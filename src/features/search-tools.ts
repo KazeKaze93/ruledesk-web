@@ -327,6 +327,9 @@ const FEATURE_CSS = [
   "  max-width: 100%;",
   "  flex: 1 1 100%;",
   "}",
+  `body.${BODY_CLASS} [class^="rdw-search-tools"][hidden] {`,
+  "  display: none !important;",
+  "}",
 ].join("\n");
 
 function findTagsInput(): HTMLInputElement | null {

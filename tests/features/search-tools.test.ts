@@ -332,6 +332,54 @@ describe("searchToolsFeature", () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
+  it("keeps the save form hidden until Save search, then Cancel hides it", () => {
+    const bodyClass = featureBodyClass("search-tools");
+    const hiddenRule = `body.${bodyClass} [class^="rdw-search-tools"][hidden]`;
+    expect(searchToolsFeature.css).toContain(hiddenRule);
+    expect(searchToolsFeature.css).toMatch(
+      /\[class\^="rdw-search-tools"\]\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
+    );
+
+    buildSearchForm("fox -dog");
+    searchToolsFeature.mount(makeCtx());
+
+    const saveForm = document.querySelector(
+      `#${ROOT_ID} .rdw-search-tools-save-form`,
+    );
+    const saveBtn = document.querySelector(
+      `#${ROOT_ID} button.rdw-search-tools-save-btn`,
+    );
+    expect(saveForm).toBeInstanceOf(HTMLElement);
+    expect(saveBtn).toBeInstanceOf(HTMLButtonElement);
+    if (
+      !(saveForm instanceof HTMLElement) ||
+      !(saveBtn instanceof HTMLButtonElement)
+    ) {
+      throw new Error("save controls missing");
+    }
+
+    expect(saveForm.hidden).toBe(true);
+    expect(saveForm.hasAttribute("hidden")).toBe(true);
+    expect(saveBtn.hidden).toBe(false);
+
+    saveBtn.click();
+    expect(saveForm.hidden).toBe(false);
+    expect(saveForm.hasAttribute("hidden")).toBe(false);
+    expect(saveBtn.hidden).toBe(true);
+
+    const cancel = document.querySelector(
+      `#${ROOT_ID} button.rdw-search-tools-save-cancel`,
+    );
+    expect(cancel).toBeInstanceOf(HTMLButtonElement);
+    if (!(cancel instanceof HTMLButtonElement)) {
+      throw new Error("cancel button missing");
+    }
+    cancel.click();
+    expect(saveForm.hidden).toBe(true);
+    expect(saveForm.hasAttribute("hidden")).toBe(true);
+    expect(saveBtn.hidden).toBe(false);
+  });
+
   it("saves the current search into collections", () => {
     const { input } = buildSearchForm("fox -dog");
     searchToolsFeature.mount(makeCtx());

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.8.0
+// @version      0.8.1
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -46,7 +46,7 @@
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
-	var USERSCRIPT_VERSION = "0.8.0";
+	var USERSCRIPT_VERSION = "0.8.1";
 	var SITE_THEME_COOKIE_NAME = "theme";
 	var SITE_THEME_COOKIE_VALUE_DARK = "dark";
 	var SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
@@ -6726,6 +6726,9 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		"  gap: 0.25rem;",
 		"  max-width: 100%;",
 		"  flex: 1 1 100%;",
+		"}",
+		`body.${BODY_CLASS} [class^="rdw-search-tools"][hidden] {`,
+		"  display: none !important;",
 		"}"
 	].join("\n");
 	function findTagsInput() {
