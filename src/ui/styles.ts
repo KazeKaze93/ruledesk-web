@@ -322,16 +322,15 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 .${CSS_CLASS.artistFollow} {
   margin-left: 4px;
   box-sizing: border-box;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 4px;
+  min-height: 18px;
+  padding: 0 5px;
   border: 1px solid #666;
-  border-radius: 4px;
+  border-radius: 3px;
   background: #fff;
   color: #333;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.2;
   vertical-align: middle;
 }
 

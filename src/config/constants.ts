@@ -66,7 +66,7 @@ export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.4.0";
+export const USERSCRIPT_VERSION = "0.4.1";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -104,8 +104,9 @@ export const UI_TEXT = {
   artistTagLabel: "Artist tag",
   artistAdd: "Add",
   artistRemove: "Unfollow",
-  artistFollow: "Follow artist",
-  artistUnfollow: "Unfollow artist",
+  artistFollow: "Follow",
+  artistFollowing: "Following",
+  artistUnfollow: "Unfollow",
   artistOpenSearch: "Search artist",
   artistInvalid: "Invalid artist tag.",
   artistDuplicate: "Already following this artist.",
@@ -119,6 +120,8 @@ export const UI_TEXT = {
   reloadUpdates: "Reload updates",
   goToPageOneToMark: "Go to page 1 to mark everything as seen",
   noNewPosts: "No new posts",
+  updatesPartialHint:
+    "This search covers only part of your artists. Marking as seen works when all artists are in one search (set “Artists per search” to 0).",
   updatesBarMissingList: "image-list not found; updates bar not mounted",
 } as const;
 

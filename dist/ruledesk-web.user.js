@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.4.0
+// @version      0.4.1
 // @description  Collections, favorites, and artist updates for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -75,8 +75,9 @@
 		artistTagLabel: "Artist tag",
 		artistAdd: "Add",
 		artistRemove: "Unfollow",
-		artistFollow: "Follow artist",
-		artistUnfollow: "Unfollow artist",
+		artistFollow: "Follow",
+		artistFollowing: "Following",
+		artistUnfollow: "Unfollow",
 		artistOpenSearch: "Search artist",
 		artistInvalid: "Invalid artist tag.",
 		artistDuplicate: "Already following this artist.",
@@ -90,6 +91,7 @@
 		reloadUpdates: "Reload updates",
 		goToPageOneToMark: "Go to page 1 to mark everything as seen",
 		noNewPosts: "No new posts",
+		updatesPartialHint: "This search covers only part of your artists. Marking as seen works when all artists are in one search (set “Artists per search” to 0).",
 		updatesBarMissingList: "image-list not found; updates bar not mounted"
 	};
 	var CSS_CLASS = {
@@ -1690,42 +1692,79 @@
 	function buildUpdatesSearchUrl(query) {
 		return buildSearchUrl(parseTags(query));
 	}
-	function isUpdatesQuery(tagsParam, artistTags) {
+	function trackedArtistSet(artistTags) {
 		const tracked = new Set();
 		for (const raw of artistTags) {
 			const tag = normalizeArtistTag(raw);
 			if (tag !== null) tracked.add(tag);
 		}
-		if (tracked.size === 0) return false;
+		return tracked;
+	}
+	function parseUpdatesArtistQuery(tagsParam, tracked) {
+		if (tracked.size === 0) return null;
 		const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
-		if (tokens.length === 0) return false;
+		if (tokens.length === 0) return null;
 		let body = tokens;
+		let hasIdFilter = false;
 		const last = tokens[tokens.length - 1];
-		if (last !== void 0 && UPDATES_ID_TOKEN_PATTERN.test(last)) body = tokens.slice(0, -1);
-		if (body.some((token) => UPDATES_ID_TOKEN_PATTERN.test(token))) return false;
-		if (body.length === 0) return false;
+		if (last !== void 0 && UPDATES_ID_TOKEN_PATTERN.test(last)) {
+			body = tokens.slice(0, -1);
+			hasIdFilter = true;
+		}
+		if (body.some((token) => UPDATES_ID_TOKEN_PATTERN.test(token))) return null;
+		if (body.length === 0) return null;
+		const tags = [];
 		if (body.length === 1) {
 			const only = body[0];
-			if (only === void 0) return false;
+			if (only === void 0) return null;
 			const tag = normalizeArtistTag(only);
-			return tag !== null && tracked.has(tag);
+			if (tag === null || !tracked.has(tag)) return null;
+			tags.push(tag);
+			return {
+				tags,
+				hasIdFilter
+			};
 		}
 		const first = body[0];
 		const lastBody = body[body.length - 1];
-		if (first !== "(" || lastBody !== ")") return false;
+		if (first !== "(" || lastBody !== ")") return null;
 		const inner = body.slice(1, -1);
-		if (inner.length === 0 || inner.length % 2 === 0) return false;
+		if (inner.length === 0 || inner.length % 2 === 0) return null;
 		for (let index = 0; index < inner.length; index += 1) {
 			const token = inner[index];
-			if (token === void 0) return false;
+			if (token === void 0) return null;
 			if (index % 2 === 1) {
-				if (token !== "~") return false;
+				if (token !== "~") return null;
 				continue;
 			}
 			const tag = normalizeArtistTag(token);
-			if (tag === null || !tracked.has(tag)) return false;
+			if (tag === null || !tracked.has(tag)) return null;
+			if (tags.includes(tag)) return null;
+			tags.push(tag);
 		}
+		return {
+			tags,
+			hasIdFilter
+		};
+	}
+	function isExactTrackedSet(tags, tracked) {
+		if (tags.length !== tracked.size) return false;
+		for (const tag of tags) if (!tracked.has(tag)) return false;
 		return true;
+	}
+	function isFullUpdatesQuery(tagsParam, artistTags) {
+		const tracked = trackedArtistSet(artistTags);
+		const parsed = parseUpdatesArtistQuery(tagsParam, tracked);
+		if (parsed === null) return false;
+		return isExactTrackedSet(parsed.tags, tracked);
+	}
+	function isPartialUpdatesQuery(tagsParam, artistTags) {
+		const tracked = trackedArtistSet(artistTags);
+		const parsed = parseUpdatesArtistQuery(tagsParam, tracked);
+		if (parsed === null) return false;
+		if (!parsed.hasIdFilter) return false;
+		if (isExactTrackedSet(parsed.tags, tracked)) return false;
+		return parsed.tags.length > 0 && parsed.tags.length < tracked.size;
 	}
 	var TagTypeSchema = _enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
 	var TagEntrySchema = object({
@@ -2496,16 +2535,15 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 .${CSS_CLASS.artistFollow} {
   margin-left: 4px;
   box-sizing: border-box;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 4px;
+  min-height: 18px;
+  padding: 0 5px;
   border: 1px solid #666;
-  border-radius: 4px;
+  border-radius: 3px;
   background: #fff;
   color: #333;
   cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.2;
   vertical-align: middle;
 }
 
@@ -2679,10 +2717,10 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	function applyFollowState(button, following) {
 		button.setAttribute("aria-pressed", following ? "true" : "false");
 		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
-		const label = following ? UI_TEXT.artistUnfollow : UI_TEXT.artistFollow;
+		const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
 		const tag = button.dataset.rdwArtistTag ?? "";
 		button.setAttribute("aria-label", `${label}: ${tag}`);
-		button.textContent = following ? "★" : "☆";
+		button.textContent = label;
 		button.title = label;
 	}
 	function attachFollowButton(li, tag) {
@@ -3368,29 +3406,31 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		if (first === void 0) return window.location.href;
 		return buildUpdatesSearchUrl(first);
 	}
-	function mountUpdatesBar(root = document, search = window.location.search) {
-		if (detectPageKind(search) !== "list") return;
-		const tagsParam = new URLSearchParams(search).get(SEARCH_PARAM_TAGS);
-		if (tagsParam === null || tagsParam.trim().length === 0) return;
-		const artistTags = listArtistTags();
-		if (!isUpdatesQuery(tagsParam, artistTags)) return;
-		const imageList = root.querySelector(SITE_SELECTORS.imageList);
-		if (imageList === null) {
-			log.warn(UI_TEXT.updatesBarMissingList);
-			return;
-		}
-		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
-		if (existing !== null) existing.remove();
-		ensureDocumentStyles();
+	function insertBar(imageList, bar) {
+		imageList.parentElement?.insertBefore(bar, imageList);
+	}
+	function createBarShell() {
 		const bar = document.createElement("div");
 		bar.id = UPDATES_BAR_ID;
 		bar.className = CSS_CLASS.updatesBar;
+		return bar;
+	}
+	function mountPartialBar(imageList) {
+		const bar = createBarShell();
+		const hint = document.createElement("p");
+		hint.className = CSS_CLASS.hint;
+		hint.textContent = UI_TEXT.updatesPartialHint;
+		bar.append(hint);
+		insertBar(imageList, bar);
+	}
+	function mountFullBar(imageList, search, artistTags) {
+		const bar = createBarShell();
 		if (imageList.querySelectorAll(SITE_SELECTORS.thumb).length === 0) {
 			const empty = document.createElement("p");
 			empty.className = CSS_CLASS.hint;
 			empty.textContent = UI_TEXT.noNewPosts;
 			bar.append(empty);
-			imageList.parentElement?.insertBefore(bar, imageList);
+			insertBar(imageList, bar);
 			return;
 		}
 		if (readPid(search) > 0) {
@@ -3398,7 +3438,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			hint.className = CSS_CLASS.hint;
 			hint.textContent = UI_TEXT.goToPageOneToMark;
 			bar.append(hint);
-			imageList.parentElement?.insertBefore(bar, imageList);
+			insertBar(imageList, bar);
 			return;
 		}
 		const actions = document.createElement("div");
@@ -3426,7 +3466,29 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		});
 		actions.append(markButton);
 		bar.append(actions);
-		imageList.parentElement?.insertBefore(bar, imageList);
+		insertBar(imageList, bar);
+	}
+	function mountUpdatesBar(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "list") return;
+		const tagsParam = new URLSearchParams(search).get(SEARCH_PARAM_TAGS);
+		if (tagsParam === null || tagsParam.trim().length === 0) return;
+		const artistTags = listArtistTags();
+		const isFull = isFullUpdatesQuery(tagsParam, artistTags);
+		const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
+		if (!isFull && !isPartial) return;
+		const imageList = root.querySelector(SITE_SELECTORS.imageList);
+		if (imageList === null) {
+			log.warn(UI_TEXT.updatesBarMissingList);
+			return;
+		}
+		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
+		if (existing !== null) existing.remove();
+		ensureDocumentStyles();
+		if (isPartial) {
+			mountPartialBar(imageList);
+			return;
+		}
+		mountFullBar(imageList, search, artistTags);
 	}
 	mountPanel();
 	var pageKind = detectPageKind(window.location.search);

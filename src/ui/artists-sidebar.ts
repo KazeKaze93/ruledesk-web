@@ -55,10 +55,10 @@ function extractArtistTagFromLi(li: Element): string | null {
 function applyFollowState(button: HTMLButtonElement, following: boolean): void {
   button.setAttribute("aria-pressed", following ? "true" : "false");
   button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
-  const label = following ? UI_TEXT.artistUnfollow : UI_TEXT.artistFollow;
+  const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
   const tag = button.dataset.rdwArtistTag ?? "";
   button.setAttribute("aria-label", `${label}: ${tag}`);
-  button.textContent = following ? "★" : "☆";
+  button.textContent = label;
   button.title = label;
 }
 

@@ -9,7 +9,8 @@ import { log } from "../log";
 import {
   buildUpdatesQueries,
   buildUpdatesSearchUrl,
-  isUpdatesQuery,
+  isFullUpdatesQuery,
+  isPartialUpdatesQuery,
 } from "../search/query";
 import { detectPageKind } from "../site/pages";
 import {
@@ -63,51 +64,35 @@ function buildReloadHref(artistTags: string[], seenPostId: number): string {
   return buildUpdatesSearchUrl(first);
 }
 
-export function mountUpdatesBar(
-  root: ParentNode = document,
-  search: string = window.location.search,
-): void {
-  if (detectPageKind(search) !== "list") {
-    return;
-  }
+function insertBar(imageList: Element, bar: HTMLElement): void {
+  imageList.parentElement?.insertBefore(bar, imageList);
+}
 
-  const params = new URLSearchParams(search);
-  const tagsParam = params.get(SEARCH_PARAM_TAGS);
-  if (tagsParam === null || tagsParam.trim().length === 0) {
-    return;
-  }
-
-  const artistTags = listArtistTags();
-  if (!isUpdatesQuery(tagsParam, artistTags)) {
-    return;
-  }
-
-  const imageList = root.querySelector(SITE_SELECTORS.imageList);
-  if (imageList === null) {
-    log.warn(UI_TEXT.updatesBarMissingList);
-    return;
-  }
-
-  const existing = root instanceof Document
-    ? root.getElementById(UPDATES_BAR_ID)
-    : root.querySelector(`#${UPDATES_BAR_ID}`);
-  if (existing !== null) {
-    existing.remove();
-  }
-
-  ensureDocumentStyles();
-
+function createBarShell(): HTMLDivElement {
   const bar = document.createElement("div");
   bar.id = UPDATES_BAR_ID;
   bar.className = CSS_CLASS.updatesBar;
+  return bar;
+}
 
+function mountPartialBar(imageList: Element): void {
+  const bar = createBarShell();
+  const hint = document.createElement("p");
+  hint.className = CSS_CLASS.hint;
+  hint.textContent = UI_TEXT.updatesPartialHint;
+  bar.append(hint);
+  insertBar(imageList, bar);
+}
+
+function mountFullBar(imageList: Element, search: string, artistTags: string[]): void {
+  const bar = createBarShell();
   const thumbCount = imageList.querySelectorAll(SITE_SELECTORS.thumb).length;
   if (thumbCount === 0) {
     const empty = document.createElement("p");
     empty.className = CSS_CLASS.hint;
     empty.textContent = UI_TEXT.noNewPosts;
     bar.append(empty);
-    imageList.parentElement?.insertBefore(bar, imageList);
+    insertBar(imageList, bar);
     return;
   }
 
@@ -117,7 +102,7 @@ export function mountUpdatesBar(
     hint.className = CSS_CLASS.hint;
     hint.textContent = UI_TEXT.goToPageOneToMark;
     bar.append(hint);
-    imageList.parentElement?.insertBefore(bar, imageList);
+    insertBar(imageList, bar);
     return;
   }
 
@@ -151,5 +136,49 @@ export function mountUpdatesBar(
 
   actions.append(markButton);
   bar.append(actions);
-  imageList.parentElement?.insertBefore(bar, imageList);
+  insertBar(imageList, bar);
+}
+
+export function mountUpdatesBar(
+  root: ParentNode = document,
+  search: string = window.location.search,
+): void {
+  if (detectPageKind(search) !== "list") {
+    return;
+  }
+
+  const params = new URLSearchParams(search);
+  const tagsParam = params.get(SEARCH_PARAM_TAGS);
+  if (tagsParam === null || tagsParam.trim().length === 0) {
+    return;
+  }
+
+  const artistTags = listArtistTags();
+  const isFull = isFullUpdatesQuery(tagsParam, artistTags);
+  const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
+  if (!isFull && !isPartial) {
+    return;
+  }
+
+  const imageList = root.querySelector(SITE_SELECTORS.imageList);
+  if (imageList === null) {
+    log.warn(UI_TEXT.updatesBarMissingList);
+    return;
+  }
+
+  const existing = root instanceof Document
+    ? root.getElementById(UPDATES_BAR_ID)
+    : root.querySelector(`#${UPDATES_BAR_ID}`);
+  if (existing !== null) {
+    existing.remove();
+  }
+
+  ensureDocumentStyles();
+
+  if (isPartial) {
+    mountPartialBar(imageList);
+    return;
+  }
+
+  mountFullBar(imageList, search, artistTags);
 }

@@ -154,10 +154,12 @@ export function buildUpdatesSearchUrl(query: string): string {
   return buildSearchUrl(parseTags(query));
 }
 
-export function isUpdatesQuery(
-  tagsParam: string,
-  artistTags: string[],
-): boolean {
+type ParsedUpdatesQuery = {
+  tags: string[];
+  hasIdFilter: boolean;
+};
+
+function trackedArtistSet(artistTags: string[]): Set<string> {
   const tracked = new Set<string>();
   for (const raw of artistTags) {
     const tag = normalizeArtistTag(raw);
@@ -165,61 +167,123 @@ export function isUpdatesQuery(
       tracked.add(tag);
     }
   }
+  return tracked;
+}
+
+function parseUpdatesArtistQuery(
+  tagsParam: string,
+  tracked: Set<string>,
+): ParsedUpdatesQuery | null {
   if (tracked.size === 0) {
-    return false;
+    return null;
   }
 
   const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
   if (tokens.length === 0) {
-    return false;
+    return null;
   }
 
   let body = tokens;
+  let hasIdFilter = false;
   const last = tokens[tokens.length - 1];
   if (last !== undefined && UPDATES_ID_TOKEN_PATTERN.test(last)) {
     body = tokens.slice(0, -1);
+    hasIdFilter = true;
   }
   if (body.some((token) => UPDATES_ID_TOKEN_PATTERN.test(token))) {
-    return false;
+    return null;
   }
   if (body.length === 0) {
-    return false;
+    return null;
   }
+
+  const tags: string[] = [];
 
   if (body.length === 1) {
     const only = body[0];
     if (only === undefined) {
-      return false;
+      return null;
     }
     const tag = normalizeArtistTag(only);
-    return tag !== null && tracked.has(tag);
+    if (tag === null || !tracked.has(tag)) {
+      return null;
+    }
+    tags.push(tag);
+    return { tags, hasIdFilter };
   }
 
   const first = body[0];
   const lastBody = body[body.length - 1];
   if (first !== UPDATES_OR_OPEN || lastBody !== UPDATES_OR_CLOSE) {
-    return false;
+    return null;
   }
   const inner = body.slice(1, -1);
   if (inner.length === 0 || inner.length % 2 === 0) {
-    return false;
+    return null;
   }
 
   for (let index = 0; index < inner.length; index += 1) {
     const token = inner[index];
     if (token === undefined) {
-      return false;
+      return null;
     }
     if (index % 2 === 1) {
       if (token !== UPDATES_OR_JOIN) {
-        return false;
+        return null;
       }
       continue;
     }
     const tag = normalizeArtistTag(token);
     if (tag === null || !tracked.has(tag)) {
+      return null;
+    }
+    if (tags.includes(tag)) {
+      return null;
+    }
+    tags.push(tag);
+  }
+
+  return { tags, hasIdFilter };
+}
+
+function isExactTrackedSet(tags: string[], tracked: Set<string>): boolean {
+  if (tags.length !== tracked.size) {
+    return false;
+  }
+  for (const tag of tags) {
+    if (!tracked.has(tag)) {
       return false;
     }
   }
   return true;
+}
+
+export function isFullUpdatesQuery(
+  tagsParam: string,
+  artistTags: string[],
+): boolean {
+  const tracked = trackedArtistSet(artistTags);
+  const parsed = parseUpdatesArtistQuery(tagsParam, tracked);
+  if (parsed === null) {
+    return false;
+  }
+  return isExactTrackedSet(parsed.tags, tracked);
+}
+
+export function isPartialUpdatesQuery(
+  tagsParam: string,
+  artistTags: string[],
+): boolean {
+  const tracked = trackedArtistSet(artistTags);
+  const parsed = parseUpdatesArtistQuery(tagsParam, tracked);
+  if (parsed === null) {
+    return false;
+  }
+  if (!parsed.hasIdFilter) {
+    return false;
+  }
+  if (isExactTrackedSet(parsed.tags, tracked)) {
+    return false;
+  }
+  return parsed.tags.length > 0 && parsed.tags.length < tracked.size;
 }

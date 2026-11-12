@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UPDATES_BAR_ID } from "../src/config/constants";
+import { UPDATES_BAR_ID, UI_TEXT } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
 import { getSeenPostId, save } from "../src/storage/store";
 import { mountUpdatesBar } from "../src/ui/updates-bar";
@@ -53,7 +53,7 @@ describe("mountUpdatesBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("marks all seen on page 1 and records the max thumb id", () => {
+  it("marks all seen on a full query page 1 and records the max thumb id", () => {
     buildListPage(["10", "42", "7"]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
@@ -67,18 +67,34 @@ describe("mountUpdatesBar", () => {
     expect(bar?.querySelector("a")?.textContent).toBe("Reload updates");
   });
 
-  it("shows page-1 hint when pid > 0", () => {
+  it("shows page-1 hint when pid > 0 on a full query", () => {
     buildListPage(["10"]);
-    mountUpdatesBar(document, "?page=post&s=list&tags=a&pid=42");
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)&pid=42");
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(bar?.textContent).toContain("Go to page 1");
     expect(bar?.querySelector("button")).toBeNull();
   });
 
-  it("shows empty text when there are no cards", () => {
+  it("shows empty text when there are no cards on a full query", () => {
     buildListPage([]);
-    mountUpdatesBar(document, "?page=post&s=list&tags=a");
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(bar?.textContent).toContain("No new posts");
+  });
+
+  it("shows partial hint without a mark button and does not write seenPostId", () => {
+    buildListPage(["99"]);
+    mountUpdatesBar(document, "?page=post&s=list&tags=a+id%3A%3E5");
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar?.textContent).toContain(UI_TEXT.updatesPartialHint);
+    expect(bar?.querySelector("button")).toBeNull();
+    expect(getSeenPostId()).toBe(0);
+  });
+
+  it("does not mount a bar for a plain artist search without id", () => {
+    buildListPage(["99"]);
+    mountUpdatesBar(document, "?page=post&s=list&tags=a");
+    expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
+    expect(getSeenPostId()).toBe(0);
   });
 });

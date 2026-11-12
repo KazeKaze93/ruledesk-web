@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildUpdatesQueries,
   buildUpdatesSearchUrl,
-  isUpdatesQuery,
+  isFullUpdatesQuery,
+  isPartialUpdatesQuery,
   normalizeArtistTag,
 } from "../src/search/query";
 
@@ -50,23 +51,41 @@ describe("buildUpdatesSearchUrl", () => {
   });
 });
 
-describe("isUpdatesQuery", () => {
+describe("isFullUpdatesQuery / isPartialUpdatesQuery", () => {
   const tracked = ["a", "b", "nyx_x"];
 
-  it("accepts a single tracked artist and optional id token", () => {
-    expect(isUpdatesQuery("nyx_x", tracked)).toBe(true);
-    expect(isUpdatesQuery("nyx_x id:>10", tracked)).toBe(true);
+  it("treats a full group and a single tracked artist as full", () => {
+    expect(isFullUpdatesQuery("( a ~ b ~ nyx_x )", tracked)).toBe(true);
+    expect(isFullUpdatesQuery("( nyx_x ~ a ~ b ) id:>10", tracked)).toBe(true);
+    expect(isFullUpdatesQuery("nyx_x", ["nyx_x"])).toBe(true);
+    expect(isFullUpdatesQuery("nyx_x id:>10", ["nyx_x"])).toBe(true);
   });
 
-  it("accepts a group of tracked artists", () => {
-    expect(isUpdatesQuery("( a ~ b )", tracked)).toBe(true);
-    expect(isUpdatesQuery("( a ~ b ) id:>19300000", tracked)).toBe(true);
+  it("order of artists does not matter for full matches", () => {
+    expect(isFullUpdatesQuery("( b ~ a ~ nyx_x )", tracked)).toBe(true);
   });
 
-  it("rejects foreign artists, extra tokens, and malformed groups", () => {
-    expect(isUpdatesQuery("( a ~ stranger )", tracked)).toBe(false);
-    expect(isUpdatesQuery("( a ~ b ) sort:score", tracked)).toBe(false);
-    expect(isUpdatesQuery("a b", tracked)).toBe(false);
-    expect(isUpdatesQuery("( a b )", tracked)).toBe(false);
+  it("marks incomplete tracked sets with id as partial only", () => {
+    expect(isPartialUpdatesQuery("( a ~ b ) id:>19300000", tracked)).toBe(true);
+    expect(isPartialUpdatesQuery("a id:>5", tracked)).toBe(true);
+    expect(isFullUpdatesQuery("( a ~ b ) id:>19300000", tracked)).toBe(false);
+  });
+
+  it("does not treat incomplete sets without id as updates queries", () => {
+    expect(isPartialUpdatesQuery("( a ~ b )", tracked)).toBe(false);
+    expect(isFullUpdatesQuery("( a ~ b )", tracked)).toBe(false);
+    expect(isPartialUpdatesQuery("a", tracked)).toBe(false);
+    expect(isFullUpdatesQuery("a", tracked)).toBe(false);
+  });
+
+  it("rejects foreign tags and duplicate tags", () => {
+    expect(isFullUpdatesQuery("( a ~ stranger )", tracked)).toBe(false);
+    expect(isPartialUpdatesQuery("( a ~ stranger ) id:>1", tracked)).toBe(
+      false,
+    );
+    expect(isFullUpdatesQuery("( a ~ a ~ b )", ["a", "b"])).toBe(false);
+    expect(isPartialUpdatesQuery("( a ~ a ) id:>1", tracked)).toBe(false);
+    expect(isFullUpdatesQuery("( a ~ b ) sort:score", tracked)).toBe(false);
+    expect(isFullUpdatesQuery("a b", tracked)).toBe(false);
   });
 });
