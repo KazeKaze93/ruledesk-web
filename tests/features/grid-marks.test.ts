@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { seenDimFeature } from "../../src/features/grid-marks";
+import {
+  resetSeenDimRuntimeState,
+  seenDimFeature,
+} from "../../src/features/grid-marks";
+import {
+  notifyThumbsAdded,
+  resetFeatureRuntimeState,
+} from "../../src/features/runtime";
 import {
   featureBodyClass,
   type FeatureContext,
@@ -12,6 +19,7 @@ import {
   load,
   save,
 } from "../../src/storage/store";
+import { STORAGE_KEY } from "../../src/config/constants";
 
 const SEEN_CLASS = "rdw-seen";
 
@@ -68,11 +76,15 @@ function buildThumb(postId: string, alt: string): HTMLSpanElement {
 describe("seenDimFeature", () => {
   beforeEach(() => {
     installGmMocks();
+    resetFeatureRuntimeState();
+    resetSeenDimRuntimeState();
     document.body.replaceChildren();
     document.body.className = "";
   });
 
   afterEach(() => {
+    resetSeenDimRuntimeState();
+    resetFeatureRuntimeState();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -114,7 +126,7 @@ describe("seenDimFeature", () => {
     const bodyClass = featureBodyClass(seenDimFeature.id);
     expect(seenDimFeature.css).toContain(`body.${bodyClass}`);
     expect(seenDimFeature.css).toContain(`.${SEEN_CLASS} img.preview`);
-    expect(seenDimFeature.css).toContain("opacity: 0.4");
+    expect(seenDimFeature.css).toContain("opacity: 0.65");
     expect(seenDimFeature.css).toContain(
       `.${SEEN_CLASS}:hover img.preview`,
     );
@@ -134,6 +146,65 @@ describe("seenDimFeature", () => {
     expect(() => {
       seenDimFeature.mount(makeCtx("list", "?page=post&s=list"));
     }).not.toThrow();
+  });
+
+  it("restamps from storage on pageshow when persisted", () => {
+    const initial = createDefaultStorage();
+    save(initial);
+
+    const thumb = buildThumb("555", "tag_c");
+    document.body.append(thumb);
+    seenDimFeature.mount(makeCtx("list", "?page=post&s=list"));
+    expect(thumb.classList.contains(SEEN_CLASS)).toBe(false);
+
+    const external = createDefaultStorage();
+    external.marks["555"] = { seen: true };
+    memory.set(STORAGE_KEY, external);
+
+    window.dispatchEvent(
+      new PageTransitionEvent("pageshow", { persisted: true }),
+    );
+
+    expect(thumb.classList.contains(SEEN_CLASS)).toBe(true);
+    expect(load().marks["555"]?.seen).toBe(true);
+  });
+
+  it("does not restamp on pageshow when not persisted", () => {
+    const initial = createDefaultStorage();
+    save(initial);
+
+    const thumb = buildThumb("556", "tag_d");
+    document.body.append(thumb);
+    seenDimFeature.mount(makeCtx("list", "?page=post&s=list"));
+
+    const external = createDefaultStorage();
+    external.marks["556"] = { seen: true };
+    memory.set(STORAGE_KEY, external);
+
+    window.dispatchEvent(
+      new PageTransitionEvent("pageshow", { persisted: false }),
+    );
+
+    expect(thumb.classList.contains(SEEN_CLASS)).toBe(false);
+  });
+
+  it("stamps new thumbs delivered via onThumbsAdded", () => {
+    const data = createDefaultStorage();
+    data.marks["777"] = { seen: true };
+    save(data);
+
+    seenDimFeature.mount(makeCtx("list", "?page=post&s=list"));
+
+    const batch = document.createElement("div");
+    const seenThumb = buildThumb("777", "tag_e");
+    const unseenThumb = buildThumb("888", "tag_f");
+    batch.append(seenThumb, unseenThumb);
+    document.body.append(batch);
+
+    notifyThumbsAdded(batch);
+
+    expect(seenThumb.classList.contains(SEEN_CLASS)).toBe(true);
+    expect(unseenThumb.classList.contains(SEEN_CLASS)).toBe(false);
   });
 });
 

@@ -9,6 +9,18 @@ describe("gridDensityFeature", () => {
     expect(gridDensityFeature.pages).toEqual(["list", "favorites"]);
     expect(gridDensityFeature.defaultEnabled).toBe(true);
     expect(gridDensityFeature.cssOnly).toBe(true);
+    expect(gridDensityFeature.choice?.options.map((option) => option.value)).toEqual([
+      "default",
+      "compact",
+      "large",
+      "masonry",
+    ]);
+    expect(gridDensityFeature.choice?.options.map((option) => option.label)).toEqual([
+      "Default",
+      "Compact (150)",
+      "Large (250)",
+      "Masonry",
+    ]);
   });
 
   it("css has compact 150 and large 250 with !important; no default size rules", () => {
@@ -25,6 +37,22 @@ describe("gridDensityFeature", () => {
     expect(css).not.toMatch(
       /body\.rdw-f-grid-density-default[\s\S]*?(?:width|height|max-width|max-height)\s*:/,
     );
+  });
+
+  it("css has masonry column layout under body.rdw-f-grid-density-masonry", () => {
+    const css = gridDensityFeature.css;
+    const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
+
+    expect(css).toContain(`body.${masonryClass} div.image-list`);
+    expect(css).toContain("column-width: 200px !important");
+    expect(css).toContain("column-gap: 10px !important");
+    expect(css).toContain(`body.${masonryClass} span.thumb`);
+    expect(css).toContain("break-inside: avoid !important");
+    expect(css).toContain(`body.${masonryClass} span.thumb > a`);
+    expect(css).toContain(`body.${masonryClass} span.thumb img.preview`);
+    expect(css).toContain("width: 100% !important");
+    expect(css).toContain("max-width: none !important");
+    expect(css).toContain("max-height: none !important");
   });
 
   it("mount is a noop", () => {
