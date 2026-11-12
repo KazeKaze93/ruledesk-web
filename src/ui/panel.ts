@@ -7,6 +7,11 @@ import {
   TOGGLE_BUTTON_ID,
   UI_TEXT,
 } from "../config/constants";
+import { FEATURES } from "../features/registry";
+import {
+  getFeatureChoice,
+  isFeatureEnabled,
+} from "../features/runtime";
 import { log } from "../log";
 import {
   buildSearchUrl,
@@ -24,16 +29,25 @@ import {
   exportJson,
   getGridFavButtonsEnabled,
   getSeenPostId,
+  getTweaksEnabled,
   getUpdatesGroupSize,
   importJson,
   load,
   removeArtist,
   renameCollection,
+  setFeatureChoiceValue,
+  setFeatureEnabled,
   setGridFavButtonsEnabled,
+  setTweaksEnabled,
   setUpdatesGroupSize,
 } from "../storage/store";
 import { setGridFavButtonsVisible } from "./cards";
 import { PANEL_CSS } from "./styles";
+
+const TWEAKS_CHECKBOX_ID = "rdw-tweaks-enabled";
+const GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
+const FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
+const FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
 
 type PanelMode =
   | { kind: "list" }
@@ -356,6 +370,64 @@ function buildCollectionsSection(
   return collectionsSection;
 }
 
+function buildFeatureSettingsRows(): HTMLElement[] {
+  const rows: HTMLElement[] = [];
+  for (const feature of FEATURES) {
+    const row = document.createElement("div");
+    row.className = CSS_CLASS.checkboxRow;
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`;
+    checkbox.className = CSS_CLASS.checkbox;
+    checkbox.checked = isFeatureEnabled(feature.id);
+    checkbox.addEventListener("change", () => {
+      setFeatureEnabled(feature.id, checkbox.checked);
+    });
+
+    const label = document.createElement("label");
+    label.className = CSS_CLASS.label;
+    label.htmlFor = checkbox.id;
+    label.textContent = feature.label;
+
+    row.append(checkbox, label);
+    rows.push(row);
+
+    if (feature.choice === undefined) {
+      continue;
+    }
+
+    const choiceField = document.createElement("div");
+    choiceField.className = CSS_CLASS.field;
+
+    const choiceLabel = document.createElement("label");
+    choiceLabel.className = CSS_CLASS.label;
+    choiceLabel.htmlFor = `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`;
+    choiceLabel.textContent = feature.label;
+
+    const select = document.createElement("select");
+    select.id = `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`;
+    select.className = CSS_CLASS.input;
+    const selected = getFeatureChoice(feature.id);
+    for (const option of feature.choice.options) {
+      const optionEl = document.createElement("option");
+      optionEl.value = option.value;
+      optionEl.textContent = option.label;
+      if (option.value === selected) {
+        optionEl.selected = true;
+      }
+      select.append(optionEl);
+    }
+    select.addEventListener("change", () => {
+      setFeatureChoiceValue(feature.id, select.value);
+    });
+
+    choiceField.append(choiceLabel, select);
+    rows.push(choiceField);
+  }
+  return rows;
+}
+
 function buildSettingsSection(): HTMLElement {
   const section = document.createElement("section");
   section.className = CSS_CLASS.section;
@@ -364,27 +436,56 @@ function buildSettingsSection(): HTMLElement {
   title.className = CSS_CLASS.sectionTitle;
   title.textContent = UI_TEXT.settingsHeading;
 
-  const row = document.createElement("div");
-  row.className = CSS_CLASS.checkboxRow;
+  const tweaksRow = document.createElement("div");
+  tweaksRow.className = CSS_CLASS.checkboxRow;
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.id = "rdw-grid-fav-buttons";
-  checkbox.className = CSS_CLASS.checkbox;
-  checkbox.checked = getGridFavButtonsEnabled();
-  checkbox.addEventListener("change", () => {
-    const enabled = checkbox.checked;
+  const tweaksCheckbox = document.createElement("input");
+  tweaksCheckbox.type = "checkbox";
+  tweaksCheckbox.id = TWEAKS_CHECKBOX_ID;
+  tweaksCheckbox.className = CSS_CLASS.checkbox;
+  tweaksCheckbox.checked = getTweaksEnabled();
+  tweaksCheckbox.addEventListener("change", () => {
+    setTweaksEnabled(tweaksCheckbox.checked);
+  });
+
+  const tweaksLabel = document.createElement("label");
+  tweaksLabel.className = CSS_CLASS.label;
+  tweaksLabel.htmlFor = tweaksCheckbox.id;
+  tweaksLabel.textContent = UI_TEXT.enablePageTweaksLabel;
+
+  tweaksRow.append(tweaksCheckbox, tweaksLabel);
+  section.append(title, tweaksRow);
+
+  for (const row of buildFeatureSettingsRows()) {
+    section.append(row);
+  }
+
+  const reloadHint = document.createElement("p");
+  reloadHint.className = CSS_CLASS.hint;
+  reloadHint.textContent = UI_TEXT.reloadToApplyHint;
+  section.append(reloadHint);
+
+  const favRow = document.createElement("div");
+  favRow.className = CSS_CLASS.checkboxRow;
+
+  const favCheckbox = document.createElement("input");
+  favCheckbox.type = "checkbox";
+  favCheckbox.id = GRID_FAV_CHECKBOX_ID;
+  favCheckbox.className = CSS_CLASS.checkbox;
+  favCheckbox.checked = getGridFavButtonsEnabled();
+  favCheckbox.addEventListener("change", () => {
+    const enabled = favCheckbox.checked;
     setGridFavButtonsEnabled(enabled);
     setGridFavButtonsVisible(enabled);
   });
 
-  const label = document.createElement("label");
-  label.className = CSS_CLASS.label;
-  label.htmlFor = checkbox.id;
-  label.textContent = UI_TEXT.gridFavButtonsLabel;
+  const favLabel = document.createElement("label");
+  favLabel.className = CSS_CLASS.label;
+  favLabel.htmlFor = favCheckbox.id;
+  favLabel.textContent = UI_TEXT.gridFavButtonsLabel;
 
-  row.append(checkbox, label);
-  section.append(title, row);
+  favRow.append(favCheckbox, favLabel);
+  section.append(favRow);
   return section;
 }
 

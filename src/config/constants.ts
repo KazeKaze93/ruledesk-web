@@ -57,6 +57,7 @@ export const IMPORT_SCHEMA_ERROR_PREFIX =
   "File is not a RuleDesk Web export";
 
 export const DEFAULT_GRID_FAV_BUTTONS = true;
+export const DEFAULT_TWEAKS_ENABLED = true;
 export const DEFAULT_UPDATES_GROUP_SIZE = 0;
 export const DEFAULT_SEEN_POST_ID = 0;
 
@@ -90,6 +91,8 @@ export const UI_TEXT = {
   importErrorPrefix: "Import failed:",
   notOnSearchPage: "Open a post list search with tags to save it.",
   settingsHeading: "Settings",
+  enablePageTweaksLabel: "Enable page tweaks",
+  reloadToApplyHint: "Reload the page to apply",
   gridFavButtonsLabel: "Show favorite buttons in grid",
   cardFavAddLabel: "Add post to favorites",
   cardFavRemoveLabel: "Remove post from favorites",

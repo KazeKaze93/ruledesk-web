@@ -1,3 +1,4 @@
+import { runFeatures } from "./features/runtime";
 import { syncFavoritesPage } from "./site/favorites-page";
 import { detectPageKind } from "./site/pages";
 import { mountArtistSidebar } from "./ui/artists-sidebar";
@@ -17,3 +18,5 @@ if (pageKind === "list") {
 } else if (pageKind === "favorites") {
   syncFavoritesPage();
 }
+
+runFeatures(pageKind, window.location.search);

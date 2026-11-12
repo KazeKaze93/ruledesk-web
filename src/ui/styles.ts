@@ -250,15 +250,6 @@ export const PANEL_CSS = `
 `;
 
 export const CARD_CSS = `
-.${CSS_CLASS.thumb} {
-  position: relative;
-  anchor-scope: --rdw-img;
-}
-
-.${CSS_CLASS.thumb} img.preview {
-  anchor-name: --rdw-img;
-}
-
 .${CSS_CLASS.cardFav} {
   position: absolute;
   top: 4px;

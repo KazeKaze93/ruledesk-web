@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 import {
   DEFAULT_GRID_FAV_BUTTONS,
   DEFAULT_SEEN_POST_ID,
+  DEFAULT_TWEAKS_ENABLED,
   DEFAULT_UPDATES_GROUP_SIZE,
   SCHEMA_VERSION,
   TAG_TYPE_EXCLUDE,
@@ -28,11 +29,16 @@ export const ArtistEntrySchema = z.object({
 
 export const MarkFlagsSchema = z.object({
   fav: z.optional(z.boolean()),
+  seen: z.optional(z.boolean()),
 });
 
 export const SettingsSchema = z.object({
   gridFavButtons: z.boolean(),
   updatesGroupSize: z.optional(z.int().check(z.nonnegative())),
+  tweaksEnabled: z.optional(z.boolean()),
+  features: z.optional(z.record(z.string(), z.boolean())),
+  featureChoice: z.optional(z.record(z.string(), z.string())),
+  featureState: z.optional(z.record(z.string(), z.unknown())),
 });
 
 export const UpdatesSchema = z.object({
@@ -66,6 +72,7 @@ export function createDefaultStorage(): StorageData {
     settings: {
       gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
       updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
+      tweaksEnabled: DEFAULT_TWEAKS_ENABLED,
     },
     updates: {
       seenPostId: DEFAULT_SEEN_POST_ID,
@@ -75,6 +82,10 @@ export function createDefaultStorage(): StorageData {
 
 export function resolveGridFavButtons(data: StorageData): boolean {
   return data.settings?.gridFavButtons ?? DEFAULT_GRID_FAV_BUTTONS;
+}
+
+export function resolveTweaksEnabled(data: StorageData): boolean {
+  return data.settings?.tweaksEnabled ?? DEFAULT_TWEAKS_ENABLED;
 }
 
 export function resolveUpdatesGroupSize(data: StorageData): number {

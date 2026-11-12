@@ -3,6 +3,7 @@ import * as z from "zod/mini";
 import {
   DEFAULT_GRID_FAV_BUTTONS,
   DEFAULT_SEEN_POST_ID,
+  DEFAULT_TWEAKS_ENABLED,
   DEFAULT_UPDATES_GROUP_SIZE,
   IMPORT_SCHEMA_ERROR_PREFIX,
   STORAGE_BACKUP_KEY,
@@ -17,6 +18,7 @@ import {
   createDefaultStorage,
   resolveGridFavButtons,
   resolveSeenPostId,
+  resolveTweaksEnabled,
   resolveUpdatesGroupSize,
   type ArtistEntry,
   type Collection,
@@ -68,10 +70,21 @@ function formatSchemaImportError(error: z.core.$ZodError): Error {
 }
 
 function currentSettings(data: StorageData): Settings {
-  return {
+  const next: Settings = {
     gridFavButtons: resolveGridFavButtons(data),
     updatesGroupSize: resolveUpdatesGroupSize(data),
+    tweaksEnabled: resolveTweaksEnabled(data),
   };
+  if (data.settings?.features !== undefined) {
+    next.features = { ...data.settings.features };
+  }
+  if (data.settings?.featureChoice !== undefined) {
+    next.featureChoice = { ...data.settings.featureChoice };
+  }
+  if (data.settings?.featureState !== undefined) {
+    next.featureState = { ...data.settings.featureState };
+  }
+  return next;
 }
 
 export function load(): StorageData {
@@ -146,6 +159,13 @@ export function setPostFavMarks(postIds: string[], fav: boolean): void {
   save(data);
 }
 
+export function setPostSeenMark(postId: string): void {
+  const data = load();
+  const previous: MarkFlags = data.marks[postId] ?? {};
+  data.marks[postId] = { ...previous, seen: true };
+  save(data);
+}
+
 export function getGridFavButtonsEnabled(): boolean {
   return resolveGridFavButtons(load());
 }
@@ -155,6 +175,68 @@ export function setGridFavButtonsEnabled(enabled: boolean): void {
   data.settings = {
     ...currentSettings(data),
     gridFavButtons: enabled,
+  };
+  save(data);
+}
+
+export function getTweaksEnabled(): boolean {
+  return resolveTweaksEnabled(load());
+}
+
+export function setTweaksEnabled(enabled: boolean): void {
+  const data = load();
+  data.settings = {
+    ...currentSettings(data),
+    tweaksEnabled: enabled,
+  };
+  save(data);
+}
+
+export function getFeatureEnabled(id: string, defaultEnabled: boolean): boolean {
+  const stored = load().settings?.features?.[id];
+  if (stored === undefined) {
+    return defaultEnabled;
+  }
+  return stored;
+}
+
+export function setFeatureEnabled(id: string, enabled: boolean): void {
+  const data = load();
+  const settings = currentSettings(data);
+  const features = { ...(settings.features ?? {}), [id]: enabled };
+  data.settings = {
+    ...settings,
+    features,
+  };
+  save(data);
+}
+
+export function getFeatureChoiceValue(id: string): string | undefined {
+  return load().settings?.featureChoice?.[id];
+}
+
+export function setFeatureChoiceValue(id: string, value: string): void {
+  const data = load();
+  const settings = currentSettings(data);
+  const featureChoice = { ...(settings.featureChoice ?? {}), [id]: value };
+  data.settings = {
+    ...settings,
+    featureChoice,
+  };
+  save(data);
+}
+
+export function getFeatureState(id: string): unknown {
+  return load().settings?.featureState?.[id];
+}
+
+export function setFeatureState(id: string, value: unknown): void {
+  const data = load();
+  const settings = currentSettings(data);
+  const featureState = { ...(settings.featureState ?? {}), [id]: value };
+  data.settings = {
+    ...settings,
+    featureState,
   };
   save(data);
 }
@@ -262,6 +344,57 @@ function mergeArtists(
   return Array.from(byTag.values());
 }
 
+function mergeStringRecord(
+  current: Record<string, string> | undefined,
+  incoming: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (incoming === undefined && current === undefined) {
+    return undefined;
+  }
+  return {
+    ...(current ?? {}),
+    ...(incoming ?? {}),
+  };
+}
+
+function mergeBooleanRecord(
+  current: Record<string, boolean> | undefined,
+  incoming: Record<string, boolean> | undefined,
+): Record<string, boolean> | undefined {
+  if (incoming === undefined && current === undefined) {
+    return undefined;
+  }
+  return {
+    ...(current ?? {}),
+    ...(incoming ?? {}),
+  };
+}
+
+function mergeUnknownRecord(
+  current: Record<string, unknown> | undefined,
+  incoming: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (incoming === undefined && current === undefined) {
+    return undefined;
+  }
+  return {
+    ...(current ?? {}),
+    ...(incoming ?? {}),
+  };
+}
+
+function mergeMarks(
+  current: StorageData["marks"],
+  incoming: StorageData["marks"],
+): StorageData["marks"] {
+  const merged: StorageData["marks"] = { ...current };
+  for (const [postId, flags] of Object.entries(incoming)) {
+    const previous = merged[postId] ?? {};
+    merged[postId] = { ...previous, ...flags };
+  }
+  return merged;
+}
+
 function mergeSettings(
   current: StorageData["settings"],
   incoming: StorageData["settings"],
@@ -272,11 +405,35 @@ function mergeSettings(
   if (current === undefined) {
     return incoming;
   }
-  return {
+  const merged: Settings = {
     gridFavButtons: incoming.gridFavButtons,
     updatesGroupSize:
       incoming.updatesGroupSize ?? current.updatesGroupSize,
   };
+  if (incoming.tweaksEnabled !== undefined) {
+    merged.tweaksEnabled = incoming.tweaksEnabled;
+  } else if (current.tweaksEnabled !== undefined) {
+    merged.tweaksEnabled = current.tweaksEnabled;
+  }
+  const features = mergeBooleanRecord(current.features, incoming.features);
+  if (features !== undefined) {
+    merged.features = features;
+  }
+  const featureChoice = mergeStringRecord(
+    current.featureChoice,
+    incoming.featureChoice,
+  );
+  if (featureChoice !== undefined) {
+    merged.featureChoice = featureChoice;
+  }
+  const featureState = mergeUnknownRecord(
+    current.featureState,
+    incoming.featureState,
+  );
+  if (featureState !== undefined) {
+    merged.featureState = featureState;
+  }
+  return merged;
 }
 
 function mergeUpdates(
@@ -306,10 +463,7 @@ export function importJson(raw: string): StorageData {
     version: current.version,
     collections: mergeCollections(current.collections, incoming.collections),
     artists: mergeArtists(current.artists, incoming.artists),
-    marks: {
-      ...current.marks,
-      ...incoming.marks,
-    },
+    marks: mergeMarks(current.marks, incoming.marks),
     settings: mergeSettings(current.settings, incoming.settings),
     updates: mergeUpdates(current.updates, incoming.updates),
   };
@@ -317,6 +471,7 @@ export function importJson(raw: string): StorageData {
     merged.settings = {
       gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
       updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
+      tweaksEnabled: DEFAULT_TWEAKS_ENABLED,
     };
   }
   save(merged);

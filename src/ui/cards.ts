@@ -7,6 +7,7 @@ import {
   SITE_SELECTORS,
   extractPostIdFromThumb,
 } from "../site/selectors";
+import { BASE_GRID_CSS, ensureThumbAnchor } from "../site/thumb";
 import { getGridFavButtonsEnabled, load } from "../storage/store";
 import { createFavButton } from "./fav-button";
 import { CARD_CSS } from "./styles";
@@ -17,7 +18,7 @@ export function ensureDocumentStyles(): void {
   }
   const style = document.createElement("style");
   style.id = DOCUMENT_STYLE_ID;
-  style.textContent = CARD_CSS;
+  style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}`;
   document.head.append(style);
 }
 
@@ -40,7 +41,7 @@ function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): v
     return;
   }
 
-  thumb.classList.add(CSS_CLASS.thumb);
+  ensureThumbAnchor(thumb);
   const button = createFavButton(postId, marked);
   link.after(button);
 }
