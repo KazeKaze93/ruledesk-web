@@ -1,9 +1,9 @@
 {
   "name": "ruledesk-web",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "Userscript for rule34.xxx: collections and list-card favorites",
+  "description": "Userscript for rule34.xxx: collections, favorites, artist updates",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

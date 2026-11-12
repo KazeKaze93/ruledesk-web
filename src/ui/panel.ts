@@ -3,21 +3,34 @@ import {
   EXPORT_FILENAME,
   EXPORT_MIME,
   PANEL_ROOT_ID,
+  TAG_TYPE_INCLUDE,
   TOGGLE_BUTTON_ID,
   UI_TEXT,
 } from "../config/constants";
 import { log } from "../log";
-import { buildSearchUrl, readTagsFromLocation, serialize } from "../search/query";
-import type { Collection } from "../storage/schema";
 import {
+  buildSearchUrl,
+  buildUpdatesQueries,
+  buildUpdatesSearchUrl,
+  normalizeArtistTag,
+  readTagsFromLocation,
+  serialize,
+} from "../search/query";
+import type { ArtistEntry, Collection } from "../storage/schema";
+import {
+  addArtist,
   addCollection,
   deleteCollection,
   exportJson,
   getGridFavButtonsEnabled,
+  getSeenPostId,
+  getUpdatesGroupSize,
   importJson,
   load,
+  removeArtist,
   renameCollection,
   setGridFavButtonsEnabled,
+  setUpdatesGroupSize,
 } from "../storage/store";
 import { setGridFavButtonsVisible } from "./cards";
 import { PANEL_CSS } from "./styles";
@@ -33,6 +46,10 @@ type PanelController = {
   setMode: (mode: PanelMode) => void;
   getNameDraft: () => string;
   setNameDraft: (value: string) => void;
+  getArtistDraft: () => string;
+  setArtistDraft: (value: string) => void;
+  getArtistError: () => string;
+  setArtistError: (value: string) => void;
   getImportError: () => string;
   clearImportError: () => void;
   requestImport: () => void;
@@ -371,6 +388,195 @@ function buildSettingsSection(): HTMLElement {
   return section;
 }
 
+function buildArtistsSection(
+  artists: ArtistEntry[],
+  controller: PanelController,
+): HTMLElement {
+  const section = document.createElement("section");
+  section.className = CSS_CLASS.section;
+
+  const title = document.createElement("h3");
+  title.className = CSS_CLASS.sectionTitle;
+  title.textContent = UI_TEXT.artistsHeading;
+  section.append(title);
+
+  const form = document.createElement("form");
+  form.className = CSS_CLASS.form;
+
+  const field = document.createElement("div");
+  field.className = CSS_CLASS.field;
+
+  const label = document.createElement("label");
+  label.className = CSS_CLASS.label;
+  label.htmlFor = "rdw-artist-tag";
+  label.textContent = UI_TEXT.artistTagLabel;
+
+  const input = document.createElement("input");
+  input.id = "rdw-artist-tag";
+  input.className = CSS_CLASS.input;
+  input.type = "text";
+  input.value = controller.getArtistDraft();
+  input.addEventListener("input", () => {
+    controller.setArtistDraft(input.value);
+  });
+
+  field.append(label, input);
+
+  const actions = document.createElement("div");
+  actions.className = CSS_CLASS.formActions;
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "submit";
+  addBtn.className = CSS_CLASS.primaryButton;
+  addBtn.textContent = UI_TEXT.artistAdd;
+  actions.append(addBtn);
+
+  form.append(field, actions);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const normalized = normalizeArtistTag(controller.getArtistDraft());
+    if (normalized === null) {
+      controller.setArtistError(UI_TEXT.artistInvalid);
+      controller.render();
+      return;
+    }
+    try {
+      addArtist(normalized);
+      controller.setArtistDraft("");
+      controller.setArtistError("");
+      controller.render();
+    } catch {
+      controller.setArtistError(UI_TEXT.artistDuplicate);
+      controller.render();
+    }
+  });
+  section.append(form);
+
+  if (controller.getArtistError().length > 0) {
+    const error = document.createElement("p");
+    error.className = CSS_CLASS.error;
+    error.textContent = controller.getArtistError();
+    section.append(error);
+  }
+
+  if (artists.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = CSS_CLASS.hint;
+    empty.textContent = UI_TEXT.artistsEmpty;
+    section.append(empty);
+  } else {
+    const list = document.createElement("ul");
+    list.className = CSS_CLASS.list;
+    for (const artist of artists) {
+      const item = document.createElement("li");
+      item.className = CSS_CLASS.listItem;
+
+      const nameBtn = document.createElement("button");
+      nameBtn.type = "button";
+      nameBtn.className = CSS_CLASS.itemName;
+      nameBtn.textContent = artist.tag;
+      nameBtn.setAttribute(
+        "aria-label",
+        `${UI_TEXT.artistOpenSearch}: ${artist.tag}`,
+      );
+      nameBtn.addEventListener("click", () => {
+        window.location.assign(
+          buildSearchUrl([{ tag: artist.tag, type: TAG_TYPE_INCLUDE }]),
+        );
+      });
+
+      const itemActions = document.createElement("div");
+      itemActions.className = CSS_CLASS.itemActions;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = CSS_CLASS.iconButton;
+      removeBtn.textContent = UI_TEXT.artistRemove;
+      removeBtn.setAttribute(
+        "aria-label",
+        `${UI_TEXT.artistUnfollow}: ${artist.tag}`,
+      );
+      removeBtn.addEventListener("click", () => {
+        removeArtist(artist.tag);
+        controller.render();
+      });
+
+      itemActions.append(removeBtn);
+      item.append(nameBtn, itemActions);
+      list.append(item);
+    }
+    section.append(list);
+  }
+
+  const groupField = document.createElement("div");
+  groupField.className = CSS_CLASS.field;
+  const groupLabel = document.createElement("label");
+  groupLabel.className = CSS_CLASS.label;
+  groupLabel.htmlFor = "rdw-updates-group-size";
+  groupLabel.textContent = UI_TEXT.updatesGroupSizeLabel;
+  const groupInput = document.createElement("input");
+  groupInput.id = "rdw-updates-group-size";
+  groupInput.className = CSS_CLASS.input;
+  groupInput.type = "number";
+  groupInput.min = "0";
+  groupInput.step = "1";
+  groupInput.value = String(getUpdatesGroupSize());
+  groupInput.addEventListener("change", () => {
+    const value = Number(groupInput.value);
+    setUpdatesGroupSize(Number.isFinite(value) ? value : 0);
+    controller.render();
+  });
+  groupField.append(groupLabel, groupInput);
+  section.append(groupField);
+
+  const seen = getSeenPostId();
+  const seenHint = document.createElement("p");
+  seenHint.className = CSS_CLASS.hint;
+  seenHint.textContent =
+    seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing;
+  section.append(seenHint);
+
+  const updatesActions = document.createElement("div");
+  updatesActions.className = CSS_CLASS.toolbar;
+  const tags = artists.map((entry) => entry.tag);
+  const queries = buildUpdatesQueries(tags, seen, getUpdatesGroupSize());
+  if (queries.length === 0) {
+    const disabled = document.createElement("button");
+    disabled.type = "button";
+    disabled.className = CSS_CLASS.primaryButton;
+    disabled.textContent = UI_TEXT.openUpdates;
+    disabled.disabled = true;
+    updatesActions.append(disabled);
+  } else if (queries.length === 1) {
+    const openBtn = document.createElement("button");
+    openBtn.type = "button";
+    openBtn.className = CSS_CLASS.primaryButton;
+    openBtn.textContent = UI_TEXT.openUpdates;
+    const onlyQuery = queries[0];
+    openBtn.addEventListener("click", () => {
+      if (onlyQuery === undefined) {
+        return;
+      }
+      window.location.assign(buildUpdatesSearchUrl(onlyQuery));
+    });
+    updatesActions.append(openBtn);
+  } else {
+    queries.forEach((query, index) => {
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = CSS_CLASS.secondaryButton;
+      openBtn.textContent = `${UI_TEXT.openUpdatesGroup} ${String(index + 1)}`;
+      openBtn.addEventListener("click", () => {
+        window.location.assign(buildUpdatesSearchUrl(query));
+      });
+      updatesActions.append(openBtn);
+    });
+  }
+  section.append(updatesActions);
+
+  return section;
+}
+
 function buildToolbar(controller: PanelController): HTMLElement {
   const toolbar = document.createElement("div");
   toolbar.className = CSS_CLASS.toolbar;
@@ -437,6 +643,8 @@ export function mountPanel(target: ParentNode = document.body): void {
   let mode: PanelMode = { kind: "list" };
   let importError = "";
   let nameDraft = "";
+  let artistDraft = "";
+  let artistError = "";
 
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -454,6 +662,14 @@ export function mountPanel(target: ParentNode = document.body): void {
     getNameDraft: () => nameDraft,
     setNameDraft: (value) => {
       nameDraft = value;
+    },
+    getArtistDraft: () => artistDraft,
+    setArtistDraft: (value) => {
+      artistDraft = value;
+    },
+    getArtistError: () => artistError,
+    setArtistError: (value) => {
+      artistError = value;
     },
     getImportError: () => importError,
     clearImportError: () => {
@@ -507,7 +723,10 @@ export function mountPanel(target: ParentNode = document.body): void {
     }
   }
 
-  function renderList(collections: Collection[]): void {
+  function renderList(
+    collections: Collection[],
+    artists: ArtistEntry[],
+  ): void {
     panel.replaceChildren();
 
     const body = document.createElement("div");
@@ -515,6 +734,7 @@ export function mountPanel(target: ParentNode = document.body): void {
 
     const saveSection = buildSaveSection(controller);
     const settingsSection = buildSettingsSection();
+    const artistsSection = buildArtistsSection(artists, controller);
     const collectionsSection = buildCollectionsSection(collections, controller);
     const toolbar = buildToolbar(controller);
 
@@ -525,12 +745,19 @@ export function mountPanel(target: ParentNode = document.body): void {
       body.append(
         saveSection,
         settingsSection,
+        artistsSection,
         collectionsSection,
         toolbar,
         error,
       );
     } else {
-      body.append(saveSection, settingsSection, collectionsSection, toolbar);
+      body.append(
+        saveSection,
+        settingsSection,
+        artistsSection,
+        collectionsSection,
+        toolbar,
+      );
     }
 
     panel.append(buildHeader(controller), body);
@@ -538,7 +765,7 @@ export function mountPanel(target: ParentNode = document.body): void {
 
   function render(): void {
     const data = load();
-    renderList(data.collections);
+    renderList(data.collections, data.artists);
   }
 
   toggle.addEventListener("click", () => {

@@ -13,6 +13,7 @@ export const SEARCH_PARAM_PAGE = "page";
 export const SEARCH_PARAM_SECTION = "s";
 export const SEARCH_PARAM_TAGS = "tags";
 export const SEARCH_PARAM_ID = "id";
+export const SEARCH_PARAM_PID = "pid";
 
 export const FAVORITES_PAGE = "favorites";
 export const FAVORITES_SECTION_VIEW = "view";
@@ -44,6 +45,11 @@ export const EXCLUDE_PREFIX = "-";
 export const TAG_SEPARATOR = " ";
 export const URL_TAG_SEPARATOR = "+";
 
+export const UPDATES_OR_OPEN = "(";
+export const UPDATES_OR_CLOSE = ")";
+export const UPDATES_OR_JOIN = "~";
+export const UPDATES_ID_PREFIX = "id:>";
+
 export const EXPORT_FILENAME = "ruledesk-web-collections.json";
 export const EXPORT_MIME = "application/json";
 
@@ -51,13 +57,16 @@ export const IMPORT_SCHEMA_ERROR_PREFIX =
   "File is not a RuleDesk Web export";
 
 export const DEFAULT_GRID_FAV_BUTTONS = true;
+export const DEFAULT_UPDATES_GROUP_SIZE = 0;
+export const DEFAULT_SEEN_POST_ID = 0;
 
 export const PANEL_ROOT_ID = "ruledesk-web-root";
 export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
+export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.3.0";
+export const USERSCRIPT_VERSION = "0.4.0";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -90,6 +99,27 @@ export const UI_TEXT = {
   cardFavErrorRequest: "Favorite request failed",
   postFavMissingNative:
     "Native addFav link not found; post-page toggle not mounted",
+  artistsHeading: "Artists",
+  artistsEmpty: "No artists followed yet.",
+  artistTagLabel: "Artist tag",
+  artistAdd: "Add",
+  artistRemove: "Unfollow",
+  artistFollow: "Follow artist",
+  artistUnfollow: "Unfollow artist",
+  artistOpenSearch: "Search artist",
+  artistInvalid: "Invalid artist tag.",
+  artistDuplicate: "Already following this artist.",
+  openUpdates: "Open updates",
+  openUpdatesGroup: "Updates",
+  updatesGroupSizeLabel: "Artists per search (0 = no limit)",
+  seenUpTo: "Seen up to post #",
+  seenNothing: "Nothing marked as seen yet.",
+  markAllSeen: "Mark all seen",
+  markedSeenConfirm: "Marked as seen up to post #",
+  reloadUpdates: "Reload updates",
+  goToPageOneToMark: "Go to page 1 to mark everything as seen",
+  noNewPosts: "No new posts",
+  updatesBarMissingList: "image-list not found; updates bar not mounted",
 } as const;
 
 export const CSS_CLASS = {
@@ -131,4 +161,8 @@ export const CSS_CLASS = {
   gridFavsHidden: "rdw-grid-favs-hidden",
   postFavItem: "rdw-post-fav-item",
   postFavButton: "rdw-post-fav-button",
+  artistFollow: "rdw-artist-follow",
+  artistFollowMarked: "rdw-artist-follow--marked",
+  updatesBar: "rdw-updates-bar",
+  updatesBarActions: "rdw-updates-bar-actions",
 } as const;

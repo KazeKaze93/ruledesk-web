@@ -27,9 +27,16 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 - Favorites page: no DOM changes; IDs are read from Remove links into local `marks`, and Remove clicks clear the mark
 - Panel setting **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
 
-No `api.rule34.xxx`. Favorite network calls happen only on user click, one post at a time.
+## Stage 3 — artists / Updates
 
-Storage uses `GM_getValue` / `GM_setValue`. Favorite clicks use normal `fetch` with `credentials: "same-origin"`.
+- Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages
+- Panel **Artists** section: add/remove, open Updates search groups, set artists-per-search, see last seen post
+- **Updates** is a normal site search: `( artist1 ~ artist2 ) id:>N` (no background polling)
+- On an Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only)
+
+No `api.rule34.xxx`. The only `fetch` calls are favorite add/remove on user click.
+
+Storage uses `GM_getValue` / `GM_setValue`.
 
 ## Export format
 
@@ -46,20 +53,22 @@ Storage uses `GM_getValue` / `GM_setValue`. Favorite clicks use normal `fetch` w
       ]
     }
   ],
-  "artists": [],
+  "artists": [{ "tag": "nyx_x" }],
   "marks": {
     "12345": { "fav": true }
   },
   "settings": {
-    "gridFavButtons": true
+    "gridFavButtons": true,
+    "updatesGroupSize": 0
+  },
+  "updates": {
+    "seenPostId": 0
   }
 }
 ```
 
-- `settings` is optional; missing means `gridFavButtons: true`
-- `artists[].lastSeenPostId` is a non-negative integer (reserved for a later stage)
-- Import merges collections by `id` (incoming wins). Duplicate names are allowed.
-- Marks merge by post id; settings from the import replace current settings when present
+- `settings` / `updates` are optional; defaults are `gridFavButtons: true`, `updatesGroupSize: 0`, `seenPostId: 0`
+- Import merges collections by `id`, artists by `tag`, marks by post id; `seenPostId` keeps the maximum of current and imported
 
 ## Scripts
 

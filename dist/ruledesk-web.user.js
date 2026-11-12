@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.3.0
-// @description  Collections and favorites UX for rule34.xxx (local marks + same-origin fav)
+// @version      0.4.0
+// @description  Collections, favorites, and artist updates for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @match        https://rule34.xxx/*
@@ -34,6 +34,7 @@
 	var FETCH_CREDENTIALS = "same-origin";
 	var TAG_TYPE_INCLUDE = "include";
 	var TAG_TYPE_EXCLUDE = "exclude";
+	var UPDATES_ID_PREFIX = "id:>";
 	var EXPORT_FILENAME = "ruledesk-web-collections.json";
 	var EXPORT_MIME = "application/json";
 	var IMPORT_SCHEMA_ERROR_PREFIX = "File is not a RuleDesk Web export";
@@ -41,6 +42,7 @@
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
+	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 	var UI_TEXT = {
 		toggleOpen: "Open RuleDesk",
 		toggleClose: "Close RuleDesk",
@@ -67,7 +69,28 @@
 		cardFavGlyph: "★",
 		cardFavErrorNotLoggedIn: "Log in to use favorites",
 		cardFavErrorRequest: "Favorite request failed",
-		postFavMissingNative: "Native addFav link not found; post-page toggle not mounted"
+		postFavMissingNative: "Native addFav link not found; post-page toggle not mounted",
+		artistsHeading: "Artists",
+		artistsEmpty: "No artists followed yet.",
+		artistTagLabel: "Artist tag",
+		artistAdd: "Add",
+		artistRemove: "Unfollow",
+		artistFollow: "Follow artist",
+		artistUnfollow: "Unfollow artist",
+		artistOpenSearch: "Search artist",
+		artistInvalid: "Invalid artist tag.",
+		artistDuplicate: "Already following this artist.",
+		openUpdates: "Open updates",
+		openUpdatesGroup: "Updates",
+		updatesGroupSizeLabel: "Artists per search (0 = no limit)",
+		seenUpTo: "Seen up to post #",
+		seenNothing: "Nothing marked as seen yet.",
+		markAllSeen: "Mark all seen",
+		markedSeenConfirm: "Marked as seen up to post #",
+		reloadUpdates: "Reload updates",
+		goToPageOneToMark: "Go to page 1 to mark everything as seen",
+		noNewPosts: "No new posts",
+		updatesBarMissingList: "image-list not found; updates bar not mounted"
 	};
 	var CSS_CLASS = {
 		host: "rdw-host",
@@ -107,7 +130,11 @@
 		cardFavPending: "rdw-card-fav--pending",
 		gridFavsHidden: "rdw-grid-favs-hidden",
 		postFavItem: "rdw-post-fav-item",
-		postFavButton: "rdw-post-fav-button"
+		postFavButton: "rdw-post-fav-button",
+		artistFollow: "rdw-artist-follow",
+		artistFollowMarked: "rdw-artist-follow--marked",
+		updatesBar: "rdw-updates-bar",
+		updatesBarActions: "rdw-updates-bar-actions"
 	};
 	function detectPageKind(search) {
 		const params = new URLSearchParams(search);
@@ -135,7 +162,11 @@
 		thumbWrap: `span.${CSS_CLASS.thumbWrap}`,
 		cardFavButton: `button.${CSS_CLASS.cardFav}`,
 		nativeAddFavLink: "a[onclick*=\"addFav(\"]",
-		favoritesDeleteLink: "a[onclick]"
+		favoritesDeleteLink: "a[onclick]",
+		tagSidebar: "ul#tag-sidebar",
+		tagTypeArtist: "li.tag-type-artist",
+		imageList: "div.image-list",
+		artistFollowButton: `button.${CSS_CLASS.artistFollow}`
 	};
 	var THUMB_ID_PATTERN = /^s(\d+)$/;
 	var FAVORITES_DELETE_ID_PATTERN = /s=delete&id=(\d+)/;
@@ -1586,6 +1617,116 @@
 			console.error(`[ruledesk-web] ${message}`, ...details);
 		}
 	};
+	var UPDATES_ID_TOKEN_PATTERN = /^id:>(\d+)$/;
+	function normalizeArtistTag(raw) {
+		const trimmed = raw.trim().toLowerCase();
+		if (trimmed.length === 0) return null;
+		const withUnderscores = trimmed.replaceAll(" ", "_");
+		if (/\s/.test(withUnderscores)) return null;
+		if (withUnderscores === "(" || withUnderscores === ")" || withUnderscores === "~") return null;
+		if (withUnderscores.startsWith("-")) return null;
+		if (withUnderscores.length === 0) return null;
+		return withUnderscores;
+	}
+	function parseTags(raw) {
+		return raw.trim().split(/\s+/).filter((token) => token.length > 0).map((token) => {
+			if (token.startsWith("-") && token.length > 1) return {
+				tag: token.slice(1),
+				type: TAG_TYPE_EXCLUDE
+			};
+			return {
+				tag: token,
+				type: TAG_TYPE_INCLUDE
+			};
+		});
+	}
+	function serialize(tags) {
+		return tags.map((entry) => entry.type === "exclude" ? `-${entry.tag}` : entry.tag).join(" ");
+	}
+	function encodeSearchToken(raw) {
+		return encodeURIComponent(raw).replaceAll("(", "%28").replaceAll(")", "%29");
+	}
+	function buildSearchUrl(tags) {
+		const encoded = tags.map((entry) => {
+			return encodeSearchToken(entry.type === "exclude" ? `-${entry.tag}` : entry.tag);
+		}).join("+");
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, SEARCH_PAGE);
+		params.set("s", SEARCH_SECTION);
+		return `${SITE_ORIGIN}${SEARCH_PATH}?${params.toString()}&${SEARCH_PARAM_TAGS}=${encoded}`;
+	}
+	function readTagsFromLocation(search) {
+		const params = new URLSearchParams(search);
+		const page = params.get(SEARCH_PARAM_PAGE);
+		const section = params.get("s");
+		const tagsRaw = params.get(SEARCH_PARAM_TAGS);
+		if (page !== "post" || section !== "list") return null;
+		if (tagsRaw === null || tagsRaw.trim().length === 0) return null;
+		return parseTags(tagsRaw);
+	}
+	function formatGroupQuery(tags) {
+		if (tags.length === 1) {
+			const only = tags[0];
+			return only === void 0 ? "" : only;
+		}
+		return `( ${tags.join(` ~ `)} )`;
+	}
+	function buildUpdatesQueries(artistTags, seenPostId, groupSize) {
+		const normalized = [];
+		for (const raw of artistTags) {
+			const tag = normalizeArtistTag(raw);
+			if (tag !== null) normalized.push(tag);
+		}
+		if (normalized.length === 0) return [];
+		const groups = [];
+		if (groupSize <= 0) groups.push(normalized);
+		else for (let index = 0; index < normalized.length; index += groupSize) groups.push(normalized.slice(index, index + groupSize));
+		return groups.map((group) => {
+			const base = formatGroupQuery(group);
+			if (seenPostId > 0) return `${base} ${UPDATES_ID_PREFIX}${String(seenPostId)}`;
+			return base;
+		});
+	}
+	function buildUpdatesSearchUrl(query) {
+		return buildSearchUrl(parseTags(query));
+	}
+	function isUpdatesQuery(tagsParam, artistTags) {
+		const tracked = new Set();
+		for (const raw of artistTags) {
+			const tag = normalizeArtistTag(raw);
+			if (tag !== null) tracked.add(tag);
+		}
+		if (tracked.size === 0) return false;
+		const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
+		if (tokens.length === 0) return false;
+		let body = tokens;
+		const last = tokens[tokens.length - 1];
+		if (last !== void 0 && UPDATES_ID_TOKEN_PATTERN.test(last)) body = tokens.slice(0, -1);
+		if (body.some((token) => UPDATES_ID_TOKEN_PATTERN.test(token))) return false;
+		if (body.length === 0) return false;
+		if (body.length === 1) {
+			const only = body[0];
+			if (only === void 0) return false;
+			const tag = normalizeArtistTag(only);
+			return tag !== null && tracked.has(tag);
+		}
+		const first = body[0];
+		const lastBody = body[body.length - 1];
+		if (first !== "(" || lastBody !== ")") return false;
+		const inner = body.slice(1, -1);
+		if (inner.length === 0 || inner.length % 2 === 0) return false;
+		for (let index = 0; index < inner.length; index += 1) {
+			const token = inner[index];
+			if (token === void 0) return false;
+			if (index % 2 === 1) {
+				if (token !== "~") return false;
+				continue;
+			}
+			const tag = normalizeArtistTag(token);
+			if (tag === null || !tracked.has(tag)) return false;
+		}
+		return true;
+	}
 	var TagTypeSchema = _enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
 	var TagEntrySchema = object({
 		tag: string().check(_minLength(1)),
@@ -1596,16 +1737,20 @@
 		name: string().check(_minLength(1)),
 		tags: array(TagEntrySchema)
 	});
-	var ArtistEntrySchema = object({
-		tag: string().check(_minLength(1)),
-		lastSeenPostId: int().check(_nonnegative())
+	var ArtistEntrySchema = object({ tag: string().check(_minLength(1)) });
+	var MarkFlagsSchema = object({ fav: optional(boolean()) });
+	var SettingsSchema = object({
+		gridFavButtons: boolean(),
+		updatesGroupSize: optional(int().check(_nonnegative()))
 	});
+	var UpdatesSchema = object({ seenPostId: int().check(_nonnegative()) });
 	var StorageSchema = object({
 		version: literal(1),
 		collections: array(CollectionSchema),
 		artists: array(ArtistEntrySchema),
-		marks: record(string(), object({ fav: optional(boolean()) })),
-		settings: optional(object({ gridFavButtons: boolean() }))
+		marks: record(string(), MarkFlagsSchema),
+		settings: optional(SettingsSchema),
+		updates: optional(UpdatesSchema)
 	});
 	function createDefaultStorage() {
 		return {
@@ -1613,11 +1758,21 @@
 			collections: [],
 			artists: [],
 			marks: {},
-			settings: { gridFavButtons: true }
+			settings: {
+				gridFavButtons: true,
+				updatesGroupSize: 0
+			},
+			updates: { seenPostId: 0 }
 		};
 	}
 	function resolveGridFavButtons(data) {
 		return data.settings?.gridFavButtons ?? true;
+	}
+	function resolveUpdatesGroupSize(data) {
+		return data.settings?.updatesGroupSize ?? 0;
+	}
+	function resolveSeenPostId(data) {
+		return data.updates?.seenPostId ?? 0;
 	}
 	function getGmGetValue() {
 		return GM_getValue;
@@ -1643,6 +1798,12 @@
 		if (issue === void 0) return new Error(`${IMPORT_SCHEMA_ERROR_PREFIX}: (root): Invalid data`);
 		const path = issue.path.length === 0 ? "(root)" : issue.path.map((segment) => String(segment)).join(".");
 		return new Error(`${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`);
+	}
+	function currentSettings(data) {
+		return {
+			gridFavButtons: resolveGridFavButtons(data),
+			updatesGroupSize: resolveUpdatesGroupSize(data)
+		};
 	}
 	function load() {
 		const raw = readRaw();
@@ -1711,8 +1872,59 @@
 	}
 	function setGridFavButtonsEnabled(enabled) {
 		const data = load();
-		data.settings = { gridFavButtons: enabled };
+		data.settings = {
+			...currentSettings(data),
+			gridFavButtons: enabled
+		};
 		save(data);
+	}
+	function getUpdatesGroupSize() {
+		return resolveUpdatesGroupSize(load());
+	}
+	function setUpdatesGroupSize(size) {
+		const data = load();
+		const safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+		data.settings = {
+			...currentSettings(data),
+			updatesGroupSize: safeSize
+		};
+		save(data);
+	}
+	function getSeenPostId() {
+		return resolveSeenPostId(load());
+	}
+	function setSeenPostId(seenPostId) {
+		const data = load();
+		data.updates = { seenPostId: Number.isFinite(seenPostId) && seenPostId >= 0 ? Math.floor(seenPostId) : 0 };
+		save(data);
+	}
+	function listArtistTags() {
+		return load().artists.map((entry) => entry.tag);
+	}
+	function isFollowingArtist(tag) {
+		const normalized = normalizeArtistTag(tag);
+		if (normalized === null) return false;
+		return listArtistTags().includes(normalized);
+	}
+	function addArtist(tag) {
+		const normalized = normalizeArtistTag(tag);
+		if (normalized === null) throw new Error("Invalid artist tag");
+		const data = load();
+		if (data.artists.some((entry) => entry.tag === normalized)) throw new Error("Duplicate artist tag");
+		const entry = ArtistEntrySchema.parse({ tag: normalized });
+		data.artists.push(entry);
+		save(data);
+		return entry;
+	}
+	function removeArtist(tag) {
+		const normalized = normalizeArtistTag(tag);
+		if (normalized === null) return false;
+		const data = load();
+		const next = data.artists.filter((entry) => entry.tag !== normalized);
+		if (next.length === data.artists.length) return false;
+		data.artists = next;
+		save(data);
+		return true;
 	}
 	function exportJson() {
 		const data = load();
@@ -1733,7 +1945,15 @@
 	function mergeSettings(current, incoming) {
 		if (incoming === void 0) return current;
 		if (current === void 0) return incoming;
-		return { gridFavButtons: incoming.gridFavButtons };
+		return {
+			gridFavButtons: incoming.gridFavButtons,
+			updatesGroupSize: incoming.updatesGroupSize ?? current.updatesGroupSize
+		};
+	}
+	function mergeUpdates(current, incoming) {
+		const currentSeen = current?.seenPostId ?? 0;
+		const incomingSeen = incoming?.seenPostId ?? 0;
+		return { seenPostId: Math.max(currentSeen, incomingSeen) };
 	}
 	function importJson(raw) {
 		let json;
@@ -1755,9 +1975,13 @@
 				...current.marks,
 				...incoming.marks
 			},
-			settings: mergeSettings(current.settings, incoming.settings)
+			settings: mergeSettings(current.settings, incoming.settings),
+			updates: mergeUpdates(current.updates, incoming.updates)
 		};
-		if (merged.settings === void 0) merged.settings = { gridFavButtons: true };
+		if (merged.settings === void 0) merged.settings = {
+			gridFavButtons: true,
+			updatesGroupSize: 0
+		};
 		save(merged);
 		return merged;
 	}
@@ -1885,18 +2109,29 @@
 		}
 		button.classList.remove(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError, CSS_CLASS.cardFavPending);
 		button.disabled = false;
-		const marked = state === "marked";
-		button.setAttribute("aria-pressed", marked ? "true" : "false");
-		button.setAttribute("aria-label", favAriaLabel(postId, marked));
 		button.removeAttribute("title");
 		if (state === "marked") {
+			button.setAttribute("aria-pressed", "true");
+			button.setAttribute("aria-label", favAriaLabel(postId, true));
 			button.classList.add(CSS_CLASS.cardFavMarked);
 			return;
 		}
+		if (state === "marked_error") {
+			button.setAttribute("aria-pressed", "true");
+			button.setAttribute("aria-label", favAriaLabel(postId, true));
+			button.classList.add(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError);
+			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+			return;
+		}
 		if (state === "error") {
+			button.setAttribute("aria-pressed", "false");
+			button.setAttribute("aria-label", favAriaLabel(postId, false));
 			button.classList.add(CSS_CLASS.cardFavError);
 			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+			return;
 		}
+		button.setAttribute("aria-pressed", "false");
+		button.setAttribute("aria-label", favAriaLabel(postId, false));
 	}
 	function createFavButton(postId, marked, className = CSS_CLASS.cardFav) {
 		const button = document.createElement("button");
@@ -1922,7 +2157,7 @@
 				applyFavButtonState(button, "idle", postId);
 				return;
 			}
-			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
+			applyFavButtonState(button, "marked_error", postId, UI_TEXT.cardFavErrorRequest);
 			log.warn("Remove favorite failed", postId, result);
 			return;
 		}
@@ -2249,8 +2484,86 @@
   cursor: wait;
 }
 
+.${CSS_CLASS.thumbWrap}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
+.${CSS_CLASS.thumbWrap}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
+  display: none !important;
+}
+
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   display: none !important;
+}
+
+.${CSS_CLASS.artistFollow} {
+  margin-left: 4px;
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.${CSS_CLASS.artistFollow}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked} {
+  background: #ffe08a;
+  border-color: #a67c00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.updatesBar} {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f7f7f7;
+  font-family: Segoe UI, system-ui, sans-serif;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.hint} {
+  margin: 0;
+  color: #555;
+  font-size: 12px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton} {
+  border: 1px solid #0b57d0;
+  background: #0b57d0;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 32px;
+  padding: 4px 10px;
+  font: inherit;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.itemName} {
+  color: #0b57d0;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.${CSS_CLASS.updatesBarActions} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .${CSS_CLASS.postFavButton} {
@@ -2342,39 +2655,74 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			attachFavButton(thumb, postId, marks[postId]?.fav === true);
 		}
 	}
-	function parseTags(raw) {
-		return raw.trim().split(/\s+/).filter((token) => token.length > 0).map((token) => {
-			if (token.startsWith("-") && token.length > 1) return {
-				tag: token.slice(1),
-				type: TAG_TYPE_EXCLUDE
-			};
-			return {
-				tag: token,
-				type: TAG_TYPE_INCLUDE
-			};
+	function extractArtistTagFromLi(li) {
+		const links = li.querySelectorAll("a[href]");
+		for (const node of links) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if (node.hasAttribute("onclick")) continue;
+			const href = node.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let url;
+			try {
+				url = new URL(href, SITE_ORIGIN);
+			} catch {
+				continue;
+			}
+			if (url.searchParams.get("page") !== "post") continue;
+			if (url.searchParams.get("s") !== "list") continue;
+			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
+			if (tags === null) continue;
+			return normalizeArtistTag(tags);
+		}
+		return null;
+	}
+	function applyFollowState(button, following) {
+		button.setAttribute("aria-pressed", following ? "true" : "false");
+		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
+		const label = following ? UI_TEXT.artistUnfollow : UI_TEXT.artistFollow;
+		const tag = button.dataset.rdwArtistTag ?? "";
+		button.setAttribute("aria-label", `${label}: ${tag}`);
+		button.textContent = following ? "★" : "☆";
+		button.title = label;
+	}
+	function attachFollowButton(li, tag) {
+		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CSS_CLASS.artistFollow;
+		button.dataset.rdwArtistTag = tag;
+		applyFollowState(button, isFollowingArtist(tag));
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const following = button.getAttribute("aria-pressed") === "true";
+			try {
+				if (following) {
+					removeArtist(tag);
+					applyFollowState(button, false);
+				} else {
+					addArtist(tag);
+					applyFollowState(button, true);
+				}
+			} catch {
+				applyFollowState(button, isFollowingArtist(tag));
+			}
 		});
+		li.append(button);
 	}
-	function serialize(tags) {
-		return tags.map((entry) => entry.type === "exclude" ? `-${entry.tag}` : entry.tag).join(" ");
-	}
-	function buildSearchUrl(tags) {
-		const encoded = tags.map((entry) => {
-			const raw = entry.type === "exclude" ? `-${entry.tag}` : entry.tag;
-			return encodeURIComponent(raw);
-		}).join("+");
-		const params = new URLSearchParams();
-		params.set(SEARCH_PARAM_PAGE, SEARCH_PAGE);
-		params.set("s", SEARCH_SECTION);
-		return `${SITE_ORIGIN}${SEARCH_PATH}?${params.toString()}&${SEARCH_PARAM_TAGS}=${encoded}`;
-	}
-	function readTagsFromLocation(search) {
-		const params = new URLSearchParams(search);
-		const page = params.get(SEARCH_PARAM_PAGE);
-		const section = params.get("s");
-		const tagsRaw = params.get(SEARCH_PARAM_TAGS);
-		if (page !== "post" || section !== "list") return null;
-		if (tagsRaw === null || tagsRaw.trim().length === 0) return null;
-		return parseTags(tagsRaw);
+	function mountArtistSidebar(root = document, search = window.location.search) {
+		const kind = detectPageKind(search);
+		if (kind !== "list" && kind !== "post") return;
+		ensureDocumentStyles();
+		const sidebar = root.querySelector(SITE_SELECTORS.tagSidebar);
+		if (sidebar === null) return;
+		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
+		for (const row of rows) {
+			if (!(row instanceof HTMLElement)) continue;
+			const tag = extractArtistTagFromLi(row);
+			if (tag === null) continue;
+			attachFollowButton(row, tag);
+		}
 	}
 	function buildHeader(controller) {
 		const header = document.createElement("div");
@@ -2641,6 +2989,161 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		section.append(title, row);
 		return section;
 	}
+	function buildArtistsSection(artists, controller) {
+		const section = document.createElement("section");
+		section.className = CSS_CLASS.section;
+		const title = document.createElement("h3");
+		title.className = CSS_CLASS.sectionTitle;
+		title.textContent = UI_TEXT.artistsHeading;
+		section.append(title);
+		const form = document.createElement("form");
+		form.className = CSS_CLASS.form;
+		const field = document.createElement("div");
+		field.className = CSS_CLASS.field;
+		const label = document.createElement("label");
+		label.className = CSS_CLASS.label;
+		label.htmlFor = "rdw-artist-tag";
+		label.textContent = UI_TEXT.artistTagLabel;
+		const input = document.createElement("input");
+		input.id = "rdw-artist-tag";
+		input.className = CSS_CLASS.input;
+		input.type = "text";
+		input.value = controller.getArtistDraft();
+		input.addEventListener("input", () => {
+			controller.setArtistDraft(input.value);
+		});
+		field.append(label, input);
+		const actions = document.createElement("div");
+		actions.className = CSS_CLASS.formActions;
+		const addBtn = document.createElement("button");
+		addBtn.type = "submit";
+		addBtn.className = CSS_CLASS.primaryButton;
+		addBtn.textContent = UI_TEXT.artistAdd;
+		actions.append(addBtn);
+		form.append(field, actions);
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			const normalized = normalizeArtistTag(controller.getArtistDraft());
+			if (normalized === null) {
+				controller.setArtistError(UI_TEXT.artistInvalid);
+				controller.render();
+				return;
+			}
+			try {
+				addArtist(normalized);
+				controller.setArtistDraft("");
+				controller.setArtistError("");
+				controller.render();
+			} catch {
+				controller.setArtistError(UI_TEXT.artistDuplicate);
+				controller.render();
+			}
+		});
+		section.append(form);
+		if (controller.getArtistError().length > 0) {
+			const error = document.createElement("p");
+			error.className = CSS_CLASS.error;
+			error.textContent = controller.getArtistError();
+			section.append(error);
+		}
+		if (artists.length === 0) {
+			const empty = document.createElement("p");
+			empty.className = CSS_CLASS.hint;
+			empty.textContent = UI_TEXT.artistsEmpty;
+			section.append(empty);
+		} else {
+			const list = document.createElement("ul");
+			list.className = CSS_CLASS.list;
+			for (const artist of artists) {
+				const item = document.createElement("li");
+				item.className = CSS_CLASS.listItem;
+				const nameBtn = document.createElement("button");
+				nameBtn.type = "button";
+				nameBtn.className = CSS_CLASS.itemName;
+				nameBtn.textContent = artist.tag;
+				nameBtn.setAttribute("aria-label", `${UI_TEXT.artistOpenSearch}: ${artist.tag}`);
+				nameBtn.addEventListener("click", () => {
+					window.location.assign(buildSearchUrl([{
+						tag: artist.tag,
+						type: TAG_TYPE_INCLUDE
+					}]));
+				});
+				const itemActions = document.createElement("div");
+				itemActions.className = CSS_CLASS.itemActions;
+				const removeBtn = document.createElement("button");
+				removeBtn.type = "button";
+				removeBtn.className = CSS_CLASS.iconButton;
+				removeBtn.textContent = UI_TEXT.artistRemove;
+				removeBtn.setAttribute("aria-label", `${UI_TEXT.artistUnfollow}: ${artist.tag}`);
+				removeBtn.addEventListener("click", () => {
+					removeArtist(artist.tag);
+					controller.render();
+				});
+				itemActions.append(removeBtn);
+				item.append(nameBtn, itemActions);
+				list.append(item);
+			}
+			section.append(list);
+		}
+		const groupField = document.createElement("div");
+		groupField.className = CSS_CLASS.field;
+		const groupLabel = document.createElement("label");
+		groupLabel.className = CSS_CLASS.label;
+		groupLabel.htmlFor = "rdw-updates-group-size";
+		groupLabel.textContent = UI_TEXT.updatesGroupSizeLabel;
+		const groupInput = document.createElement("input");
+		groupInput.id = "rdw-updates-group-size";
+		groupInput.className = CSS_CLASS.input;
+		groupInput.type = "number";
+		groupInput.min = "0";
+		groupInput.step = "1";
+		groupInput.value = String(getUpdatesGroupSize());
+		groupInput.addEventListener("change", () => {
+			const value = Number(groupInput.value);
+			setUpdatesGroupSize(Number.isFinite(value) ? value : 0);
+			controller.render();
+		});
+		groupField.append(groupLabel, groupInput);
+		section.append(groupField);
+		const seen = getSeenPostId();
+		const seenHint = document.createElement("p");
+		seenHint.className = CSS_CLASS.hint;
+		seenHint.textContent = seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing;
+		section.append(seenHint);
+		const updatesActions = document.createElement("div");
+		updatesActions.className = CSS_CLASS.toolbar;
+		const queries = buildUpdatesQueries(artists.map((entry) => entry.tag), seen, getUpdatesGroupSize());
+		if (queries.length === 0) {
+			const disabled = document.createElement("button");
+			disabled.type = "button";
+			disabled.className = CSS_CLASS.primaryButton;
+			disabled.textContent = UI_TEXT.openUpdates;
+			disabled.disabled = true;
+			updatesActions.append(disabled);
+		} else if (queries.length === 1) {
+			const openBtn = document.createElement("button");
+			openBtn.type = "button";
+			openBtn.className = CSS_CLASS.primaryButton;
+			openBtn.textContent = UI_TEXT.openUpdates;
+			const onlyQuery = queries[0];
+			openBtn.addEventListener("click", () => {
+				if (onlyQuery === void 0) return;
+				window.location.assign(buildUpdatesSearchUrl(onlyQuery));
+			});
+			updatesActions.append(openBtn);
+		} else queries.forEach((query, index) => {
+			const openBtn = document.createElement("button");
+			openBtn.type = "button";
+			openBtn.className = CSS_CLASS.secondaryButton;
+			openBtn.textContent = `${UI_TEXT.openUpdatesGroup} ${String(index + 1)}`;
+			openBtn.addEventListener("click", () => {
+				window.location.assign(buildUpdatesSearchUrl(query));
+			});
+			updatesActions.append(openBtn);
+		});
+		section.append(updatesActions);
+		return section;
+	}
 	function buildToolbar(controller) {
 		const toolbar = document.createElement("div");
 		toolbar.className = CSS_CLASS.toolbar;
@@ -2694,6 +3197,8 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		let mode = { kind: "list" };
 		let importError = "";
 		let nameDraft = "";
+		let artistDraft = "";
+		let artistError = "";
 		const fileInput = document.createElement("input");
 		fileInput.type = "file";
 		fileInput.accept = ".json,application/json";
@@ -2709,6 +3214,14 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			getNameDraft: () => nameDraft,
 			setNameDraft: (value) => {
 				nameDraft = value;
+			},
+			getArtistDraft: () => artistDraft,
+			setArtistDraft: (value) => {
+				artistDraft = value;
+			},
+			getArtistError: () => artistError,
+			setArtistError: (value) => {
+				artistError = value;
 			},
 			getImportError: () => importError,
 			clearImportError: () => {
@@ -2755,24 +3268,26 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 				toggle.focus();
 			}
 		}
-		function renderList(collections) {
+		function renderList(collections, artists) {
 			panel.replaceChildren();
 			const body = document.createElement("div");
 			body.className = CSS_CLASS.body;
 			const saveSection = buildSaveSection(controller);
 			const settingsSection = buildSettingsSection();
+			const artistsSection = buildArtistsSection(artists, controller);
 			const collectionsSection = buildCollectionsSection(collections, controller);
 			const toolbar = buildToolbar(controller);
 			if (controller.getImportError().length > 0) {
 				const error = document.createElement("p");
 				error.className = CSS_CLASS.error;
 				error.textContent = `${UI_TEXT.importErrorPrefix} ${controller.getImportError()}`;
-				body.append(saveSection, settingsSection, collectionsSection, toolbar, error);
-			} else body.append(saveSection, settingsSection, collectionsSection, toolbar);
+				body.append(saveSection, settingsSection, artistsSection, collectionsSection, toolbar, error);
+			} else body.append(saveSection, settingsSection, artistsSection, collectionsSection, toolbar);
 			panel.append(buildHeader(controller), body);
 		}
 		function render() {
-			renderList(load().collections);
+			const data = load();
+			renderList(data.collections, data.artists);
 		}
 		toggle.addEventListener("click", () => {
 			setOpen(!open);
@@ -2830,9 +3345,97 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		item.append(button);
 		nativeItem.after(item);
 	}
+	function readPid(search) {
+		const raw = new URLSearchParams(search).get("pid");
+		if (raw === null || raw.trim().length === 0) return 0;
+		const value = Number(raw);
+		if (!Number.isFinite(value) || value < 0) return 0;
+		return Math.floor(value);
+	}
+	function maxThumbPostId(root) {
+		let maxId = 0;
+		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+		for (const thumb of thumbs) {
+			const postId = extractPostIdFromThumb(thumb);
+			if (postId === null) continue;
+			const numeric = Number(postId);
+			if (Number.isFinite(numeric) && numeric > maxId) maxId = numeric;
+		}
+		return maxId;
+	}
+	function buildReloadHref(artistTags, seenPostId) {
+		const first = buildUpdatesQueries(artistTags, seenPostId, getUpdatesGroupSize())[0];
+		if (first === void 0) return window.location.href;
+		return buildUpdatesSearchUrl(first);
+	}
+	function mountUpdatesBar(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "list") return;
+		const tagsParam = new URLSearchParams(search).get(SEARCH_PARAM_TAGS);
+		if (tagsParam === null || tagsParam.trim().length === 0) return;
+		const artistTags = listArtistTags();
+		if (!isUpdatesQuery(tagsParam, artistTags)) return;
+		const imageList = root.querySelector(SITE_SELECTORS.imageList);
+		if (imageList === null) {
+			log.warn(UI_TEXT.updatesBarMissingList);
+			return;
+		}
+		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
+		if (existing !== null) existing.remove();
+		ensureDocumentStyles();
+		const bar = document.createElement("div");
+		bar.id = UPDATES_BAR_ID;
+		bar.className = CSS_CLASS.updatesBar;
+		if (imageList.querySelectorAll(SITE_SELECTORS.thumb).length === 0) {
+			const empty = document.createElement("p");
+			empty.className = CSS_CLASS.hint;
+			empty.textContent = UI_TEXT.noNewPosts;
+			bar.append(empty);
+			imageList.parentElement?.insertBefore(bar, imageList);
+			return;
+		}
+		if (readPid(search) > 0) {
+			const hint = document.createElement("p");
+			hint.className = CSS_CLASS.hint;
+			hint.textContent = UI_TEXT.goToPageOneToMark;
+			bar.append(hint);
+			imageList.parentElement?.insertBefore(bar, imageList);
+			return;
+		}
+		const actions = document.createElement("div");
+		actions.className = CSS_CLASS.updatesBarActions;
+		const markButton = document.createElement("button");
+		markButton.type = "button";
+		markButton.className = CSS_CLASS.primaryButton;
+		markButton.textContent = UI_TEXT.markAllSeen;
+		markButton.addEventListener("click", () => {
+			const pageMax = maxThumbPostId(imageList);
+			const nextSeen = Math.max(getSeenPostId(), pageMax);
+			setSeenPostId(nextSeen);
+			bar.replaceChildren();
+			const confirm = document.createElement("p");
+			confirm.className = CSS_CLASS.hint;
+			confirm.textContent = `${UI_TEXT.markedSeenConfirm}${String(nextSeen)}`;
+			const reload = document.createElement("a");
+			reload.className = CSS_CLASS.itemName;
+			reload.href = buildReloadHref(artistTags, nextSeen);
+			reload.textContent = UI_TEXT.reloadUpdates;
+			const wrap = document.createElement("div");
+			wrap.className = CSS_CLASS.updatesBarActions;
+			wrap.append(confirm, reload);
+			bar.append(wrap);
+		});
+		actions.append(markButton);
+		bar.append(actions);
+		imageList.parentElement?.insertBefore(bar, imageList);
+	}
 	mountPanel();
 	var pageKind = detectPageKind(window.location.search);
-	if (pageKind === "list") mountCards();
-	else if (pageKind === "post") mountPostPageToggle();
-	else if (pageKind === "favorites") syncFavoritesPage();
+	if (pageKind === "list") {
+		mountCards();
+		mountArtistSidebar();
+		mountUpdatesBar();
+	} else if (pageKind === "post") {
+		mountPostPageToggle();
+		mountArtistSidebar();
+	} else if (pageKind === "favorites") syncFavoritesPage();
 })();

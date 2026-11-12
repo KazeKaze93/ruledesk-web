@@ -2,16 +2,23 @@ import * as z from "zod/mini";
 
 import {
   DEFAULT_GRID_FAV_BUTTONS,
+  DEFAULT_SEEN_POST_ID,
+  DEFAULT_UPDATES_GROUP_SIZE,
   IMPORT_SCHEMA_ERROR_PREFIX,
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
 } from "../config/constants";
 import { log } from "../log";
+import { normalizeArtistTag } from "../search/query";
 import {
+  ArtistEntrySchema,
   CollectionSchema,
   StorageSchema,
   createDefaultStorage,
   resolveGridFavButtons,
+  resolveSeenPostId,
+  resolveUpdatesGroupSize,
+  type ArtistEntry,
   type Collection,
   type MarkFlags,
   type Settings,
@@ -58,6 +65,13 @@ function formatSchemaImportError(error: z.core.$ZodError): Error {
   return new Error(
     `${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`,
   );
+}
+
+function currentSettings(data: StorageData): Settings {
+  return {
+    gridFavButtons: resolveGridFavButtons(data),
+    updatesGroupSize: resolveUpdatesGroupSize(data),
+  };
 }
 
 export function load(): StorageData {
@@ -138,11 +152,81 @@ export function getGridFavButtonsEnabled(): boolean {
 
 export function setGridFavButtonsEnabled(enabled: boolean): void {
   const data = load();
-  const settings: Settings = {
+  data.settings = {
+    ...currentSettings(data),
     gridFavButtons: enabled,
   };
-  data.settings = settings;
   save(data);
+}
+
+export function getUpdatesGroupSize(): number {
+  return resolveUpdatesGroupSize(load());
+}
+
+export function setUpdatesGroupSize(size: number): void {
+  const data = load();
+  const safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+  data.settings = {
+    ...currentSettings(data),
+    updatesGroupSize: safeSize,
+  };
+  save(data);
+}
+
+export function getSeenPostId(): number {
+  return resolveSeenPostId(load());
+}
+
+export function setSeenPostId(seenPostId: number): void {
+  const data = load();
+  const safeId =
+    Number.isFinite(seenPostId) && seenPostId >= 0
+      ? Math.floor(seenPostId)
+      : DEFAULT_SEEN_POST_ID;
+  data.updates = { seenPostId: safeId };
+  save(data);
+}
+
+export function listArtistTags(): string[] {
+  return load().artists.map((entry) => entry.tag);
+}
+
+export function isFollowingArtist(tag: string): boolean {
+  const normalized = normalizeArtistTag(tag);
+  if (normalized === null) {
+    return false;
+  }
+  return listArtistTags().includes(normalized);
+}
+
+export function addArtist(tag: string): ArtistEntry {
+  const normalized = normalizeArtistTag(tag);
+  if (normalized === null) {
+    throw new Error("Invalid artist tag");
+  }
+  const data = load();
+  if (data.artists.some((entry) => entry.tag === normalized)) {
+    throw new Error("Duplicate artist tag");
+  }
+  const entry = ArtistEntrySchema.parse({ tag: normalized });
+  data.artists.push(entry);
+  save(data);
+  return entry;
+}
+
+export function removeArtist(tag: string): boolean {
+  const normalized = normalizeArtistTag(tag);
+  if (normalized === null) {
+    return false;
+  }
+  const data = load();
+  const next = data.artists.filter((entry) => entry.tag !== normalized);
+  if (next.length === data.artists.length) {
+    return false;
+  }
+  data.artists = next;
+  save(data);
+  return true;
 }
 
 export function exportJson(): string {
@@ -168,7 +252,7 @@ function mergeArtists(
   current: StorageData["artists"],
   incoming: StorageData["artists"],
 ): StorageData["artists"] {
-  const byTag = new Map<string, StorageData["artists"][number]>();
+  const byTag = new Map<string, ArtistEntry>();
   for (const item of current) {
     byTag.set(item.tag, item);
   }
@@ -190,7 +274,18 @@ function mergeSettings(
   }
   return {
     gridFavButtons: incoming.gridFavButtons,
+    updatesGroupSize:
+      incoming.updatesGroupSize ?? current.updatesGroupSize,
   };
+}
+
+function mergeUpdates(
+  current: StorageData["updates"],
+  incoming: StorageData["updates"],
+): StorageData["updates"] {
+  const currentSeen = current?.seenPostId ?? DEFAULT_SEEN_POST_ID;
+  const incomingSeen = incoming?.seenPostId ?? DEFAULT_SEEN_POST_ID;
+  return { seenPostId: Math.max(currentSeen, incomingSeen) };
 }
 
 export function importJson(raw: string): StorageData {
@@ -216,9 +311,13 @@ export function importJson(raw: string): StorageData {
       ...incoming.marks,
     },
     settings: mergeSettings(current.settings, incoming.settings),
+    updates: mergeUpdates(current.updates, incoming.updates),
   };
   if (merged.settings === undefined) {
-    merged.settings = { gridFavButtons: DEFAULT_GRID_FAV_BUTTONS };
+    merged.settings = {
+      gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
+      updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
+    };
   }
   save(merged);
   return merged;
