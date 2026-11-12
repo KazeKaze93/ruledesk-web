@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.6.1
+// @version      0.6.2
 // @description  Collections, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -44,6 +44,11 @@
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
+	var SITE_THEME_COOKIE_NAME = "theme";
+	var SITE_THEME_COOKIE_VALUE_DARK = "dark";
+	var SITE_THEME_STYLESHEET_DIR = "/css/";
+	var SITE_THEME_STYLESHEET_LIGHT = "desktop.css";
+	var SITE_THEME_STYLESHEET_DARK = "desktop-dark.css";
 	var UI_TEXT = {
 		toggleOpen: "Open RuleDesk",
 		toggleClose: "Close RuleDesk",
@@ -65,6 +70,8 @@
 		notOnSearchPage: "Open a post list search with tags to save it.",
 		settingsHeading: "Settings",
 		enablePageTweaksLabel: "Enable page tweaks",
+		siteDarkThemeLabel: "Dark theme (site)",
+		siteDarkThemeHint: "Uses the site's own dark stylesheet",
 		reloadToApplyHint: "Reload the page to apply",
 		gridFavButtonsLabel: "Show favorite buttons in grid",
 		cardFavAddLabel: "Add post to favorites",
@@ -4665,7 +4672,88 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			attachFollowButton(row, tag);
 		}
 	}
+	var MS_PER_DAY = 864e5;
+	var COOKIE_PAIR_SEPARATOR = ";";
+	var COOKIE_NAME_VALUE_SEPARATOR = "=";
+	var STYLESHEET_REL = "stylesheet";
+	var LIGHT_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_LIGHT}`;
+	var DARK_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_DARK}`;
+	function readCookieValue(name) {
+		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
+		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR}`;
+		for (const pair of pairs) {
+			const trimmed = pair.trim();
+			if (!trimmed.startsWith(prefix)) continue;
+			return trimmed.slice(prefix.length);
+		}
+		return null;
+	}
+	function writeThemeCookie(value, expires) {
+		document.cookie = [
+			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}${value}`,
+			`expires=${expires.toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function deleteThemeCookie() {
+		document.cookie = [
+			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}`,
+			`expires=${new Date(0).toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function isSiteDesktopStylesheetPath(pathname) {
+		return pathname.endsWith(LIGHT_STYLESHEET_PATH) || pathname.endsWith(DARK_STYLESHEET_PATH);
+	}
+	function stylesheetFilenameForTheme(theme) {
+		return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
+	}
+	function replaceStylesheetFilename(href, filename) {
+		const url = new URL(href, window.location.href);
+		const segments = url.pathname.split("/");
+		segments[segments.length - 1] = filename;
+		url.pathname = segments.join("/");
+		return url.href;
+	}
+	function findSiteDesktopStylesheetLink() {
+		const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
+		for (const link of links) {
+			const href = link.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let pathname;
+			try {
+				pathname = new URL(href, window.location.href).pathname;
+			} catch {
+				continue;
+			}
+			if (isSiteDesktopStylesheetPath(pathname)) return link;
+		}
+		return null;
+	}
+	function applySiteStylesheet(theme) {
+		const link = findSiteDesktopStylesheetLink();
+		if (link === null) {
+			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
+			return;
+		}
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) {
+			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
+			return;
+		}
+		link.setAttribute("href", replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)));
+	}
+	function getSiteTheme() {
+		if (readCookieValue("theme") === "dark") return "dark";
+		return "light";
+	}
+	function setSiteTheme(theme) {
+		if (theme === "dark") writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, new Date(Date.now() + 365 * MS_PER_DAY));
+		else deleteThemeCookie();
+		applySiteStylesheet(theme);
+	}
 	var TWEAKS_CHECKBOX_ID = "rdw-tweaks-enabled";
+	var SITE_DARK_THEME_CHECKBOX_ID = "rdw-site-dark-theme";
 	var GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
 	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
 	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
@@ -4975,6 +5063,26 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		tweaksLabel.textContent = UI_TEXT.enablePageTweaksLabel;
 		tweaksRow.append(tweaksCheckbox, tweaksLabel);
 		section.append(title, tweaksRow);
+		const themeRow = document.createElement("div");
+		themeRow.className = CSS_CLASS.checkboxRow;
+		const themeCheckbox = document.createElement("input");
+		themeCheckbox.type = "checkbox";
+		themeCheckbox.id = SITE_DARK_THEME_CHECKBOX_ID;
+		themeCheckbox.className = CSS_CLASS.checkbox;
+		themeCheckbox.checked = getSiteTheme() === "dark";
+		themeCheckbox.addEventListener("change", () => {
+			setSiteTheme(themeCheckbox.checked ? "dark" : "light");
+		});
+		const themeLabel = document.createElement("label");
+		themeLabel.className = CSS_CLASS.label;
+		themeLabel.htmlFor = themeCheckbox.id;
+		themeLabel.textContent = UI_TEXT.siteDarkThemeLabel;
+		themeRow.append(themeCheckbox, themeLabel);
+		section.append(themeRow);
+		const themeHint = document.createElement("p");
+		themeHint.className = CSS_CLASS.hint;
+		themeHint.textContent = UI_TEXT.siteDarkThemeHint;
+		section.append(themeHint);
 		for (const row of buildFeatureSettingsRows()) section.append(row);
 		const reloadHint = document.createElement("p");
 		reloadHint.className = CSS_CLASS.hint;

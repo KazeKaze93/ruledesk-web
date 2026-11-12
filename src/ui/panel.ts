@@ -41,11 +41,13 @@ import {
   setTweaksEnabled,
   setUpdatesGroupSize,
 } from "../storage/store";
+import { getSiteTheme, setSiteTheme } from "../site/theme";
 import { setGridFavButtonsVisible } from "./cards";
 import { createFavoritesSyncSection } from "./favorites-sync-section";
 import { PANEL_CSS } from "./styles";
 
 const TWEAKS_CHECKBOX_ID = "rdw-tweaks-enabled";
+const SITE_DARK_THEME_CHECKBOX_ID = "rdw-site-dark-theme";
 const GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
 const FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
 const FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
@@ -456,6 +458,31 @@ function buildSettingsSection(): HTMLElement {
 
   tweaksRow.append(tweaksCheckbox, tweaksLabel);
   section.append(title, tweaksRow);
+
+  const themeRow = document.createElement("div");
+  themeRow.className = CSS_CLASS.checkboxRow;
+
+  const themeCheckbox = document.createElement("input");
+  themeCheckbox.type = "checkbox";
+  themeCheckbox.id = SITE_DARK_THEME_CHECKBOX_ID;
+  themeCheckbox.className = CSS_CLASS.checkbox;
+  themeCheckbox.checked = getSiteTheme() === "dark";
+  themeCheckbox.addEventListener("change", () => {
+    setSiteTheme(themeCheckbox.checked ? "dark" : "light");
+  });
+
+  const themeLabel = document.createElement("label");
+  themeLabel.className = CSS_CLASS.label;
+  themeLabel.htmlFor = themeCheckbox.id;
+  themeLabel.textContent = UI_TEXT.siteDarkThemeLabel;
+
+  themeRow.append(themeCheckbox, themeLabel);
+  section.append(themeRow);
+
+  const themeHint = document.createElement("p");
+  themeHint.className = CSS_CLASS.hint;
+  themeHint.textContent = UI_TEXT.siteDarkThemeHint;
+  section.append(themeHint);
 
   for (const row of buildFeatureSettingsRows()) {
     section.append(row);

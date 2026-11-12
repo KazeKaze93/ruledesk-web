@@ -40,6 +40,10 @@ No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on 
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
+## Dark theme (site)
+
+Panel setting **Dark theme (site)** toggles the site’s own `theme` cookie (`dark` vs absent) and swaps `css/desktop.css` ↔ `css/desktop-dark.css`. The script does not inject its own dark CSS.
+
 ## Stage 4 — page tweaks (features)
 
 Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox; some have a choice (e.g. grid size). Changes apply after reload.
