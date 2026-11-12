@@ -1,24 +1,8 @@
-import {
-  CSS_CLASS,
-  SEARCH_PARAM_PAGE,
-  SEARCH_PARAM_SECTION,
-  SEARCH_PARAM_TAGS,
-  SEARCH_PAGE,
-  SEARCH_SECTION,
-  SITE_ORIGIN,
-  UI_TEXT,
-} from "../config/constants";
+import { CSS_CLASS, UI_TEXT } from "../config/constants";
 import { log } from "../log";
-import { normalizeArtistTag } from "../search/query";
-import { addFavorite, removeFavorite } from "../site/favorites";
+import { addFavorite, removeFavorite, voteUp } from "../site/favorites";
 import { readPostIdFromSearch } from "../site/pages";
-import { SITE_SELECTORS } from "../site/selectors";
 import { addFav, isFav, removeFav } from "../storage/favs";
-import {
-  addArtist,
-  isFollowingArtist,
-  removeArtist,
-} from "../storage/store";
 import {
   applyFavButtonState,
   createFavButton,
@@ -31,33 +15,50 @@ import {
 } from "./types";
 
 const FEATURE_ID = "post-actions";
-const FEATURE_LABEL = "Post actions";
+const FEATURE_LABEL = "Post side panel";
 const FEATURE_PAGES = ["post"] as const;
 
 const HOST_RIGHT_COL_ID = "right-col";
-const HOST_POST_VIEW_ID = "post-view";
+const LINK_LIST_SELECTOR = "div.link-list ul";
 const ORIGINAL_LINK_TEXT = "Original image";
+const ADD_FAVORITES_LINK_TEXT = "Add to favorites";
 const SCORE_SPAN_ID_PREFIX = "psc";
 
-const CLASS_BAR = "rdw-post-actions";
+const NARROW_BREAKPOINT_PX = 1100;
+const NARROW_MEDIA_QUERY = `(max-width: ${String(NARROW_BREAKPOINT_PX - 1)}px)`;
+const PANEL_WIDTH_PX = 160;
+const PANEL_TOP = "2.5rem";
+const PANEL_Z_INDEX = 100;
+
+const CLASS_PANEL = "rdw-post-actions";
+const CLASS_MODE_FIXED = "rdw-post-actions--fixed";
+const CLASS_MODE_NARROW = "rdw-post-actions--narrow";
 const CLASS_FAV_WRAP = "rdw-post-actions-fav-wrap";
 const CLASS_FAV_BUTTON = "rdw-post-actions-fav";
 const CLASS_FAV_LABEL = "rdw-post-actions-fav-label";
-const CLASS_FOLLOW = "rdw-post-actions-follow";
 const CLASS_ORIGINAL = "rdw-post-actions-original";
+const CLASS_SCORE_ROW = "rdw-post-actions-score-row";
 const CLASS_SCORE = "rdw-post-actions-score";
+const CLASS_VOTE = "rdw-post-actions-vote";
+const CLASS_OPTION = "rdw-post-actions-option";
 
 const TEXT_FAVORITE = "Favorite";
 const TEXT_IN_FAVORITES = "In favorites";
-const TEXT_FOLLOW = "Follow";
-const TEXT_FOLLOWING = "Following";
 const TEXT_ORIGINAL = "Original";
 const TEXT_SCORE_PREFIX = "Score: ";
+const TEXT_VOTE_UP = "Vote up";
+const TEXT_SCORE_UNKNOWN = "—";
 
 const LABEL_ORIGINAL = "Open original image";
+const LABEL_VOTE_UP = "Vote up";
 
-const WARN_NO_HOST =
-  "post-actions: #right-col and #post-view missing; not mounted";
+const EXCLUDED_OPTION_TEXTS: ReadonlySet<string> = new Set([
+  ORIGINAL_LINK_TEXT,
+  ADD_FAVORITES_LINK_TEXT,
+]);
+
+const WARN_NO_RIGHT_COL =
+  "post-actions: #right-col missing in narrow mode; panel stays on body";
 
 const FOCUS_OUTLINE = "2px solid #4c8bf5";
 const FOCUS_OUTLINE_OFFSET = "2px";
@@ -66,23 +67,39 @@ const BODY_CLASS = featureBodyClass(FEATURE_ID);
 const BODY_SELECTOR = `body.${BODY_CLASS}`;
 
 const FEATURE_CSS = `
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_BAR} {
+${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 0.75rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  box-sizing: border-box;
+  padding: 0.5rem;
   font-size: 0.875rem;
   line-height: 1.3;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_WRAP} {
-  display: inline-flex;
+${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_FIXED} {
+  position: fixed;
+  right: 0;
+  top: ${PANEL_TOP};
+  width: ${String(PANEL_WIDTH_PX)}px;
+  z-index: ${String(PANEL_Z_INDEX)};
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
+  position: static;
+  width: auto;
+  margin: 0 0 0.75rem;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_WRAP},
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE_ROW} {
+  display: flex;
   align-items: center;
   gap: 0.35rem;
+  flex-wrap: wrap;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FOLLOW},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL} {
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL},
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE},
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION} {
   color: inherit;
   background: transparent;
   border: 1px solid currentColor;
@@ -91,118 +108,159 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL} {
   cursor: pointer;
   text-decoration: none;
   font: inherit;
+  text-align: left;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}.${CSS_CLASS.cardFavMarked},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FOLLOW}[aria-pressed="true"] {
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}.${CSS_CLASS.cardFavMarked} {
   font-weight: 600;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}:focus-visible,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FOLLOW}:focus-visible,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL}:focus-visible {
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL}:focus-visible,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE}:focus-visible,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION}:focus-visible {
   outline: ${FOCUS_OUTLINE};
   outline-offset: ${FOCUS_OUTLINE_OFFSET};
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE}:disabled,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION}:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
   font-variant-numeric: tabular-nums;
 }
 `.trim();
 
-function findHost(): Element | null {
-  const rightCol = document.getElementById(HOST_RIGHT_COL_ID);
-  if (rightCol !== null) {
-    return rightCol;
-  }
-  return document.getElementById(HOST_POST_VIEW_ID);
-}
+let layoutCleanup: (() => void) | null = null;
 
-function removeExistingBar(): void {
+function removeExistingPanel(): void {
+  if (layoutCleanup !== null) {
+    layoutCleanup();
+    layoutCleanup = null;
+  }
   const existing = document.getElementById(POST_ACTIONS_ID);
   if (existing !== null) {
     existing.remove();
   }
 }
 
-function extractArtistTagFromLi(li: Element): string | null {
-  const links = li.querySelectorAll("a[href]");
-  for (const node of links) {
-    if (!(node instanceof HTMLAnchorElement)) {
-      continue;
+function isNarrowViewport(): boolean {
+  if (typeof window.matchMedia === "function") {
+    return window.matchMedia(NARROW_MEDIA_QUERY).matches;
+  }
+  return window.innerWidth < NARROW_BREAKPOINT_PX;
+}
+
+function placePanel(panel: HTMLElement, narrow: boolean): void {
+  panel.classList.toggle(CLASS_MODE_FIXED, !narrow);
+  panel.classList.toggle(CLASS_MODE_NARROW, narrow);
+
+  if (narrow) {
+    const rightCol = document.getElementById(HOST_RIGHT_COL_ID);
+    if (rightCol !== null) {
+      rightCol.insertBefore(panel, rightCol.firstChild);
+      return;
     }
-    if (node.hasAttribute("onclick")) {
-      continue;
+    log.warn(WARN_NO_RIGHT_COL);
+  }
+
+  if (panel.parentElement !== document.body) {
+    document.body.append(panel);
+  }
+}
+
+function bindLayoutMode(panel: HTMLElement): void {
+  const sync = (): void => {
+    placePanel(panel, isNarrowViewport());
+  };
+  sync();
+
+  if (typeof window.matchMedia === "function") {
+    const media = window.matchMedia(NARROW_MEDIA_QUERY);
+    const onChange = (): void => {
+      sync();
+    };
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", onChange);
+      layoutCleanup = (): void => {
+        media.removeEventListener("change", onChange);
+      };
+      return;
     }
-    const href = node.getAttribute("href");
-    if (href === null || href.length === 0) {
-      continue;
+    if (typeof media.addListener === "function") {
+      media.addListener(onChange);
+      layoutCleanup = (): void => {
+        media.removeListener(onChange);
+      };
+      return;
     }
-    let url: URL;
-    try {
-      url = new URL(href, SITE_ORIGIN);
-    } catch {
-      continue;
+  }
+
+  const onResize = (): void => {
+    sync();
+  };
+  window.addEventListener("resize", onResize);
+  layoutCleanup = (): void => {
+    window.removeEventListener("resize", onResize);
+  };
+}
+
+function findOriginalAnchor(): HTMLAnchorElement | null {
+  const list = document.querySelector(LINK_LIST_SELECTOR);
+  const roots: ParentNode[] =
+    list !== null ? [list, document] : [document];
+  for (const root of roots) {
+    const links = root.querySelectorAll("a[href]");
+    for (const node of links) {
+      if (!(node instanceof HTMLAnchorElement)) {
+        continue;
+      }
+      if (node.textContent?.trim() !== ORIGINAL_LINK_TEXT) {
+        continue;
+      }
+      const href = node.getAttribute("href");
+      if (href === null || href.length === 0 || href === "#") {
+        continue;
+      }
+      return node;
     }
-    if (url.searchParams.get(SEARCH_PARAM_PAGE) !== SEARCH_PAGE) {
-      continue;
-    }
-    if (url.searchParams.get(SEARCH_PARAM_SECTION) !== SEARCH_SECTION) {
-      continue;
-    }
-    const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
-    if (tags === null) {
-      continue;
-    }
-    return normalizeArtistTag(tags);
   }
   return null;
 }
 
-function collectArtistTags(): string[] {
-  const sidebar = document.querySelector(SITE_SELECTORS.tagSidebar);
-  if (sidebar === null) {
+function collectOptionAnchors(): HTMLAnchorElement[] {
+  const list = document.querySelector(LINK_LIST_SELECTOR);
+  if (list === null) {
     return [];
   }
-  const tags: string[] = [];
-  const seen = new Set<string>();
-  const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
-  for (const row of rows) {
-    const tag = extractArtistTagFromLi(row);
-    if (tag === null || seen.has(tag)) {
-      continue;
-    }
-    seen.add(tag);
-    tags.push(tag);
-  }
-  return tags;
-}
-
-function findOriginalHref(): string | null {
-  const links = document.querySelectorAll("a[href]");
+  const result: HTMLAnchorElement[] = [];
+  const links = list.querySelectorAll("a[href]");
   for (const node of links) {
     if (!(node instanceof HTMLAnchorElement)) {
       continue;
     }
-    if (node.textContent?.trim() !== ORIGINAL_LINK_TEXT) {
+    const text = node.textContent?.trim() ?? "";
+    if (text.length === 0 || EXCLUDED_OPTION_TEXTS.has(text)) {
       continue;
     }
-    const href = node.getAttribute("href");
-    if (href === null || href.length === 0 || href === "#") {
-      continue;
-    }
-    return href;
+    result.push(node);
   }
-  return null;
+  return result;
 }
 
-function readScoreText(postId: string): string | null {
+function readScoreText(postId: string): string {
   const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
   if (span === null) {
-    return null;
+    return TEXT_SCORE_UNKNOWN;
   }
   const text = span.textContent?.trim() ?? "";
-  return text.length > 0 ? text : null;
+  return text.length > 0 ? text : TEXT_SCORE_UNKNOWN;
 }
 
-function applyScoreValue(postId: string, scoreLabel: HTMLElement, score: number): void {
+function applyScoreValue(
+  postId: string,
+  scoreLabel: HTMLElement,
+  score: number,
+): void {
   const text = String(score);
   scoreLabel.textContent = `${TEXT_SCORE_PREFIX}${text}`;
   const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
@@ -311,39 +369,6 @@ async function handlePostFavClick(
   log.warn("post-actions: favorite failed", postId, result);
 }
 
-function createFollowButton(tag: string): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = CLASS_FOLLOW;
-  button.dataset.rdwArtistTag = tag;
-  applyFollowState(button, isFollowingArtist(tag));
-  button.addEventListener("click", (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const following = button.getAttribute("aria-pressed") === "true";
-    try {
-      if (following) {
-        removeArtist(tag);
-        applyFollowState(button, false);
-      } else {
-        addArtist(tag);
-        applyFollowState(button, true);
-      }
-    } catch {
-      applyFollowState(button, isFollowingArtist(tag));
-    }
-  });
-  return button;
-}
-
-function applyFollowState(button: HTMLButtonElement, following: boolean): void {
-  const tag = button.dataset.rdwArtistTag ?? "";
-  const verb = following ? TEXT_FOLLOWING : TEXT_FOLLOW;
-  button.setAttribute("aria-pressed", following ? "true" : "false");
-  button.setAttribute("aria-label", `${verb} ${tag}`);
-  button.textContent = `${verb} ${tag}`;
-}
-
 function createOriginalLink(href: string): HTMLAnchorElement {
   const link = document.createElement("a");
   link.className = CLASS_ORIGINAL;
@@ -362,50 +387,105 @@ function createScoreLabel(scoreText: string): HTMLElement {
   return score;
 }
 
-function buildBar(ctx: FeatureContext): HTMLElement {
-  const bar = document.createElement("div");
-  bar.id = POST_ACTIONS_ID;
-  bar.className = CLASS_BAR;
-  bar.setAttribute("role", "toolbar");
-  bar.setAttribute("aria-label", FEATURE_LABEL);
+function createVoteButton(
+  postId: string,
+  scoreLabel: HTMLElement,
+): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = CLASS_VOTE;
+  button.textContent = TEXT_VOTE_UP;
+  button.setAttribute("aria-label", LABEL_VOTE_UP);
+  button.addEventListener("click", (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleVoteUpClick(button, scoreLabel, postId);
+  });
+  return button;
+}
+
+async function handleVoteUpClick(
+  button: HTMLButtonElement,
+  scoreLabel: HTMLElement,
+  postId: string,
+): Promise<void> {
+  if (button.disabled) {
+    return;
+  }
+  button.disabled = true;
+  try {
+    const score = await voteUp(postId);
+    if (score !== null) {
+      applyScoreValue(postId, scoreLabel, score);
+    }
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function createScoreRow(postId: string): HTMLElement {
+  const row = document.createElement("span");
+  row.className = CLASS_SCORE_ROW;
+  const scoreLabel = createScoreLabel(readScoreText(postId));
+  row.append(scoreLabel, createVoteButton(postId, scoreLabel));
+  return row;
+}
+
+function createOptionProxy(nativeLink: HTMLAnchorElement): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = CLASS_OPTION;
+  const text = nativeLink.textContent?.trim() ?? "";
+  button.textContent = text;
+  button.setAttribute("aria-label", text);
+  button.addEventListener("click", (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    nativeLink.click();
+  });
+  return button;
+}
+
+function buildPanel(ctx: FeatureContext): HTMLElement {
+  const panel = document.createElement("div");
+  panel.id = POST_ACTIONS_ID;
+  panel.className = CLASS_PANEL;
+  panel.setAttribute("role", "complementary");
+  panel.setAttribute("aria-label", FEATURE_LABEL);
 
   const postId = readPostIdFromSearch(ctx.search);
-  let scoreLabel: HTMLElement | null = null;
-
   if (postId !== null) {
-    const scoreText = readScoreText(postId);
-    if (scoreText !== null) {
-      scoreLabel = createScoreLabel(scoreText);
+    const scoreRow = createScoreRow(postId);
+    const scoreLabel = scoreRow.querySelector(`.${CLASS_SCORE}`);
+    const scoreEl =
+      scoreLabel instanceof HTMLElement ? scoreLabel : null;
+    panel.append(createPostFavControl(postId, scoreEl));
+
+    const original = findOriginalAnchor();
+    if (original !== null) {
+      panel.append(createOriginalLink(original.href));
     }
-    bar.append(createPostFavControl(postId, scoreLabel));
+
+    panel.append(scoreRow);
+  } else {
+    const original = findOriginalAnchor();
+    if (original !== null) {
+      panel.append(createOriginalLink(original.href));
+    }
   }
 
-  for (const tag of collectArtistTags()) {
-    bar.append(createFollowButton(tag));
+  for (const nativeLink of collectOptionAnchors()) {
+    panel.append(createOptionProxy(nativeLink));
   }
 
-  const originalHref = findOriginalHref();
-  if (originalHref !== null) {
-    bar.append(createOriginalLink(originalHref));
-  }
-
-  if (scoreLabel !== null) {
-    bar.append(scoreLabel);
-  }
-
-  return bar;
+  return panel;
 }
 
 function mountPostActions(ctx: FeatureContext): void {
-  const host = findHost();
-  if (host === null) {
-    log.warn(WARN_NO_HOST);
-    return;
-  }
-
-  removeExistingBar();
-  const bar = buildBar(ctx);
-  host.insertBefore(bar, host.firstChild);
+  removeExistingPanel();
+  const panel = buildPanel(ctx);
+  document.body.append(panel);
+  bindLayoutMode(panel);
 }
 
 export const postActionsFeature: Feature = {
