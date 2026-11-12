@@ -38,6 +38,23 @@ No `api.rule34.xxx`. The only `fetch` calls are favorite add/remove on user clic
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
+## Stage 4 — page tweaks (features)
+
+Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox; some have a choice (e.g. grid size). Changes apply after reload.
+
+| Module | Default | Pages | What it does |
+|---|---|---|---|
+| Top bar | on | list, post, favorites | Fixed search / collections / Updates bar |
+| Top pagination | on | list | Compact pager + ←/→ keys |
+| Clean header menu | on | all | Hides unused header links |
+| Collapsible tag groups | on | list, post | Collapse tag sidebar groups |
+| Following badge | on | list | Badge on thumbs with followed artists |
+| Dim seen posts | on | list, post | Marks opened posts; dims them in the grid |
+| Grid size | on | list, favorites | compact / default / large |
+| Dark theme | **off** | all | Site-wide dark CSS |
+
+Turn a module off in Settings, or disable **Enable page tweaks** to unload all of them.
+
 ## Export format
 
 ```json
@@ -59,7 +76,11 @@ Storage uses `GM_getValue` / `GM_setValue`.
   },
   "settings": {
     "gridFavButtons": true,
-    "updatesGroupSize": 0
+    "tweaksEnabled": true,
+    "updatesGroupSize": 0,
+    "features": { "dark-theme": false },
+    "featureChoice": { "grid-density": "default" },
+    "featureState": {}
   },
   "updates": {
     "seenPostId": 0
@@ -67,8 +88,8 @@ Storage uses `GM_getValue` / `GM_setValue`.
 }
 ```
 
-- `settings` / `updates` are optional; defaults are `gridFavButtons: true`, `updatesGroupSize: 0`, `seenPostId: 0`
-- Import merges collections by `id`, artists by `tag`, marks by post id; `seenPostId` keeps the maximum of current and imported
+- `settings` / `updates` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `seenPostId: 0`
+- Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); `seenPostId` keeps the maximum of current and imported
 
 ## Scripts
 

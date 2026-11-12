@@ -66,7 +66,7 @@ export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.4.3";
+export const USERSCRIPT_VERSION = "0.5.0";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
