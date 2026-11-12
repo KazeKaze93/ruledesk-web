@@ -79,6 +79,7 @@ describe("menuCleanupFeature", () => {
     expect(menuCleanupFeature.id).toBe("menu-cleanup");
     expect(menuCleanupFeature.label).toBe("Clean header menu");
     expect(menuCleanupFeature.defaultEnabled).toBe(true);
+    expect(menuCleanupFeature.cssOnly).toBe(true);
     expect(menuCleanupFeature.pages).toEqual([
       "list",
       "post",

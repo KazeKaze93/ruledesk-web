@@ -24,6 +24,7 @@ export const gridDensityFeature: Feature = {
   label: "Grid size",
   pages: ["list", "favorites"],
   defaultEnabled: true,
+  cssOnly: true,
   choice: {
     options: [
       { value: "compact", label: "Compact" },

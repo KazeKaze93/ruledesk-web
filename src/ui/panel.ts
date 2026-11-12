@@ -9,6 +9,8 @@ import {
 } from "../config/constants";
 import { FEATURES } from "../features/registry";
 import {
+  applyCssOnlyFeatureChoice,
+  applyCssOnlyFeatureEnabled,
   getFeatureChoice,
   isFeatureEnabled,
 } from "../features/runtime";
@@ -386,6 +388,11 @@ function buildFeatureSettingsRows(): HTMLElement[] {
     checkbox.checked = isFeatureEnabled(feature.id);
     checkbox.addEventListener("change", () => {
       setFeatureEnabled(feature.id, checkbox.checked);
+      if (feature.cssOnly === true) {
+        applyCssOnlyFeatureEnabled(feature.id, checkbox.checked);
+        return;
+      }
+      window.location.reload();
     });
 
     const label = document.createElement("label");
@@ -423,6 +430,11 @@ function buildFeatureSettingsRows(): HTMLElement[] {
     }
     select.addEventListener("change", () => {
       setFeatureChoiceValue(feature.id, select.value);
+      if (feature.cssOnly === true) {
+        applyCssOnlyFeatureChoice(feature.id, select.value);
+        return;
+      }
+      window.location.reload();
     });
 
     choiceField.append(choiceLabel, select);
@@ -449,6 +461,7 @@ function buildSettingsSection(): HTMLElement {
   tweaksCheckbox.checked = getTweaksEnabled();
   tweaksCheckbox.addEventListener("change", () => {
     setTweaksEnabled(tweaksCheckbox.checked);
+    window.location.reload();
   });
 
   const tweaksLabel = document.createElement("label");
@@ -487,11 +500,6 @@ function buildSettingsSection(): HTMLElement {
   for (const row of buildFeatureSettingsRows()) {
     section.append(row);
   }
-
-  const reloadHint = document.createElement("p");
-  reloadHint.className = CSS_CLASS.hint;
-  reloadHint.textContent = UI_TEXT.reloadToApplyHint;
-  section.append(reloadHint);
 
   const favRow = document.createElement("div");
   favRow.className = CSS_CLASS.checkboxRow;

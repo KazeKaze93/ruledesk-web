@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.6.2
+// @version      0.6.3
 // @description  Collections, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -72,7 +72,6 @@
 		enablePageTweaksLabel: "Enable page tweaks",
 		siteDarkThemeLabel: "Dark theme (site)",
 		siteDarkThemeHint: "Uses the site's own dark stylesheet",
-		reloadToApplyHint: "Reload the page to apply",
 		gridFavButtonsLabel: "Show favorite buttons in grid",
 		cardFavAddLabel: "Add post to favorites",
 		cardFavRemoveLabel: "Remove post from favorites",
@@ -172,6 +171,25 @@
 			console.error(`[ruledesk-web] ${message}`, ...details);
 		}
 	};
+	function detectPageKind(search) {
+		const params = new URLSearchParams(search);
+		const page = params.get(SEARCH_PARAM_PAGE);
+		const section = params.get("s");
+		if (page === "post" && section === "list") return "list";
+		if (page === "post" && section === "view") return "post";
+		if (page === "favorites" && section === "view") return "favorites";
+		return "other";
+	}
+	function readPostIdFromSearch(search) {
+		const params = new URLSearchParams(search);
+		const page = params.get(SEARCH_PARAM_PAGE);
+		const section = params.get("s");
+		const id = params.get("id");
+		if (page !== "post" || section !== "view") return null;
+		if (id === null || id.trim().length === 0) return null;
+		if (!/^\d+$/.test(id)) return null;
+		return id;
+	}
 	function getEnumValues(entries) {
 		const numericValues = Object.values(entries).filter((v) => typeof v === "number");
 		return Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
@@ -2363,6 +2381,7 @@
 		label: "Grid size",
 		pages: ["list", "favorites"],
 		defaultEnabled: true,
+		cssOnly: true,
 		choice: {
 			options: [
 				{
@@ -2383,25 +2402,6 @@
 		css: [sizeCss("compact", COMPACT_PX), sizeCss("large", LARGE_PX)].join("\n"),
 		mount: () => {}
 	};
-	function detectPageKind(search) {
-		const params = new URLSearchParams(search);
-		const page = params.get(SEARCH_PARAM_PAGE);
-		const section = params.get("s");
-		if (page === "post" && section === "list") return "list";
-		if (page === "post" && section === "view") return "post";
-		if (page === "favorites" && section === "view") return "favorites";
-		return "other";
-	}
-	function readPostIdFromSearch(search) {
-		const params = new URLSearchParams(search);
-		const page = params.get(SEARCH_PARAM_PAGE);
-		const section = params.get("s");
-		const id = params.get("id");
-		if (page !== "post" || section !== "view") return null;
-		if (id === null || id.trim().length === 0) return null;
-		if (!/^\d+$/.test(id)) return null;
-		return id;
-	}
 	var SITE_SELECTORS = {
 		thumb: "span.thumb",
 		thumbLink: "a[href*=\"s=view\"]",
@@ -2590,6 +2590,7 @@ body.${featureBodyClass(FOLLOWED_BADGE_FEATURE_ID)} .${FOLLOWED_BADGE_CLASS} {
 		label: SEEN_DIM_LABEL,
 		pages: ["list", "post"],
 		defaultEnabled: true,
+		cssOnly: true,
 		css: `
 body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS} img.preview {
   opacity: ${SEEN_DIM_OPACITY};
@@ -2660,6 +2661,7 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 		label: FEATURE_LABEL$3,
 		pages: [...FEATURE_PAGES$3],
 		defaultEnabled: true,
+		cssOnly: true,
 		css: FEATURE_CSS$3,
 		mount: mountMenuCleanup
 	};
@@ -3585,6 +3587,9 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		postActionsFeature,
 		gridDensityFeature
 	];
+	var mountedIds = new Set();
+	var activePageKind = null;
+	var activeSearch = "";
 	function findFeature(id) {
 		return FEATURES.find((feature) => feature.id === id);
 	}
@@ -3620,7 +3625,60 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			}
 		};
 	}
+	function resolvePageContext() {
+		if (activePageKind !== null) return {
+			pageKind: activePageKind,
+			search: activeSearch
+		};
+		return {
+			pageKind: detectPageKind(window.location.search),
+			search: window.location.search
+		};
+	}
+	function clearChoiceBodyClasses(feature) {
+		if (feature.choice === void 0) return;
+		for (const option of feature.choice.options) document.body.classList.remove(featureChoiceBodyClass(feature.id, option.value));
+	}
+	function mountFeatureOnce(feature) {
+		if (mountedIds.has(feature.id)) return;
+		const { pageKind, search } = resolvePageContext();
+		if (!feature.pages.includes(pageKind)) return;
+		mountedIds.add(feature.id);
+		try {
+			feature.mount(createContext(feature, pageKind, search));
+		} catch (error) {
+			log.error(`Feature mount failed: ${feature.id}`, error);
+		}
+	}
+	function applyCssOnlyFeatureEnabled(id, enabled) {
+		const feature = findFeature(id);
+		if (feature?.cssOnly !== true) return;
+		if (!getTweaksEnabled()) return;
+		if (!enabled) {
+			document.body.classList.remove(featureBodyClass(feature.id));
+			clearChoiceBodyClasses(feature);
+			return;
+		}
+		ensureFeatureCss(feature);
+		document.body.classList.add(featureBodyClass(feature.id));
+		if (feature.choice !== void 0) {
+			clearChoiceBodyClasses(feature);
+			document.body.classList.add(featureChoiceBodyClass(feature.id, getFeatureChoice(feature.id)));
+		}
+		mountFeatureOnce(feature);
+	}
+	function applyCssOnlyFeatureChoice(id, value) {
+		const feature = findFeature(id);
+		if (feature?.cssOnly !== true || feature.choice === void 0) return;
+		if (!getTweaksEnabled()) return;
+		if (!getFeatureEnabled(id, feature.defaultEnabled)) return;
+		ensureFeatureCss(feature);
+		clearChoiceBodyClasses(feature);
+		document.body.classList.add(featureChoiceBodyClass(feature.id, value));
+	}
 	function runFeatures(pageKind, search, features = FEATURES) {
+		activePageKind = pageKind;
+		activeSearch = search;
 		if (!getTweaksEnabled()) return;
 		for (const feature of features) {
 			if (!feature.pages.includes(pageKind)) continue;
@@ -3635,6 +3693,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 				document.body.classList.add(featureChoiceBodyClass(feature.id, choiceValue));
 			}
 			ensureFeatureCss(feature);
+			mountedIds.add(feature.id);
 			try {
 				feature.mount(createContext(feature, pageKind, search));
 			} catch (error) {
@@ -5008,6 +5067,11 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			checkbox.checked = isFeatureEnabled(feature.id);
 			checkbox.addEventListener("change", () => {
 				setFeatureEnabled(feature.id, checkbox.checked);
+				if (feature.cssOnly === true) {
+					applyCssOnlyFeatureEnabled(feature.id, checkbox.checked);
+					return;
+				}
+				window.location.reload();
 			});
 			const label = document.createElement("label");
 			label.className = CSS_CLASS.label;
@@ -5035,6 +5099,11 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			}
 			select.addEventListener("change", () => {
 				setFeatureChoiceValue(feature.id, select.value);
+				if (feature.cssOnly === true) {
+					applyCssOnlyFeatureChoice(feature.id, select.value);
+					return;
+				}
+				window.location.reload();
 			});
 			choiceField.append(choiceLabel, select);
 			rows.push(choiceField);
@@ -5056,6 +5125,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		tweaksCheckbox.checked = getTweaksEnabled();
 		tweaksCheckbox.addEventListener("change", () => {
 			setTweaksEnabled(tweaksCheckbox.checked);
+			window.location.reload();
 		});
 		const tweaksLabel = document.createElement("label");
 		tweaksLabel.className = CSS_CLASS.label;
@@ -5084,10 +5154,6 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		themeHint.textContent = UI_TEXT.siteDarkThemeHint;
 		section.append(themeHint);
 		for (const row of buildFeatureSettingsRows()) section.append(row);
-		const reloadHint = document.createElement("p");
-		reloadHint.className = CSS_CLASS.hint;
-		reloadHint.textContent = UI_TEXT.reloadToApplyHint;
-		section.append(reloadHint);
 		const favRow = document.createElement("div");
 		favRow.className = CSS_CLASS.checkboxRow;
 		const favCheckbox = document.createElement("input");

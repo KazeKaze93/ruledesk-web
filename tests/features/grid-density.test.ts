@@ -8,6 +8,7 @@ describe("gridDensityFeature", () => {
     expect(gridDensityFeature.choice?.defaultValue).toBe("default");
     expect(gridDensityFeature.pages).toEqual(["list", "favorites"]);
     expect(gridDensityFeature.defaultEnabled).toBe(true);
+    expect(gridDensityFeature.cssOnly).toBe(true);
   });
 
   it("css has compact 150 and large 250 with !important; no default size rules", () => {

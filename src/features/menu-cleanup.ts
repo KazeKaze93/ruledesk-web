@@ -77,6 +77,7 @@ export const menuCleanupFeature: Feature = {
   label: FEATURE_LABEL,
   pages: [...FEATURE_PAGES],
   defaultEnabled: true,
+  cssOnly: true,
   css: FEATURE_CSS,
   mount: mountMenuCleanup,
 };

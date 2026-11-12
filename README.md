@@ -46,7 +46,7 @@ Panel setting **Dark theme (site)** toggles the site’s own `theme` cookie (`da
 
 ## Stage 4 — page tweaks (features)
 
-Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox; some have a choice (e.g. grid size). Changes apply after reload.
+Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox; some have a choice (e.g. grid size). CSS-only modules (menu cleanup, grid size, dim seen) apply immediately; other modules and the master tweaks switch reload the page.
 
 | Module | Default | Pages | What it does |
 |---|---|---|---|

@@ -227,6 +227,7 @@ export const seenDimFeature: Feature = {
   label: SEEN_DIM_LABEL,
   pages: ["list", "post"],
   defaultEnabled: true,
+  cssOnly: true,
   css: `
 body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS} img.preview {
   opacity: ${SEEN_DIM_OPACITY};

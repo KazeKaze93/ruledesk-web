@@ -1,5 +1,5 @@
 import { log } from "../log";
-import type { PageKind } from "../site/pages";
+import { detectPageKind, type PageKind } from "../site/pages";
 import {
   getFeatureChoiceValue,
   getFeatureEnabled,
@@ -15,6 +15,10 @@ import {
   type Feature,
   type FeatureContext,
 } from "./types";
+
+const mountedIds = new Set<string>();
+let activePageKind: PageKind | null = null;
+let activeSearch = "";
 
 function findFeature(id: string): Feature | undefined {
   return FEATURES.find((feature) => feature.id === id);
@@ -67,11 +71,108 @@ function createContext(feature: Feature, pageKind: PageKind, search: string): Fe
   };
 }
 
+function resolvePageContext(): { pageKind: PageKind; search: string } {
+  if (activePageKind !== null) {
+    return { pageKind: activePageKind, search: activeSearch };
+  }
+  return {
+    pageKind: detectPageKind(window.location.search),
+    search: window.location.search,
+  };
+}
+
+function clearChoiceBodyClasses(feature: Feature): void {
+  if (feature.choice === undefined) {
+    return;
+  }
+  for (const option of feature.choice.options) {
+    document.body.classList.remove(
+      featureChoiceBodyClass(feature.id, option.value),
+    );
+  }
+}
+
+function mountFeatureOnce(feature: Feature): void {
+  if (mountedIds.has(feature.id)) {
+    return;
+  }
+  const { pageKind, search } = resolvePageContext();
+  if (!feature.pages.includes(pageKind)) {
+    return;
+  }
+  mountedIds.add(feature.id);
+  try {
+    feature.mount(createContext(feature, pageKind, search));
+  } catch (error) {
+    log.error(`Feature mount failed: ${feature.id}`, error);
+  }
+}
+
+/**
+ * Live-apply a cssOnly feature enable/disable: body classes + CSS injection.
+ * Mounts once if not yet mounted when enabling. Does not remount on re-enable.
+ */
+export function applyCssOnlyFeatureEnabled(id: string, enabled: boolean): void {
+  const feature = findFeature(id);
+  if (feature?.cssOnly !== true) {
+    return;
+  }
+  if (!getTweaksEnabled()) {
+    return;
+  }
+
+  if (!enabled) {
+    document.body.classList.remove(featureBodyClass(feature.id));
+    clearChoiceBodyClasses(feature);
+    return;
+  }
+
+  ensureFeatureCss(feature);
+  document.body.classList.add(featureBodyClass(feature.id));
+  if (feature.choice !== undefined) {
+    clearChoiceBodyClasses(feature);
+    document.body.classList.add(
+      featureChoiceBodyClass(feature.id, getFeatureChoice(feature.id)),
+    );
+  }
+  mountFeatureOnce(feature);
+}
+
+/**
+ * Live-apply a cssOnly feature choice: swap body.rdw-f-<id>-<value> classes.
+ */
+export function applyCssOnlyFeatureChoice(id: string, value: string): void {
+  const feature = findFeature(id);
+  if (feature?.cssOnly !== true || feature.choice === undefined) {
+    return;
+  }
+  if (!getTweaksEnabled()) {
+    return;
+  }
+  if (!getFeatureEnabled(id, feature.defaultEnabled)) {
+    return;
+  }
+
+  ensureFeatureCss(feature);
+  clearChoiceBodyClasses(feature);
+  document.body.classList.add(featureChoiceBodyClass(feature.id, value));
+}
+
+/** Clears mount tracking and page context (tests). */
+export function resetFeatureRuntimeState(): void {
+  mountedIds.clear();
+  activePageKind = null;
+  activeSearch = "";
+}
+
 export function runFeatures(
   pageKind: PageKind,
   search: string,
   features: readonly Feature[] = FEATURES,
 ): void {
+  activePageKind = pageKind;
+  activeSearch = search;
+
   if (!getTweaksEnabled()) {
     return;
   }
@@ -103,6 +204,7 @@ export function runFeatures(
 
     ensureFeatureCss(feature);
 
+    mountedIds.add(feature.id);
     try {
       feature.mount(createContext(feature, pageKind, search));
     } catch (error) {

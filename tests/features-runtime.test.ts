@@ -4,8 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEBUG_KEY, STORAGE_KEY } from "../src/config/constants";
 import { FEATURES } from "../src/features/registry";
 import {
+  applyCssOnlyFeatureChoice,
+  applyCssOnlyFeatureEnabled,
   getFeatureChoice,
   isFeatureEnabled,
+  resetFeatureRuntimeState,
   runFeatures,
 } from "../src/features/runtime";
 import type { Feature } from "../src/features/types";
@@ -24,6 +27,8 @@ import {
   setPostSeenMark,
   setTweaksEnabled,
 } from "../src/storage/store";
+import { mountPanel } from "../src/ui/panel";
+import { PANEL_ROOT_ID } from "../src/config/constants";
 
 const memory = new Map<string, unknown>();
 const ORIGINAL_FEATURES = [...FEATURES];
@@ -67,6 +72,7 @@ function makeFeature(
     pages: partial.pages,
     defaultEnabled: partial.defaultEnabled ?? true,
     css: partial.css ?? `body.${featureBodyClass(partial.id)} { color: red; }`,
+    ...(partial.cssOnly !== undefined ? { cssOnly: partial.cssOnly } : {}),
     ...(partial.choice !== undefined ? { choice: partial.choice } : {}),
     mount: (ctx) => {
       if (mountImpl !== undefined) {
@@ -81,6 +87,7 @@ describe("features runtime", () => {
     installGmMocks();
     memory.set(DEBUG_KEY, false);
     clearFeatures();
+    resetFeatureRuntimeState();
     document.body.replaceChildren();
     document.body.className = "";
     document.head.querySelectorAll("style").forEach((node) => node.remove());
@@ -88,6 +95,7 @@ describe("features runtime", () => {
 
   afterEach(() => {
     restoreFeatures();
+    resetFeatureRuntimeState();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -331,5 +339,214 @@ describe("features runtime", () => {
     expect(
       document.head.querySelectorAll("#rdw-feature-style-once"),
     ).toHaveLength(1);
+  });
+
+  it("cssOnly toggle applies body class and CSS without remounting", () => {
+    const mountCount = { value: 0 };
+    FEATURES.push(
+      makeFeature({
+        id: "live-css",
+        pages: ["list"],
+        defaultEnabled: false,
+        cssOnly: true,
+        css: "body.rdw-f-live-css { color: blue; }",
+        mountImpl: () => {
+          mountCount.value += 1;
+        },
+      }),
+    );
+
+    runFeatures("list", "?page=post&s=list");
+    expect(mountCount.value).toBe(0);
+    expect(
+      document.body.classList.contains(featureBodyClass("live-css")),
+    ).toBe(false);
+
+    setFeatureEnabled("live-css", true);
+    applyCssOnlyFeatureEnabled("live-css", true);
+    expect(mountCount.value).toBe(1);
+    expect(
+      document.body.classList.contains(featureBodyClass("live-css")),
+    ).toBe(true);
+    expect(
+      document.head.querySelectorAll("#rdw-feature-style-live-css"),
+    ).toHaveLength(1);
+
+    applyCssOnlyFeatureEnabled("live-css", false);
+    expect(
+      document.body.classList.contains(featureBodyClass("live-css")),
+    ).toBe(false);
+    expect(mountCount.value).toBe(1);
+
+    applyCssOnlyFeatureEnabled("live-css", true);
+    expect(
+      document.body.classList.contains(featureBodyClass("live-css")),
+    ).toBe(true);
+    expect(mountCount.value).toBe(1);
+  });
+
+  it("cssOnly choice swaps body classes without remounting", () => {
+    const mountCount = { value: 0 };
+    FEATURES.push(
+      makeFeature({
+        id: "live-choice",
+        pages: ["list"],
+        cssOnly: true,
+        choice: {
+          options: [
+            { value: "a", label: "A" },
+            { value: "b", label: "B" },
+          ],
+          defaultValue: "a",
+        },
+        mountImpl: () => {
+          mountCount.value += 1;
+        },
+      }),
+    );
+
+    runFeatures("list", "?page=post&s=list");
+    expect(mountCount.value).toBe(1);
+    expect(
+      document.body.classList.contains(
+        featureChoiceBodyClass("live-choice", "a"),
+      ),
+    ).toBe(true);
+
+    setFeatureChoiceValue("live-choice", "b");
+    applyCssOnlyFeatureChoice("live-choice", "b");
+    expect(
+      document.body.classList.contains(
+        featureChoiceBodyClass("live-choice", "a"),
+      ),
+    ).toBe(false);
+    expect(
+      document.body.classList.contains(
+        featureChoiceBodyClass("live-choice", "b"),
+      ),
+    ).toBe(true);
+    expect(mountCount.value).toBe(1);
+  });
+});
+
+describe("panel settings apply", () => {
+  beforeEach(() => {
+    installGmMocks();
+    memory.set(DEBUG_KEY, false);
+    clearFeatures();
+    resetFeatureRuntimeState();
+    document.body.replaceChildren();
+    document.body.className = "";
+    document.head.querySelectorAll("style").forEach((node) => node.remove());
+    window.history.replaceState({}, "", "/index.php?page=post&s=list");
+  });
+
+  afterEach(() => {
+    restoreFeatures();
+    resetFeatureRuntimeState();
+    document.getElementById(PANEL_ROOT_ID)?.remove();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function openSettingsPanel(): ShadowRoot {
+    mountPanel();
+    const host = document.getElementById(PANEL_ROOT_ID);
+    expect(host).not.toBeNull();
+    const shadow = host?.shadowRoot;
+    expect(shadow).not.toBeNull();
+    if (shadow === null || shadow === undefined) {
+      throw new Error("expected panel shadow root");
+    }
+    const toggle = shadow.querySelector("#ruledesk-web-toggle");
+    expect(toggle).toBeInstanceOf(HTMLButtonElement);
+    if (!(toggle instanceof HTMLButtonElement)) {
+      throw new Error("expected toggle button");
+    }
+    toggle.click();
+    return shadow;
+  }
+
+  it("reloads when a non-cssOnly feature is toggled", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      reload,
+      search: "?page=post&s=list",
+    });
+
+    FEATURES.push(
+      makeFeature({
+        id: "needs-reload",
+        pages: ["list"],
+        defaultEnabled: false,
+      }),
+    );
+
+    const shadow = openSettingsPanel();
+    const checkbox = shadow.querySelector("#rdw-feature-needs-reload");
+    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    if (!(checkbox instanceof HTMLInputElement)) {
+      throw new Error("expected feature checkbox");
+    }
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change"));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload when a cssOnly feature is toggled", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      reload,
+      search: "?page=post&s=list",
+    });
+
+    FEATURES.push(
+      makeFeature({
+        id: "live-panel",
+        pages: ["list"],
+        defaultEnabled: false,
+        cssOnly: true,
+      }),
+    );
+
+    runFeatures("list", "?page=post&s=list");
+    const shadow = openSettingsPanel();
+    const checkbox = shadow.querySelector("#rdw-feature-live-panel");
+    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    if (!(checkbox instanceof HTMLInputElement)) {
+      throw new Error("expected feature checkbox");
+    }
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event("change"));
+    expect(reload).not.toHaveBeenCalled();
+    expect(
+      document.body.classList.contains(featureBodyClass("live-panel")),
+    ).toBe(true);
+  });
+
+  it("reloads when Enable page tweaks is toggled", () => {
+    const reload = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      reload,
+      search: "?page=post&s=list",
+    });
+
+    const shadow = openSettingsPanel();
+    const checkbox = shadow.querySelector("#rdw-tweaks-enabled");
+    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    if (!(checkbox instanceof HTMLInputElement)) {
+      throw new Error("expected tweaks checkbox");
+    }
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event("change"));
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show a reload-to-apply hint", () => {
+    const shadow = openSettingsPanel();
+    expect(shadow.textContent ?? "").not.toContain("Reload the page to apply");
   });
 });

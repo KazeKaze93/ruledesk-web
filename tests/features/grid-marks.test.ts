@@ -291,5 +291,6 @@ describe("grid-marks feature metadata", () => {
     expect(seenDimFeature.id).toBe("seen-dim");
     expect(seenDimFeature.pages).toEqual(["list", "post"]);
     expect(seenDimFeature.defaultEnabled).toBe(true);
+    expect(seenDimFeature.cssOnly).toBe(true);
   });
 });

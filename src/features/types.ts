@@ -39,6 +39,8 @@ export type Feature = {
   pages: PageKind[];
   defaultEnabled: boolean;
   css: string;
+  /** Live toggle via body class + CSS only; mount runs at most once per page load. */
+  cssOnly?: boolean;
   choice?: FeatureChoice;
   mount: (ctx: FeatureContext) => void;
 };

@@ -68,7 +68,7 @@ export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.6.2";
+export const USERSCRIPT_VERSION = "0.6.3";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -104,7 +104,6 @@ export const UI_TEXT = {
   enablePageTweaksLabel: "Enable page tweaks",
   siteDarkThemeLabel: "Dark theme (site)",
   siteDarkThemeHint: "Uses the site's own dark stylesheet",
-  reloadToApplyHint: "Reload the page to apply",
   gridFavButtonsLabel: "Show favorite buttons in grid",
   cardFavAddLabel: "Add post to favorites",
   cardFavRemoveLabel: "Remove post from favorites",
