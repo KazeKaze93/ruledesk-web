@@ -1,7 +1,9 @@
 import * as z from "zod/mini";
 
 import {
+  COLLECTION_KIND_POSTS,
   DEFAULT_GRID_FAV_BUTTONS,
+  DEFAULT_PLAYLIST_CHUNK_SIZE,
   DEFAULT_SEEN_POST_ID,
   DEFAULT_TWEAKS_ENABLED,
   DEFAULT_UPDATES_GROUP_SIZE,
@@ -25,7 +27,9 @@ import {
   ExportBlobSchema,
   StorageSchema,
   createDefaultStorage,
+  isPlaylist,
   resolveGridFavButtons,
+  resolvePlaylistChunkSize,
   resolveSeenPostId,
   resolveTweaksEnabled,
   resolveUpdatesGroupSize,
@@ -121,6 +125,7 @@ function currentSettings(data: StorageData): Settings {
   const next: Settings = {
     gridFavButtons: resolveGridFavButtons(data),
     updatesGroupSize: resolveUpdatesGroupSize(data),
+    playlistChunkSize: resolvePlaylistChunkSize(data),
     tweaksEnabled: resolveTweaksEnabled(data),
   };
   if (data.settings?.features !== undefined) {
@@ -133,6 +138,17 @@ function currentSettings(data: StorageData): Settings {
     next.featureState = { ...data.settings.featureState };
   }
   return next;
+}
+
+function normalizePostId(postId: number): number | null {
+  if (!Number.isFinite(postId)) {
+    return null;
+  }
+  const truncated = Math.trunc(postId);
+  if (truncated < 0) {
+    return null;
+  }
+  return truncated;
 }
 
 export function load(): StorageData {
@@ -200,6 +216,86 @@ export function deleteCollection(id: string): boolean {
   data.collections = next;
   save(data);
   return true;
+}
+
+/** Creates a post playlist (`kind: "posts"`, empty tags, empty postIds). */
+export function createPlaylist(name: string): Collection {
+  const data = load();
+  const collection = CollectionSchema.parse({
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    tags: [],
+    kind: COLLECTION_KIND_POSTS,
+    postIds: [],
+  });
+  data.collections.push(collection);
+  save(data);
+  return collection;
+}
+
+export function listPlaylists(): Collection[] {
+  return load().collections.filter(isPlaylist);
+}
+
+export function playlistsContaining(postId: number): Collection[] {
+  const normalized = normalizePostId(postId);
+  if (normalized === null) {
+    return [];
+  }
+  return listPlaylists().filter((playlist) =>
+    (playlist.postIds ?? []).includes(normalized),
+  );
+}
+
+export function addPostToPlaylist(
+  id: string,
+  postId: number,
+): Collection | null {
+  const normalized = normalizePostId(postId);
+  if (normalized === null) {
+    return null;
+  }
+  const data = load();
+  const target = data.collections.find((item) => item.id === id);
+  if (target === undefined || !isPlaylist(target)) {
+    return null;
+  }
+  const postIds = [...(target.postIds ?? [])];
+  if (!postIds.includes(normalized)) {
+    postIds.push(normalized);
+  }
+  target.postIds = postIds;
+  target.tags = [];
+  target.kind = COLLECTION_KIND_POSTS;
+  CollectionSchema.parse(target);
+  save(data);
+  return target;
+}
+
+export function removePostFromPlaylist(
+  id: string,
+  postId: number,
+): Collection | null {
+  const normalized = normalizePostId(postId);
+  if (normalized === null) {
+    return null;
+  }
+  const data = load();
+  const target = data.collections.find((item) => item.id === id);
+  if (target === undefined || !isPlaylist(target)) {
+    return null;
+  }
+  const previous = target.postIds ?? [];
+  const postIds = previous.filter((entry) => entry !== normalized);
+  if (postIds.length === previous.length) {
+    return target;
+  }
+  target.postIds = postIds;
+  target.tags = [];
+  target.kind = COLLECTION_KIND_POSTS;
+  CollectionSchema.parse(target);
+  save(data);
+  return target;
 }
 
 /** Thin wrapper over favs storage (keeps callers compiling). */
@@ -324,6 +420,23 @@ export function setUpdatesGroupSize(size: number): void {
   data.settings = {
     ...currentSettings(data),
     updatesGroupSize: safeSize,
+  };
+  save(data);
+}
+
+export function getPlaylistChunkSize(): number {
+  return resolvePlaylistChunkSize(load());
+}
+
+export function setPlaylistChunkSize(size: number): void {
+  const data = load();
+  const safeSize =
+    Number.isFinite(size) && size > 0
+      ? Math.floor(size)
+      : DEFAULT_PLAYLIST_CHUNK_SIZE;
+  data.settings = {
+    ...currentSettings(data),
+    playlistChunkSize: safeSize,
   };
   save(data);
 }
@@ -487,6 +600,8 @@ function mergeSettings(
     gridFavButtons: incoming.gridFavButtons,
     updatesGroupSize:
       incoming.updatesGroupSize ?? current.updatesGroupSize,
+    playlistChunkSize:
+      incoming.playlistChunkSize ?? current.playlistChunkSize,
   };
   if (incoming.tweaksEnabled !== undefined) {
     merged.tweaksEnabled = incoming.tweaksEnabled;
@@ -556,6 +671,7 @@ export function importJson(raw: string): StorageData {
     merged.settings = {
       gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
       updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
+      playlistChunkSize: DEFAULT_PLAYLIST_CHUNK_SIZE,
       tweaksEnabled: DEFAULT_TWEAKS_ENABLED,
     };
   }

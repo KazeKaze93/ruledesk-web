@@ -8,12 +8,20 @@ import {
 import { clearFavsCache, isFav } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
+  addCollection,
+  addPostToPlaylist,
   clearStorageCache,
+  createPlaylist,
   exportJson,
+  getPlaylistChunkSize,
   importJson,
+  listPlaylists,
   load,
+  playlistsContaining,
   reloadFromStorage,
+  removePostFromPlaylist,
   save,
+  setPlaylistChunkSize,
 } from "../src/storage/store";
 
 const memory = new Map<string, unknown>();
@@ -292,5 +300,126 @@ describe("store", () => {
     expect(load().artists).toEqual([]);
     expect(reloadFromStorage().artists).toEqual([{ tag: "external" }]);
     expect(load().artists).toEqual([{ tag: "external" }]);
+  });
+
+  it("loads legacy collections without kind/postIds as saved searches", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [
+        {
+          id: "legacy",
+          name: "Cats",
+          tags: [{ tag: "cat", type: "include" }],
+        },
+      ],
+      artists: [],
+      marks: {},
+    });
+    const data = load();
+    expect(data.collections[0]).toEqual({
+      id: "legacy",
+      name: "Cats",
+      tags: [{ tag: "cat", type: "include" }],
+    });
+    expect(listPlaylists()).toEqual([]);
+  });
+
+  it("createPlaylist stores kind posts with empty tags and unique ids", () => {
+    const first = createPlaylist("  Watch later  ");
+    const second = createPlaylist("Watch later");
+    expect(first).toMatchObject({
+      name: "Watch later",
+      kind: "posts",
+      tags: [],
+      postIds: [],
+    });
+    expect(second.id).not.toBe(first.id);
+    expect(listPlaylists()).toHaveLength(2);
+  });
+
+  it("add/remove post ids uniquely and playlistsContaining finds them", () => {
+    const playlist = createPlaylist("A");
+    const other = createPlaylist("B");
+    expect(addPostToPlaylist(playlist.id, 10)?.postIds).toEqual([10]);
+    expect(addPostToPlaylist(playlist.id, 10)?.postIds).toEqual([10]);
+    expect(addPostToPlaylist(playlist.id, 20)?.postIds).toEqual([10, 20]);
+    expect(addPostToPlaylist(other.id, 10)?.postIds).toEqual([10]);
+    expect(playlistsContaining(10).map((item) => item.id).sort()).toEqual(
+      [playlist.id, other.id].sort(),
+    );
+    expect(removePostFromPlaylist(playlist.id, 10)?.postIds).toEqual([20]);
+    expect(playlistsContaining(10).map((item) => item.id)).toEqual([other.id]);
+    expect(addPostToPlaylist("missing", 1)).toBeNull();
+    expect(removePostFromPlaylist("missing", 1)).toBeNull();
+  });
+
+  it("listPlaylists ignores saved searches", () => {
+    addCollection("Search", [{ tag: "cat", type: "include" }]);
+    const playlist = createPlaylist("Posts");
+    expect(listPlaylists().map((item) => item.id)).toEqual([playlist.id]);
+  });
+
+  it("playlistChunkSize defaults to 40 and can be set", () => {
+    expect(getPlaylistChunkSize()).toBe(40);
+    setPlaylistChunkSize(7);
+    expect(getPlaylistChunkSize()).toBe(7);
+    expect(load().settings?.playlistChunkSize).toBe(7);
+  });
+
+  it("export/import includes playlists in collections and omits blacklist", () => {
+    const search = addCollection("Search", [
+      { tag: "cat", type: "include" },
+    ]);
+    const playlist = createPlaylist("Later");
+    addPostToPlaylist(playlist.id, 99);
+    setPlaylistChunkSize(12);
+
+    const exported = JSON.parse(exportJson()) as {
+      collections: unknown[];
+      settings?: { playlistChunkSize?: number };
+      blacklist?: unknown;
+      tag_blacklist?: unknown;
+    };
+    expect(exported.blacklist).toBeUndefined();
+    expect(exported.tag_blacklist).toBeUndefined();
+    expect(exported.settings?.playlistChunkSize).toBe(12);
+    const exportedSearch = exported.collections.find(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        "id" in item &&
+        item.id === search.id,
+    );
+    expect(exportedSearch).toEqual({
+      id: search.id,
+      name: "Search",
+      tags: [{ tag: "cat", type: "include" }],
+    });
+    expect(exported.collections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: playlist.id,
+          kind: "posts",
+          postIds: [99],
+          tags: [],
+        }),
+      ]),
+    );
+
+    memory.clear();
+    clearFavsCache();
+    clearStorageCache();
+    const merged = importJson(JSON.stringify(exported));
+    expect(merged.collections).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: search.id }),
+        expect.objectContaining({
+          id: playlist.id,
+          kind: "posts",
+          postIds: [99],
+        }),
+      ]),
+    );
+    expect(getPlaylistChunkSize()).toBe(12);
   });
 });

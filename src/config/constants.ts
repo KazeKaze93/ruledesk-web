@@ -62,6 +62,12 @@ export const DEFAULT_GRID_FAV_BUTTONS = true;
 export const DEFAULT_TWEAKS_ENABLED = true;
 export const DEFAULT_UPDATES_GROUP_SIZE = 0;
 export const DEFAULT_SEEN_POST_ID = 0;
+export const DEFAULT_PLAYLIST_CHUNK_SIZE = 40;
+
+export const COLLECTION_KIND_SEARCH = "search" as const;
+export const COLLECTION_KIND_POSTS = "posts" as const;
+
+export const PLAYLIST_ID_PREFIX = "id:";
 
 export const PANEL_ROOT_ID = "ruledesk-web-root";
 export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
@@ -78,6 +84,8 @@ export const SITE_THEME_COOKIE_VALUE_DARK = "dark";
 export const SITE_THEME_COOKIE_MAX_AGE_DAYS = 365;
 export const SITE_THEME_COOKIE_PATH = "/";
 export const SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
+export const SITE_BLACKLIST_COOKIE_PATH = "/";
+export const SITE_BLACKLIST_COOKIE_MAX_AGE_YEARS = 5;
 export const SITE_THEME_STYLESHEET_DIR = "/css/";
 export const SITE_THEME_STYLESHEET_LIGHT = "desktop.css";
 export const SITE_THEME_STYLESHEET_DARK = "desktop-dark.css";

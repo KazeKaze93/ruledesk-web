@@ -1,10 +1,17 @@
-import { SITE_BLACKLIST_COOKIE_NAME } from "../config/constants";
+import {
+  SITE_BLACKLIST_COOKIE_MAX_AGE_YEARS,
+  SITE_BLACKLIST_COOKIE_NAME,
+  SITE_BLACKLIST_COOKIE_PATH,
+} from "../config/constants";
 
 const COOKIE_PAIR_SEPARATOR = ";";
 const COOKIE_NAME_VALUE_SEPARATOR = "=";
 const BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
 const USER_ENTRY_PREFIX = "user:";
 const RATING_ENTRY_PREFIX = "rating:";
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const DAYS_PER_YEAR = 365;
+const BLACKLIST_TAG_SEPARATOR = " ";
 
 function readCookieValue(name: string): string | null {
   const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
@@ -17,6 +24,37 @@ function readCookieValue(name: string): string | null {
     return trimmed.slice(prefix.length);
   }
   return null;
+}
+
+function normalizeBlacklistTags(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of tags) {
+    const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
+    if (normalized.length === 0 || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
+function encodeBlacklistCookieValue(tags: readonly string[]): string {
+  if (tags.length === 0) {
+    return "";
+  }
+  return encodeURIComponent(
+    encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)),
+  );
+}
+
+function writeBlacklistCookie(value: string, expires: Date): void {
+  document.cookie = [
+    `${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}${value}`,
+    `expires=${expires.toUTCString()}`,
+    `path=${SITE_BLACKLIST_COOKIE_PATH}`,
+  ].join("; ");
 }
 
 /**
@@ -43,6 +81,19 @@ export function readSiteBlacklist(): string[] {
     result.push(trimmed);
   }
   return result;
+}
+
+/**
+ * Writes the site `tag_blacklist` cookie (browser cookie only; account list untouched).
+ * Value encoding matches the live site: encodeURIComponent twice over space-joined tags.
+ */
+export function writeSiteBlacklist(tags: string[]): void {
+  const normalized = normalizeBlacklistTags(tags);
+  const expires = new Date(
+    Date.now() +
+      SITE_BLACKLIST_COOKIE_MAX_AGE_YEARS * DAYS_PER_YEAR * MS_PER_DAY,
+  );
+  writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
 }
 
 /**

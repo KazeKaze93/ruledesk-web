@@ -1,5 +1,6 @@
 import {
   EXCLUDE_PREFIX,
+  PLAYLIST_ID_PREFIX,
   SEARCH_PAGE,
   SEARCH_PARAM_PAGE,
   SEARCH_PARAM_SECTION,
@@ -19,6 +20,7 @@ import {
 import type { TagEntry } from "../storage/schema";
 
 const UPDATES_ID_TOKEN_PATTERN = /^id:>(\d+)$/;
+const PLAYLIST_ID_TOKEN_PATTERN = /^id:(\d+)$/;
 
 export function normalizeArtistTag(raw: string): string | null {
   const trimmed = raw.trim().toLowerCase();
@@ -322,4 +324,119 @@ export function isPartialUpdatesQuery(
     return false;
   }
   return parsed.tags.length > 0 && parsed.tags.length < tracked.size;
+}
+
+function formatPlaylistIdToken(postId: number): string {
+  return `${PLAYLIST_ID_PREFIX}${String(postId)}`;
+}
+
+function formatPlaylistChunkQuery(ids: number[]): string {
+  if (ids.length === 1) {
+    const only = ids[0];
+    return only === undefined ? "" : formatPlaylistIdToken(only);
+  }
+  const tokens = ids.map(formatPlaylistIdToken);
+  return `${UPDATES_OR_OPEN} ${tokens.join(` ${UPDATES_OR_JOIN} `)} ${UPDATES_OR_CLOSE}`;
+}
+
+/**
+ * Builds playlist search queries: ids descending, chunked by `chunkSize`.
+ * One id → `id:N`; multiple → `( id:A ~ id:B ~ ... )`.
+ * `chunkSize <= 0` keeps all ids in a single query.
+ */
+export function buildPlaylistQueries(
+  postIds: number[],
+  chunkSize: number,
+): string[] {
+  const unique = new Set<number>();
+  for (const raw of postIds) {
+    if (!Number.isFinite(raw)) {
+      continue;
+    }
+    const id = Math.trunc(raw);
+    if (id >= 0) {
+      unique.add(id);
+    }
+  }
+  const sorted = Array.from(unique).sort((a, b) => b - a);
+  if (sorted.length === 0) {
+    return [];
+  }
+
+  const chunks: number[][] = [];
+  if (chunkSize <= 0) {
+    chunks.push(sorted);
+  } else {
+    for (let index = 0; index < sorted.length; index += chunkSize) {
+      chunks.push(sorted.slice(index, index + chunkSize));
+    }
+  }
+  return chunks.map(formatPlaylistChunkQuery);
+}
+
+/**
+ * Parses a playlist id-query produced by `buildPlaylistQueries`.
+ * Returns null when any non-playlist token is present.
+ */
+export function parsePlaylistQuery(tagsParam: string): number[] | null {
+  const tokens = tagsParam
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  if (tokens.length === 1) {
+    const only = tokens[0];
+    if (only === undefined) {
+      return null;
+    }
+    const match = PLAYLIST_ID_TOKEN_PATTERN.exec(only);
+    if (match === null) {
+      return null;
+    }
+    const id = Number(match[1]);
+    if (!Number.isFinite(id)) {
+      return null;
+    }
+    return [id];
+  }
+
+  const first = tokens[0];
+  const last = tokens[tokens.length - 1];
+  if (first !== UPDATES_OR_OPEN || last !== UPDATES_OR_CLOSE) {
+    return null;
+  }
+  const inner = tokens.slice(1, -1);
+  if (inner.length === 0 || inner.length % 2 === 0) {
+    return null;
+  }
+
+  const ids: number[] = [];
+  for (let index = 0; index < inner.length; index += 1) {
+    const token = inner[index];
+    if (token === undefined) {
+      return null;
+    }
+    if (index % 2 === 1) {
+      if (token !== UPDATES_OR_JOIN) {
+        return null;
+      }
+      continue;
+    }
+    const match = PLAYLIST_ID_TOKEN_PATTERN.exec(token);
+    if (match === null) {
+      return null;
+    }
+    const id = Number(match[1]);
+    if (!Number.isFinite(id)) {
+      return null;
+    }
+    if (ids.includes(id)) {
+      return null;
+    }
+    ids.push(id);
+  }
+  return ids;
 }

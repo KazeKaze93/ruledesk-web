@@ -5,7 +5,9 @@ import {
   TAG_TYPE_INCLUDE,
 } from "../src/config/constants";
 import {
+  buildPlaylistQueries,
   buildSearchUrl,
+  parsePlaylistQuery,
   parseTags,
   serialize,
 } from "../src/search/query";
@@ -67,5 +69,46 @@ describe("buildSearchUrl", () => {
     expect(buildSearchUrl(tags)).toBe(
       "https://rule34.xxx/index.php?page=post&s=list&tags=foo%20bar+-baz+a%2Bb",
     );
+  });
+});
+
+describe("buildPlaylistQueries / parsePlaylistQuery", () => {
+  it("formats a single id without parentheses", () => {
+    expect(buildPlaylistQueries([19335574], 40)).toEqual(["id:19335574"]);
+    expect(parsePlaylistQuery("id:19335574")).toEqual([19335574]);
+  });
+
+  it("formats an or-group and sorts ids descending", () => {
+    expect(buildPlaylistQueries([10, 30, 20], 40)).toEqual([
+      "( id:30 ~ id:20 ~ id:10 )",
+    ]);
+    expect(parsePlaylistQuery("( id:30 ~ id:20 ~ id:10 )")).toEqual([
+      30, 20, 10,
+    ]);
+  });
+
+  it("chunks by chunkSize", () => {
+    expect(buildPlaylistQueries([5, 4, 3, 2, 1], 2)).toEqual([
+      "( id:5 ~ id:4 )",
+      "( id:3 ~ id:2 )",
+      "id:1",
+    ]);
+  });
+
+  it("rejects non-playlist queries", () => {
+    expect(parsePlaylistQuery("")).toBeNull();
+    expect(parsePlaylistQuery("cat")).toBeNull();
+    expect(parsePlaylistQuery("id:>10")).toBeNull();
+    expect(parsePlaylistQuery("( id:1 ~ cat )")).toBeNull();
+    expect(parsePlaylistQuery("( id:1 ~ id:2 ) id:3")).toBeNull();
+    expect(parsePlaylistQuery("( id:1 ~ id:1 )")).toBeNull();
+  });
+
+  it("round-trips chunk queries", () => {
+    const queries = buildPlaylistQueries([9, 8, 7, 6, 5], 3);
+    expect(queries.map((query) => parsePlaylistQuery(query))).toEqual([
+      [9, 8, 7],
+      [6, 5],
+    ]);
   });
 });

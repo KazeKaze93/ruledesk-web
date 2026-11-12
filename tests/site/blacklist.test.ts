@@ -4,7 +4,11 @@ import { SITE_BLACKLIST_COOKIE_NAME } from "../../src/config/constants";
 import {
   isBlacklisted,
   readSiteBlacklist,
+  writeSiteBlacklist,
 } from "../../src/site/blacklist";
+
+const LIVE_COOKIE_VALUE = "gay%2520gay_sex%2520roblox";
+const LIVE_TAGS = ["gay", "gay_sex", "roblox"] as const;
 
 function setCookie(raw: string): void {
   document.cookie = `${SITE_BLACKLIST_COOKIE_NAME}=${raw}`;
@@ -46,6 +50,49 @@ describe("readSiteBlacklist", () => {
   it("drops empties and lowercases entries", () => {
     setCookie(encodeURI("Tag_A,,  ,TAG_B"));
     expect(readSiteBlacklist()).toEqual(["tag_a", "tag_b"]);
+  });
+
+  it("reads the live double-encoded cookie value", () => {
+    setCookie(LIVE_COOKIE_VALUE);
+    expect(readSiteBlacklist()).toEqual([...LIVE_TAGS]);
+  });
+});
+
+describe("writeSiteBlacklist", () => {
+  beforeEach(() => {
+    clearCookies();
+  });
+
+  afterEach(() => {
+    clearCookies();
+  });
+
+  it("writes the live double-encoded cookie value", () => {
+    writeSiteBlacklist([...LIVE_TAGS]);
+    const raw = document.cookie
+      .split(";")
+      .map((pair) => pair.trim())
+      .find((pair) => pair.startsWith(`${SITE_BLACKLIST_COOKIE_NAME}=`));
+    expect(raw).toBe(`${SITE_BLACKLIST_COOKIE_NAME}=${LIVE_COOKIE_VALUE}`);
+    expect(readSiteBlacklist()).toEqual([...LIVE_TAGS]);
+  });
+
+  it("normalizes trim, case, spaces, empties, and duplicates", () => {
+    writeSiteBlacklist(["  Gay Sex  ", "GAY_SEX", "", "Roblox", "roblox"]);
+    expect(readSiteBlacklist()).toEqual(["gay_sex", "roblox"]);
+  });
+
+  it("writes an empty value for an empty list", () => {
+    writeSiteBlacklist(["gay"]);
+    writeSiteBlacklist([]);
+    expect(readSiteBlacklist()).toEqual([]);
+    const raw = document.cookie
+      .split(";")
+      .map((pair) => pair.trim())
+      .find((pair) => pair.startsWith(`${SITE_BLACKLIST_COOKIE_NAME}=`));
+    expect(raw === undefined || raw === `${SITE_BLACKLIST_COOKIE_NAME}=`).toBe(
+      true,
+    );
   });
 });
 
