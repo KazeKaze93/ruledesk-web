@@ -1,7 +1,7 @@
 import { CSS_CLASS, UI_TEXT } from "../config/constants";
 import { log } from "../log";
 import { addFavorite, removeFavorite } from "../site/favorites";
-import { setPostFavMark } from "../storage/store";
+import { addFav, removeFav } from "../storage/favs";
 
 export type FavButtonState =
   | "idle"
@@ -96,7 +96,7 @@ export async function handleFavToggleClick(
   if (currentlyMarked) {
     const result = await removeFavorite(postId);
     if (result.status === "removed") {
-      setPostFavMark(postId, false);
+      removeFav(postId);
       applyFavButtonState(button, "idle", postId);
       return;
     }
@@ -112,7 +112,7 @@ export async function handleFavToggleClick(
 
   const result = await addFavorite(postId);
   if (result.status === "added" || result.status === "already") {
-    setPostFavMark(postId, true);
+    addFav(postId);
     applyFavButtonState(button, "marked", postId);
     return;
   }

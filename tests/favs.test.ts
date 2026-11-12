@@ -1,0 +1,209 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import {
+  DEBUG_KEY,
+  FAVS_STORAGE_KEY,
+  STORAGE_KEY,
+} from "../src/config/constants";
+import {
+  addFav,
+  addFavs,
+  clearFavsCache,
+  getSyncState,
+  isFav,
+  loadFavSet,
+  migrateMarksFavToFavs,
+  removeFav,
+  setSyncState,
+} from "../src/storage/favs";
+import { createDefaultStorage } from "../src/storage/schema";
+import { exportJson, importJson, load, save } from "../src/storage/store";
+
+const memory = new Map<string, unknown>();
+
+function installGmMocks(): void {
+  memory.clear();
+  clearFavsCache();
+  vi.stubGlobal(
+    "GM_getValue",
+    (key: string, defaultValue?: unknown): unknown => {
+      if (!memory.has(key)) {
+        return defaultValue;
+      }
+      return memory.get(key);
+    },
+  );
+  vi.stubGlobal("GM_setValue", (key: string, value: unknown): void => {
+    memory.set(key, value);
+  });
+}
+
+describe("favs storage", () => {
+  beforeEach(() => {
+    installGmMocks();
+    memory.set(DEBUG_KEY, false);
+  });
+
+  it("migrates marks.fav into favs.ids and strips fav from marks", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {
+        "10": { fav: true },
+        "20": { fav: true, seen: true },
+        "30": { seen: true },
+      },
+    });
+
+    migrateMarksFavToFavs();
+
+    expect(isFav(10)).toBe(true);
+    expect(isFav(20)).toBe(true);
+    expect(isFav(30)).toBe(false);
+    expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([10, 20]);
+
+    const main = load();
+    expect(main.marks["10"]).toBeUndefined();
+    expect(main.marks["20"]).toEqual({ seen: true });
+    expect(main.marks["30"]).toEqual({ seen: true });
+    expect(main.marks["10"]?.fav).toBeUndefined();
+    expect(main.marks["20"]?.fav).toBeUndefined();
+
+    const rawFavs = memory.get(FAVS_STORAGE_KEY);
+    expect(rawFavs).toEqual({
+      version: 1,
+      ids: expect.arrayContaining([10, 20]),
+    });
+  });
+
+  it("migration is idempotent", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {
+        "5": { fav: true, seen: true },
+      },
+    });
+
+    migrateMarksFavToFavs();
+    const afterFirst = structuredClone(memory.get(FAVS_STORAGE_KEY));
+    const marksAfterFirst = structuredClone(
+      (memory.get(STORAGE_KEY) as { marks: unknown }).marks,
+    );
+
+    clearFavsCache();
+    migrateMarksFavToFavs();
+    migrateMarksFavToFavs();
+
+    expect(memory.get(FAVS_STORAGE_KEY)).toEqual(afterFirst);
+    expect(
+      (memory.get(STORAGE_KEY) as { marks: unknown }).marks,
+    ).toEqual(marksAfterFirst);
+    expect(isFav(5)).toBe(true);
+    expect(load().marks["5"]).toEqual({ seen: true });
+  });
+
+  it("round-trips 15_000 ids through read/write", () => {
+    const ids = Array.from({ length: 15_000 }, (_, index) => index + 1);
+    addFavs(ids);
+
+    clearFavsCache();
+    const loaded = loadFavSet();
+    expect(loaded.size).toBe(15_000);
+    expect(isFav(1)).toBe(true);
+    expect(isFav(15_000)).toBe(true);
+    expect(isFav(15_001)).toBe(false);
+
+    const stored = memory.get(FAVS_STORAGE_KEY) as { ids: number[] };
+    expect(stored.ids).toHaveLength(15_000);
+  });
+
+  it("addFav / removeFav update cache for subsequent isFav", () => {
+    expect(isFav(99)).toBe(false);
+    addFav(99);
+    expect(isFav(99)).toBe(true);
+    expect(isFav("99")).toBe(true);
+    removeFav("99");
+    expect(isFav(99)).toBe(false);
+  });
+
+  it("getSyncState / setSyncState persist on the favs key", () => {
+    addFav(1);
+    expect(getSyncState()).toBeUndefined();
+    setSyncState({
+      nextPid: 42,
+      lastPid: 0,
+      startedAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(getSyncState()).toEqual({
+      nextPid: 42,
+      lastPid: 0,
+      startedAt: "2026-01-01T00:00:00.000Z",
+    });
+    clearFavsCache();
+    expect(getSyncState()).toEqual({
+      nextPid: 42,
+      lastPid: 0,
+      startedAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(isFav(1)).toBe(true);
+  });
+
+  it("imports old format with marks.fav into favs", () => {
+    save(createDefaultStorage());
+    addFav(1);
+
+    importJson(
+      JSON.stringify({
+        version: 1,
+        collections: [],
+        artists: [],
+        marks: {
+          "2": { fav: true },
+          "3": { fav: true, seen: true },
+        },
+      }),
+    );
+
+    expect(isFav(1)).toBe(true);
+    expect(isFav(2)).toBe(true);
+    expect(isFav(3)).toBe(true);
+    expect(load().marks["2"]).toBeUndefined();
+    expect(load().marks["3"]).toEqual({ seen: true });
+  });
+
+  it("imports new format with favIds and merges sets", () => {
+    save(createDefaultStorage());
+    addFav(10);
+
+    importJson(
+      JSON.stringify({
+        version: 1,
+        collections: [],
+        artists: [],
+        marks: {},
+        favIds: [10, 20, 30],
+      }),
+    );
+
+    expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([
+      10, 20, 30,
+    ]);
+  });
+
+  it("exportJson includes favIds and omits marks.fav", () => {
+    const data = createDefaultStorage();
+    data.marks["7"] = { fav: true, seen: true };
+    save(data);
+
+    const exported = JSON.parse(exportJson()) as {
+      favIds: number[];
+      marks: Record<string, { fav?: boolean; seen?: boolean }>;
+    };
+    expect(exported.favIds).toEqual([7]);
+    expect(exported.marks["7"]).toEqual({ seen: true });
+    expect(exported.marks["7"]?.fav).toBeUndefined();
+  });
+});

@@ -13,6 +13,7 @@ import {
   featureBodyClass,
   featureChoiceBodyClass,
 } from "../src/features/types";
+import { clearFavsCache, isFav } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
   load,
@@ -28,6 +29,7 @@ const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearFavsCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -210,8 +212,8 @@ describe("features runtime", () => {
     });
     const data = load();
     expect(data.settings).toBeUndefined();
-    expect(data.marks["7"]?.fav).toBe(true);
-    expect(data.marks["7"]?.seen).toBeUndefined();
+    expect(data.marks["7"]).toBeUndefined();
+    expect(isFav(7)).toBe(true);
     expect(isFeatureEnabled("missing")).toBe(false);
   });
 
@@ -286,7 +288,8 @@ describe("features runtime", () => {
     data.marks["42"] = { fav: true };
     save(data);
     setPostSeenMark("42");
-    expect(load().marks["42"]).toEqual({ fav: true, seen: true });
+    expect(isFav(42)).toBe(true);
+    expect(load().marks["42"]).toEqual({ seen: true });
   });
 
   it("injects feature css once", () => {

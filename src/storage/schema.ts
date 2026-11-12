@@ -5,6 +5,7 @@ import {
   DEFAULT_SEEN_POST_ID,
   DEFAULT_TWEAKS_ENABLED,
   DEFAULT_UPDATES_GROUP_SIZE,
+  FAVS_SCHEMA_VERSION,
   SCHEMA_VERSION,
   TAG_TYPE_EXCLUDE,
   TAG_TYPE_INCLUDE,
@@ -27,6 +28,7 @@ export const ArtistEntrySchema = z.object({
   tag: z.string().check(z.minLength(1)),
 });
 
+/** Legacy `fav` remains optional so old storage/export blobs still parse. */
 export const MarkFlagsSchema = z.object({
   fav: z.optional(z.boolean()),
   seen: z.optional(z.boolean()),
@@ -54,6 +56,30 @@ export const StorageSchema = z.object({
   updates: z.optional(UpdatesSchema),
 });
 
+export const FavsSyncSchema = z.object({
+  nextPid: z.int(),
+  lastPid: z.int(),
+  startedAt: z.string(),
+  finishedAt: z.optional(z.string()),
+});
+
+export const FavsSchema = z.object({
+  version: z.literal(FAVS_SCHEMA_VERSION),
+  ids: z.array(z.int()),
+  sync: z.optional(FavsSyncSchema),
+});
+
+/** Export/import blob: main storage fields plus optional `favIds`. */
+export const ExportBlobSchema = z.object({
+  version: z.literal(SCHEMA_VERSION),
+  collections: z.array(CollectionSchema),
+  artists: z.array(ArtistEntrySchema),
+  marks: z.record(z.string(), MarkFlagsSchema),
+  settings: z.optional(SettingsSchema),
+  updates: z.optional(UpdatesSchema),
+  favIds: z.optional(z.array(z.int())),
+});
+
 export type TagType = z.infer<typeof TagTypeSchema>;
 export type TagEntry = z.infer<typeof TagEntrySchema>;
 export type Collection = z.infer<typeof CollectionSchema>;
@@ -62,6 +88,16 @@ export type MarkFlags = z.infer<typeof MarkFlagsSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 export type UpdatesState = z.infer<typeof UpdatesSchema>;
 export type StorageData = z.infer<typeof StorageSchema>;
+export type FavsSyncState = z.infer<typeof FavsSyncSchema>;
+export type FavsData = z.infer<typeof FavsSchema>;
+export type ExportBlob = z.infer<typeof ExportBlobSchema>;
+
+export function createDefaultFavs(): FavsData {
+  return {
+    version: FAVS_SCHEMA_VERSION,
+    ids: [],
+  };
+}
 
 export function createDefaultStorage(): StorageData {
   return {

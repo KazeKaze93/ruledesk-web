@@ -3,7 +3,7 @@ import {
   SITE_SELECTORS,
   extractPostIdFromFavoritesDeleteOnclick,
 } from "./selectors";
-import { setPostFavMark, setPostFavMarks } from "../storage/store";
+import { addFavs, removeFav } from "../storage/favs";
 
 let removeClickBound = false;
 
@@ -56,7 +56,7 @@ function bindRemoveClickCapture(): void {
       if (postId === null) {
         return;
       }
-      setPostFavMark(postId, false);
+      removeFav(postId);
     },
     true,
   );
@@ -71,6 +71,13 @@ export function syncFavoritesPage(
   }
 
   const ids = collectFavoritePostIds(root);
-  setPostFavMarks(ids, true);
+  const numericIds: number[] = [];
+  for (const postId of ids) {
+    const parsed = Number(postId);
+    if (Number.isFinite(parsed)) {
+      numericIds.push(Math.trunc(parsed));
+    }
+  }
+  addFavs(numericIds);
   bindRemoveClickCapture();
 }

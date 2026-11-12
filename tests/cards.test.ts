@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CSS_CLASS, STORAGE_KEY } from "../src/config/constants";
-import { createDefaultStorage } from "../src/storage/schema";
-import { load, save, setGridFavButtonsEnabled } from "../src/storage/store";
+import { CSS_CLASS } from "../src/config/constants";
+import { addFav, clearFavsCache, isFav } from "../src/storage/favs";
+import { setGridFavButtonsEnabled } from "../src/storage/store";
 import { mountCards } from "../src/ui/cards";
 import { CARD_CSS } from "../src/ui/styles";
 import { addFavorite, removeFavorite } from "../src/site/favorites";
@@ -11,6 +11,7 @@ const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearFavsCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -140,10 +141,8 @@ describe("mountCards", () => {
     expect(linkClicks).toBe(0);
   });
 
-  it("marks buttons from stored fav marks", () => {
-    const data = createDefaultStorage();
-    data.marks["111"] = { fav: true };
-    save(data);
+  it("marks buttons from stored favs", () => {
+    addFav(111);
 
     const root = document.createElement("div");
     root.append(buildThumb("111"), buildThumb("222"));
@@ -197,20 +196,18 @@ describe("mountCards", () => {
     await vi.waitFor(() => {
       expect(button.getAttribute("aria-pressed")).toBe("true");
     });
-    expect(load().marks["111"]?.fav).toBe(true);
+    expect(isFav(111)).toBe(true);
 
     mockFetchSequence([{ body: "removed-page" }]);
     button.click();
     await vi.waitFor(() => {
       expect(button.getAttribute("aria-pressed")).toBe("false");
     });
-    expect(load().marks["111"]?.fav).toBe(false);
+    expect(isFav(111)).toBe(false);
   });
 
   it("keeps the star marked when remove fails", async () => {
-    const data = createDefaultStorage();
-    data.marks["111"] = { fav: true };
-    save(data);
+    addFav(111);
 
     const root = document.createElement("div");
     root.append(buildThumb("111"));
@@ -230,7 +227,7 @@ describe("mountCards", () => {
     });
     expect(button.getAttribute("aria-pressed")).toBe("true");
     expect(button.classList.contains(CSS_CLASS.cardFavMarked)).toBe(true);
-    expect(load().marks["111"]?.fav).toBe(true);
+    expect(isFav(111)).toBe(true);
   });
 });
 
@@ -244,15 +241,14 @@ describe("removeFavorite", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns error on !ok and does not clear the mark itself", async () => {
-    const data = createDefaultStorage();
-    data.marks["99"] = { fav: true };
-    save(data);
+  it("returns error on !ok and does not clear the fav itself", async () => {
+    addFav(99);
+    const beforeFavs = memory.get("ruledesk-web.favs");
     mockFetchSequence([{ ok: false, body: "fail" }]);
 
     await expect(removeFavorite("99")).resolves.toEqual({ status: "error" });
-    expect(load().marks["99"]?.fav).toBe(true);
-    expect(memory.get(STORAGE_KEY)).toEqual(data);
+    expect(isFav(99)).toBe(true);
+    expect(memory.get("ruledesk-web.favs")).toEqual(beforeFavs);
   });
 
   it("returns error on network failure", async () => {

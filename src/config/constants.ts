@@ -1,8 +1,10 @@
 export const STORAGE_KEY = "ruledesk-web.storage";
 export const STORAGE_BACKUP_KEY = "ruledesk-web.storage.backup";
+export const FAVS_STORAGE_KEY = "ruledesk-web.favs";
 export const DEBUG_KEY = "ruledesk-web.debug";
 
 export const SCHEMA_VERSION = 1 as const;
+export const FAVS_SCHEMA_VERSION = 1 as const;
 
 export const SITE_ORIGIN = "https://rule34.xxx";
 export const SEARCH_PATH = "/index.php";

@@ -8,6 +8,7 @@ export const THUMB_CLASS = "rdw-thumb";
 export const THUMB_ANCHOR_NAME = "--rdw-img";
 
 export const FEATURE_STYLE_ID_PREFIX = "rdw-feature-style-";
+export const POST_ACTIONS_ID = "rdw-post-actions";
 
 export function featureBodyClass(id: string): string {
   return `rdw-f-${id}`;

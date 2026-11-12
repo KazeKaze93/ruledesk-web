@@ -5,6 +5,7 @@ import {
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
 } from "../src/config/constants";
+import { clearFavsCache, isFav } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
   exportJson,
@@ -17,6 +18,7 @@ const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearFavsCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -183,10 +185,10 @@ describe("store", () => {
       tags: [{ tag: "cat", type: "include" }],
     });
     save(data);
-    expect(JSON.parse(exportJson())).toEqual(data);
+    expect(JSON.parse(exportJson())).toEqual({ ...data, favIds: [] });
   });
 
-  it("loads legacy storage without settings", () => {
+  it("loads legacy storage without settings and migrates fav marks", () => {
     memory.set(STORAGE_KEY, {
       version: 1,
       collections: [],
@@ -195,7 +197,8 @@ describe("store", () => {
     });
     const data = load();
     expect(data.settings).toBeUndefined();
-    expect(data.marks["7"]?.fav).toBe(true);
+    expect(data.marks["7"]).toBeUndefined();
+    expect(isFav(7)).toBe(true);
   });
 
   it("loads legacy artists with lastSeenPostId and storage without updates", () => {

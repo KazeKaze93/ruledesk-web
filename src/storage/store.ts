@@ -12,8 +12,17 @@ import {
 import { log } from "../log";
 import { normalizeArtistTag } from "../search/query";
 import {
+  addFav,
+  addFavs,
+  extractFavIdsFromMarks,
+  loadFavSet,
+  migrateMarksFavToFavs,
+  removeFav,
+} from "./favs";
+import {
   ArtistEntrySchema,
   CollectionSchema,
+  ExportBlobSchema,
   StorageSchema,
   createDefaultStorage,
   resolveGridFavButtons,
@@ -22,6 +31,7 @@ import {
   resolveUpdatesGroupSize,
   type ArtistEntry,
   type Collection,
+  type ExportBlob,
   type MarkFlags,
   type Settings,
   type StorageData,
@@ -90,14 +100,25 @@ function currentSettings(data: StorageData): Settings {
 export function load(): StorageData {
   const raw = readRaw();
   if (raw === undefined || raw === null) {
+    migrateMarksFavToFavs();
     return createDefaultStorage();
   }
   const parsed = StorageSchema.safeParse(raw);
   if (!parsed.success) {
     backupInvalid(raw);
+    migrateMarksFavToFavs();
     return createDefaultStorage();
   }
-  return parsed.data;
+  migrateMarksFavToFavs();
+  const after = readRaw();
+  if (after === undefined || after === null) {
+    return createDefaultStorage();
+  }
+  const reparsed = StorageSchema.safeParse(after);
+  if (!reparsed.success) {
+    return parsed.data;
+  }
+  return reparsed.data;
 }
 
 export function save(data: StorageData): void {
@@ -140,23 +161,34 @@ export function deleteCollection(id: string): boolean {
   return true;
 }
 
+/** Thin wrapper over favs storage (keeps callers compiling). */
 export function setPostFavMark(postId: string, fav: boolean): void {
-  const data = load();
-  const previous: MarkFlags = data.marks[postId] ?? {};
-  data.marks[postId] = { ...previous, fav };
-  save(data);
+  if (fav) {
+    addFav(postId);
+  } else {
+    removeFav(postId);
+  }
 }
 
+/** Thin wrapper over favs storage (keeps callers compiling). */
 export function setPostFavMarks(postIds: string[], fav: boolean): void {
   if (postIds.length === 0) {
     return;
   }
-  const data = load();
-  for (const postId of postIds) {
-    const previous: MarkFlags = data.marks[postId] ?? {};
-    data.marks[postId] = { ...previous, fav };
+  if (fav) {
+    const ids: number[] = [];
+    for (const postId of postIds) {
+      const parsed = Number(postId);
+      if (Number.isFinite(parsed)) {
+        ids.push(Math.trunc(parsed));
+      }
+    }
+    addFavs(ids);
+    return;
   }
-  save(data);
+  for (const postId of postIds) {
+    removeFav(postId);
+  }
 }
 
 export function setPostSeenMark(postId: string): void {
@@ -313,7 +345,12 @@ export function removeArtist(tag: string): boolean {
 
 export function exportJson(): string {
   const data = load();
-  return `${JSON.stringify(data, null, 2)}\n`;
+  const favIds = Array.from(loadFavSet()).sort((a, b) => a - b);
+  const blob: ExportBlob = {
+    ...data,
+    favIds,
+  };
+  return `${JSON.stringify(blob, null, 2)}\n`;
 }
 
 function mergeCollections(
@@ -453,17 +490,24 @@ export function importJson(raw: string): StorageData {
     const message = error instanceof Error ? error.message : "Invalid JSON";
     throw new Error(message);
   }
-  const parsed = StorageSchema.safeParse(json);
+  const parsed = ExportBlobSchema.safeParse(json);
   if (!parsed.success) {
     throw formatSchemaImportError(parsed.error);
   }
   const incoming = parsed.data;
+  const fromMarks = extractFavIdsFromMarks(incoming.marks);
+  const favIdsToMerge = new Set<number>(fromMarks.favIds);
+  if (incoming.favIds !== undefined) {
+    for (const id of incoming.favIds) {
+      favIdsToMerge.add(id);
+    }
+  }
   const current = load();
   const merged: StorageData = {
     version: current.version,
     collections: mergeCollections(current.collections, incoming.collections),
     artists: mergeArtists(current.artists, incoming.artists),
-    marks: mergeMarks(current.marks, incoming.marks),
+    marks: mergeMarks(current.marks, fromMarks.marks),
     settings: mergeSettings(current.settings, incoming.settings),
     updates: mergeUpdates(current.updates, incoming.updates),
   };
@@ -475,5 +519,6 @@ export function importJson(raw: string): StorageData {
     };
   }
   save(merged);
+  addFavs(Array.from(favIdsToMerge));
   return merged;
 }

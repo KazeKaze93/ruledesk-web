@@ -8,7 +8,8 @@ import {
   extractPostIdFromThumb,
 } from "../site/selectors";
 import { BASE_GRID_CSS, ensureThumbAnchor } from "../site/thumb";
-import { getGridFavButtonsEnabled, load } from "../storage/store";
+import { isFav } from "../storage/favs";
+import { getGridFavButtonsEnabled } from "../storage/store";
 import { createFavButton } from "./fav-button";
 import { CARD_CSS } from "./styles";
 
@@ -72,7 +73,6 @@ export function mountCards(
     return;
   }
 
-  const marks = load().marks;
   const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
 
   for (const thumb of thumbs) {
@@ -83,7 +83,7 @@ export function mountCards(
     if (postId === null) {
       continue;
     }
-    const marked = marks[postId]?.fav === true;
+    const marked = isFav(postId);
     attachFavButton(thumb, postId, marked);
   }
 }

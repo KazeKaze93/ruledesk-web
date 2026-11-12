@@ -4,13 +4,13 @@ import {
   collectFavoritePostIds,
   syncFavoritesPage,
 } from "../src/site/favorites-page";
-import { createDefaultStorage } from "../src/storage/schema";
-import { load, save } from "../src/storage/store";
+import { addFav, clearFavsCache, isFav } from "../src/storage/favs";
 
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearFavsCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -57,15 +57,12 @@ describe("favorites page sync", () => {
     const root = buildFavoritesFragment();
     document.body.append(root);
     syncFavoritesPage(root, "?page=favorites&s=view");
-    const data = load();
-    expect(data.marks["111"]?.fav).toBe(true);
-    expect(data.marks["222"]?.fav).toBe(true);
+    expect(isFav(111)).toBe(true);
+    expect(isFav(222)).toBe(true);
   });
 
-  it("clears the mark when a Remove link is clicked", () => {
-    const data = createDefaultStorage();
-    data.marks["111"] = { fav: true };
-    save(data);
+  it("clears the fav when a Remove link is clicked", () => {
+    addFav(111);
 
     const root = buildFavoritesFragment();
     document.body.append(root);
@@ -74,6 +71,6 @@ describe("favorites page sync", () => {
     const remove = root.querySelector("a[onclick*='id=111']");
     expect(remove).toBeInstanceOf(HTMLAnchorElement);
     remove?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(load().marks["111"]?.fav).toBe(false);
+    expect(isFav(111)).toBe(false);
   });
 });
