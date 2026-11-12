@@ -1,0 +1,353 @@
+import { log } from "../log";
+import { isBlacklisted, readSiteBlacklist } from "../site/blacklist";
+import { fetchNextPage } from "../site/next-page";
+import { SITE_SELECTORS } from "../site/selectors";
+import { notifyThumbsAdded } from "./runtime";
+import { featureBodyClass, type Feature, type FeatureContext } from "./types";
+
+const FEATURE_ID = "infinite-scroll";
+const FEATURE_LABEL = "Infinite scroll";
+const FEATURE_PAGES = ["list"] as const;
+
+const BODY_FEATURE_CLASS = featureBodyClass(FEATURE_ID);
+
+const ROOT_MARGIN_PX = 800;
+const ROOT_MARGIN = `${String(ROOT_MARGIN_PX)}px`;
+const MIN_REQUEST_INTERVAL_MS = 1000;
+
+const CLASS_SENTINEL = "rdw-infinite-sentinel";
+const CLASS_STATUS = "rdw-infinite-status";
+const CLASS_SEPARATOR = "rdw-infinite-page";
+const CLASS_RETRY = "rdw-infinite-retry";
+const CLASS_BLACKLISTED = "rdw-blacklisted";
+
+const TEXT_LOADING = "Loading…";
+const TEXT_END = "End of results";
+const TEXT_ERROR = "Failed to load more";
+const TEXT_RETRY = "Retry";
+const PAGE_LABEL_PREFIX = "Page ";
+
+const PAGINATION_NEXT_SELECTOR = 'div.pagination a[alt="next"]';
+
+const WARN_MISSING =
+  "infinite-scroll: missing image-list or next link; not mounted";
+
+const SCORE_TOKEN_PREFIX = "score:";
+const RATING_TOKEN_PREFIX = "rating:";
+
+const FEATURE_CSS = `
+body.${BODY_FEATURE_CLASS} .${CLASS_SENTINEL} {
+  display: block;
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+}
+body.${BODY_FEATURE_CLASS} .${CLASS_STATUS} {
+  display: block;
+  width: 100%;
+  margin: 0.75rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  column-span: all;
+}
+body.${BODY_FEATURE_CLASS} .${CLASS_SEPARATOR} {
+  display: block;
+  width: 100%;
+  margin: 0.75rem 0 0.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.75;
+  column-span: all;
+}
+body.${BODY_FEATURE_CLASS} .${CLASS_RETRY} {
+  margin-left: 0.5rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  font: inherit;
+}
+body.${BODY_FEATURE_CLASS} .${CLASS_RETRY}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+body.${BODY_FEATURE_CLASS} span.thumb.${CLASS_BLACKLISTED} {
+  display: none !important;
+}
+`.trim();
+
+type ThumbMeta = {
+  tags: string[];
+  score: number;
+  rating: string;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function readInitialNextUrl(): string | null {
+  const nextLink = document.querySelector(PAGINATION_NEXT_SELECTOR);
+  if (!(nextLink instanceof HTMLAnchorElement)) {
+    return null;
+  }
+  const href = nextLink.getAttribute("href");
+  if (href === null || href.length === 0 || href === "#") {
+    return null;
+  }
+  try {
+    return new URL(href, window.location.href).href;
+  } catch {
+    return null;
+  }
+}
+
+function parseThumbMeta(thumb: Element): ThumbMeta {
+  const img = thumb.querySelector(SITE_SELECTORS.previewImage);
+  const title = img?.getAttribute("title")?.trim() ?? "";
+  const alt = img?.getAttribute("alt")?.trim() ?? "";
+  const source = title.length > 0 ? title : alt;
+  if (source.length === 0) {
+    return { tags: [], score: 0, rating: "" };
+  }
+
+  const tags: string[] = [];
+  let score = 0;
+  let rating = "";
+  for (const token of source.split(/\s+/)) {
+    if (token.length === 0) {
+      continue;
+    }
+    const lower = token.toLowerCase();
+    if (lower.startsWith(SCORE_TOKEN_PREFIX)) {
+      const raw = token.slice(SCORE_TOKEN_PREFIX.length);
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed)) {
+        score = parsed;
+      }
+      continue;
+    }
+    if (lower.startsWith(RATING_TOKEN_PREFIX)) {
+      rating = token.slice(RATING_TOKEN_PREFIX.length);
+      continue;
+    }
+    tags.push(token);
+  }
+  return { tags, score, rating };
+}
+
+function collectExistingThumbIds(): Set<string> {
+  const ids = new Set<string>();
+  const thumbs = document.querySelectorAll(SITE_SELECTORS.thumb);
+  for (const thumb of thumbs) {
+    if (thumb.id.length > 0) {
+      ids.add(thumb.id);
+    }
+  }
+  return ids;
+}
+
+function applyBlacklist(thumb: Element, list: readonly string[]): void {
+  if (!(thumb instanceof HTMLElement)) {
+    return;
+  }
+  const meta = parseThumbMeta(thumb);
+  if (isBlacklisted(meta.tags, meta.score, meta.rating, list)) {
+    thumb.classList.add(CLASS_BLACKLISTED);
+  }
+}
+
+function createSeparator(pageNumber: number): HTMLElement {
+  const separator = document.createElement("div");
+  separator.className = CLASS_SEPARATOR;
+  separator.textContent = `${PAGE_LABEL_PREFIX}${String(pageNumber)}`;
+  return separator;
+}
+
+type ScrollUi = {
+  sentinel: HTMLElement;
+  status: HTMLElement;
+};
+
+function createUi(imageList: Element): ScrollUi {
+  const sentinel = document.createElement("div");
+  sentinel.className = CLASS_SENTINEL;
+  sentinel.setAttribute("aria-hidden", "true");
+
+  const status = document.createElement("div");
+  status.className = CLASS_STATUS;
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+
+  imageList.after(sentinel, status);
+  return { sentinel, status };
+}
+
+function setStatusLoading(status: HTMLElement): void {
+  status.replaceChildren();
+  status.textContent = TEXT_LOADING;
+}
+
+function setStatusEnd(status: HTMLElement): void {
+  status.replaceChildren();
+  status.textContent = TEXT_END;
+}
+
+function setStatusError(status: HTMLElement, onRetry: () => void): void {
+  status.replaceChildren();
+  const message = document.createElement("span");
+  message.textContent = TEXT_ERROR;
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = CLASS_RETRY;
+  retry.textContent = TEXT_RETRY;
+  retry.addEventListener("click", (event: Event) => {
+    event.preventDefault();
+    onRetry();
+  });
+  status.append(message, retry);
+}
+
+function clearStatus(status: HTMLElement): void {
+  status.replaceChildren();
+}
+
+/** True when the sentinel is within rootMargin of the viewport (IO may not re-fire). */
+function isSentinelNear(sentinel: Element): boolean {
+  const rect = sentinel.getBoundingClientRect();
+  const viewBottom = window.innerHeight + ROOT_MARGIN_PX;
+  const viewTop = -ROOT_MARGIN_PX;
+  return rect.top < viewBottom && rect.bottom > viewTop;
+}
+
+function mountInfiniteScroll(_ctx: FeatureContext): void {
+  const imageList = document.querySelector(SITE_SELECTORS.imageList);
+  if (imageList === null) {
+    log.warn(WARN_MISSING);
+    return;
+  }
+
+  let nextUrl = readInitialNextUrl();
+  if (nextUrl === null) {
+    log.warn(WARN_MISSING);
+    return;
+  }
+
+  const { sentinel, status } = createUi(imageList);
+  let inFlight = false;
+  let lastRequestAt = 0;
+  let pageNumber = 1;
+  let ended = false;
+  let observer: IntersectionObserver | null = null;
+
+  const finish = (): void => {
+    ended = true;
+    nextUrl = null;
+    setStatusEnd(status);
+    if (observer !== null) {
+      observer.disconnect();
+      observer = null;
+    }
+  };
+
+  const appendBatch = async (requestUrl: string): Promise<string | null> => {
+    const result = await fetchNextPage(requestUrl);
+    pageNumber += 1;
+    imageList.append(createSeparator(pageNumber));
+
+    const existingIds = collectExistingThumbIds();
+    const blacklist = readSiteBlacklist();
+
+    for (const thumb of result.thumbs) {
+      if (thumb.id.length > 0 && existingIds.has(thumb.id)) {
+        continue;
+      }
+      const node = document.importNode(thumb, true);
+      if (node.id.length > 0) {
+        existingIds.add(node.id);
+      }
+      applyBlacklist(node, blacklist);
+      imageList.append(node);
+    }
+
+    notifyThumbsAdded(imageList);
+    return result.nextUrl;
+  };
+
+  const loadMore = async (options?: { bypassRateLimit?: boolean }): Promise<void> => {
+    if (ended || inFlight || nextUrl === null) {
+      return;
+    }
+    inFlight = true;
+    let bypassRateLimit = options?.bypassRateLimit === true;
+
+    try {
+      while (!ended && nextUrl !== null && isSentinelNear(sentinel)) {
+        const elapsed = Date.now() - lastRequestAt;
+        if (
+          !bypassRateLimit &&
+          lastRequestAt > 0 &&
+          elapsed < MIN_REQUEST_INTERVAL_MS
+        ) {
+          await sleep(MIN_REQUEST_INTERVAL_MS - elapsed);
+          continue;
+        }
+        bypassRateLimit = false;
+
+        const requestUrl = nextUrl;
+        lastRequestAt = Date.now();
+        setStatusLoading(status);
+
+        try {
+          const fetchedNext = await appendBatch(requestUrl);
+          nextUrl = fetchedNext;
+          clearStatus(status);
+          if (nextUrl === null) {
+            finish();
+            return;
+          }
+        } catch (error) {
+          log.warn("infinite-scroll: fetch failed", requestUrl, error);
+          setStatusError(status, () => {
+            void loadMore({ bypassRateLimit: true });
+          });
+          return;
+        }
+      }
+    } finally {
+      inFlight = false;
+    }
+  };
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) {
+          continue;
+        }
+        void loadMore();
+        break;
+      }
+    },
+    { root: null, rootMargin: ROOT_MARGIN, threshold: 0 },
+  );
+  observer.observe(sentinel);
+}
+
+export const infiniteScrollFeature: Feature = {
+  id: FEATURE_ID,
+  label: FEATURE_LABEL,
+  pages: [...FEATURE_PAGES],
+  defaultEnabled: true,
+  css: FEATURE_CSS,
+  mount: mountInfiniteScroll,
+};
