@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UPDATES_BAR_ID, UI_TEXT } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
-import { getSeenPostId, save } from "../src/storage/store";
+import { clearStorageCache, getSeenPostId, save } from "../src/storage/store";
 import { mountUpdatesBar } from "../src/ui/updates-bar";
 
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {

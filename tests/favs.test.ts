@@ -17,13 +17,20 @@ import {
   setSyncState,
 } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
-import { exportJson, importJson, load, save } from "../src/storage/store";
+import {
+  clearStorageCache,
+  exportJson,
+  importJson,
+  load,
+  save,
+} from "../src/storage/store";
 
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {

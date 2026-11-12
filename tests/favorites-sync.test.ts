@@ -13,6 +13,7 @@ import {
   FAVORITES_SYNC_PAGE_PAUSE_MS,
   FAVORITES_SYNC_PID_STEP,
   extractUserIdFromDocument,
+  resolveLastPid,
   runFavoritesSync,
 } from "../src/site/favorites-sync";
 import {
@@ -22,14 +23,16 @@ import {
   loadFavSet,
   setSyncState,
 } from "../src/storage/favs";
+import { clearStorageCache } from "../src/storage/store";
 import { createFavoritesSyncSection } from "../src/ui/favorites-sync-section";
 
-const USER_ID = 77;
+const USER_ID = 479099;
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -54,12 +57,52 @@ function mountMyFavoritesLink(userId: number = USER_ID): void {
   document.body.append(li);
 }
 
+function favOnclick(pid: number): string {
+  return `document.location='?page=favorites&amp;s=view&amp;id=${String(USER_ID)}&amp;pid=${String(pid)}'; return false;`;
+}
+
+/**
+ * Live favorites paginator markup (onclick-based; href is "#").
+ * First page sample includes next + lastpage; last page has neither.
+ */
+function favoritesPaginatorHtml(options: {
+  currentLabel: string;
+  nextPid?: number;
+  lastPid?: number;
+  pageTwoLabel?: string;
+}): string {
+  const { currentLabel, nextPid, lastPid, pageTwoLabel = "2" } = options;
+  const parts: string[] = [`<b>${currentLabel}</b>`];
+  if (nextPid !== undefined) {
+    parts.push(
+      `<a href="#" onclick="${favOnclick(nextPid)}">${pageTwoLabel}</a>`,
+    );
+    parts.push(
+      `<a href="#" onclick="${favOnclick(nextPid)}" name="next">&gt;</a>`,
+    );
+  }
+  if (lastPid !== undefined) {
+    parts.push(
+      `<a href="#" onclick="${favOnclick(lastPid)}" name="lastpage">&gt;&gt;</a>`,
+    );
+  }
+  return `<div id="paginator">${parts.join("\n")}</div>`;
+}
+
 function favoritesPageHtml(options: {
   ids: number[];
+  nextPid?: number;
   lastPid?: number;
+  currentLabel?: string;
   includePaginator?: boolean;
 }): string {
-  const { ids, lastPid, includePaginator = true } = options;
+  const {
+    ids,
+    nextPid,
+    lastPid,
+    currentLabel = "1",
+    includePaginator = true,
+  } = options;
   const thumbs = ids
     .map(
       (id) => `
@@ -74,11 +117,18 @@ function favoritesPageHtml(options: {
 
   let paginator = "";
   if (includePaginator) {
-    const last =
-      lastPid === undefined
-        ? ""
-        : `<a name="lastpage" href="index.php?page=favorites&s=view&id=${String(USER_ID)}&pid=${String(lastPid)}">Last</a>`;
-    paginator = `<div id="paginator">${last}</div>`;
+    const paginatorOptions: {
+      currentLabel: string;
+      nextPid?: number;
+      lastPid?: number;
+    } = { currentLabel };
+    if (nextPid !== undefined) {
+      paginatorOptions.nextPid = nextPid;
+    }
+    if (lastPid !== undefined) {
+      paginatorOptions.lastPid = lastPid;
+    }
+    paginator = favoritesPaginatorHtml(paginatorOptions);
   }
 
   return `<!DOCTYPE html><html><body>${thumbs}${paginator}</body></html>`;
@@ -119,6 +169,62 @@ describe("extractUserIdFromDocument", () => {
   });
 });
 
+describe("resolveLastPid", () => {
+  it("parses pid from lastpage onclick, not href", () => {
+    const doc = new DOMParser().parseFromString(
+      favoritesPageHtml({
+        ids: [1],
+        nextPid: FAVORITES_SYNC_PID_STEP,
+        lastPid: 13050,
+      }),
+      "text/html",
+    );
+    const last = doc.querySelector('a[name="lastpage"]');
+    expect(last).toBeInstanceOf(HTMLAnchorElement);
+    if (last instanceof HTMLAnchorElement) {
+      expect(last.getAttribute("href")).toBe("#");
+      expect(last.href).toContain("#");
+    }
+    expect(resolveLastPid(doc, 0)).toBe(13050);
+  });
+
+  it("treats a page with no lastpage and no next as last", () => {
+    const doc = new DOMParser().parseFromString(
+      favoritesPageHtml({
+        ids: [9],
+        currentLabel: "261",
+      }),
+      "text/html",
+    );
+    expect(doc.querySelector('a[name="lastpage"]')).toBeNull();
+    expect(doc.querySelector('a[name="next"]')).toBeNull();
+    expect(resolveLastPid(doc, 13000)).toBe(13000);
+  });
+
+  it("returns null when next exists but lastpage is missing", () => {
+    const doc = new DOMParser().parseFromString(
+      favoritesPageHtml({
+        ids: [1],
+        nextPid: FAVORITES_SYNC_PID_STEP,
+      }),
+      "text/html",
+    );
+    expect(doc.querySelector('a[name="lastpage"]')).toBeNull();
+    expect(doc.querySelector('a[name="next"]')).not.toBeNull();
+    expect(resolveLastPid(doc, 0)).toBeNull();
+  });
+
+  it("returns null when lastpage onclick has no pid", () => {
+    const html = `<!DOCTYPE html><html><body>
+      <div id="paginator">
+        <a href="#" onclick="return false;" name="lastpage">&gt;&gt;</a>
+      </div>
+    </body></html>`;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    expect(resolveLastPid(doc, 0)).toBeNull();
+  });
+});
+
 describe("runFavoritesSync", () => {
   beforeEach(() => {
     installGmMocks();
@@ -139,13 +245,14 @@ describe("runFavoritesSync", () => {
       {
         body: favoritesPageHtml({
           ids: [10, 11],
+          nextPid: FAVORITES_SYNC_PID_STEP,
           lastPid: FAVORITES_SYNC_PID_STEP,
         }),
       },
       {
         body: favoritesPageHtml({
           ids: [12],
-          lastPid: FAVORITES_SYNC_PID_STEP,
+          currentLabel: "2",
         }),
       },
     ]);
@@ -185,7 +292,7 @@ describe("runFavoritesSync", () => {
       {
         body: favoritesPageHtml({
           ids: [20, 21],
-          lastPid: FAVORITES_SYNC_PID_STEP,
+          currentLabel: "2",
         }),
       },
     ]);
@@ -208,13 +315,14 @@ describe("runFavoritesSync", () => {
       {
         body: favoritesPageHtml({
           ids: [30],
+          nextPid: FAVORITES_SYNC_PID_STEP,
           lastPid: FAVORITES_SYNC_PID_STEP,
         }),
       },
       {
         body: favoritesPageHtml({
           ids: [31],
-          lastPid: FAVORITES_SYNC_PID_STEP,
+          currentLabel: "2",
         }),
       },
     ]);
@@ -253,8 +361,26 @@ describe("runFavoritesSync", () => {
       {
         body: favoritesPageHtml({
           ids: [],
-          lastPid: 0,
           includePaginator: true,
+        }),
+      },
+    ]);
+    const result = await runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+    });
+    expect(result).toEqual({
+      status: "error",
+      message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
+    });
+  });
+
+  it("stops with unexpected page when next exists without lastpage", async () => {
+    mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [1],
+          nextPid: FAVORITES_SYNC_PID_STEP,
         }),
       },
     ]);
@@ -289,7 +415,6 @@ describe("runFavoritesSync", () => {
       {
         body: favoritesPageHtml({
           ids: [40, 41, 42],
-          lastPid: 0,
         }),
       },
     ]);

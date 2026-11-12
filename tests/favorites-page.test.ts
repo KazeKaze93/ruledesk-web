@@ -5,12 +5,14 @@ import {
   syncFavoritesPage,
 } from "../src/site/favorites-page";
 import { addFav, clearFavsCache, isFav } from "../src/storage/favs";
+import { clearStorageCache } from "../src/storage/store";
 
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {

@@ -8,6 +8,8 @@ import {
   applyCssOnlyFeatureEnabled,
   getFeatureChoice,
   isFeatureEnabled,
+  notifyThumbsAdded,
+  onThumbsAdded,
   resetFeatureRuntimeState,
   runFeatures,
 } from "../src/features/runtime";
@@ -19,6 +21,7 @@ import {
 import { clearFavsCache, isFav } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
+  clearStorageCache,
   load,
   save,
   setFeatureChoiceValue,
@@ -36,6 +39,7 @@ const ORIGINAL_FEATURES = [...FEATURES];
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -297,7 +301,7 @@ describe("features runtime", () => {
     expect(getFeatureChoice("sample-feature")).toBe("b");
   });
 
-  it("ignores stale top-bar and dark-theme settings keys after registry removal", () => {
+  it("ignores stale settings keys after registry removal", () => {
     const data = createDefaultStorage();
     data.settings = {
       gridFavButtons: true,
@@ -307,14 +311,32 @@ describe("features runtime", () => {
         "top-bar": true,
         "dark-theme": false,
         pager: true,
+        "followed-badge": true,
       },
     };
     save(data);
 
     expect(load().settings?.features?.["top-bar"]).toBe(true);
     expect(load().settings?.features?.["dark-theme"]).toBe(false);
+    expect(load().settings?.features?.pager).toBe(true);
+    expect(load().settings?.features?.["followed-badge"]).toBe(true);
     expect(isFeatureEnabled("top-bar")).toBe(false);
     expect(isFeatureEnabled("dark-theme")).toBe(false);
+    expect(isFeatureEnabled("pager")).toBe(false);
+    expect(isFeatureEnabled("followed-badge")).toBe(false);
+  });
+
+  it("notifies thumbs-added subscribers and supports unsubscribe", () => {
+    const seen: ParentNode[] = [];
+    const stop = onThumbsAdded((root) => {
+      seen.push(root);
+    });
+    const root = document.createElement("div");
+    notifyThumbsAdded(root);
+    expect(seen).toEqual([root]);
+    stop();
+    notifyThumbsAdded(document.createElement("div"));
+    expect(seen).toHaveLength(1);
   });
 
   it("setPostSeenMark writes seen without clearing fav", () => {

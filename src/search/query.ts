@@ -154,6 +154,30 @@ export function buildUpdatesSearchUrl(query: string): string {
   return buildSearchUrl(parseTags(query));
 }
 
+/**
+ * First artist OR-group without an id:> token (single tag, no parentheses, if one artist).
+ */
+export function buildFeedQuery(
+  artistTags: string[],
+  groupSize: number,
+): string {
+  const groups = buildUpdatesQueries(artistTags, 0, groupSize);
+  const first = groups[0];
+  return first === undefined ? "" : first;
+}
+
+/** Search URL for the first feed group of followed artists. */
+export function buildFeedUrl(
+  artistTags: string[],
+  groupSize: number,
+): string {
+  const query = buildFeedQuery(artistTags, groupSize);
+  if (query.length === 0) {
+    return buildSearchUrl([]);
+  }
+  return buildUpdatesSearchUrl(query);
+}
+
 export function stripUpdatesIdFilter(tagsParam: string): string {
   const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
   if (tokens.length === 0) {

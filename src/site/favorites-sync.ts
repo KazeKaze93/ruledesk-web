@@ -31,8 +31,10 @@ const THUMB_SELECTOR = "span.thumb";
 const THUMB_POST_LINK_SELECTOR = 'span.thumb a[id^="p"]';
 const PAGINATOR_SELECTOR = "#paginator";
 const LASTPAGE_SELECTOR = 'a[name="lastpage"]';
+const NEXT_SELECTOR = 'a[name="next"]';
 const REMOVE_LINK_SELECTOR = "a[onclick]";
 const POST_LINK_ID_PATTERN = /^p(\d+)$/;
+const ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
 
 const URL_PARSE_BASE = "https://rule34.xxx";
 
@@ -115,13 +117,13 @@ function parsePositiveInt(raw: string | null): number | null {
   return Math.trunc(value);
 }
 
-function parsePidFromHref(href: string): number | null {
-  try {
-    const url = new URL(href, URL_PARSE_BASE);
-    return parsePositiveInt(url.searchParams.get(SEARCH_PARAM_PID));
-  } catch {
+function parsePidFromOnclick(onclick: string): number | null {
+  const match = ONCLICK_PID_PATTERN.exec(onclick);
+  const raw = match?.[1];
+  if (raw === undefined) {
     return null;
   }
+  return parsePositiveInt(raw);
 }
 
 export function extractUserIdFromDocument(root: ParentNode): number | null {
@@ -193,18 +195,27 @@ function collectFavoriteIdsFromDocument(doc: Document): number[] {
   return Array.from(ids);
 }
 
-function resolveLastPid(doc: Document, currentPid: number): number {
+/**
+ * Reads last-page pid from a[name="lastpage"] onclick only.
+ * No lastpage and no next → current page is last (returns currentPid).
+ * No lastpage but next exists, or lastpage onclick unparseable → null (unexpected).
+ */
+export function resolveLastPid(
+  doc: Document,
+  currentPid: number,
+): number | null {
   const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
-  if (!(lastpage instanceof HTMLAnchorElement)) {
-    return currentPid;
+  if (lastpage instanceof HTMLAnchorElement) {
+    const onclick = lastpage.getAttribute("onclick");
+    if (onclick === null || onclick.length === 0) {
+      return null;
+    }
+    return parsePidFromOnclick(onclick);
   }
-  const fromHref = parsePidFromHref(lastpage.href);
-  if (fromHref !== null) {
-    return fromHref;
-  }
-  const fromAttr = parsePositiveInt(lastpage.getAttribute(SEARCH_PARAM_PID));
-  if (fromAttr !== null) {
-    return fromAttr;
+
+  const next = doc.querySelector(NEXT_SELECTOR);
+  if (next !== null) {
+    return null;
   }
   return currentPid;
 }
@@ -295,7 +306,16 @@ export async function runFavoritesSync(
       const html = await response.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
       const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
-      lastPid = resolveLastPid(doc, pid);
+      const resolvedLastPid = resolveLastPid(doc, pid);
+      if (resolvedLastPid === null) {
+        log.warn("favorites sync: unexpected page", { pid, cardCount });
+        persistSyncProgress({ nextPid: pid, lastPid, startedAt });
+        return {
+          status: "error",
+          message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
+        };
+      }
+      lastPid = resolvedLastPid;
       page = pageIndexFromPid(pid);
       pages = pagesFromLastPid(lastPid);
 

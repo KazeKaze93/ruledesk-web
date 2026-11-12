@@ -2,6 +2,7 @@ import {
   CSS_CLASS,
   DOCUMENT_STYLE_ID,
 } from "../config/constants";
+import { onThumbsAdded } from "../features/runtime";
 import { detectPageKind } from "../site/pages";
 import {
   SITE_SELECTORS,
@@ -12,6 +13,25 @@ import { isFav } from "../storage/favs";
 import { getGridFavButtonsEnabled } from "../storage/store";
 import { createFavButton } from "./fav-button";
 import { CARD_CSS } from "./styles";
+
+let unsubscribeThumbsAdded: (() => void) | undefined;
+
+function ensureThumbsAddedSubscription(): void {
+  if (unsubscribeThumbsAdded !== undefined) {
+    return;
+  }
+  unsubscribeThumbsAdded = onThumbsAdded((root) => {
+    mountCards(root);
+  });
+}
+
+/** Clears the thumbs-added subscription (tests). */
+export function resetCardsRuntimeState(): void {
+  if (unsubscribeThumbsAdded !== undefined) {
+    unsubscribeThumbsAdded();
+    unsubscribeThumbsAdded = undefined;
+  }
+}
 
 export function ensureDocumentStyles(): void {
   if (document.getElementById(DOCUMENT_STYLE_ID) !== null) {
@@ -62,6 +82,8 @@ export function mountCards(
   root: ParentNode = document,
   search: string = window.location.search,
 ): void {
+  ensureThumbsAddedSubscription();
+
   if (detectPageKind(search) !== "list") {
     return;
   }

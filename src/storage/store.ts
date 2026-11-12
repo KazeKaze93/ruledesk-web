@@ -41,6 +41,9 @@ import {
 type GmGetValue = (key: string, defaultValue?: unknown) => unknown;
 type GmSetValue = (key: string, value: unknown) => void;
 
+let cachedStorage: StorageData | null = null;
+let storageCacheHydrated = false;
+
 function getGmGetValue(): GmGetValue {
   return GM_getValue;
 }
@@ -55,6 +58,41 @@ function readRaw(): unknown {
 
 function writeData(data: StorageData): void {
   getGmSetValue()(STORAGE_KEY, data);
+}
+
+function setStorageCache(data: StorageData): void {
+  cachedStorage = data;
+  storageCacheHydrated = true;
+}
+
+/** Clears the in-memory main storage cache (tests / full remount). */
+export function clearStorageCache(): void {
+  cachedStorage = null;
+  storageCacheHydrated = false;
+}
+
+function loadUncached(): StorageData {
+  const raw = readRaw();
+  if (raw === undefined || raw === null) {
+    migrateMarksFavToFavs();
+    return createDefaultStorage();
+  }
+  const parsed = StorageSchema.safeParse(raw);
+  if (!parsed.success) {
+    backupInvalid(raw);
+    migrateMarksFavToFavs();
+    return createDefaultStorage();
+  }
+  migrateMarksFavToFavs();
+  const after = readRaw();
+  if (after === undefined || after === null) {
+    return createDefaultStorage();
+  }
+  const reparsed = StorageSchema.safeParse(after);
+  if (!reparsed.success) {
+    return parsed.data;
+  }
+  return reparsed.data;
 }
 
 function backupInvalid(raw: unknown): void {
@@ -98,32 +136,35 @@ function currentSettings(data: StorageData): Settings {
 }
 
 export function load(): StorageData {
-  const raw = readRaw();
-  if (raw === undefined || raw === null) {
-    migrateMarksFavToFavs();
-    return createDefaultStorage();
+  if (storageCacheHydrated && cachedStorage !== null) {
+    return cachedStorage;
   }
-  const parsed = StorageSchema.safeParse(raw);
-  if (!parsed.success) {
-    backupInvalid(raw);
-    migrateMarksFavToFavs();
-    return createDefaultStorage();
-  }
-  migrateMarksFavToFavs();
-  const after = readRaw();
-  if (after === undefined || after === null) {
-    return createDefaultStorage();
-  }
-  const reparsed = StorageSchema.safeParse(after);
-  if (!reparsed.success) {
-    return parsed.data;
-  }
-  return reparsed.data;
+  const data = loadUncached();
+  setStorageCache(data);
+  return data;
+}
+
+/** Drop the in-memory cache and re-read + validate from GM storage. */
+export function reloadFromStorage(): StorageData {
+  clearStorageCache();
+  return load();
 }
 
 export function save(data: StorageData): void {
   const parsed = StorageSchema.parse(data);
   writeData(parsed);
+  migrateMarksFavToFavs();
+  const after = readRaw();
+  if (after === undefined || after === null) {
+    setStorageCache(createDefaultStorage());
+    return;
+  }
+  const reparsed = StorageSchema.safeParse(after);
+  if (!reparsed.success) {
+    setStorageCache(parsed);
+    return;
+  }
+  setStorageCache(reparsed.data);
 }
 
 export function addCollection(name: string, tags: TagEntry[]): Collection {

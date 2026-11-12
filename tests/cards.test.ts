@@ -1,9 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CSS_CLASS } from "../src/config/constants";
+import {
+  notifyThumbsAdded,
+  resetFeatureRuntimeState,
+} from "../src/features/runtime";
 import { addFav, clearFavsCache, isFav } from "../src/storage/favs";
-import { setGridFavButtonsEnabled } from "../src/storage/store";
-import { mountCards } from "../src/ui/cards";
+import {
+  clearStorageCache,
+  setGridFavButtonsEnabled,
+} from "../src/storage/store";
+import {
+  mountCards,
+  resetCardsRuntimeState,
+} from "../src/ui/cards";
 import { CARD_CSS } from "../src/ui/styles";
 import { addFavorite, removeFavorite } from "../src/site/favorites";
 
@@ -12,6 +22,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -66,12 +77,16 @@ function mockFetchSequence(
 describe("mountCards", () => {
   beforeEach(() => {
     installGmMocks();
+    resetCardsRuntimeState();
+    resetFeatureRuntimeState();
     document.body.replaceChildren();
     document.body.className = "";
     document.head.querySelectorAll("style").forEach((node) => node.remove());
   });
 
   afterEach(() => {
+    resetCardsRuntimeState();
+    resetFeatureRuntimeState();
     vi.unstubAllGlobals();
   });
 
@@ -176,6 +191,25 @@ describe("mountCards", () => {
     mountCards(root, "?page=post&s=list");
     expect(root.querySelectorAll(`button.${CSS_CLASS.cardFav}`)).toHaveLength(
       0,
+    );
+  });
+
+  it("attaches stars to thumbs delivered via notifyThumbsAdded", () => {
+    window.history.replaceState({}, "", "/index.php?page=post&s=list");
+    const host = document.createElement("div");
+    document.body.append(host);
+    mountCards(host, "?page=post&s=list");
+    expect(host.querySelectorAll(`button.${CSS_CLASS.cardFav}`)).toHaveLength(
+      0,
+    );
+
+    const batch = document.createElement("div");
+    batch.append(buildThumb("333"), buildThumb("444"));
+    host.append(batch);
+    notifyThumbsAdded(batch);
+
+    expect(batch.querySelectorAll(`button.${CSS_CLASS.cardFav}`)).toHaveLength(
+      2,
     );
   });
 

@@ -20,6 +20,25 @@ const mountedIds = new Set<string>();
 let activePageKind: PageKind | null = null;
 let activeSearch = "";
 
+export type ThumbsAddedListener = (root: ParentNode) => void;
+
+const thumbsAddedListeners = new Set<ThumbsAddedListener>();
+
+/** Subscribe to thumbs inserted after the initial page load (e.g. infinite scroll). */
+export function onThumbsAdded(cb: ThumbsAddedListener): () => void {
+  thumbsAddedListeners.add(cb);
+  return (): void => {
+    thumbsAddedListeners.delete(cb);
+  };
+}
+
+/** Notify subscribers that new thumb nodes exist under `root`. */
+export function notifyThumbsAdded(root: ParentNode): void {
+  for (const listener of thumbsAddedListeners) {
+    listener(root);
+  }
+}
+
 function findFeature(id: string): Feature | undefined {
   return FEATURES.find((feature) => feature.id === id);
 }
@@ -158,9 +177,10 @@ export function applyCssOnlyFeatureChoice(id: string, value: string): void {
   document.body.classList.add(featureChoiceBodyClass(feature.id, value));
 }
 
-/** Clears mount tracking and page context (tests). */
+/** Clears mount tracking, thumbs bus, and page context (tests). */
 export function resetFeatureRuntimeState(): void {
   mountedIds.clear();
+  thumbsAddedListeners.clear();
   activePageKind = null;
   activeSearch = "";
 }

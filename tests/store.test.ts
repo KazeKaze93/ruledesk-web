@@ -8,9 +8,11 @@ import {
 import { clearFavsCache, isFav } from "../src/storage/favs";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
+  clearStorageCache,
   exportJson,
   importJson,
   load,
+  reloadFromStorage,
   save,
 } from "../src/storage/store";
 
@@ -19,6 +21,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearFavsCache();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -234,5 +237,60 @@ describe("store", () => {
 
     expect(merged.artists.map((item) => item.tag).sort()).toEqual(["a", "b"]);
     expect(merged.updates?.seenPostId).toBe(25);
+  });
+
+  it("caches load in memory so GM_getValue runs once per page lifetime", () => {
+    const data = createDefaultStorage();
+    data.artists.push({ tag: "nyx_x" });
+    save(data);
+
+    const getSpy = vi.fn(
+      (key: string, defaultValue?: unknown): unknown => {
+        if (!memory.has(key)) {
+          return defaultValue;
+        }
+        return memory.get(key);
+      },
+    );
+    vi.stubGlobal("GM_getValue", getSpy);
+
+    clearStorageCache();
+    const first = load();
+    const getCallsAfterFirst = getSpy.mock.calls.filter(
+      (call) => call[0] === STORAGE_KEY,
+    ).length;
+    expect(getCallsAfterFirst).toBeGreaterThanOrEqual(1);
+
+    const second = load();
+    const getCallsAfterSecond = getSpy.mock.calls.filter(
+      (call) => call[0] === STORAGE_KEY,
+    ).length;
+    expect(getCallsAfterSecond).toBe(getCallsAfterFirst);
+    expect(second).toBe(first);
+    expect(second.artists).toEqual([{ tag: "nyx_x" }]);
+  });
+
+  it("save updates the in-memory cache", () => {
+    const data = createDefaultStorage();
+    save(data);
+    data.artists.push({ tag: "cached" });
+    save(data);
+    expect(load().artists).toEqual([{ tag: "cached" }]);
+  });
+
+  it("reloadFromStorage re-reads from GM and replaces the cache", () => {
+    save(createDefaultStorage());
+    expect(load().artists).toEqual([]);
+
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "external" }],
+      marks: {},
+    });
+
+    expect(load().artists).toEqual([]);
+    expect(reloadFromStorage().artists).toEqual([{ tag: "external" }]);
+    expect(load().artists).toEqual([{ tag: "external" }]);
   });
 });

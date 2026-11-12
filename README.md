@@ -50,11 +50,9 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 
 | Module | Default | Pages | What it does |
 |---|---|---|---|
-| Top pagination | on | list | Compact pager above the image list + ←/→ keys |
 | Clean header menu | on | all | Hides unused header links |
-| Collapse General and Meta tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
+| Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
 | Show search tags as a list under the search field | on | list, post | Token chips under the site search form |
-| Following badge | on | list | ✓ circle on thumbs with followed artists (skips artists already in the current include search) |
 | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid |
 | Post actions | on | post | Favorite / Follow / Original / Score bar above the post sidebar |
 | Grid size | on | list, favorites | compact / default / large |
@@ -85,7 +83,7 @@ Turn a module off in Settings, or disable **Enable page tweaks** to unload all o
     "gridFavButtons": true,
     "tweaksEnabled": true,
     "updatesGroupSize": 0,
-    "features": { "pager": true },
+    "features": { "menu-cleanup": true },
     "featureChoice": { "grid-density": "default" },
     "featureState": {}
   },

@@ -77,6 +77,7 @@ export const SITE_THEME_COOKIE_NAME = "theme";
 export const SITE_THEME_COOKIE_VALUE_DARK = "dark";
 export const SITE_THEME_COOKIE_MAX_AGE_DAYS = 365;
 export const SITE_THEME_COOKIE_PATH = "/";
+export const SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
 export const SITE_THEME_STYLESHEET_DIR = "/css/";
 export const SITE_THEME_STYLESHEET_LIGHT = "desktop.css";
 export const SITE_THEME_STYLESHEET_DARK = "desktop-dark.css";

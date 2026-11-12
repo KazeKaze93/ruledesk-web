@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CSS_CLASS } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
-import { load, save } from "../src/storage/store";
+import { clearStorageCache, load, save } from "../src/storage/store";
 import { mountArtistSidebar } from "../src/ui/artists-sidebar";
 
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
   memory.clear();
+  clearStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {

@@ -103,15 +103,26 @@ export async function addFavorite(postId: string): Promise<FavoriteResult> {
   }
 
   try {
-    const voteRaw = await fetchText(buildVoteUrl(postId));
-    const score = parseVoteScore(voteRaw);
-    if (score === undefined) {
+    const score = await voteUp(postId);
+    if (score === null) {
       return { status: "added" };
     }
     return { status: "added", score };
   } catch (error) {
     log.warn("vote request failed after addfav", postId, error);
     return { status: "added" };
+  }
+}
+
+/** GET vote-up endpoint; returns the new score number, or null if unparseable/failed. */
+export async function voteUp(postId: string): Promise<number | null> {
+  try {
+    const voteRaw = await fetchText(buildVoteUrl(postId));
+    const score = parseVoteScore(voteRaw);
+    return score === undefined ? null : score;
+  } catch (error) {
+    log.warn("vote request failed", postId, error);
+    return null;
   }
 }
 

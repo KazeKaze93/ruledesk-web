@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildFeedQuery,
+  buildFeedUrl,
   buildUpdatesQueries,
   buildUpdatesSearchUrl,
   isFullUpdatesQuery,
@@ -47,6 +49,27 @@ describe("buildUpdatesSearchUrl", () => {
   it("matches the site encoding sample", () => {
     expect(buildUpdatesSearchUrl("( a ~ b ) id:>19300000")).toBe(
       "https://rule34.xxx/index.php?page=post&s=list&tags=%28+a+~+b+%29+id%3A%3E19300000",
+    );
+  });
+});
+
+describe("buildFeedQuery / buildFeedUrl", () => {
+  it("returns the first artist group without an id token", () => {
+    expect(buildFeedQuery(["nyx_x"], 0)).toBe("nyx_x");
+    expect(buildFeedQuery(["a", "b", "c"], 0)).toBe("( a ~ b ~ c )");
+    expect(buildFeedQuery(["a", "b", "c", "d"], 2)).toBe("( a ~ b )");
+  });
+
+  it("returns an empty query and a plain list URL when there are no artists", () => {
+    expect(buildFeedQuery([], 0)).toBe("");
+    expect(buildFeedUrl([], 0)).toBe(
+      "https://rule34.xxx/index.php?page=post&s=list&tags=",
+    );
+  });
+
+  it("builds a search URL for the first feed group", () => {
+    expect(buildFeedUrl(["a", "b"], 0)).toBe(
+      "https://rule34.xxx/index.php?page=post&s=list&tags=%28+a+~+b+%29",
     );
   });
 });

@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addFavorite, removeFavorite } from "../src/site/favorites";
+import {
+  addFavorite,
+  removeFavorite,
+  voteUp,
+} from "../src/site/favorites";
 
 function mockFetchSequence(
   responses: Array<{ ok?: boolean; body: string } | Error>,
-): void {
+): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn();
   for (const item of responses) {
     if (item instanceof Error) {
@@ -18,6 +22,7 @@ function mockFetchSequence(
     }
   }
   vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
 }
 
 describe("addFavorite", () => {
@@ -69,6 +74,35 @@ describe("addFavorite", () => {
     mockFetchSequence([{ body: "3" }, { body: "ok" }]);
     await expect(addFavorite("99")).resolves.toEqual({ status: "added" });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("voteUp", () => {
+  beforeEach(() => {
+    vi.stubGlobal("GM_getValue", () => undefined);
+    vi.stubGlobal("GM_setValue", () => undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("returns the new score number", async () => {
+    const fetchMock = mockFetchSequence([{ body: "17" }]);
+    await expect(voteUp("99")).resolves.toBe(17);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("page=post&s=vote");
+  });
+
+  it("returns null when the body is non-numeric", async () => {
+    mockFetchSequence([{ body: "ok" }]);
+    await expect(voteUp("99")).resolves.toBeNull();
+  });
+
+  it("returns null on network failure", async () => {
+    mockFetchSequence([new Error("offline")]);
+    await expect(voteUp("99")).resolves.toBeNull();
   });
 });
 
