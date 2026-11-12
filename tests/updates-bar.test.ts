@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UPDATES_BAR_ID, UI_TEXT } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
 import { clearStorageCache, getSeenPostId, save } from "../src/storage/store";
+import { FEED_NEW_CLASS } from "../src/features/feed";
 import { mountUpdatesBar } from "../src/ui/updates-bar";
 
 const memory = new Map<string, unknown>();
@@ -31,14 +32,19 @@ function seedArtists(seenPostId = 0): void {
   save(data);
 }
 
-function buildListPage(postIds: string[]): void {
+function buildThumb(id: string, markNew = false): HTMLSpanElement {
+  const thumb = document.createElement("span");
+  thumb.className = markNew ? `thumb ${FEED_NEW_CLASS}` : "thumb";
+  thumb.id = `s${id}`;
+  return thumb;
+}
+
+function buildListPage(postIds: string[], markNewIds: string[] = []): void {
   const list = document.createElement("div");
   list.className = "image-list";
+  const newSet = new Set(markNewIds);
   for (const id of postIds) {
-    const thumb = document.createElement("span");
-    thumb.className = "thumb";
-    thumb.id = `s${id}`;
-    list.append(thumb);
+    list.append(buildThumb(id, newSet.has(id)));
   }
   document.body.append(list);
 }
@@ -55,33 +61,63 @@ describe("mountUpdatesBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows Mark all seen when page max id is greater than seen", () => {
+  it("shows N new on this page and Mark all seen when page has newer ids", () => {
     seedArtists(10);
-    buildListPage(["10", "42", "7"]);
+    buildListPage(["10", "42", "7"], ["42"]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(bar).not.toBeNull();
+    expect(bar?.textContent).toContain("1 new on this page");
     const button = bar?.querySelector("button");
     expect(button?.textContent).toBe("Mark all seen");
+    expect(bar?.querySelector("a")?.textContent).toBe("Only new");
     button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(getSeenPostId()).toBe(42);
-    expect(bar?.textContent).toContain("42");
-    expect(bar?.querySelector("a")?.textContent).toBe("Reload updates");
+    expect(bar?.textContent).toContain("Marked as seen up to #42");
+    expect(document.querySelectorAll(`.${FEED_NEW_CLASS}`).length).toBe(0);
   });
 
-  it("hides Mark all seen when page max id is already covered", () => {
+  it("shows No new posts since #N without a mark button when nothing is new", () => {
     seedArtists(42);
     buildListPage(["10", "42", "7"]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(bar?.querySelector("button")).toBeNull();
-    expect(bar?.textContent).toContain(
-      "Everything here is already marked as seen (up to #42)",
-    );
-    expect(bar?.querySelector("a")?.textContent).toBe(UI_TEXT.openUpdates);
+    expect(bar?.textContent).toContain("No new posts since #42");
+    expect(bar?.querySelector("a")?.textContent).toBe("Only new");
     expect(getSeenPostId()).toBe(42);
+  });
+
+  it("hides Only new when seenPostId is 0", () => {
+    seedArtists(0);
+    buildListPage(["10", "42"]);
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar?.textContent).toContain("2 new on this page");
+    expect(
+      Array.from(bar?.querySelectorAll("a") ?? []).map((a) => a.textContent),
+    ).not.toContain("Only new");
+  });
+
+  it("shows Show all when the feed query already has an id token", () => {
+    seedArtists(5);
+    buildListPage(["10", "42"]);
+    mountUpdatesBar(
+      document,
+      "?page=post&s=list&tags=(+a+~+b+)+id%3A%3E5",
+    );
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar?.querySelector("a")?.textContent).toBe("Show all");
+    expect(bar?.querySelector("a")?.getAttribute("href")).toContain(
+      "tags=%28+a+~+b+%29",
+    );
+    expect(bar?.querySelector("a")?.getAttribute("href")).not.toContain(
+      "id%3A%3E",
+    );
   });
 
   it("shows page-1 hint when pid > 0 on a full query", () => {
@@ -92,11 +128,13 @@ describe("mountUpdatesBar", () => {
     expect(bar?.querySelector("button")).toBeNull();
   });
 
-  it("shows empty text when there are no cards on a full query", () => {
+  it("shows No new posts since when the image-list has no cards", () => {
+    seedArtists(7);
     buildListPage([]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
     const bar = document.getElementById(UPDATES_BAR_ID);
-    expect(bar?.textContent).toContain("No new posts");
+    expect(bar?.textContent).toContain("No new posts since #7");
+    expect(bar?.querySelector("button")).toBeNull();
   });
 
   it("shows partial hint without a mark button and does not write seenPostId", () => {
@@ -136,9 +174,7 @@ describe("mountUpdatesBar", () => {
     expect(bar).not.toBeNull();
     expect(content.firstElementChild).toBe(bar);
     expect(bar?.textContent).toContain("No new posts since #19300000");
-    expect(bar?.querySelector("a")?.textContent).toBe(
-      UI_TEXT.showAllFollowedPosts,
-    );
+    expect(bar?.querySelector("a")?.textContent).toBe("Show all");
     expect(bar?.querySelector("a")?.getAttribute("href")).toContain(
       "tags=%28+a+~+b+%29",
     );
@@ -158,6 +194,7 @@ describe("mountUpdatesBar", () => {
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(content.firstElementChild).toBe(bar);
     expect(bar?.textContent).toContain("No new posts since #7");
+    expect(bar?.querySelector("a")?.textContent).toBe("Show all");
   });
 
   it("does not mount when image-list and both hosts are missing", () => {

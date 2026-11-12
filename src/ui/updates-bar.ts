@@ -2,12 +2,13 @@ import {
   CSS_CLASS,
   SEARCH_PARAM_PID,
   SEARCH_PARAM_TAGS,
+  TAG_SEPARATOR,
   UI_TEXT,
   UPDATES_BAR_ID,
+  UPDATES_ID_PREFIX,
 } from "../config/constants";
 import { log } from "../log";
 import {
-  buildUpdatesQueries,
   buildUpdatesSearchUrl,
   isFullUpdatesQuery,
   isPartialUpdatesQuery,
@@ -20,11 +21,20 @@ import {
 } from "../site/selectors";
 import {
   getSeenPostId,
-  getUpdatesGroupSize,
   listArtistTags,
   setSeenPostId,
 } from "../storage/store";
 import { ensureDocumentStyles } from "./cards";
+
+/** Keep in sync with `FEED_NEW_CLASS` in features/feed.ts. */
+const FEED_NEW_CLASS = "new";
+
+const ID_FILTER_PATTERN = /^id:>(\d+)$/;
+
+const TEXT_NEW_ON_PAGE_SUFFIX = " new on this page";
+const TEXT_MARKED_SEEN_PREFIX = "Marked as seen up to #";
+const TEXT_ONLY_NEW = "Only new";
+const TEXT_SHOW_ALL = "Show all";
 
 function readPid(search: string): number {
   const params = new URLSearchParams(search);
@@ -55,20 +65,36 @@ function maxThumbPostId(root: ParentNode): number {
   return maxId;
 }
 
-function buildReloadHref(artistTags: string[], seenPostId: number): string {
-  const groupSize = getUpdatesGroupSize();
-  const queries = buildUpdatesQueries(artistTags, seenPostId, groupSize);
-  const first = queries[0];
-  if (first === undefined) {
-    return window.location.href;
+function countNewThumbs(root: ParentNode, seenPostId: number): number {
+  let count = 0;
+  const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+  for (const thumb of thumbs) {
+    const postId = extractPostIdFromThumb(thumb);
+    if (postId === null) {
+      continue;
+    }
+    const numeric = Number(postId);
+    if (Number.isFinite(numeric) && numeric > seenPostId) {
+      count += 1;
+    }
   }
-  return buildUpdatesSearchUrl(first);
+  return count;
+}
+
+function tagsHaveIdFilter(tagsParam: string): boolean {
+  const tokens = tagsParam
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length > 0);
+  const last = tokens[tokens.length - 1];
+  return last !== undefined && ID_FILTER_PATTERN.test(last);
 }
 
 function removeExistingBar(root: ParentNode): void {
-  const existing = root instanceof Document
-    ? root.getElementById(UPDATES_BAR_ID)
-    : root.querySelector(`#${UPDATES_BAR_ID}`);
+  const existing =
+    root instanceof Document
+      ? root.getElementById(UPDATES_BAR_ID)
+      : root.querySelector(`#${UPDATES_BAR_ID}`);
   if (existing !== null) {
     existing.remove();
   }
@@ -92,6 +118,49 @@ function findEmptyUpdatesHost(root: ParentNode): Element | null {
   );
 }
 
+function clearNewHighlights(root: ParentNode): void {
+  const thumbs = root.querySelectorAll(
+    `${SITE_SELECTORS.thumb}.${FEED_NEW_CLASS}`,
+  );
+  for (const thumb of thumbs) {
+    thumb.classList.remove(FEED_NEW_CLASS);
+  }
+}
+
+function createToggleLink(
+  tagsParam: string,
+  seenPostId: number,
+): HTMLAnchorElement | null {
+  if (tagsHaveIdFilter(tagsParam)) {
+    const link = document.createElement("a");
+    link.className = CSS_CLASS.itemName;
+    link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
+    link.textContent = TEXT_SHOW_ALL;
+    return link;
+  }
+  if (seenPostId === 0) {
+    return null;
+  }
+  const base = stripUpdatesIdFilter(tagsParam);
+  const onlyNewQuery = `${base}${TAG_SEPARATOR}${UPDATES_ID_PREFIX}${String(seenPostId)}`;
+  const link = document.createElement("a");
+  link.className = CSS_CLASS.itemName;
+  link.href = buildUpdatesSearchUrl(onlyNewQuery);
+  link.textContent = TEXT_ONLY_NEW;
+  return link;
+}
+
+function appendToggle(
+  parent: Element,
+  tagsParam: string,
+  seenPostId: number,
+): void {
+  const toggle = createToggleLink(tagsParam, seenPostId);
+  if (toggle !== null) {
+    parent.append(toggle);
+  }
+}
+
 function mountEmptyPageBar(root: ParentNode, tagsParam: string): void {
   const host = findEmptyUpdatesHost(root);
   if (host === null) {
@@ -106,14 +175,14 @@ function mountEmptyPageBar(root: ParentNode, tagsParam: string): void {
   text.className = CSS_CLASS.hint;
   text.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
 
-  const link = document.createElement("a");
-  link.className = CSS_CLASS.itemName;
-  link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
-  link.textContent = UI_TEXT.showAllFollowedPosts;
+  const showAll = document.createElement("a");
+  showAll.className = CSS_CLASS.itemName;
+  showAll.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
+  showAll.textContent = TEXT_SHOW_ALL;
 
   const wrap = document.createElement("div");
   wrap.className = CSS_CLASS.updatesBarActions;
-  wrap.append(text, link);
+  wrap.append(text, showAll);
   bar.append(wrap);
 
   host.insertBefore(bar, host.firstChild);
@@ -128,19 +197,15 @@ function mountPartialBar(imageList: Element): void {
   insertBeforeImageList(imageList, bar);
 }
 
-function mountFullBar(imageList: Element, search: string, artistTags: string[]): void {
+function mountFullBar(
+  imageList: Element,
+  search: string,
+  tagsParam: string,
+): void {
   const bar = createBarShell();
-  const thumbCount = imageList.querySelectorAll(SITE_SELECTORS.thumb).length;
-  if (thumbCount === 0) {
-    const empty = document.createElement("p");
-    empty.className = CSS_CLASS.hint;
-    empty.textContent = UI_TEXT.noNewPosts;
-    bar.append(empty);
-    insertBeforeImageList(imageList, bar);
-    return;
-  }
-
+  const seen = getSeenPostId();
   const pid = readPid(search);
+
   if (pid > 0) {
     const hint = document.createElement("p");
     hint.className = CSS_CLASS.hint;
@@ -150,26 +215,24 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
     return;
   }
 
-  const pageMax = maxThumbPostId(imageList);
-  const seen = getSeenPostId();
+  const newCount = countNewThumbs(imageList, seen);
   const actions = document.createElement("div");
   actions.className = CSS_CLASS.updatesBarActions;
 
-  if (pageMax <= seen) {
+  if (newCount === 0) {
     const hint = document.createElement("p");
     hint.className = CSS_CLASS.hint;
-    hint.textContent = `${UI_TEXT.alreadyMarkedSeenPrefix}${String(seen)}${UI_TEXT.alreadyMarkedSeenSuffix}`;
-
-    const openLink = document.createElement("a");
-    openLink.className = CSS_CLASS.itemName;
-    openLink.href = buildReloadHref(artistTags, seen);
-    openLink.textContent = UI_TEXT.openUpdates;
-
-    actions.append(hint, openLink);
+    hint.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
+    actions.append(hint);
+    appendToggle(actions, tagsParam, seen);
     bar.append(actions);
     insertBeforeImageList(imageList, bar);
     return;
   }
+
+  const summary = document.createElement("p");
+  summary.className = CSS_CLASS.hint;
+  summary.textContent = `${String(newCount)}${TEXT_NEW_ON_PAGE_SUFFIX}`;
 
   const markButton = document.createElement("button");
   markButton.type = "button";
@@ -178,24 +241,22 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
   markButton.addEventListener("click", () => {
     const nextSeen = Math.max(getSeenPostId(), maxThumbPostId(imageList));
     setSeenPostId(nextSeen);
+    clearNewHighlights(document);
 
     bar.replaceChildren();
     const confirm = document.createElement("p");
     confirm.className = CSS_CLASS.hint;
-    confirm.textContent = `${UI_TEXT.markedSeenConfirm}${String(nextSeen)}`;
-
-    const reload = document.createElement("a");
-    reload.className = CSS_CLASS.itemName;
-    reload.href = buildReloadHref(artistTags, nextSeen);
-    reload.textContent = UI_TEXT.reloadUpdates;
+    confirm.textContent = `${TEXT_MARKED_SEEN_PREFIX}${String(nextSeen)}`;
 
     const wrap = document.createElement("div");
     wrap.className = CSS_CLASS.updatesBarActions;
-    wrap.append(confirm, reload);
+    wrap.append(confirm);
+    appendToggle(wrap, tagsParam, nextSeen);
     bar.append(wrap);
   });
 
-  actions.append(markButton);
+  actions.append(summary, markButton);
+  appendToggle(actions, tagsParam, seen);
   bar.append(actions);
   insertBeforeImageList(imageList, bar);
 }
@@ -235,5 +296,5 @@ export function mountUpdatesBar(
     return;
   }
 
-  mountFullBar(imageList, search, artistTags);
+  mountFullBar(imageList, search, tagsParam);
 }
