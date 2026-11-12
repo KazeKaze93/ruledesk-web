@@ -310,8 +310,86 @@ export const CARD_CSS = `
   cursor: wait;
 }
 
+.${CSS_CLASS.thumbWrap}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
+.${CSS_CLASS.thumbWrap}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
+  display: none !important;
+}
+
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   display: none !important;
+}
+
+.${CSS_CLASS.artistFollow} {
+  margin-left: 4px;
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.${CSS_CLASS.artistFollow}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked} {
+  background: #ffe08a;
+  border-color: #a67c00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.updatesBar} {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #f7f7f7;
+  font-family: Segoe UI, system-ui, sans-serif;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.hint} {
+  margin: 0;
+  color: #555;
+  font-size: 12px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton} {
+  border: 1px solid #0b57d0;
+  background: #0b57d0;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  min-height: 32px;
+  padding: 4px 10px;
+  font: inherit;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.itemName} {
+  color: #0b57d0;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.${CSS_CLASS.updatesBarActions} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
 .${CSS_CLASS.postFavButton} {

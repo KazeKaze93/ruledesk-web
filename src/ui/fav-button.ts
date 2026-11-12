@@ -3,7 +3,12 @@ import { log } from "../log";
 import { addFavorite, removeFavorite } from "../site/favorites";
 import { setPostFavMark } from "../storage/store";
 
-export type FavButtonState = "idle" | "pending" | "marked" | "error";
+export type FavButtonState =
+  | "idle"
+  | "pending"
+  | "marked"
+  | "error"
+  | "marked_error";
 
 export function favAriaLabel(postId: string, marked: boolean): string {
   const action = marked
@@ -30,19 +35,33 @@ export function applyFavButtonState(
     CSS_CLASS.cardFavPending,
   );
   button.disabled = false;
-  const marked = state === "marked";
-  button.setAttribute("aria-pressed", marked ? "true" : "false");
-  button.setAttribute("aria-label", favAriaLabel(postId, marked));
   button.removeAttribute("title");
 
   if (state === "marked") {
+    button.setAttribute("aria-pressed", "true");
+    button.setAttribute("aria-label", favAriaLabel(postId, true));
     button.classList.add(CSS_CLASS.cardFavMarked);
     return;
   }
+
+  if (state === "marked_error") {
+    button.setAttribute("aria-pressed", "true");
+    button.setAttribute("aria-label", favAriaLabel(postId, true));
+    button.classList.add(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError);
+    button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+    return;
+  }
+
   if (state === "error") {
+    button.setAttribute("aria-pressed", "false");
+    button.setAttribute("aria-label", favAriaLabel(postId, false));
     button.classList.add(CSS_CLASS.cardFavError);
     button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+    return;
   }
+
+  button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-label", favAriaLabel(postId, false));
 }
 
 export function createFavButton(
@@ -83,7 +102,7 @@ export async function handleFavToggleClick(
     }
     applyFavButtonState(
       button,
-      "error",
+      "marked_error",
       postId,
       UI_TEXT.cardFavErrorRequest,
     );

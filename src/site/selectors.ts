@@ -8,10 +8,15 @@ export const SITE_SELECTORS = {
   cardFavButton: `button.${CSS_CLASS.cardFav}`,
   nativeAddFavLink: 'a[onclick*="addFav("]',
   favoritesDeleteLink: "a[onclick]",
+  tagSidebar: "ul#tag-sidebar",
+  tagTypeArtist: "li.tag-type-artist",
+  imageList: "div.image-list",
+  artistFollowButton: `button.${CSS_CLASS.artistFollow}`,
 } as const;
 
 export const THUMB_ID_PATTERN = /^s(\d+)$/;
 export const FAVORITES_DELETE_ID_PATTERN = /s=delete&id=(\d+)/;
+
 export function extractPostIdFromThumb(thumb: Element): string | null {
   const match = THUMB_ID_PATTERN.exec(thumb.id);
   if (match === null) {

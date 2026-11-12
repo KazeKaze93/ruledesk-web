@@ -197,4 +197,39 @@ describe("store", () => {
     expect(data.settings).toBeUndefined();
     expect(data.marks["7"]?.fav).toBe(true);
   });
+
+  it("loads legacy artists with lastSeenPostId and storage without updates", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "nyx_x", lastSeenPostId: 99 }],
+      marks: {},
+    });
+    const data = load();
+    expect(data.artists).toEqual([{ tag: "nyx_x" }]);
+    expect(data.updates).toBeUndefined();
+  });
+
+  it("imports artists by tag and keeps max seenPostId", () => {
+    save({
+      version: 1,
+      collections: [],
+      artists: [{ tag: "a" }],
+      marks: {},
+      updates: { seenPostId: 10 },
+    });
+
+    const merged = importJson(
+      JSON.stringify({
+        version: 1,
+        collections: [],
+        artists: [{ tag: "b" }, { tag: "a" }],
+        marks: {},
+        updates: { seenPostId: 25 },
+      }),
+    );
+
+    expect(merged.artists.map((item) => item.tag).sort()).toEqual(["a", "b"]);
+    expect(merged.updates?.seenPostId).toBe(25);
+  });
 });

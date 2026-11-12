@@ -156,6 +156,51 @@ describe("mountCards", () => {
     });
     expect(load().marks["111"]?.fav).toBe(false);
   });
+
+  it("keeps the star marked when remove fails", async () => {
+    const data = createDefaultStorage();
+    data.marks["111"] = { fav: true };
+    save(data);
+
+    const root = document.createElement("div");
+    root.append(buildThumb("111"));
+    document.body.append(root);
+    mountCards(root, "?page=post&s=list");
+
+    const button = root.querySelector(`button.${CSS_CLASS.cardFav}`);
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    mockFetchSequence([{ ok: false, body: "fail" }]);
+    button.click();
+    await vi.waitFor(() => {
+      expect(button.classList.contains(CSS_CLASS.cardFavError)).toBe(true);
+    });
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    expect(button.classList.contains(CSS_CLASS.cardFavMarked)).toBe(true);
+    expect(load().marks["111"]?.fav).toBe(true);
+  });
+
+  it("hides the star with CSS when the preview link is display:none", () => {
+    const root = document.createElement("div");
+    const thumb = buildThumb("111");
+    root.append(thumb);
+    document.body.append(root);
+    mountCards(root, "?page=post&s=list");
+
+    const link = root.querySelector("#p111");
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    link.setAttribute("style", "display: none");
+
+    const styleTag = document.getElementById("ruledesk-web-document-style");
+    expect(styleTag?.textContent ?? "").toContain('display: none');
+    expect(styleTag?.textContent ?? "").toContain(CSS_CLASS.cardFav);
+  });
 });
 
 describe("removeFavorite", () => {

@@ -2,6 +2,8 @@ import * as z from "zod/mini";
 
 import {
   DEFAULT_GRID_FAV_BUTTONS,
+  DEFAULT_SEEN_POST_ID,
+  DEFAULT_UPDATES_GROUP_SIZE,
   SCHEMA_VERSION,
   TAG_TYPE_EXCLUDE,
   TAG_TYPE_INCLUDE,
@@ -22,7 +24,6 @@ export const CollectionSchema = z.object({
 
 export const ArtistEntrySchema = z.object({
   tag: z.string().check(z.minLength(1)),
-  lastSeenPostId: z.int().check(z.nonnegative()),
 });
 
 export const MarkFlagsSchema = z.object({
@@ -31,6 +32,11 @@ export const MarkFlagsSchema = z.object({
 
 export const SettingsSchema = z.object({
   gridFavButtons: z.boolean(),
+  updatesGroupSize: z.optional(z.int().check(z.nonnegative())),
+});
+
+export const UpdatesSchema = z.object({
+  seenPostId: z.int().check(z.nonnegative()),
 });
 
 export const StorageSchema = z.object({
@@ -39,6 +45,7 @@ export const StorageSchema = z.object({
   artists: z.array(ArtistEntrySchema),
   marks: z.record(z.string(), MarkFlagsSchema),
   settings: z.optional(SettingsSchema),
+  updates: z.optional(UpdatesSchema),
 });
 
 export type TagType = z.infer<typeof TagTypeSchema>;
@@ -47,6 +54,7 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export type ArtistEntry = z.infer<typeof ArtistEntrySchema>;
 export type MarkFlags = z.infer<typeof MarkFlagsSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
+export type UpdatesState = z.infer<typeof UpdatesSchema>;
 export type StorageData = z.infer<typeof StorageSchema>;
 
 export function createDefaultStorage(): StorageData {
@@ -57,10 +65,22 @@ export function createDefaultStorage(): StorageData {
     marks: {},
     settings: {
       gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
+      updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
+    },
+    updates: {
+      seenPostId: DEFAULT_SEEN_POST_ID,
     },
   };
 }
 
 export function resolveGridFavButtons(data: StorageData): boolean {
   return data.settings?.gridFavButtons ?? DEFAULT_GRID_FAV_BUTTONS;
+}
+
+export function resolveUpdatesGroupSize(data: StorageData): number {
+  return data.settings?.updatesGroupSize ?? DEFAULT_UPDATES_GROUP_SIZE;
+}
+
+export function resolveSeenPostId(data: StorageData): number {
+  return data.updates?.seenPostId ?? DEFAULT_SEEN_POST_ID;
 }
