@@ -2,28 +2,33 @@
 
 Userscript for [Tampermonkey](https://www.tampermonkey.net/) / [Violentmonkey](https://violentmonkey.github.io/) on `https://rule34.xxx/*`.
 
-Stage 1 adds **collections**: named saved tag searches (include / exclude). There is no site API usage and no network requests from the script — opening a collection navigates to a normal search URL.
+## Install / update
 
-## Install
+Install or update from the built file on GitHub:
 
-1. Build: `npm install` then `npm run build`
-2. Open the userscript manager → Create a new script / Install from file
-3. Use the built file: `dist/ruledesk-web.user.js`
+https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 
-For development with live reload: `npm run dev` (vite-plugin-monkey).
+Managers that honor `@updateURL` / `@downloadURL` can auto-check that same raw URL.
 
-## Stage 1 features
+Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
-- Floating toggle button (bottom-right) opens a Shadow DOM panel
+## Stage 1 — collections
+
+- Floating toggle (bottom-right) opens a Shadow DOM panel
 - Save the current `page=post&s=list` search when `tags` is non-empty
-- Open / rename / delete collections (delete asks for confirmation inside the panel)
-- Export and import collections as JSON via the panel
+- Open / rename / delete collections (delete confirms inside the panel)
+- Export and import JSON via the panel
 
-Storage uses only `GM_getValue` / `GM_setValue`.
+## Stage 2 — list card favorites
+
+- On `page=post&s=list` only, each `span.thumb` gets a favorite button
+- Click runs the same-origin GETs the site uses (`/public/addfav.php`, then vote-up only when newly added)
+- Local `marks[postId].fav` remembers which posts were added; marked buttons restore on reload
+- No `api.rule34.xxx`, no background or bulk requests
+
+Storage uses `GM_getValue` / `GM_setValue`. Favorite clicks use normal `fetch` with `credentials: "same-origin"`.
 
 ## Export format
-
-One JSON object:
 
 ```json
 {
@@ -39,12 +44,15 @@ One JSON object:
     }
   ],
   "artists": [],
-  "marks": {}
+  "marks": {
+    "12345": { "fav": true }
+  }
 }
 ```
 
-- `artists` and `marks` are reserved for later stages
+- `artists[].lastSeenPostId` is a non-negative integer (reserved for a later stage)
 - Import merges collections by `id` (incoming wins). Duplicate names are allowed.
+- Marks merge by post id (incoming object replaces the previous one for that id)
 
 ## Scripts
 

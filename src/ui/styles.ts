@@ -69,6 +69,7 @@ export const PANEL_CSS = `
   margin: 0;
   font-size: 16px;
   font-weight: 700;
+  color: #1a1a1a;
 }
 
 .${CSS_CLASS.close} {
@@ -78,6 +79,12 @@ export const PANEL_CSS = `
   cursor: pointer;
   min-width: 32px;
   min-height: 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: #1a1a1a;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .${CSS_CLASS.body} {
@@ -226,5 +233,54 @@ export const PANEL_CSS = `
 
 .${CSS_CLASS.hidden} {
   display: none !important;
+}
+`;
+
+export const CARD_CSS = `
+.${CSS_CLASS.thumb} {
+  position: relative;
+}
+
+.${CSS_CLASS.cardFav} {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 5;
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.${CSS_CLASS.cardFav}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked} {
+  background: #ffe08a;
+  border-color: #a67c00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError} {
+  background: #f8d7da;
+  border-color: #a12828;
+  color: #a12828;
+}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
+.${CSS_CLASS.cardFav}:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 `;

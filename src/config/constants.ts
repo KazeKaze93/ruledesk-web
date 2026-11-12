@@ -12,6 +12,24 @@ export const SEARCH_PARAM_PAGE = "page";
 export const SEARCH_PARAM_SECTION = "s";
 export const SEARCH_PARAM_TAGS = "tags";
 
+export const ADDFAV_PATH = "/public/addfav.php";
+export const ADDFAV_PARAM_ID = "id";
+export const VOTE_PATH = "/index.php";
+export const VOTE_PARAM_PAGE = "page";
+export const VOTE_PARAM_SECTION = "s";
+export const VOTE_PARAM_ID = "id";
+export const VOTE_PARAM_TYPE = "type";
+export const VOTE_PAGE = "post";
+export const VOTE_SECTION = "vote";
+export const VOTE_TYPE_UP = "up";
+
+export const ADDFAV_RESPONSE_ADDED = "3";
+export const ADDFAV_RESPONSE_ALREADY = "1";
+export const ADDFAV_RESPONSE_NOT_LOGGED_IN = "2";
+
+export const FETCH_CREDENTIALS = "same-origin" as const;
+export const FETCH_METHOD_GET = "GET" as const;
+
 export const TAG_TYPE_INCLUDE = "include" as const;
 export const TAG_TYPE_EXCLUDE = "exclude" as const;
 export const EXCLUDE_PREFIX = "-";
@@ -21,8 +39,17 @@ export const URL_TAG_SEPARATOR = "+";
 export const EXPORT_FILENAME = "ruledesk-web-collections.json";
 export const EXPORT_MIME = "application/json";
 
+export const IMPORT_SCHEMA_ERROR_PREFIX =
+  "File is not a RuleDesk Web export";
+
 export const PANEL_ROOT_ID = "ruledesk-web-root";
 export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
+export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
+
+export const USERSCRIPT_VERSION = "0.2.0";
+export const USERSCRIPT_UPDATE_URL =
+  "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
+export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
 
 export const UI_TEXT = {
   toggleOpen: "Open RuleDesk",
@@ -43,6 +70,9 @@ export const UI_TEXT = {
   import: "Import",
   importErrorPrefix: "Import failed:",
   notOnSearchPage: "Open a post list search with tags to save it.",
+  cardFavLabel: "Add post to favorites",
+  cardFavGlyph: "★",
+  cardFavErrorTitle: "Could not add to favorites",
 } as const;
 
 export const CSS_CLASS = {
@@ -74,4 +104,9 @@ export const CSS_CLASS = {
   error: "rdw-error",
   confirmRow: "rdw-confirm-row",
   hidden: "rdw-hidden",
+  thumb: "rdw-thumb",
+  cardFav: "rdw-card-fav",
+  cardFavMarked: "rdw-card-fav--marked",
+  cardFavError: "rdw-card-fav--error",
+  cardFavPending: "rdw-card-fav--pending",
 } as const;

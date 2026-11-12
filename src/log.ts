@@ -22,15 +22,9 @@ export const log = {
     console.info(`[ruledesk-web] ${message}`, ...details);
   },
   warn(message: string, ...details: unknown[]): void {
-    if (!isDebugEnabled()) {
-      return;
-    }
     console.warn(`[ruledesk-web] ${message}`, ...details);
   },
   error(message: string, ...details: unknown[]): void {
-    if (!isDebugEnabled()) {
-      return;
-    }
     console.error(`[ruledesk-web] ${message}`, ...details);
   },
 };

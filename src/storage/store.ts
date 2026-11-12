@@ -1,4 +1,7 @@
+import * as z from "zod/mini";
+
 import {
+  IMPORT_SCHEMA_ERROR_PREFIX,
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
 } from "../config/constants";
@@ -8,6 +11,7 @@ import {
   StorageSchema,
   createDefaultStorage,
   type Collection,
+  type MarkFlags,
   type StorageData,
   type TagEntry,
 } from "./schema";
@@ -37,6 +41,20 @@ function backupInvalid(raw: unknown): void {
     key: STORAGE_KEY,
     backupKey: STORAGE_BACKUP_KEY,
   });
+}
+
+function formatSchemaImportError(error: z.core.$ZodError): Error {
+  const issue = error.issues[0];
+  if (issue === undefined) {
+    return new Error(`${IMPORT_SCHEMA_ERROR_PREFIX}: (root): Invalid data`);
+  }
+  const path =
+    issue.path.length === 0
+      ? "(root)"
+      : issue.path.map((segment) => String(segment)).join(".");
+  return new Error(
+    `${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`,
+  );
 }
 
 export function load(): StorageData {
@@ -92,6 +110,13 @@ export function deleteCollection(id: string): boolean {
   return true;
 }
 
+export function setPostFavMark(postId: string, fav: boolean): void {
+  const data = load();
+  const previous: MarkFlags = data.marks[postId] ?? {};
+  data.marks[postId] = { ...previous, fav };
+  save(data);
+}
+
 export function exportJson(): string {
   const data = load();
   return `${JSON.stringify(data, null, 2)}\n`;
@@ -133,7 +158,11 @@ export function importJson(raw: string): StorageData {
     const message = error instanceof Error ? error.message : "Invalid JSON";
     throw new Error(message);
   }
-  const incoming = StorageSchema.parse(json);
+  const parsed = StorageSchema.safeParse(json);
+  if (!parsed.success) {
+    throw formatSchemaImportError(parsed.error);
+  }
+  const incoming = parsed.data;
   const current = load();
   const merged: StorageData = {
     version: current.version,
