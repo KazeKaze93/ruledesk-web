@@ -1,13 +1,72 @@
 import { CSS_CLASS } from "../config/constants";
 import { FAVORITES_SYNC_SECTION_CSS } from "./favorites-sync-section";
 
+/** Panel-local class names (not in shared CSS_CLASS — Phase B5 ownership). */
+export const PANEL_UI_CLASS = {
+  tabs: "rdw-tabs",
+  tab: "rdw-tab",
+  tabPanel: "rdw-tab-panel",
+  footer: "rdw-footer",
+  artistMeta: "rdw-artist-meta",
+  artistFilter: "rdw-artist-filter",
+  artistList: "rdw-artist-list",
+  artistRow: "rdw-artist-row",
+  artistLink: "rdw-artist-link",
+  artistUndo: "rdw-artist-undo",
+  scrollRegion: "rdw-scroll-region",
+  themeDark: "rdw-theme-dark",
+} as const;
+
 export const PANEL_CSS = `
 :host {
   all: initial;
   font-family: Segoe UI, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.4;
-  color: #1a1a1a;
+  --rdw-fg: #1a1a1a;
+  --rdw-fg-muted: #555;
+  --rdw-fg-label: #333;
+  --rdw-fg-section: #444;
+  --rdw-bg: #f7f7f7;
+  --rdw-bg-header: #ececec;
+  --rdw-bg-item: #fff;
+  --rdw-bg-input: #fff;
+  --rdw-border: #ccc;
+  --rdw-border-strong: #333;
+  --rdw-border-control: #666;
+  --rdw-link: #0b57d0;
+  --rdw-focus: #4c8bf5;
+  --rdw-primary: #0b57d0;
+  --rdw-primary-fg: #fff;
+  --rdw-danger: #a12828;
+  --rdw-danger-fg: #fff;
+  --rdw-toggle-bg: #111;
+  --rdw-toggle-fg: #fff;
+  --rdw-shadow: rgba(0, 0, 0, 0.28);
+  color: var(--rdw-fg);
+}
+
+:host(.${PANEL_UI_CLASS.themeDark}) {
+  --rdw-fg: #e8e8e8;
+  --rdw-fg-muted: #a8a8a8;
+  --rdw-fg-label: #c8c8c8;
+  --rdw-fg-section: #b0b0b0;
+  --rdw-bg: #1e1e1e;
+  --rdw-bg-header: #2a2a2a;
+  --rdw-bg-item: #252525;
+  --rdw-bg-input: #2a2a2a;
+  --rdw-border: #444;
+  --rdw-border-strong: #666;
+  --rdw-border-control: #777;
+  --rdw-link: #7eb0ff;
+  --rdw-focus: #4c8bf5;
+  --rdw-primary: #3b7ddd;
+  --rdw-primary-fg: #fff;
+  --rdw-danger: #d9534f;
+  --rdw-danger-fg: #fff;
+  --rdw-toggle-bg: #2a2a2a;
+  --rdw-toggle-fg: #e8e8e8;
+  --rdw-shadow: rgba(0, 0, 0, 0.55);
 }
 
 .${CSS_CLASS.host} {
@@ -24,29 +83,36 @@ export const PANEL_CSS = `
 .${CSS_CLASS.toggle} {
   width: 44px;
   height: 44px;
-  border: 1px solid #444;
+  border: 1px solid var(--rdw-border-strong);
   border-radius: 999px;
-  background: #111;
-  color: #fff;
+  background: var(--rdw-toggle-bg);
+  color: var(--rdw-toggle-fg);
   cursor: pointer;
   font-size: 18px;
   font-weight: 700;
 }
 
 .${CSS_CLASS.toggle}:focus-visible {
-  outline: 2px solid #4c8bf5;
+  outline: 2px solid var(--rdw-focus);
   outline-offset: 2px;
 }
 
 .${CSS_CLASS.panel} {
   display: none;
-  width: min(360px, calc(100vw - 32px));
-  max-height: min(70vh, 560px);
-  overflow: auto;
-  background: #f7f7f7;
-  border: 1px solid #333;
+  box-sizing: border-box;
+  width: 360px;
+  height: 480px;
+  min-width: 320px;
+  min-height: 240px;
+  max-width: 90vw;
+  max-height: 90vh;
+  resize: both;
+  overflow: hidden;
+  background: var(--rdw-bg);
+  border: 1px solid var(--rdw-border-strong);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 24px var(--rdw-shadow);
+  color: var(--rdw-fg);
 }
 
 .${CSS_CLASS.panel}.${CSS_CLASS.panelOpen} {
@@ -60,22 +126,21 @@ export const PANEL_CSS = `
   justify-content: space-between;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid #ccc;
-  background: #ececec;
-  position: sticky;
-  top: 0;
+  border-bottom: 1px solid var(--rdw-border);
+  background: var(--rdw-bg-header);
+  flex-shrink: 0;
 }
 
 .${CSS_CLASS.title} {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--rdw-fg);
 }
 
 .${CSS_CLASS.close} {
-  border: 1px solid #666;
-  background: #fff;
+  border: 1px solid var(--rdw-border-control);
+  background: var(--rdw-bg-item);
   border-radius: 4px;
   cursor: pointer;
   min-width: 32px;
@@ -83,16 +148,73 @@ export const PANEL_CSS = `
   width: 32px;
   height: 32px;
   padding: 0;
-  color: #1a1a1a;
+  color: var(--rdw-fg);
   font-size: 18px;
   line-height: 1;
+}
+
+.${PANEL_UI_CLASS.tabs} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: 1px solid var(--rdw-border);
+  background: var(--rdw-bg-header);
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+
+.${PANEL_UI_CLASS.tab} {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdw-fg-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  margin-bottom: -1px;
+}
+
+.${PANEL_UI_CLASS.tab}[aria-selected="true"] {
+  color: var(--rdw-fg);
+  border-bottom-color: var(--rdw-primary);
+}
+
+.${PANEL_UI_CLASS.tab}:focus-visible {
+  outline: 2px solid var(--rdw-focus);
+  outline-offset: -2px;
 }
 
 .${CSS_CLASS.body} {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.${PANEL_UI_CLASS.tabPanel} {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   padding: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.${PANEL_UI_CLASS.tabPanel}[hidden] {
+  display: none !important;
+}
+
+.${PANEL_UI_CLASS.scrollRegion} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .${CSS_CLASS.section} {
@@ -107,7 +229,7 @@ export const PANEL_CSS = `
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #444;
+  color: var(--rdw-fg-section);
 }
 
 .${CSS_CLASS.list} {
@@ -124,15 +246,79 @@ export const PANEL_CSS = `
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--rdw-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--rdw-bg-item);
+}
+
+.${PANEL_UI_CLASS.artistMeta} {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.${PANEL_UI_CLASS.artistFilter} {
+  flex-shrink: 0;
+}
+
+.${PANEL_UI_CLASS.artistList} {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.${PANEL_UI_CLASS.artistRow} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.${PANEL_UI_CLASS.artistRow}:hover {
+  background: var(--rdw-bg-header);
+}
+
+.${PANEL_UI_CLASS.artistLink} {
+  color: var(--rdw-link);
+  text-decoration: none;
+  font-weight: 600;
+  word-break: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.${PANEL_UI_CLASS.artistLink}:hover {
+  text-decoration: underline;
+}
+
+.${PANEL_UI_CLASS.artistLink}:focus-visible {
+  outline: 2px solid var(--rdw-focus);
+  outline-offset: 2px;
+}
+
+.${PANEL_UI_CLASS.artistUndo} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--rdw-fg-muted);
 }
 
 .${CSS_CLASS.itemName} {
   border: 0;
   background: transparent;
-  color: #0b57d0;
+  color: var(--rdw-link);
   text-align: left;
   cursor: pointer;
   padding: 0;
@@ -149,7 +335,7 @@ export const PANEL_CSS = `
 .${CSS_CLASS.close}:focus-visible,
 .${CSS_CLASS.input}:focus-visible,
 .${CSS_CLASS.checkbox}:focus-visible {
-  outline: 2px solid #4c8bf5;
+  outline: 2px solid var(--rdw-focus);
   outline-offset: 2px;
 }
 
@@ -176,8 +362,9 @@ export const PANEL_CSS = `
 
 .${CSS_CLASS.iconButton},
 .${CSS_CLASS.secondaryButton} {
-  border: 1px solid #666;
-  background: #fff;
+  border: 1px solid var(--rdw-border-control);
+  background: var(--rdw-bg-item);
+  color: var(--rdw-fg);
   border-radius: 4px;
   cursor: pointer;
   min-height: 32px;
@@ -185,10 +372,17 @@ export const PANEL_CSS = `
   font: inherit;
 }
 
+.${CSS_CLASS.iconButton} {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
 .${CSS_CLASS.primaryButton} {
-  border: 1px solid #0b57d0;
-  background: #0b57d0;
-  color: #fff;
+  border: 1px solid var(--rdw-primary);
+  background: var(--rdw-primary);
+  color: var(--rdw-primary-fg);
   border-radius: 4px;
   cursor: pointer;
   min-height: 32px;
@@ -202,9 +396,9 @@ export const PANEL_CSS = `
 }
 
 .${CSS_CLASS.dangerButton} {
-  border: 1px solid #a12828;
-  background: #a12828;
-  color: #fff;
+  border: 1px solid var(--rdw-danger);
+  background: var(--rdw-danger);
+  color: var(--rdw-danger-fg);
   border-radius: 4px;
   cursor: pointer;
   min-height: 32px;
@@ -221,28 +415,37 @@ export const PANEL_CSS = `
 
 .${CSS_CLASS.label} {
   font-size: 12px;
-  color: #333;
+  color: var(--rdw-fg-label);
 }
 
 .${CSS_CLASS.input} {
-  border: 1px solid #666;
+  border: 1px solid var(--rdw-border-control);
   border-radius: 4px;
   min-height: 32px;
   padding: 4px 8px;
   font: inherit;
-  background: #fff;
+  background: var(--rdw-bg-input);
+  color: var(--rdw-fg);
 }
 
 .${CSS_CLASS.hint} {
   margin: 0;
-  color: #555;
+  color: var(--rdw-fg-muted);
   font-size: 12px;
 }
 
 .${CSS_CLASS.error} {
   margin: 0;
-  color: #a12828;
+  color: var(--rdw-danger);
   font-size: 12px;
+}
+
+.${PANEL_UI_CLASS.footer} {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-top: 1px solid var(--rdw-border);
+  font-size: 11px;
+  color: var(--rdw-fg-muted);
 }
 
 .${CSS_CLASS.hidden} {

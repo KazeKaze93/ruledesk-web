@@ -52,7 +52,7 @@ export const FAVORITES_SYNC_SECTION_CSS = `
 
 .${SECTION_CLASS} .${STATUS_CLASS} {
   margin: 0;
-  color: #333;
+  color: var(--rdw-fg-label, #333);
   font-size: 12px;
 }
 
@@ -71,10 +71,15 @@ export const FAVORITES_SYNC_SECTION_CSS = `
 .${SECTION_CLASS} .${WARNING_CLASS},
 .${SECTION_CLASS} .${NOTE_CLASS} {
   margin: 0;
-  color: #555;
+  color: var(--rdw-fg-muted, #555);
   font-size: 12px;
 }
 `.trim();
+
+export type FavoritesSyncSectionOptions = {
+  /** When false, omit the section h3 (Favorites tab already labels the area). */
+  includeHeading?: boolean;
+};
 
 type SyncUiRefs = {
   status: HTMLElement;
@@ -231,13 +236,12 @@ async function startSync(refs: SyncUiRefs): Promise<void> {
  * Panel section that runs an add-only favorites sync on explicit user click.
  * Survives panel re-renders via a module-level AbortController.
  */
-export function createFavoritesSyncSection(): HTMLElement {
+export function createFavoritesSyncSection(
+  options: FavoritesSyncSectionOptions = {},
+): HTMLElement {
+  const includeHeading = options.includeHeading !== false;
   const section = document.createElement("section");
   section.className = `${CSS_CLASS.section} ${SECTION_CLASS}`;
-
-  const title = document.createElement("h3");
-  title.className = CSS_CLASS.sectionTitle;
-  title.textContent = HEADING;
 
   const status = document.createElement("p");
   status.className = STATUS_CLASS;
@@ -281,8 +285,14 @@ export function createFavoritesSyncSection(): HTMLElement {
   pauseHint.className = CSS_CLASS.hint;
   pauseHint.textContent = `Pause between pages: ${String(PAUSE_SECONDS)} s`;
 
+  if (includeHeading) {
+    const title = document.createElement("h3");
+    title.className = CSS_CLASS.sectionTitle;
+    title.textContent = HEADING;
+    section.append(title);
+  }
+
   section.append(
-    title,
     status,
     progress,
     actions,
