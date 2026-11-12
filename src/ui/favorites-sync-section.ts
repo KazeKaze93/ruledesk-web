@@ -108,7 +108,7 @@ function pagesFromLastPid(lastPid: number): number {
   return Math.floor(lastPid / FAVORITES_SYNC_PID_STEP) + 1;
 }
 
-function isUnfinished(sync: FavsSyncState | undefined): sync is FavsSyncState {
+function isUnfinished(sync: FavsSyncState | undefined): boolean {
   return sync !== undefined && sync.finishedAt === undefined;
 }
 
@@ -116,7 +116,7 @@ function buildStatusText(): string {
   const count = loadFavSet().size;
   const sync = getSyncState();
   const parts = [TEXT_IDLE_COUNT(count)];
-  if (isUnfinished(sync)) {
+  if (sync !== undefined && sync.finishedAt === undefined) {
     const page = pageFromPid(sync.nextPid);
     const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
     parts.push(TEXT_PAUSED(page, pages));

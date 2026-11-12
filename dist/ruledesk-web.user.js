@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.5.0
+// @version      0.6.0
 // @description  Collections, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -15,6 +15,7 @@
 	"use strict";
 	var STORAGE_KEY = "ruledesk-web.storage";
 	var STORAGE_BACKUP_KEY = "ruledesk-web.storage.backup";
+	var FAVS_STORAGE_KEY = "ruledesk-web.favs";
 	var DEBUG_KEY = "ruledesk-web.debug";
 	var SITE_ORIGIN = "https://rule34.xxx";
 	var SEARCH_PATH = "/index.php";
@@ -23,6 +24,7 @@
 	var SEARCH_PARAM_PAGE = "page";
 	var SEARCH_PARAM_TAGS = "tags";
 	var FAVORITES_PAGE = "favorites";
+	var FAVORITES_SECTION_VIEW = "view";
 	var FAVORITES_SECTION_DELETE = "delete";
 	var FAVORITES_PARAM_RETURN_PID = "return_pid";
 	var ADDFAV_PATH = "/public/addfav.php";
@@ -1775,6 +1777,32 @@
 		settings: optional(SettingsSchema),
 		updates: optional(UpdatesSchema)
 	});
+	var FavsSyncSchema = object({
+		nextPid: int(),
+		lastPid: int(),
+		startedAt: string(),
+		finishedAt: optional(string())
+	});
+	var FavsSchema = object({
+		version: literal(1),
+		ids: array(int()),
+		sync: optional(FavsSyncSchema)
+	});
+	var ExportBlobSchema = object({
+		version: literal(1),
+		collections: array(CollectionSchema),
+		artists: array(ArtistEntrySchema),
+		marks: record(string(), MarkFlagsSchema),
+		settings: optional(SettingsSchema),
+		updates: optional(UpdatesSchema),
+		favIds: optional(array(int()))
+	});
+	function createDefaultFavs() {
+		return {
+			version: 1,
+			ids: []
+		};
+	}
 	function createDefaultStorage() {
 		return {
 			version: 1,
@@ -1800,6 +1828,182 @@
 	}
 	function resolveSeenPostId(data) {
 		return data.updates?.seenPostId ?? 0;
+	}
+	var cachedIds = null;
+	var cachedSync;
+	var cacheHydrated = false;
+	function getGmGetValue$1() {
+		return GM_getValue;
+	}
+	function getGmSetValue$1() {
+		return GM_setValue;
+	}
+	function normalizePostId(id) {
+		if (typeof id === "number") {
+			if (!Number.isFinite(id)) return null;
+			return Math.trunc(id);
+		}
+		const trimmed = id.trim();
+		if (trimmed.length === 0) return null;
+		const parsed = Number(trimmed);
+		if (!Number.isFinite(parsed)) return null;
+		return Math.trunc(parsed);
+	}
+	function readFavsRaw() {
+		const raw = getGmGetValue$1()(FAVS_STORAGE_KEY, void 0);
+		if (raw === void 0 || raw === null) return createDefaultFavs();
+		const parsed = FavsSchema.safeParse(raw);
+		if (!parsed.success) {
+			log.error("Invalid favs storage content; using empty favs", { key: FAVS_STORAGE_KEY });
+			return createDefaultFavs();
+		}
+		return parsed.data;
+	}
+	function writeFavsData(data) {
+		const parsed = FavsSchema.parse(data);
+		getGmSetValue$1()(FAVS_STORAGE_KEY, parsed);
+	}
+	function setCacheFromData(data) {
+		cachedIds = new Set(data.ids);
+		cachedSync = data.sync;
+		cacheHydrated = true;
+	}
+	function readMainStorageRaw() {
+		const raw = getGmGetValue$1()(STORAGE_KEY, void 0);
+		if (raw === void 0 || raw === null) return null;
+		const parsed = StorageSchema.safeParse(raw);
+		if (!parsed.success) return null;
+		return parsed.data;
+	}
+	function writeMainStorage(data) {
+		getGmSetValue$1()(STORAGE_KEY, StorageSchema.parse(data));
+	}
+	function migrateMarksFavToFavs() {
+		const main = readMainStorageRaw();
+		const favs = readFavsRaw();
+		const ids = new Set(favs.ids);
+		let marksChanged = false;
+		if (main !== null) {
+			const nextMarks = {};
+			for (const [postId, flags] of Object.entries(main.marks)) {
+				const nextFlags = {};
+				if (flags.seen === true) nextFlags.seen = true;
+				if (flags.fav === true) {
+					const normalized = normalizePostId(postId);
+					if (normalized !== null) ids.add(normalized);
+					marksChanged = true;
+				} else if (flags.fav !== void 0) marksChanged = true;
+				if (Object.keys(nextFlags).length > 0) nextMarks[postId] = nextFlags;
+				else if (flags.fav === void 0 && flags.seen === void 0) nextMarks[postId] = {};
+			}
+			if (marksChanged) {
+				main.marks = nextMarks;
+				writeMainStorage(main);
+			}
+		}
+		const nextFavs = {
+			version: favs.version,
+			ids: Array.from(ids)
+		};
+		if (favs.sync !== void 0) nextFavs.sync = favs.sync;
+		if (nextFavs.ids.length !== favs.ids.length || nextFavs.ids.some((id) => !favs.ids.includes(id))) writeFavsData(nextFavs);
+		setCacheFromData(nextFavs);
+	}
+	function ensureCache() {
+		if (cacheHydrated && cachedIds !== null) return cachedIds;
+		migrateMarksFavToFavs();
+		if (cachedIds === null) setCacheFromData(readFavsRaw());
+		return cachedIds ?? new Set();
+	}
+	function persistIds(ids) {
+		const next = {
+			version: createDefaultFavs().version,
+			ids: Array.from(ids)
+		};
+		if (cachedSync !== void 0) next.sync = cachedSync;
+		writeFavsData(next);
+		cachedIds = ids;
+		cacheHydrated = true;
+	}
+	function loadFavSet() {
+		return ensureCache();
+	}
+	function isFav(id) {
+		const normalized = normalizePostId(id);
+		if (normalized === null) return false;
+		return ensureCache().has(normalized);
+	}
+	function addFav(id) {
+		const normalized = normalizePostId(id);
+		if (normalized === null) return;
+		const ids = new Set(ensureCache());
+		if (ids.has(normalized)) {
+			cachedIds = ids;
+			return;
+		}
+		ids.add(normalized);
+		persistIds(ids);
+	}
+	function removeFav(id) {
+		const normalized = normalizePostId(id);
+		if (normalized === null) return;
+		const ids = new Set(ensureCache());
+		if (!ids.has(normalized)) {
+			cachedIds = ids;
+			return;
+		}
+		ids.delete(normalized);
+		persistIds(ids);
+	}
+	function addFavs(ids) {
+		if (ids.length === 0) {
+			ensureCache();
+			return;
+		}
+		const next = new Set(ensureCache());
+		let changed = false;
+		for (const id of ids) {
+			const normalized = normalizePostId(id);
+			if (normalized === null) continue;
+			if (!next.has(normalized)) {
+				next.add(normalized);
+				changed = true;
+			}
+		}
+		if (changed) persistIds(next);
+		else cachedIds = next;
+	}
+	function getSyncState() {
+		ensureCache();
+		return cachedSync;
+	}
+	function setSyncState(sync) {
+		const ids = ensureCache();
+		cachedSync = sync;
+		const next = {
+			version: createDefaultFavs().version,
+			ids: Array.from(ids)
+		};
+		if (sync !== void 0) next.sync = sync;
+		writeFavsData(next);
+		cacheHydrated = true;
+	}
+	function extractFavIdsFromMarks(marks) {
+		const favIds = [];
+		const nextMarks = {};
+		for (const [postId, flags] of Object.entries(marks)) {
+			if (flags.fav === true) {
+				const normalized = normalizePostId(postId);
+				if (normalized !== null) favIds.push(normalized);
+			}
+			const nextFlags = {};
+			if (flags.seen === true) nextFlags.seen = true;
+			if (Object.keys(nextFlags).length > 0) nextMarks[postId] = nextFlags;
+		}
+		return {
+			marks: nextMarks,
+			favIds
+		};
 	}
 	function getGmGetValue() {
 		return GM_getValue;
@@ -1839,13 +2043,22 @@
 	}
 	function load() {
 		const raw = readRaw();
-		if (raw === void 0 || raw === null) return createDefaultStorage();
+		if (raw === void 0 || raw === null) {
+			migrateMarksFavToFavs();
+			return createDefaultStorage();
+		}
 		const parsed = StorageSchema.safeParse(raw);
 		if (!parsed.success) {
 			backupInvalid(raw);
+			migrateMarksFavToFavs();
 			return createDefaultStorage();
 		}
-		return parsed.data;
+		migrateMarksFavToFavs();
+		const after = readRaw();
+		if (after === void 0 || after === null) return createDefaultStorage();
+		const reparsed = StorageSchema.safeParse(after);
+		if (!reparsed.success) return parsed.data;
+		return reparsed.data;
 	}
 	function save(data) {
 		writeData(StorageSchema.parse(data));
@@ -1877,27 +2090,6 @@
 		data.collections = next;
 		save(data);
 		return true;
-	}
-	function setPostFavMark(postId, fav) {
-		const data = load();
-		const previous = data.marks[postId] ?? {};
-		data.marks[postId] = {
-			...previous,
-			fav
-		};
-		save(data);
-	}
-	function setPostFavMarks(postIds, fav) {
-		if (postIds.length === 0) return;
-		const data = load();
-		for (const postId of postIds) {
-			const previous = data.marks[postId] ?? {};
-			data.marks[postId] = {
-				...previous,
-				fav
-			};
-		}
-		save(data);
 	}
 	function setPostSeenMark(postId) {
 		const data = load();
@@ -2030,7 +2222,12 @@
 	}
 	function exportJson() {
 		const data = load();
-		return `${JSON.stringify(data, null, 2)}\n`;
+		const favIds = Array.from(loadFavSet()).sort((a, b) => a - b);
+		const blob = {
+			...data,
+			favIds
+		};
+		return `${JSON.stringify(blob, null, 2)}\n`;
 	}
 	function mergeCollections(current, incoming) {
 		const byId = new Map();
@@ -2103,15 +2300,18 @@
 			const message = error instanceof Error ? error.message : "Invalid JSON";
 			throw new Error(message);
 		}
-		const parsed = StorageSchema.safeParse(json);
+		const parsed = ExportBlobSchema.safeParse(json);
 		if (!parsed.success) throw formatSchemaImportError(parsed.error);
 		const incoming = parsed.data;
+		const fromMarks = extractFavIdsFromMarks(incoming.marks);
+		const favIdsToMerge = new Set(fromMarks.favIds);
+		if (incoming.favIds !== void 0) for (const id of incoming.favIds) favIdsToMerge.add(id);
 		const current = load();
 		const merged = {
 			version: current.version,
 			collections: mergeCollections(current.collections, incoming.collections),
 			artists: mergeArtists(current.artists, incoming.artists),
-			marks: mergeMarks(current.marks, incoming.marks),
+			marks: mergeMarks(current.marks, fromMarks.marks),
 			settings: mergeSettings(current.settings, incoming.settings),
 			updates: mergeUpdates(current.updates, incoming.updates)
 		};
@@ -2121,6 +2321,7 @@
 			tweaksEnabled: true
 		};
 		save(merged);
+		addFavs(Array.from(favIdsToMerge));
 		return merged;
 	}
 	var TOPBAR_ID = "rdw-topbar";
@@ -2129,21 +2330,22 @@
 	var THUMB_CLASS = "rdw-thumb";
 	var THUMB_ANCHOR_NAME = "--rdw-img";
 	var FEATURE_STYLE_ID_PREFIX = "rdw-feature-style-";
+	var POST_ACTIONS_ID = "rdw-post-actions";
 	function featureBodyClass(id) {
 		return `rdw-f-${id}`;
 	}
 	function featureChoiceBodyClass(id, value) {
 		return `rdw-f-${id}-${value}`;
 	}
-	var FEATURE_ID$4 = "dark-theme";
-	var SCOPE = `body.${featureBodyClass(FEATURE_ID$4)}`;
+	var FEATURE_ID$5 = "dark-theme";
+	var SCOPE = `body.${featureBodyClass(FEATURE_ID$5)}`;
 	var LINK_COLOR = "#8ab4f8";
 	var VISITED_LINK_COLOR = "#b39ddb";
 	var BODY_BG = "#16181c";
 	var BODY_COLOR = "#d7d9dc";
 	var BORDER_COLOR = "#3a3f45";
 	var darkThemeFeature = {
-		id: FEATURE_ID$4,
+		id: FEATURE_ID$5,
 		label: "Dark theme",
 		pages: [
 			"list",
@@ -2231,11 +2433,11 @@ ${SCOPE} * {
 `.trim(),
 		mount: () => {}
 	};
-	var FEATURE_ID$3 = "grid-density";
+	var FEATURE_ID$4 = "grid-density";
 	var COMPACT_PX = 150;
 	var LARGE_PX = 250;
 	function sizeCss(choiceValue, px) {
-		const bodyClass = featureChoiceBodyClass(FEATURE_ID$3, choiceValue);
+		const bodyClass = featureChoiceBodyClass(FEATURE_ID$4, choiceValue);
 		return [
 			`body.${bodyClass} span.thumb,`,
 			`body.${bodyClass} span.thumb > a {`,
@@ -2249,7 +2451,7 @@ ${SCOPE} * {
 		].join("\n");
 	}
 	var gridDensityFeature = {
-		id: FEATURE_ID$3,
+		id: FEATURE_ID$4,
 		label: "Grid size",
 		pages: ["list", "favorites"],
 		defaultEnabled: true,
@@ -2336,13 +2538,16 @@ ${SCOPE} * {
 	var SEEN_DIM_FEATURE_ID = "seen-dim";
 	var FOLLOWED_BADGE_CLASS = "rdw-followed-badge";
 	var SEEN_CLASS = "rdw-seen";
-	var FOLLOWED_BADGE_TEXT = "Following";
 	var FOLLOWED_BADGE_LABEL = "Following badge";
+	var FOLLOWED_BADGE_TITLE_PREFIX = "Following: ";
 	var SEEN_DIM_LABEL = "Dim seen posts";
 	var BADGE_OFFSET_PX = "4px";
+	var BADGE_SIZE_PX = "10px";
+	var BADGE_MAX_WIDTH_PX = "20px";
 	var SEEN_DIM_OPACITY = "0.4";
 	var SEEN_DIM_HOVER_OPACITY = "1";
 	var ALT_TAG_SEPARATOR = " ";
+	var BADGE_TAG_JOIN = ", ";
 	function findThumbLink$1(thumb, postId) {
 		if (postId !== null) {
 			const byId = thumb.querySelector(`#p${postId}`);
@@ -2351,40 +2556,65 @@ ${SCOPE} * {
 		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
 		return byHref instanceof HTMLAnchorElement ? byHref : null;
 	}
-	function thumbHasFollowedArtist(thumb) {
+	function collectIncludeTags(search) {
+		const entries = readTagsFromLocation(search);
+		const includes = new Set();
+		if (entries === null) return includes;
+		for (const entry of entries) {
+			if (entry.type !== "include") continue;
+			const normalized = normalizeArtistTag(entry.tag);
+			if (normalized !== null) includes.add(normalized);
+		}
+		return includes;
+	}
+	function followedBadgeCaption(tags) {
+		return `${FOLLOWED_BADGE_TITLE_PREFIX}${tags.join(BADGE_TAG_JOIN)}`;
+	}
+	function findBadgeArtistTags(thumb, includeTags) {
 		const preview = thumb.querySelector(SITE_SELECTORS.previewImage);
 		if (!(preview instanceof HTMLImageElement)) {
 			log.warn("followed-badge: missing img.preview on thumb", thumb.id);
-			return false;
+			return [];
 		}
 		const alt = preview.alt.trim();
-		if (alt.length === 0) return false;
-		for (const tag of alt.split(ALT_TAG_SEPARATOR)) {
-			if (tag.length === 0) continue;
-			if (isFollowingArtist(tag)) return true;
+		if (alt.length === 0) return [];
+		const matched = [];
+		const seen = new Set();
+		for (const raw of alt.split(ALT_TAG_SEPARATOR)) {
+			if (raw.length === 0) continue;
+			if (!isFollowingArtist(raw)) continue;
+			const normalized = normalizeArtistTag(raw);
+			if (normalized === null) continue;
+			if (includeTags.has(normalized)) continue;
+			if (seen.has(normalized)) continue;
+			seen.add(normalized);
+			matched.push(normalized);
 		}
-		return false;
+		return matched;
 	}
-	function ensureFollowedBadge(thumb) {
+	function ensureFollowedBadge(thumb, includeTags) {
 		if (thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`) !== null) return;
-		if (!thumbHasFollowedArtist(thumb)) return;
+		const artistTags = findBadgeArtistTags(thumb, includeTags);
+		if (artistTags.length === 0) return;
 		const link = findThumbLink$1(thumb, extractPostIdFromThumb(thumb));
 		if (link === null) {
 			log.warn("followed-badge: missing post link on thumb", thumb.id);
 			return;
 		}
 		ensureThumbAnchor(thumb);
+		const caption = followedBadgeCaption(artistTags);
 		const badge = document.createElement("span");
 		badge.className = FOLLOWED_BADGE_CLASS;
-		badge.textContent = FOLLOWED_BADGE_TEXT;
-		badge.setAttribute("aria-hidden", "true");
+		badge.title = caption;
+		badge.setAttribute("aria-label", caption);
 		link.after(badge);
 	}
-	function mountFollowedBadge(_ctx) {
+	function mountFollowedBadge(ctx) {
+		const includeTags = collectIncludeTags(ctx.search);
 		const thumbs = document.querySelectorAll(SITE_SELECTORS.thumb);
 		for (const thumb of thumbs) {
 			if (!(thumb instanceof HTMLElement)) continue;
-			ensureFollowedBadge(thumb);
+			ensureFollowedBadge(thumb, includeTags);
 		}
 	}
 	function mountSeenDim(ctx) {
@@ -2419,14 +2649,16 @@ body.${featureBodyClass(FOLLOWED_BADGE_FEATURE_ID)} .${FOLLOWED_BADGE_CLASS} {
   left: ${BADGE_OFFSET_PX};
   z-index: 5;
   box-sizing: border-box;
-  padding: 2px 6px;
+  display: block;
+  width: ${BADGE_SIZE_PX};
+  height: ${BADGE_SIZE_PX};
+  max-width: ${BADGE_MAX_WIDTH_PX};
+  padding: 0;
   border: 1px solid #333;
-  border-radius: 3px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
-  color: #333;
-  font-size: 11px;
-  line-height: 1.2;
   pointer-events: none;
+  overflow: hidden;
 }
 
 @supports (anchor-name: --a) {
@@ -2455,11 +2687,11 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 `,
 		mount: mountSeenDim
 	};
-	var FEATURE_ID$2 = "menu-cleanup";
-	var FEATURE_LABEL$2 = "Clean header menu";
+	var FEATURE_ID$3 = "menu-cleanup";
+	var FEATURE_LABEL$3 = "Clean header menu";
 	var CONTENT_ID = "content";
 	var HIDDEN_CLASS = "rdw-menu-hidden";
-	var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$2);
+	var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$3);
 	var MISSING_MENU_WARN = "Header menu not found";
 	var HIDE_LINK_TEXT_SET = new Set([
 		"iCame Top 100",
@@ -2471,13 +2703,13 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 		"About",
 		"TOS"
 	]);
-	var FEATURE_PAGES$2 = [
+	var FEATURE_PAGES$3 = [
 		"list",
 		"post",
 		"favorites",
 		"other"
 	];
-	var FEATURE_CSS$2 = `body.${BODY_FEATURE_CLASS$1} li.${HIDDEN_CLASS} { display:none !important; }`;
+	var FEATURE_CSS$3 = `body.${BODY_FEATURE_CLASS$1} li.${HIDDEN_CLASS} { display:none !important; }`;
 	function isHeaderMenuLink(anchor, content) {
 		const listItem = anchor.closest("li");
 		if (listItem === null) return false;
@@ -2510,11 +2742,11 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 		}
 	}
 	var menuCleanupFeature = {
-		id: FEATURE_ID$2,
-		label: FEATURE_LABEL$2,
-		pages: [...FEATURE_PAGES$2],
+		id: FEATURE_ID$3,
+		label: FEATURE_LABEL$3,
+		pages: [...FEATURE_PAGES$3],
 		defaultEnabled: true,
-		css: FEATURE_CSS$2,
+		css: FEATURE_CSS$3,
 		mount: mountMenuCleanup
 	};
 	var PAGER_ID = "pager";
@@ -2533,7 +2765,7 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 	var TEXT_SEP = "|";
 	var LABEL_PREV = "Previous page";
 	var LABEL_NEXT = "Next page";
-	var WARN_NO_HOST = "pager: topbar slot and image-list missing; pager not mounted";
+	var WARN_NO_HOST$1 = "pager: topbar slot and image-list missing; pager not mounted";
 	var BODY_CLASS = featureBodyClass(PAGER_ID);
 	function readPid$1(search) {
 		const rawSearch = search.startsWith("?") ? search.slice(1) : search;
@@ -2637,7 +2869,7 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 		root.append(prev, createSep(), page, createSep(), next);
 		return root;
 	}
-	function findHost() {
+	function findHost$1() {
 		const slot = document.getElementById(TOPBAR_SLOT_PAGER_ID);
 		if (slot !== null) return {
 			host: slot,
@@ -2683,10 +2915,10 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 		const pageNumber = Math.floor(currentPid / step) + 1;
 		const prevHref = prevPid === null ? null : hrefForPid(ctx.search, prevPid);
 		const nextHref = hasNext && nextPid !== null ? hrefForPid(ctx.search, nextPid) : null;
-		const hostInfo = findHost();
+		const hostInfo = findHost$1();
 		if (hostInfo === null) {
 			detachKeyboardNav();
-			log.warn(WARN_NO_HOST);
+			log.warn(WARN_NO_HOST$1);
 			return;
 		}
 		removeExistingPager();
@@ -2731,6 +2963,434 @@ body.${BODY_CLASS} .${PAGER_SEP_CLASS} {
 }
 `.trim(),
 		mount: mountPager
+	};
+	function buildAddFavUrl(postId) {
+		const params = new URLSearchParams();
+		params.set("id", postId);
+		return `${SITE_ORIGIN}${ADDFAV_PATH}?${params.toString()}`;
+	}
+	function buildVoteUrl(postId) {
+		const params = new URLSearchParams();
+		params.set(VOTE_PARAM_PAGE, VOTE_PAGE);
+		params.set("s", VOTE_SECTION);
+		params.set("id", postId);
+		params.set(VOTE_PARAM_TYPE, "up");
+		return `${SITE_ORIGIN}${VOTE_PATH}?${params.toString()}`;
+	}
+	function buildRemoveFavUrl(postId) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_DELETE);
+		params.set("id", postId);
+		params.set(FAVORITES_PARAM_RETURN_PID, "0");
+		return `${SITE_ORIGIN}${SEARCH_PATH}?${params.toString()}`;
+	}
+	async function fetchText(url) {
+		const response = await fetch(url, {
+			method: "GET",
+			credentials: FETCH_CREDENTIALS
+		});
+		if (!response.ok) throw new Error(`HTTP ${String(response.status)}`);
+		return (await response.text()).trim();
+	}
+	function parseVoteScore(raw) {
+		if (raw.length === 0) return;
+		const score = Number(raw);
+		if (!Number.isFinite(score)) return;
+		return score;
+	}
+	async function addFavorite(postId) {
+		let addResponse;
+		try {
+			addResponse = await fetchText(buildAddFavUrl(postId));
+		} catch (error) {
+			log.warn("addfav request failed", postId, error);
+			return { status: "error" };
+		}
+		if (addResponse === "1") return { status: "already" };
+		if (addResponse === "2") return { status: "not_logged_in" };
+		if (addResponse !== "3") {
+			log.warn("Unexpected addfav response", postId, addResponse);
+			return { status: "error" };
+		}
+		try {
+			const score = parseVoteScore(await fetchText(buildVoteUrl(postId)));
+			if (score === void 0) return { status: "added" };
+			return {
+				status: "added",
+				score
+			};
+		} catch (error) {
+			log.warn("vote request failed after addfav", postId, error);
+			return { status: "added" };
+		}
+	}
+	async function removeFavorite(postId) {
+		try {
+			const response = await fetch(buildRemoveFavUrl(postId), {
+				method: "GET",
+				credentials: FETCH_CREDENTIALS
+			});
+			if (!response.ok) {
+				log.warn("remove favorite HTTP error", postId, response.status);
+				return { status: "error" };
+			}
+			return { status: "removed" };
+		} catch (error) {
+			log.warn("remove favorite request failed", postId, error);
+			return { status: "error" };
+		}
+	}
+	function favAriaLabel(postId, marked) {
+		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
+	}
+	function applyFavButtonState(button, state, postId, errorTitle) {
+		if (state === "pending") {
+			button.disabled = true;
+			button.classList.add(CSS_CLASS.cardFavPending);
+			return;
+		}
+		button.classList.remove(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError, CSS_CLASS.cardFavPending);
+		button.disabled = false;
+		button.removeAttribute("title");
+		if (state === "marked") {
+			button.setAttribute("aria-pressed", "true");
+			button.setAttribute("aria-label", favAriaLabel(postId, true));
+			button.classList.add(CSS_CLASS.cardFavMarked);
+			return;
+		}
+		if (state === "marked_error") {
+			button.setAttribute("aria-pressed", "true");
+			button.setAttribute("aria-label", favAriaLabel(postId, true));
+			button.classList.add(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError);
+			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+			return;
+		}
+		if (state === "error") {
+			button.setAttribute("aria-pressed", "false");
+			button.setAttribute("aria-label", favAriaLabel(postId, false));
+			button.classList.add(CSS_CLASS.cardFavError);
+			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+			return;
+		}
+		button.setAttribute("aria-pressed", "false");
+		button.setAttribute("aria-label", favAriaLabel(postId, false));
+	}
+	function createFavButton(postId, marked, className = CSS_CLASS.cardFav) {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = className;
+		button.textContent = UI_TEXT.cardFavGlyph;
+		applyFavButtonState(button, marked ? "marked" : "idle", postId);
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			handleFavToggleClick(button, postId);
+		});
+		return button;
+	}
+	async function handleFavToggleClick(button, postId) {
+		if (button.disabled) return;
+		const currentlyMarked = button.getAttribute("aria-pressed") === "true";
+		applyFavButtonState(button, "pending", postId);
+		if (currentlyMarked) {
+			const result = await removeFavorite(postId);
+			if (result.status === "removed") {
+				removeFav(postId);
+				applyFavButtonState(button, "idle", postId);
+				return;
+			}
+			applyFavButtonState(button, "marked_error", postId, UI_TEXT.cardFavErrorRequest);
+			log.warn("Remove favorite failed", postId, result);
+			return;
+		}
+		const result = await addFavorite(postId);
+		if (result.status === "added" || result.status === "already") {
+			addFav(postId);
+			applyFavButtonState(button, "marked", postId);
+			return;
+		}
+		if (result.status === "not_logged_in") {
+			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorNotLoggedIn);
+			log.warn("Favorite requires login", postId);
+			return;
+		}
+		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
+		log.warn("Favorite failed", postId, result);
+	}
+	var FEATURE_ID$2 = "post-actions";
+	var FEATURE_LABEL$2 = "Post actions";
+	var FEATURE_PAGES$2 = ["post"];
+	var HOST_RIGHT_COL_ID = "right-col";
+	var HOST_POST_VIEW_ID = "post-view";
+	var ORIGINAL_LINK_TEXT = "Original image";
+	var SCORE_SPAN_ID_PREFIX = "psc";
+	var CLASS_BAR$1 = "rdw-post-actions";
+	var CLASS_FAV_WRAP = "rdw-post-actions-fav-wrap";
+	var CLASS_FAV_BUTTON = "rdw-post-actions-fav";
+	var CLASS_FAV_LABEL = "rdw-post-actions-fav-label";
+	var CLASS_FOLLOW = "rdw-post-actions-follow";
+	var CLASS_ORIGINAL = "rdw-post-actions-original";
+	var CLASS_SCORE = "rdw-post-actions-score";
+	var TEXT_FAVORITE = "Favorite";
+	var TEXT_IN_FAVORITES = "In favorites";
+	var TEXT_FOLLOW = "Follow";
+	var TEXT_FOLLOWING = "Following";
+	var TEXT_ORIGINAL = "Original";
+	var TEXT_SCORE_PREFIX = "Score: ";
+	var LABEL_ORIGINAL = "Open original image";
+	var WARN_NO_HOST = "post-actions: #right-col and #post-view missing; not mounted";
+	var FOCUS_OUTLINE$1 = "2px solid #4c8bf5";
+	var FOCUS_OUTLINE_OFFSET$1 = "2px";
+	var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$2)}`;
+	var FEATURE_CSS$2 = `
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID}.${CLASS_BAR$1} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FAV_WRAP} {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON},
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FOLLOW},
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL} {
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 0.15rem 0.45rem;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+}
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}.${CSS_CLASS.cardFavMarked},
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FOLLOW}[aria-pressed="true"] {
+  font-weight: 600;
+}
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}:focus-visible,
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_FOLLOW}:focus-visible,
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL}:focus-visible {
+  outline: ${FOCUS_OUTLINE$1};
+  outline-offset: ${FOCUS_OUTLINE_OFFSET$1};
+}
+${BODY_SELECTOR$1} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
+  font-variant-numeric: tabular-nums;
+}
+`.trim();
+	function findHost() {
+		const rightCol = document.getElementById(HOST_RIGHT_COL_ID);
+		if (rightCol !== null) return rightCol;
+		return document.getElementById(HOST_POST_VIEW_ID);
+	}
+	function removeExistingBar$1() {
+		const existing = document.getElementById(POST_ACTIONS_ID);
+		if (existing !== null) existing.remove();
+	}
+	function extractArtistTagFromLi$1(li) {
+		const links = li.querySelectorAll("a[href]");
+		for (const node of links) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if (node.hasAttribute("onclick")) continue;
+			const href = node.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let url;
+			try {
+				url = new URL(href, SITE_ORIGIN);
+			} catch {
+				continue;
+			}
+			if (url.searchParams.get("page") !== "post") continue;
+			if (url.searchParams.get("s") !== "list") continue;
+			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
+			if (tags === null) continue;
+			return normalizeArtistTag(tags);
+		}
+		return null;
+	}
+	function collectArtistTags() {
+		const sidebar = document.querySelector(SITE_SELECTORS.tagSidebar);
+		if (sidebar === null) return [];
+		const tags = [];
+		const seen = new Set();
+		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
+		for (const row of rows) {
+			const tag = extractArtistTagFromLi$1(row);
+			if (tag === null || seen.has(tag)) continue;
+			seen.add(tag);
+			tags.push(tag);
+		}
+		return tags;
+	}
+	function findOriginalHref() {
+		const links = document.querySelectorAll("a[href]");
+		for (const node of links) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if (node.textContent?.trim() !== ORIGINAL_LINK_TEXT) continue;
+			const href = node.getAttribute("href");
+			if (href === null || href.length === 0 || href === "#") continue;
+			return href;
+		}
+		return null;
+	}
+	function readScoreText(postId) {
+		const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
+		if (span === null) return null;
+		const text = span.textContent?.trim() ?? "";
+		return text.length > 0 ? text : null;
+	}
+	function applyScoreValue(postId, scoreLabel, score) {
+		const text = String(score);
+		scoreLabel.textContent = `${TEXT_SCORE_PREFIX}${text}`;
+		const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
+		if (span !== null) span.textContent = text;
+	}
+	function syncFavLabel(label, marked) {
+		label.textContent = marked ? TEXT_IN_FAVORITES : TEXT_FAVORITE;
+	}
+	function createPostFavControl(postId, scoreLabel) {
+		const marked = isFav(postId);
+		const template = createFavButton(postId, marked, CLASS_FAV_BUTTON);
+		const cloned = template.cloneNode(true);
+		if (!(cloned instanceof HTMLButtonElement)) return template;
+		applyFavButtonState(cloned, marked ? "marked" : "idle", postId);
+		const wrap = document.createElement("span");
+		wrap.className = CLASS_FAV_WRAP;
+		const label = document.createElement("span");
+		label.className = CLASS_FAV_LABEL;
+		syncFavLabel(label, marked);
+		cloned.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			handlePostFavClick(cloned, label, postId, scoreLabel);
+		});
+		wrap.append(cloned, label);
+		return wrap;
+	}
+	async function handlePostFavClick(button, label, postId, scoreLabel) {
+		if (button.disabled) return;
+		const currentlyMarked = button.getAttribute("aria-pressed") === "true";
+		applyFavButtonState(button, "pending", postId);
+		if (currentlyMarked) {
+			const result = await removeFavorite(postId);
+			if (result.status === "removed") {
+				removeFav(postId);
+				applyFavButtonState(button, "idle", postId);
+				syncFavLabel(label, false);
+				return;
+			}
+			applyFavButtonState(button, "marked_error", postId, UI_TEXT.cardFavErrorRequest);
+			syncFavLabel(label, true);
+			log.warn("post-actions: remove favorite failed", postId, result);
+			return;
+		}
+		const result = await addFavorite(postId);
+		if (result.status === "added" || result.status === "already") {
+			addFav(postId);
+			applyFavButtonState(button, "marked", postId);
+			syncFavLabel(label, true);
+			if (result.status === "added" && result.score !== void 0 && scoreLabel !== null) applyScoreValue(postId, scoreLabel, result.score);
+			return;
+		}
+		if (result.status === "not_logged_in") {
+			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorNotLoggedIn);
+			syncFavLabel(label, false);
+			log.warn("post-actions: favorite requires login", postId);
+			return;
+		}
+		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
+		syncFavLabel(label, false);
+		log.warn("post-actions: favorite failed", postId, result);
+	}
+	function createFollowButton(tag) {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CLASS_FOLLOW;
+		button.dataset.rdwArtistTag = tag;
+		applyFollowState$1(button, isFollowingArtist(tag));
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const following = button.getAttribute("aria-pressed") === "true";
+			try {
+				if (following) {
+					removeArtist(tag);
+					applyFollowState$1(button, false);
+				} else {
+					addArtist(tag);
+					applyFollowState$1(button, true);
+				}
+			} catch {
+				applyFollowState$1(button, isFollowingArtist(tag));
+			}
+		});
+		return button;
+	}
+	function applyFollowState$1(button, following) {
+		const tag = button.dataset.rdwArtistTag ?? "";
+		const verb = following ? TEXT_FOLLOWING : TEXT_FOLLOW;
+		button.setAttribute("aria-pressed", following ? "true" : "false");
+		button.setAttribute("aria-label", `${verb} ${tag}`);
+		button.textContent = `${verb} ${tag}`;
+	}
+	function createOriginalLink(href) {
+		const link = document.createElement("a");
+		link.className = CLASS_ORIGINAL;
+		link.href = href;
+		link.target = "_blank";
+		link.rel = "noopener";
+		link.setAttribute("aria-label", LABEL_ORIGINAL);
+		link.textContent = TEXT_ORIGINAL;
+		return link;
+	}
+	function createScoreLabel(scoreText) {
+		const score = document.createElement("span");
+		score.className = CLASS_SCORE;
+		score.textContent = `${TEXT_SCORE_PREFIX}${scoreText}`;
+		return score;
+	}
+	function buildBar(ctx) {
+		const bar = document.createElement("div");
+		bar.id = POST_ACTIONS_ID;
+		bar.className = CLASS_BAR$1;
+		bar.setAttribute("role", "toolbar");
+		bar.setAttribute("aria-label", FEATURE_LABEL$2);
+		const postId = readPostIdFromSearch(ctx.search);
+		let scoreLabel = null;
+		if (postId !== null) {
+			const scoreText = readScoreText(postId);
+			if (scoreText !== null) scoreLabel = createScoreLabel(scoreText);
+			bar.append(createPostFavControl(postId, scoreLabel));
+		}
+		for (const tag of collectArtistTags()) bar.append(createFollowButton(tag));
+		const originalHref = findOriginalHref();
+		if (originalHref !== null) bar.append(createOriginalLink(originalHref));
+		if (scoreLabel !== null) bar.append(scoreLabel);
+		return bar;
+	}
+	function mountPostActions(ctx) {
+		const host = findHost();
+		if (host === null) {
+			log.warn(WARN_NO_HOST);
+			return;
+		}
+		removeExistingBar$1();
+		const bar = buildBar(ctx);
+		host.insertBefore(bar, host.firstChild);
+	}
+	var postActionsFeature = {
+		id: FEATURE_ID$2,
+		label: FEATURE_LABEL$2,
+		pages: [...FEATURE_PAGES$2],
+		defaultEnabled: true,
+		css: FEATURE_CSS$2,
+		mount: mountPostActions
 	};
 	var FEATURE_ID$1 = "tag-groups";
 	var FEATURE_LABEL$1 = "Collapsible tag groups";
@@ -3015,6 +3675,7 @@ ${BODY_SELECTOR} #${TOPBAR_ID} .${CLASS_UPDATES}:focus-visible {
 		tagGroupsFeature,
 		followedBadgeFeature,
 		seenDimFeature,
+		postActionsFeature,
 		gridDensityFeature,
 		darkThemeFeature
 	];
@@ -3103,167 +3764,502 @@ ${BODY_SELECTOR} #${TOPBAR_ID} .${CLASS_UPDATES}:focus-visible {
 			if (onclick === null) return;
 			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
 			if (postId === null) return;
-			setPostFavMark(postId, false);
+			removeFav(postId);
 		}, true);
 	}
 	function syncFavoritesPage(root = document, search = window.location.search) {
 		if (detectPageKind(search) !== "favorites") return;
-		setPostFavMarks(collectFavoritePostIds(root), true);
+		const ids = collectFavoritePostIds(root);
+		const numericIds = [];
+		for (const postId of ids) {
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) numericIds.push(Math.trunc(parsed));
+		}
+		addFavs(numericIds);
 		bindRemoveClickCapture();
 	}
-	function buildAddFavUrl(postId) {
-		const params = new URLSearchParams();
-		params.set("id", postId);
-		return `${SITE_ORIGIN}${ADDFAV_PATH}?${params.toString()}`;
+	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
+	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
+	var THUMB_SELECTOR = "span.thumb";
+	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
+	var PAGINATOR_SELECTOR = "#paginator";
+	var LASTPAGE_SELECTOR = "a[name=\"lastpage\"]";
+	var REMOVE_LINK_SELECTOR = "a[onclick]";
+	var POST_LINK_ID_PATTERN = /^p(\d+)$/;
+	var URL_PARSE_BASE = "https://rule34.xxx";
+	var FAVORITES_SYNC_ERROR_NOT_LOGGED_IN = "not logged in or menu not found";
+	var FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE = "unexpected page";
+	function createAbortResult(total, page, pages) {
+		return {
+			status: "aborted",
+			total,
+			page,
+			pages
+		};
 	}
-	function buildVoteUrl(postId) {
-		const params = new URLSearchParams();
-		params.set(VOTE_PARAM_PAGE, VOTE_PAGE);
-		params.set("s", VOTE_SECTION);
-		params.set("id", postId);
-		params.set(VOTE_PARAM_TYPE, "up");
-		return `${SITE_ORIGIN}${VOTE_PATH}?${params.toString()}`;
+	function isAbortError(error) {
+		return error instanceof DOMException && error.name === "AbortError" || error instanceof Error && error.name === "AbortError";
 	}
-	function buildRemoveFavUrl(postId) {
-		const params = new URLSearchParams();
-		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
-		params.set("s", FAVORITES_SECTION_DELETE);
-		params.set("id", postId);
-		params.set(FAVORITES_PARAM_RETURN_PID, "0");
-		return `${SITE_ORIGIN}${SEARCH_PATH}?${params.toString()}`;
+	function throwIfAborted(signal) {
+		if (signal.aborted) throw new DOMException("Aborted", "AbortError");
 	}
-	async function fetchText(url) {
-		const response = await fetch(url, {
-			method: "GET",
-			credentials: FETCH_CREDENTIALS
-		});
-		if (!response.ok) throw new Error(`HTTP ${String(response.status)}`);
-		return (await response.text()).trim();
-	}
-	function parseVoteScore(raw) {
-		if (raw.length === 0) return;
-		const score = Number(raw);
-		if (!Number.isFinite(score)) return;
-		return score;
-	}
-	async function addFavorite(postId) {
-		let addResponse;
-		try {
-			addResponse = await fetchText(buildAddFavUrl(postId));
-		} catch (error) {
-			log.warn("addfav request failed", postId, error);
-			return { status: "error" };
-		}
-		if (addResponse === "1") return { status: "already" };
-		if (addResponse === "2") return { status: "not_logged_in" };
-		if (addResponse !== "3") {
-			log.warn("Unexpected addfav response", postId, addResponse);
-			return { status: "error" };
-		}
-		try {
-			const score = parseVoteScore(await fetchText(buildVoteUrl(postId)));
-			if (score === void 0) return { status: "added" };
-			return {
-				status: "added",
-				score
-			};
-		} catch (error) {
-			log.warn("vote request failed after addfav", postId, error);
-			return { status: "added" };
-		}
-	}
-	async function removeFavorite(postId) {
-		try {
-			const response = await fetch(buildRemoveFavUrl(postId), {
-				method: "GET",
-				credentials: FETCH_CREDENTIALS
-			});
-			if (!response.ok) {
-				log.warn("remove favorite HTTP error", postId, response.status);
-				return { status: "error" };
-			}
-			return { status: "removed" };
-		} catch (error) {
-			log.warn("remove favorite request failed", postId, error);
-			return { status: "error" };
-		}
-	}
-	function favAriaLabel(postId, marked) {
-		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
-	}
-	function applyFavButtonState(button, state, postId, errorTitle) {
-		if (state === "pending") {
-			button.disabled = true;
-			button.classList.add(CSS_CLASS.cardFavPending);
-			return;
-		}
-		button.classList.remove(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError, CSS_CLASS.cardFavPending);
-		button.disabled = false;
-		button.removeAttribute("title");
-		if (state === "marked") {
-			button.setAttribute("aria-pressed", "true");
-			button.setAttribute("aria-label", favAriaLabel(postId, true));
-			button.classList.add(CSS_CLASS.cardFavMarked);
-			return;
-		}
-		if (state === "marked_error") {
-			button.setAttribute("aria-pressed", "true");
-			button.setAttribute("aria-label", favAriaLabel(postId, true));
-			button.classList.add(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError);
-			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
-			return;
-		}
-		if (state === "error") {
-			button.setAttribute("aria-pressed", "false");
-			button.setAttribute("aria-label", favAriaLabel(postId, false));
-			button.classList.add(CSS_CLASS.cardFavError);
-			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
-			return;
-		}
-		button.setAttribute("aria-pressed", "false");
-		button.setAttribute("aria-label", favAriaLabel(postId, false));
-	}
-	function createFavButton(postId, marked, className = CSS_CLASS.cardFav) {
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = className;
-		button.textContent = UI_TEXT.cardFavGlyph;
-		applyFavButtonState(button, marked ? "marked" : "idle", postId);
-		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			handleFavToggleClick(button, postId);
-		});
-		return button;
-	}
-	async function handleFavToggleClick(button, postId) {
-		if (button.disabled) return;
-		const currentlyMarked = button.getAttribute("aria-pressed") === "true";
-		applyFavButtonState(button, "pending", postId);
-		if (currentlyMarked) {
-			const result = await removeFavorite(postId);
-			if (result.status === "removed") {
-				setPostFavMark(postId, false);
-				applyFavButtonState(button, "idle", postId);
+	function delay(ms, signal) {
+		return new Promise((resolve, reject) => {
+			if (signal.aborted) {
+				reject(new DOMException("Aborted", "AbortError"));
 				return;
 			}
-			applyFavButtonState(button, "marked_error", postId, UI_TEXT.cardFavErrorRequest);
-			log.warn("Remove favorite failed", postId, result);
+			const timer = setTimeout(() => {
+				signal.removeEventListener("abort", onAbort);
+				if (signal.aborted) {
+					reject(new DOMException("Aborted", "AbortError"));
+					return;
+				}
+				resolve();
+			}, ms);
+			const onAbort = () => {
+				clearTimeout(timer);
+				reject(new DOMException("Aborted", "AbortError"));
+			};
+			signal.addEventListener("abort", onAbort, { once: true });
+		});
+	}
+	function parsePositiveInt(raw) {
+		if (raw === null) return null;
+		const trimmed = raw.trim();
+		if (trimmed.length === 0) return null;
+		const value = Number(trimmed);
+		if (!Number.isFinite(value) || value < 0) return null;
+		return Math.trunc(value);
+	}
+	function parsePidFromHref(href) {
+		try {
+			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("pid"));
+		} catch {
+			return null;
+		}
+	}
+	function extractUserIdFromDocument(root) {
+		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
+		if (!(link instanceof HTMLAnchorElement)) return null;
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) return null;
+		try {
+			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("id"));
+		} catch {
+			return null;
+		}
+	}
+	function buildFavoritesPageUrl(userId, pid) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_VIEW);
+		params.set("id", String(userId));
+		params.set("pid", String(pid));
+		return `${SEARCH_PATH}?${params.toString()}`;
+	}
+	function pageIndexFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid$1(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function collectFavoriteIdsFromDocument(doc) {
+		const ids = new Set();
+		const postLinks = doc.querySelectorAll(THUMB_POST_LINK_SELECTOR);
+		for (const link of postLinks) {
+			const raw = POST_LINK_ID_PATTERN.exec(link.id)?.[1];
+			if (raw === void 0) continue;
+			const parsed = Number(raw);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		const removeLinks = doc.querySelectorAll(REMOVE_LINK_SELECTOR);
+		for (const link of removeLinks) {
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) continue;
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		return Array.from(ids);
+	}
+	function resolveLastPid(doc, currentPid) {
+		const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
+		if (!(lastpage instanceof HTMLAnchorElement)) return currentPid;
+		const fromHref = parsePidFromHref(lastpage.href);
+		if (fromHref !== null) return fromHref;
+		const fromAttr = parsePositiveInt(lastpage.getAttribute("pid"));
+		if (fromAttr !== null) return fromAttr;
+		return currentPid;
+	}
+	function isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount) {
+		if (cardCount === 0 && pid <= lastPid) return true;
+		if (pid === 0 && cardCount === 0 && doc.querySelector(PAGINATOR_SELECTOR) === null) return true;
+		return false;
+	}
+	function persistSyncProgress(state) {
+		setSyncState(state);
+	}
+	async function runFavoritesSync(options) {
+		const { onProgress, signal } = options;
+		const userId = extractUserIdFromDocument(document);
+		if (userId === null) {
+			log.warn("favorites sync: user id not found");
+			return {
+				status: "error",
+				message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN
+			};
+		}
+		const existing = getSyncState();
+		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
+		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
+		let pid = unfinished ? existing.nextPid : 0;
+		let lastPid = unfinished ? existing.lastPid : 0;
+		let total = loadFavSet().size;
+		let page = pageIndexFromPid(pid);
+		let pages = pagesFromLastPid$1(lastPid);
+		try {
+			throwIfAborted(signal);
+			while (true) {
+				throwIfAborted(signal);
+				const url = buildFavoritesPageUrl(userId, pid);
+				let response;
+				try {
+					response = await fetch(url, {
+						method: "GET",
+						credentials: FETCH_CREDENTIALS
+					});
+				} catch (error) {
+					if (isAbortError(error)) throw error;
+					log.warn("favorites sync: fetch failed", url, error);
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: error instanceof Error ? error.message : "request failed"
+					};
+				}
+				if (!response.ok) {
+					log.warn("favorites sync: HTTP error", response.status, url);
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: `HTTP ${String(response.status)}`
+					};
+				}
+				const html = await response.text();
+				const doc = new DOMParser().parseFromString(html, "text/html");
+				const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
+				lastPid = resolveLastPid(doc, pid);
+				page = pageIndexFromPid(pid);
+				pages = pagesFromLastPid$1(lastPid);
+				if (isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount)) {
+					log.warn("favorites sync: unexpected page", {
+						pid,
+						lastPid,
+						cardCount
+					});
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
+					};
+				}
+				addFavs(collectFavoriteIdsFromDocument(doc));
+				total = loadFavSet().size;
+				const nextPid = pid + 50;
+				persistSyncProgress({
+					nextPid,
+					lastPid,
+					startedAt
+				});
+				onProgress({
+					page,
+					pages,
+					total
+				});
+				if (pid >= lastPid) {
+					const finishedAt = new Date().toISOString();
+					persistSyncProgress({
+						nextPid,
+						lastPid,
+						startedAt,
+						finishedAt
+					});
+					log.info("favorites sync: completed", {
+						total,
+						pages
+					});
+					return {
+						status: "completed",
+						total,
+						pages
+					};
+				}
+				throwIfAborted(signal);
+				await delay(FAVORITES_SYNC_PAGE_PAUSE_MS, signal);
+				throwIfAborted(signal);
+				pid = nextPid;
+				page = pageIndexFromPid(pid);
+			}
+		} catch (error) {
+			if (isAbortError(error)) {
+				log.info("favorites sync: aborted", {
+					pid,
+					total
+				});
+				return createAbortResult(total, page, pages);
+			}
+			log.error("favorites sync: unexpected failure", error);
+			persistSyncProgress({
+				nextPid: pid,
+				lastPid,
+				startedAt
+			});
+			return {
+				status: "error",
+				message: error instanceof Error ? error.message : "unexpected error"
+			};
+		}
+	}
+	var SECTION_CLASS = "rdw-favs-sync";
+	var STATUS_CLASS = "rdw-favs-sync-status";
+	var PROGRESS_CLASS = "rdw-favs-sync-progress";
+	var ACTIONS_CLASS = "rdw-favs-sync-actions";
+	var WARNING_CLASS = "rdw-favs-sync-warning";
+	var NOTE_CLASS = "rdw-favs-sync-note";
+	var HEADING = "Favorites sync";
+	var TEXT_SYNC = "Sync favorites";
+	var TEXT_RESUME = "Resume";
+	var TEXT_STOP = "Stop";
+	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
+	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
+	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
+	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
+	var TEXT_PAUSED = (page, pages) => `Paused at page ${String(page)} of ${String(pages)}`;
+	var TEXT_PROGRESS = (p) => `Page ${String(p.page)} of ${String(p.pages)} · ${String(p.total)} ids`;
+	var TEXT_DONE = (total, pages) => `Synced ${String(total)} ids across ${String(pages)} pages`;
+	var TEXT_ABORTED = (page, pages, total) => `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
+	var PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1e3;
+	var FAVORITES_SYNC_SECTION_CSS = `
+.${SECTION_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.${SECTION_CLASS} .${STATUS_CLASS} {
+  margin: 0;
+  color: #333;
+  font-size: 12px;
+}
+
+.${SECTION_CLASS} .${PROGRESS_CLASS} {
+  width: 100%;
+  height: 8px;
+}
+
+.${SECTION_CLASS} .${ACTIONS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.${SECTION_CLASS} .${WARNING_CLASS},
+.${SECTION_CLASS} .${NOTE_CLASS} {
+  margin: 0;
+  color: #555;
+  font-size: 12px;
+}
+`.trim();
+	var activeSync = null;
+	function formatSyncDate(iso) {
+		const parsed = Date.parse(iso);
+		if (!Number.isFinite(parsed)) return iso;
+		return new Date(parsed).toLocaleString();
+	}
+	function pageFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function isUnfinished(sync) {
+		return sync !== void 0 && sync.finishedAt === void 0;
+	}
+	function buildStatusText() {
+		const count = loadFavSet().size;
+		const sync = getSyncState();
+		const parts = [TEXT_IDLE_COUNT(count)];
+		if (sync !== void 0 && sync.finishedAt === void 0) {
+			const page = pageFromPid(sync.nextPid);
+			const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
+			parts.push(TEXT_PAUSED(page, pages));
+		} else if (sync?.finishedAt !== void 0) parts.push(TEXT_LAST_SYNC(sync.finishedAt));
+		return parts.join(" · ");
+	}
+	function applyIdleUi(refs) {
+		const unfinished = isUnfinished(getSyncState());
+		refs.status.textContent = buildStatusText();
+		refs.progress.removeAttribute("value");
+		refs.progress.removeAttribute("max");
+		refs.error.hidden = true;
+		refs.error.textContent = "";
+		refs.syncBtn.disabled = activeSync !== null;
+		refs.resumeBtn.disabled = activeSync !== null || !unfinished;
+		refs.stopBtn.disabled = activeSync === null;
+		refs.syncBtn.hidden = unfinished;
+		refs.resumeBtn.hidden = !unfinished;
+	}
+	function applyProgressUi(refs, progress) {
+		refs.status.textContent = TEXT_PROGRESS(progress);
+		refs.progress.max = Math.max(progress.pages, 1);
+		refs.progress.value = progress.page;
+		refs.syncBtn.disabled = true;
+		refs.resumeBtn.disabled = true;
+		refs.stopBtn.disabled = false;
+		refs.syncBtn.hidden = true;
+		refs.resumeBtn.hidden = false;
+	}
+	function applyResultUi(refs, result) {
+		activeSync = null;
+		if (result.status === "error") {
+			refs.error.hidden = false;
+			refs.error.textContent = result.message;
+			applyIdleUi(refs);
 			return;
 		}
-		const result = await addFavorite(postId);
-		if (result.status === "added" || result.status === "already") {
-			setPostFavMark(postId, true);
-			applyFavButtonState(button, "marked", postId);
+		refs.error.hidden = true;
+		refs.error.textContent = "";
+		applyIdleUi(refs);
+		if (result.status === "completed") {
+			refs.status.textContent = TEXT_DONE(result.total, result.pages);
+			refs.progress.max = Math.max(result.pages, 1);
+			refs.progress.value = result.pages;
 			return;
 		}
-		if (result.status === "not_logged_in") {
-			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorNotLoggedIn);
-			log.warn("Favorite requires login", postId);
-			return;
+		refs.status.textContent = TEXT_ABORTED(result.page, result.pages, result.total);
+		refs.progress.max = Math.max(result.pages, 1);
+		refs.progress.value = result.page;
+	}
+	async function startSync(refs) {
+		if (activeSync !== null) return;
+		const controller = new AbortController();
+		const listeners = new Set();
+		activeSync = {
+			controller,
+			listeners
+		};
+		const onProgress = (progress) => {
+			for (const listener of listeners) listener(progress);
+		};
+		listeners.add((progress) => {
+			applyProgressUi(refs, progress);
+		});
+		refs.error.hidden = true;
+		refs.error.textContent = "";
+		applyProgressUi(refs, {
+			page: 0,
+			pages: 1,
+			total: loadFavSet().size
+		});
+		try {
+			const result = await runFavoritesSync({
+				onProgress,
+				signal: controller.signal
+			});
+			if (activeSync?.controller === controller) applyResultUi(refs, result);
+		} catch (error) {
+			log.error("favorites sync section: unexpected failure", error);
+			if (activeSync?.controller === controller) {
+				activeSync = null;
+				refs.error.hidden = false;
+				refs.error.textContent = error instanceof Error ? error.message : "unexpected error";
+				applyIdleUi(refs);
+			}
 		}
-		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
-		log.warn("Favorite failed", postId, result);
+	}
+	function createFavoritesSyncSection() {
+		const section = document.createElement("section");
+		section.className = `${CSS_CLASS.section} ${SECTION_CLASS}`;
+		const title = document.createElement("h3");
+		title.className = CSS_CLASS.sectionTitle;
+		title.textContent = HEADING;
+		const status = document.createElement("p");
+		status.className = STATUS_CLASS;
+		const progress = document.createElement("progress");
+		progress.className = PROGRESS_CLASS;
+		const actions = document.createElement("div");
+		actions.className = ACTIONS_CLASS;
+		const syncBtn = document.createElement("button");
+		syncBtn.type = "button";
+		syncBtn.className = CSS_CLASS.primaryButton;
+		syncBtn.textContent = TEXT_SYNC;
+		const resumeBtn = document.createElement("button");
+		resumeBtn.type = "button";
+		resumeBtn.className = CSS_CLASS.secondaryButton;
+		resumeBtn.textContent = TEXT_RESUME;
+		const stopBtn = document.createElement("button");
+		stopBtn.type = "button";
+		stopBtn.className = CSS_CLASS.secondaryButton;
+		stopBtn.textContent = TEXT_STOP;
+		actions.append(syncBtn, resumeBtn, stopBtn);
+		const error = document.createElement("p");
+		error.className = CSS_CLASS.error;
+		error.hidden = true;
+		const warning = document.createElement("p");
+		warning.className = WARNING_CLASS;
+		warning.textContent = TEXT_WARNING;
+		const note = document.createElement("p");
+		note.className = NOTE_CLASS;
+		note.textContent = TEXT_NOTE;
+		const pauseHint = document.createElement("p");
+		pauseHint.className = CSS_CLASS.hint;
+		pauseHint.textContent = `Pause between pages: ${String(PAUSE_SECONDS)} s`;
+		section.append(title, status, progress, actions, error, warning, note, pauseHint);
+		const refs = {
+			status,
+			progress,
+			error,
+			syncBtn,
+			resumeBtn,
+			stopBtn
+		};
+		if (activeSync !== null) {
+			const listener = (p) => {
+				applyProgressUi(refs, p);
+			};
+			activeSync.listeners.add(listener);
+			applyProgressUi(refs, {
+				page: 0,
+				pages: 1,
+				total: loadFavSet().size
+			});
+			refs.stopBtn.disabled = false;
+		} else applyIdleUi(refs);
+		syncBtn.addEventListener("click", () => {
+			startSync(refs);
+		});
+		resumeBtn.addEventListener("click", () => {
+			startSync(refs);
+		});
+		stopBtn.addEventListener("click", () => {
+			activeSync?.controller.abort();
+		});
+		return section;
 	}
 	var PANEL_CSS = `
 :host {
@@ -3512,6 +4508,8 @@ ${BODY_SELECTOR} #${TOPBAR_ID} .${CLASS_UPDATES}:focus-visible {
 .${CSS_CLASS.hidden} {
   display: none !important;
 }
+
+${FAVORITES_SYNC_SECTION_CSS}
 `;
 	var CARD_CSS = `
 .${CSS_CLASS.cardFav} {
@@ -3692,13 +4690,12 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const enabled = getGridFavButtonsEnabled();
 		applyGridFavVisibilityClass(enabled);
 		if (!enabled) return;
-		const marks = load().marks;
 		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
 		for (const thumb of thumbs) {
 			if (!(thumb instanceof HTMLElement)) continue;
 			const postId = extractPostIdFromThumb(thumb);
 			if (postId === null) continue;
-			attachFavButton(thumb, postId, marks[postId]?.fav === true);
+			attachFavButton(thumb, postId, isFav(postId));
 		}
 	}
 	function extractArtistTagFromLi(li) {
@@ -4389,6 +5386,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			body.className = CSS_CLASS.body;
 			const saveSection = buildSaveSection(controller);
 			const settingsSection = buildSettingsSection();
+			const favoritesSyncSection = createFavoritesSyncSection();
 			const artistsSection = buildArtistsSection(artists, controller);
 			const collectionsSection = buildCollectionsSection(collections, controller);
 			const toolbar = buildToolbar(controller);
@@ -4396,8 +5394,8 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 				const error = document.createElement("p");
 				error.className = CSS_CLASS.error;
 				error.textContent = `${UI_TEXT.importErrorPrefix} ${controller.getImportError()}`;
-				body.append(saveSection, settingsSection, artistsSection, collectionsSection, toolbar, error);
-			} else body.append(saveSection, settingsSection, artistsSection, collectionsSection, toolbar);
+				body.append(saveSection, settingsSection, favoritesSyncSection, artistsSection, collectionsSection, toolbar, error);
+			} else body.append(saveSection, settingsSection, favoritesSyncSection, artistsSection, collectionsSection, toolbar);
 			panel.append(buildHeader(controller), body);
 		}
 		function render() {

@@ -6,6 +6,7 @@ import {
 } from "./grid-marks";
 import { menuCleanupFeature } from "./menu-cleanup";
 import { pagerFeature } from "./pager";
+import { postActionsFeature } from "./post-actions";
 import { tagGroupsFeature } from "./tag-groups";
 import { topBarFeature } from "./top-bar";
 import type { Feature } from "./types";
@@ -17,6 +18,7 @@ export const FEATURES: Feature[] = [
   tagGroupsFeature,
   followedBadgeFeature,
   seenDimFeature,
+  postActionsFeature,
   gridDensityFeature,
   darkThemeFeature,
 ];

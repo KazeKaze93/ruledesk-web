@@ -42,6 +42,7 @@ import {
   setUpdatesGroupSize,
 } from "../storage/store";
 import { setGridFavButtonsVisible } from "./cards";
+import { createFavoritesSyncSection } from "./favorites-sync-section";
 import { PANEL_CSS } from "./styles";
 
 const TWEAKS_CHECKBOX_ID = "rdw-tweaks-enabled";
@@ -835,6 +836,7 @@ export function mountPanel(target: ParentNode = document.body): void {
 
     const saveSection = buildSaveSection(controller);
     const settingsSection = buildSettingsSection();
+    const favoritesSyncSection = createFavoritesSyncSection();
     const artistsSection = buildArtistsSection(artists, controller);
     const collectionsSection = buildCollectionsSection(collections, controller);
     const toolbar = buildToolbar(controller);
@@ -846,6 +848,7 @@ export function mountPanel(target: ParentNode = document.body): void {
       body.append(
         saveSection,
         settingsSection,
+        favoritesSyncSection,
         artistsSection,
         collectionsSection,
         toolbar,
@@ -855,6 +858,7 @@ export function mountPanel(target: ParentNode = document.body): void {
       body.append(
         saveSection,
         settingsSection,
+        favoritesSyncSection,
         artistsSection,
         collectionsSection,
         toolbar,

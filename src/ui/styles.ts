@@ -1,4 +1,5 @@
 import { CSS_CLASS } from "../config/constants";
+import { FAVORITES_SYNC_SECTION_CSS } from "./favorites-sync-section";
 
 export const PANEL_CSS = `
 :host {
@@ -247,6 +248,8 @@ export const PANEL_CSS = `
 .${CSS_CLASS.hidden} {
   display: none !important;
 }
+
+${FAVORITES_SYNC_SECTION_CSS}
 `;
 
 export const CARD_CSS = `

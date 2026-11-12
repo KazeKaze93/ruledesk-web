@@ -23,8 +23,10 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 - On the post list grid, a star is anchored to `img.preview` via CSS anchor positioning (hover / focus to reveal; marked stars stay visible); the site’s link/image markup is left intact
 - Click toggles favorite: same-origin `addfav` (+ vote on new add) or favorites delete
-- Favorites page: no DOM changes; IDs are read from Remove links into local `marks`, and Remove clicks clear the mark
+- Local favorite IDs live in a separate GM key (`ruledesk-web.favs`); legacy `marks.*.fav` is migrated on load
+- Favorites page: no DOM changes; IDs are read from Remove links into local favs, and Remove clicks clear the local mark
 - Panel setting **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
+- Panel **Favorites sync**: optional full crawl of the site favorites list (add-only; one page every 1.5 s) via Sync / Resume / Stop
 
 ## Stage 3 — artists / Updates
 
@@ -34,7 +36,7 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 - On a full Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
 - Empty Updates pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
-No `api.rule34.xxx`. The only `fetch` calls are favorite add/remove on user click.
+No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click) and `favorites-sync.ts` (explicit Sync / Resume).
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
@@ -48,8 +50,9 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | Top pagination | on | list | Compact pager + ←/→ keys |
 | Clean header menu | on | all | Hides unused header links |
 | Collapsible tag groups | on | list, post | Collapse tag sidebar groups |
-| Following badge | on | list | Badge on thumbs with followed artists |
+| Following badge | on | list | Compact marker on thumbs with followed artists (skips artists already in the current include search) |
 | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid |
+| Post actions | on | post | Favorite / Follow / Original / Score bar above the post sidebar |
 | Grid size | on | list, favorites | compact / default / large |
 | Dark theme | **off** | all | Site-wide dark CSS |
 
@@ -72,8 +75,9 @@ Turn a module off in Settings, or disable **Enable page tweaks** to unload all o
   ],
   "artists": [{ "tag": "nyx_x" }],
   "marks": {
-    "12345": { "fav": true }
+    "12345": { "seen": true }
   },
+  "favIds": [12345, 67890],
   "settings": {
     "gridFavButtons": true,
     "tweaksEnabled": true,
@@ -88,8 +92,9 @@ Turn a module off in Settings, or disable **Enable page tweaks** to unload all o
 }
 ```
 
-- `settings` / `updates` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `seenPostId: 0`
-- Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); `seenPostId` keeps the maximum of current and imported
+- `settings` / `updates` / `favIds` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `seenPostId: 0`
+- Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); legacy `marks.*.fav` becomes fav ids; `seenPostId` keeps the maximum of current and imported
+- Runtime fav ids are stored under `ruledesk-web.favs` (not inside the main storage key)
 
 ## Scripts
 
