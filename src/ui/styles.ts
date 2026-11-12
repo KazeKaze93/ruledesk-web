@@ -1,4 +1,6 @@
 import { CSS_CLASS } from "../config/constants";
+import { BLACKLIST_SECTION_CSS } from "./blacklist-section";
+import { COLLECTIONS_TAB_CSS } from "./collections-tab";
 import { FAVORITES_SYNC_SECTION_CSS } from "./favorites-sync-section";
 
 /** Panel-local class names (not in shared CSS_CLASS — Phase B5 ownership). */
@@ -453,6 +455,10 @@ export const PANEL_CSS = `
 }
 
 ${FAVORITES_SYNC_SECTION_CSS}
+
+${BLACKLIST_SECTION_CSS}
+
+${COLLECTIONS_TAB_CSS}
 `;
 
 export const CARD_CSS = `

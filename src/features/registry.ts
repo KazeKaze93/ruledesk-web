@@ -3,6 +3,8 @@ import { gridDensityFeature } from "./grid-density";
 import { seenDimFeature } from "./grid-marks";
 import { infiniteScrollFeature } from "./infinite-scroll";
 import { menuCleanupFeature } from "./menu-cleanup";
+import { playlistBarFeature } from "./playlist-bar";
+import { playlistMenuFeature } from "./playlist-menu";
 import { postActionsFeature } from "./post-actions";
 import { searchToolsFeature } from "./search-tools";
 import { tagGroupsFeature } from "./tag-groups";
@@ -14,6 +16,8 @@ export const FEATURES: Feature[] = [
   tagGroupsFeature,
   searchToolsFeature,
   seenDimFeature,
+  playlistMenuFeature,
+  playlistBarFeature,
   infiniteScrollFeature,
   postActionsFeature,
   gridDensityFeature,

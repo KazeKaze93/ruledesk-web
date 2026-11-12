@@ -567,8 +567,17 @@ describe("panel settings apply", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show a reload-to-apply hint", () => {
+  it("does not show a reload-to-apply hint for feature toggles", () => {
     const shadow = openSettingsPanel();
-    expect(shadow.textContent ?? "").not.toContain("Reload the page to apply");
+    const blacklist = shadow.querySelector(".rdw-blacklist");
+    expect(blacklist).not.toBeNull();
+    expect(blacklist?.textContent ?? "").toContain(
+      "Saved. Reload the page to apply.",
+    );
+    const withoutBlacklist = (shadow.textContent ?? "").replace(
+      blacklist?.textContent ?? "",
+      "",
+    );
+    expect(withoutBlacklist).not.toContain("Reload the page to apply");
   });
 });

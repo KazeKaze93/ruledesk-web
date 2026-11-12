@@ -12,8 +12,8 @@ export default defineConfig({
         name: "RuleDesk Web",
         namespace: "https://github.com/kazekaze93/ruledesk-web",
         description:
-          "Collections, favorites, artist updates, and page tweaks for rule34.xxx",
-        version: "0.7.0",
+          "Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx",
+        version: "0.8.0",
         match: ["https://rule34.xxx/*"],
         "run-at": "document-idle",
         grant: ["GM_getValue", "GM_setValue"],

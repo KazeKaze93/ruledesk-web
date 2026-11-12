@@ -74,7 +74,7 @@ export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.7.0";
+export const USERSCRIPT_VERSION = "0.8.0";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -133,6 +133,7 @@ export const UI_TEXT = {
   openUpdates: "Open updates",
   openUpdatesGroup: "Updates",
   updatesGroupSizeLabel: "Artists per search (0 = no limit)",
+  playlistChunkSizeLabel: "Playlist part size",
   seenUpTo: "Seen up to post #",
   seenNothing: "Nothing marked as seen yet.",
   markAllSeen: "Mark all seen",

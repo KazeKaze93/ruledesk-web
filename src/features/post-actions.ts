@@ -7,6 +7,7 @@ import {
   applyFavButtonState,
   createFavButton,
 } from "../ui/fav-button";
+import { createPlaylistMenu } from "./playlist-menu";
 import {
   POST_ACTIONS_ID,
   featureBodyClass,
@@ -460,6 +461,7 @@ function buildPanel(ctx: FeatureContext): HTMLElement {
     const scoreEl =
       scoreLabel instanceof HTMLElement ? scoreLabel : null;
     panel.append(createPostFavControl(postId, scoreEl));
+    panel.append(createPlaylistMenu(Number(postId)));
 
     const original = findOriginalAnchor();
     if (original !== null) {

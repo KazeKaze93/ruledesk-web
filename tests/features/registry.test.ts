@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FEATURES } from "../../src/features/registry";
 
 describe("FEATURES registry", () => {
-  it("registers 0.7.0 modules in order and omits removed ones", () => {
+  it("registers 0.8.0 modules in order and omits removed ones", () => {
     const ids = FEATURES.map((feature) => feature.id);
     expect(ids).toEqual([
       "feed",
@@ -11,6 +11,8 @@ describe("FEATURES registry", () => {
       "tag-groups",
       "search-tools",
       "seen-dim",
+      "playlist-menu",
+      "playlist-bar",
       "infinite-scroll",
       "post-actions",
       "grid-density",

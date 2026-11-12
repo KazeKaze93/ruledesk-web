@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.7.0
-// @description  Collections, favorites, artist updates, and page tweaks for rule34.xxx
+// @version      0.8.0
+// @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @match        https://rule34.xxx/*
@@ -40,11 +40,13 @@
 	var EXPORT_FILENAME = "ruledesk-web-collections.json";
 	var EXPORT_MIME = "application/json";
 	var IMPORT_SCHEMA_ERROR_PREFIX = "File is not a RuleDesk Web export";
+	var COLLECTION_KIND_SEARCH = "search";
+	var COLLECTION_KIND_POSTS = "posts";
 	var PANEL_ROOT_ID = "ruledesk-web-root";
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
-	var USERSCRIPT_VERSION = "0.7.0";
+	var USERSCRIPT_VERSION = "0.8.0";
 	var SITE_THEME_COOKIE_NAME = "theme";
 	var SITE_THEME_COOKIE_VALUE_DARK = "dark";
 	var SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
@@ -94,6 +96,7 @@
 		openUpdates: "Open updates",
 		openUpdatesGroup: "Updates",
 		updatesGroupSizeLabel: "Artists per search (0 = no limit)",
+		playlistChunkSizeLabel: "Playlist part size",
 		seenUpTo: "Seen up to post #",
 		seenNothing: "Nothing marked as seen yet.",
 		markAllSeen: "Mark all seen",
@@ -1445,6 +1448,14 @@
 	function _unknown(Class) {
 		return new Class({ type: "unknown" });
 	}
+	function _gt(value, params) {
+		return new $ZodCheckGreaterThan({
+			check: "greater_than",
+			...normalizeParams(params),
+			value,
+			inclusive: false
+		});
+	}
 	function _gte(value, params) {
 		return new $ZodCheckGreaterThan({
 			check: "greater_than",
@@ -1452,6 +1463,9 @@
 			value,
 			inclusive: true
 		});
+	}
+	function _positive(params) {
+		return _gt(0, params);
 	}
 	function _nonnegative(params) {
 		return _gte(0, params);
@@ -1619,6 +1633,7 @@
 		});
 	}
 	var UPDATES_ID_TOKEN_PATTERN = /^id:>(\d+)$/;
+	var PLAYLIST_ID_TOKEN_PATTERN = /^id:(\d+)$/;
 	function normalizeArtistTag(raw) {
 		const trimmed = raw.trim().toLowerCase();
 		if (trimmed.length === 0) return null;
@@ -1781,7 +1796,66 @@
 		if (isExactTrackedSet(parsed.tags, tracked)) return false;
 		return parsed.tags.length > 0 && parsed.tags.length < tracked.size;
 	}
+	function formatPlaylistIdToken(postId) {
+		return `id:${String(postId)}`;
+	}
+	function formatPlaylistChunkQuery(ids) {
+		if (ids.length === 1) {
+			const only = ids[0];
+			return only === void 0 ? "" : formatPlaylistIdToken(only);
+		}
+		return `( ${ids.map(formatPlaylistIdToken).join(` ~ `)} )`;
+	}
+	function buildPlaylistQueries(postIds, chunkSize) {
+		const unique = new Set();
+		for (const raw of postIds) {
+			if (!Number.isFinite(raw)) continue;
+			const id = Math.trunc(raw);
+			if (id >= 0) unique.add(id);
+		}
+		const sorted = Array.from(unique).sort((a, b) => b - a);
+		if (sorted.length === 0) return [];
+		const chunks = [];
+		if (chunkSize <= 0) chunks.push(sorted);
+		else for (let index = 0; index < sorted.length; index += chunkSize) chunks.push(sorted.slice(index, index + chunkSize));
+		return chunks.map(formatPlaylistChunkQuery);
+	}
+	function parsePlaylistQuery(tagsParam) {
+		const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
+		if (tokens.length === 0) return null;
+		if (tokens.length === 1) {
+			const only = tokens[0];
+			if (only === void 0) return null;
+			const match = PLAYLIST_ID_TOKEN_PATTERN.exec(only);
+			if (match === null) return null;
+			const id = Number(match[1]);
+			if (!Number.isFinite(id)) return null;
+			return [id];
+		}
+		const first = tokens[0];
+		const last = tokens[tokens.length - 1];
+		if (first !== "(" || last !== ")") return null;
+		const inner = tokens.slice(1, -1);
+		if (inner.length === 0 || inner.length % 2 === 0) return null;
+		const ids = [];
+		for (let index = 0; index < inner.length; index += 1) {
+			const token = inner[index];
+			if (token === void 0) return null;
+			if (index % 2 === 1) {
+				if (token !== "~") return null;
+				continue;
+			}
+			const match = PLAYLIST_ID_TOKEN_PATTERN.exec(token);
+			if (match === null) return null;
+			const id = Number(match[1]);
+			if (!Number.isFinite(id)) return null;
+			if (ids.includes(id)) return null;
+			ids.push(id);
+		}
+		return ids;
+	}
 	var TagTypeSchema = _enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
+	var CollectionKindSchema = _enum([COLLECTION_KIND_SEARCH, COLLECTION_KIND_POSTS]);
 	var TagEntrySchema = object({
 		tag: string().check(_minLength(1)),
 		type: TagTypeSchema
@@ -1789,7 +1863,9 @@
 	var CollectionSchema = object({
 		id: string().check(_minLength(1)),
 		name: string().check(_minLength(1)),
-		tags: array(TagEntrySchema)
+		tags: array(TagEntrySchema),
+		kind: optional(CollectionKindSchema),
+		postIds: optional(array(int()))
 	});
 	var ArtistEntrySchema = object({ tag: string().check(_minLength(1)) });
 	var MarkFlagsSchema = object({
@@ -1799,6 +1875,7 @@
 	var SettingsSchema = object({
 		gridFavButtons: boolean(),
 		updatesGroupSize: optional(int().check(_nonnegative())),
+		playlistChunkSize: optional(int().check(_positive())),
 		tweaksEnabled: optional(boolean()),
 		features: optional(record(string(), boolean())),
 		featureChoice: optional(record(string(), string())),
@@ -1833,6 +1910,9 @@
 		updates: optional(UpdatesSchema),
 		favIds: optional(array(int()))
 	});
+	function isPlaylist(collection) {
+		return collection.kind === COLLECTION_KIND_POSTS;
+	}
 	function createDefaultFavs() {
 		return {
 			version: 1,
@@ -1862,6 +1942,9 @@
 	function resolveUpdatesGroupSize(data) {
 		return data.settings?.updatesGroupSize ?? 0;
 	}
+	function resolvePlaylistChunkSize(data) {
+		return data.settings?.playlistChunkSize ?? 40;
+	}
 	function resolveSeenPostId(data) {
 		return data.updates?.seenPostId ?? 0;
 	}
@@ -1874,7 +1957,7 @@
 	function getGmSetValue$1() {
 		return GM_setValue;
 	}
-	function normalizePostId(id) {
+	function normalizePostId$1(id) {
 		if (typeof id === "number") {
 			if (!Number.isFinite(id)) return null;
 			return Math.trunc(id);
@@ -1925,7 +2008,7 @@
 				const nextFlags = {};
 				if (flags.seen === true) nextFlags.seen = true;
 				if (flags.fav === true) {
-					const normalized = normalizePostId(postId);
+					const normalized = normalizePostId$1(postId);
 					if (normalized !== null) ids.add(normalized);
 					marksChanged = true;
 				} else if (flags.fav !== void 0) marksChanged = true;
@@ -1965,12 +2048,12 @@
 		return ensureCache();
 	}
 	function isFav(id) {
-		const normalized = normalizePostId(id);
+		const normalized = normalizePostId$1(id);
 		if (normalized === null) return false;
 		return ensureCache().has(normalized);
 	}
 	function addFav(id) {
-		const normalized = normalizePostId(id);
+		const normalized = normalizePostId$1(id);
 		if (normalized === null) return;
 		const ids = new Set(ensureCache());
 		if (ids.has(normalized)) {
@@ -1981,7 +2064,7 @@
 		persistIds(ids);
 	}
 	function removeFav(id) {
-		const normalized = normalizePostId(id);
+		const normalized = normalizePostId$1(id);
 		if (normalized === null) return;
 		const ids = new Set(ensureCache());
 		if (!ids.has(normalized)) {
@@ -1999,7 +2082,7 @@
 		const next = new Set(ensureCache());
 		let changed = false;
 		for (const id of ids) {
-			const normalized = normalizePostId(id);
+			const normalized = normalizePostId$1(id);
 			if (normalized === null) continue;
 			if (!next.has(normalized)) {
 				next.add(normalized);
@@ -2029,7 +2112,7 @@
 		const nextMarks = {};
 		for (const [postId, flags] of Object.entries(marks)) {
 			if (flags.fav === true) {
-				const normalized = normalizePostId(postId);
+				const normalized = normalizePostId$1(postId);
 				if (normalized !== null) favIds.push(normalized);
 			}
 			const nextFlags = {};
@@ -2099,12 +2182,19 @@
 		const next = {
 			gridFavButtons: resolveGridFavButtons(data),
 			updatesGroupSize: resolveUpdatesGroupSize(data),
+			playlistChunkSize: resolvePlaylistChunkSize(data),
 			tweaksEnabled: resolveTweaksEnabled(data)
 		};
 		if (data.settings?.features !== void 0) next.features = { ...data.settings.features };
 		if (data.settings?.featureChoice !== void 0) next.featureChoice = { ...data.settings.featureChoice };
 		if (data.settings?.featureState !== void 0) next.featureState = { ...data.settings.featureState };
 		return next;
+	}
+	function normalizePostId(postId) {
+		if (!Number.isFinite(postId)) return null;
+		const truncated = Math.trunc(postId);
+		if (truncated < 0) return null;
+		return truncated;
 	}
 	function load() {
 		if (storageCacheHydrated && cachedStorage !== null) return cachedStorage;
@@ -2159,6 +2249,58 @@
 		data.collections = next;
 		save(data);
 		return true;
+	}
+	function createPlaylist(name) {
+		const data = load();
+		const collection = CollectionSchema.parse({
+			id: crypto.randomUUID(),
+			name: name.trim(),
+			tags: [],
+			kind: COLLECTION_KIND_POSTS,
+			postIds: []
+		});
+		data.collections.push(collection);
+		save(data);
+		return collection;
+	}
+	function listPlaylists() {
+		return load().collections.filter(isPlaylist);
+	}
+	function playlistsContaining(postId) {
+		const normalized = normalizePostId(postId);
+		if (normalized === null) return [];
+		return listPlaylists().filter((playlist) => (playlist.postIds ?? []).includes(normalized));
+	}
+	function addPostToPlaylist(id, postId) {
+		const normalized = normalizePostId(postId);
+		if (normalized === null) return null;
+		const data = load();
+		const target = data.collections.find((item) => item.id === id);
+		if (target === void 0 || !isPlaylist(target)) return null;
+		const postIds = [...target.postIds ?? []];
+		if (!postIds.includes(normalized)) postIds.push(normalized);
+		target.postIds = postIds;
+		target.tags = [];
+		target.kind = COLLECTION_KIND_POSTS;
+		CollectionSchema.parse(target);
+		save(data);
+		return target;
+	}
+	function removePostFromPlaylist(id, postId) {
+		const normalized = normalizePostId(postId);
+		if (normalized === null) return null;
+		const data = load();
+		const target = data.collections.find((item) => item.id === id);
+		if (target === void 0 || !isPlaylist(target)) return null;
+		const previous = target.postIds ?? [];
+		const postIds = previous.filter((entry) => entry !== normalized);
+		if (postIds.length === previous.length) return target;
+		target.postIds = postIds;
+		target.tags = [];
+		target.kind = COLLECTION_KIND_POSTS;
+		CollectionSchema.parse(target);
+		save(data);
+		return target;
 	}
 	function setPostSeenMark(postId) {
 		const data = load();
@@ -2253,6 +2395,18 @@
 		};
 		save(data);
 	}
+	function getPlaylistChunkSize() {
+		return resolvePlaylistChunkSize(load());
+	}
+	function setPlaylistChunkSize(size) {
+		const data = load();
+		const safeSize = Number.isFinite(size) && size > 0 ? Math.floor(size) : 40;
+		data.settings = {
+			...currentSettings(data),
+			playlistChunkSize: safeSize
+		};
+		save(data);
+	}
 	function getSeenPostId() {
 		return resolveSeenPostId(load());
 	}
@@ -2344,7 +2498,8 @@
 		if (current === void 0) return incoming;
 		const merged = {
 			gridFavButtons: incoming.gridFavButtons,
-			updatesGroupSize: incoming.updatesGroupSize ?? current.updatesGroupSize
+			updatesGroupSize: incoming.updatesGroupSize ?? current.updatesGroupSize,
+			playlistChunkSize: incoming.playlistChunkSize ?? current.playlistChunkSize
 		};
 		if (incoming.tweaksEnabled !== void 0) merged.tweaksEnabled = incoming.tweaksEnabled;
 		else if (current.tweaksEnabled !== void 0) merged.tweaksEnabled = current.tweaksEnabled;
@@ -2387,6 +2542,7 @@
 		if (merged.settings === void 0) merged.settings = {
 			gridFavButtons: true,
 			updatesGroupSize: 0,
+			playlistChunkSize: 40,
 			tweaksEnabled: true
 		};
 		save(merged);
@@ -2605,6 +2761,698 @@
 		}
 		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
 		log.warn("Favorite failed", postId, result);
+	}
+	var COOKIE_PAIR_SEPARATOR$1 = ";";
+	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
+	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
+	var USER_ENTRY_PREFIX = "user:";
+	var RATING_ENTRY_PREFIX = "rating:";
+	var MS_PER_DAY$1 = 864e5;
+	var DAYS_PER_YEAR = 365;
+	var BLACKLIST_TAG_SEPARATOR = " ";
+	function readCookieValue$1(name) {
+		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR$1);
+		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
+		for (const pair of pairs) {
+			const trimmed = pair.trim();
+			if (!trimmed.startsWith(prefix)) continue;
+			return trimmed.slice(prefix.length);
+		}
+		return null;
+	}
+	function normalizeBlacklistTags(tags) {
+		const seen = new Set();
+		const result = [];
+		for (const raw of tags) {
+			const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
+			if (normalized.length === 0 || seen.has(normalized)) continue;
+			seen.add(normalized);
+			result.push(normalized);
+		}
+		return result;
+	}
+	function encodeBlacklistCookieValue(tags) {
+		if (tags.length === 0) return "";
+		return encodeURIComponent(encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)));
+	}
+	function writeBlacklistCookie(value, expires) {
+		document.cookie = [
+			`${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
+			`expires=${expires.toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function readSiteBlacklist() {
+		const raw = readCookieValue$1(SITE_BLACKLIST_COOKIE_NAME);
+		if (raw === null || raw.length === 0) return [];
+		let decoded;
+		try {
+			decoded = decodeURIComponent(decodeURI(raw));
+		} catch {
+			return [];
+		}
+		const result = [];
+		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
+			const trimmed = part.trim().toLowerCase();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function writeSiteBlacklist(tags) {
+		const normalized = normalizeBlacklistTags(tags);
+		const expires = new Date(Date.now() + 5 * DAYS_PER_YEAR * MS_PER_DAY$1);
+		writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
+	}
+	function isBlacklisted(tags, score, rating, list) {
+		if (list.length === 0) return false;
+		const tagSet = new Set();
+		for (const tag of tags) {
+			const normalized = tag.trim().toLowerCase();
+			if (normalized.length > 0) tagSet.add(normalized);
+		}
+		const ratingNorm = rating.trim().toLowerCase();
+		for (const entry of list) {
+			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
+			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
+				const value = entry.slice(7);
+				if (value.length > 0 && value === ratingNorm) return true;
+				continue;
+			}
+			if (tagSet.has(entry)) return true;
+		}
+		return false;
+	}
+	var SECTION_CLASS$1 = "rdw-blacklist";
+	var CHIPS_CLASS$1 = "rdw-blacklist-chips";
+	var CHIP_CLASS$1 = "rdw-blacklist-chip";
+	var CHIP_LABEL_CLASS$1 = "rdw-blacklist-chip-label";
+	var CHIP_REMOVE_CLASS$1 = "rdw-blacklist-chip-remove";
+	var ADD_ROW_CLASS = "rdw-blacklist-add-row";
+	var SAVED_ROW_CLASS = "rdw-blacklist-saved-row";
+	var HINT_CLASS = "rdw-blacklist-hint";
+	var HEADING$1 = "Blacklist";
+	var ADD_LABEL = "Add tag";
+	var ADD_BUTTON = "Add";
+	var SAVED_TEXT = "Saved. Reload the page to apply.";
+	var RELOAD_BUTTON = "Reload";
+	var PERMANENT_HINT = "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
+	var REMOVE_ARIA = (tag) => `Remove ${tag} from blacklist`;
+	var ADD_INPUT_ID = "rdw-blacklist-add";
+	var TAG_SPLIT_PATTERN = /[, ]+/;
+	var KEY_ENTER$2 = "Enter";
+	var REMOVE_SYMBOL = "×";
+	var BLACKLIST_SECTION_CSS = `
+.${SECTION_CLASS$1} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.${SECTION_CLASS$1} .${CHIPS_CLASS$1} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.${SECTION_CLASS$1} .${CHIP_CLASS$1} {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--rdw-border, #ccc);
+  border-radius: 999px;
+  background: var(--rdw-bg-item, #fff);
+}
+
+.${SECTION_CLASS$1} .${CHIP_LABEL_CLASS$1} {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.${SECTION_CLASS$1} .${CHIP_REMOVE_CLASS$1} {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--rdw-fg-muted, #555);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.${SECTION_CLASS$1} .${CHIP_REMOVE_CLASS$1}:focus-visible {
+  outline: 2px solid var(--rdw-focus, #4c8bf5);
+  outline-offset: 1px;
+}
+
+.${SECTION_CLASS$1} .${ADD_ROW_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.${SECTION_CLASS$1} .${ADD_ROW_CLASS} .${CSS_CLASS.field} {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+
+.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} .${CSS_CLASS.hint} {
+  margin: 0;
+}
+
+.${SECTION_CLASS$1} .${HINT_CLASS} {
+  margin: 0;
+  color: var(--rdw-fg-muted, #555);
+  font-size: 12px;
+}
+`.trim();
+	function parseAddTokens(raw) {
+		const result = [];
+		for (const part of raw.split(TAG_SPLIT_PATTERN)) {
+			const trimmed = part.trim();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function persistTags(tags) {
+		writeSiteBlacklist([...tags]);
+		return readSiteBlacklist();
+	}
+	function renderChips$1(refs, tags) {
+		refs.chips.replaceChildren();
+		for (const tag of tags) {
+			const item = document.createElement("li");
+			item.className = CHIP_CLASS$1;
+			const label = document.createElement("span");
+			label.className = CHIP_LABEL_CLASS$1;
+			label.textContent = tag;
+			const removeBtn = document.createElement("button");
+			removeBtn.type = "button";
+			removeBtn.className = CHIP_REMOVE_CLASS$1;
+			removeBtn.textContent = REMOVE_SYMBOL;
+			removeBtn.setAttribute("aria-label", REMOVE_ARIA(tag));
+			removeBtn.addEventListener("click", () => {
+				renderChips$1(refs, persistTags(readSiteBlacklist().filter((entry) => entry !== tag)));
+			});
+			item.append(label, removeBtn);
+			refs.chips.append(item);
+		}
+	}
+	function addFromInput(refs) {
+		const tokens = parseAddTokens(refs.input.value);
+		if (tokens.length === 0) return;
+		renderChips$1(refs, persistTags([...readSiteBlacklist(), ...tokens]));
+		refs.input.value = "";
+	}
+	function createBlacklistSection() {
+		const section = document.createElement("section");
+		section.className = `${CSS_CLASS.section} ${SECTION_CLASS$1}`;
+		const title = document.createElement("h3");
+		title.className = CSS_CLASS.sectionTitle;
+		title.textContent = HEADING$1;
+		const chips = document.createElement("ul");
+		chips.className = CHIPS_CLASS$1;
+		const addRow = document.createElement("div");
+		addRow.className = ADD_ROW_CLASS;
+		const field = document.createElement("div");
+		field.className = CSS_CLASS.field;
+		const label = document.createElement("label");
+		label.className = CSS_CLASS.label;
+		label.htmlFor = ADD_INPUT_ID;
+		label.textContent = ADD_LABEL;
+		const input = document.createElement("input");
+		input.id = ADD_INPUT_ID;
+		input.className = CSS_CLASS.input;
+		input.type = "text";
+		input.autocomplete = "off";
+		input.spellcheck = false;
+		field.append(label, input);
+		const addBtn = document.createElement("button");
+		addBtn.type = "button";
+		addBtn.className = CSS_CLASS.primaryButton;
+		addBtn.textContent = ADD_BUTTON;
+		addRow.append(field, addBtn);
+		const savedRow = document.createElement("div");
+		savedRow.className = SAVED_ROW_CLASS;
+		const savedText = document.createElement("p");
+		savedText.className = CSS_CLASS.hint;
+		savedText.textContent = SAVED_TEXT;
+		const reloadBtn = document.createElement("button");
+		reloadBtn.type = "button";
+		reloadBtn.className = CSS_CLASS.secondaryButton;
+		reloadBtn.textContent = RELOAD_BUTTON;
+		reloadBtn.addEventListener("click", () => {
+			window.location.reload();
+		});
+		savedRow.append(savedText, reloadBtn);
+		const hint = document.createElement("p");
+		hint.className = HINT_CLASS;
+		hint.textContent = PERMANENT_HINT;
+		section.append(title, chips, addRow, savedRow, hint);
+		const refs = {
+			chips,
+			input
+		};
+		renderChips$1(refs, readSiteBlacklist());
+		addBtn.addEventListener("click", () => {
+			addFromInput(refs);
+		});
+		input.addEventListener("keydown", (event) => {
+			if (event.key !== KEY_ENTER$2) return;
+			event.preventDefault();
+			addFromInput(refs);
+		});
+		return section;
+	}
+	var TAB_CLASS = "rdw-collections-tab";
+	var SECTION_HEADING_CLASS = "rdw-collections-heading";
+	var PLAYLIST_META_CLASS = "rdw-playlist-meta";
+	var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
+	var PLAYLIST_PART_CLASS = "rdw-playlist-part";
+	var ROW_MAIN_CLASS = "rdw-collections-row-main";
+	var SAVED_SEARCHES_HEADING = "Saved searches";
+	var PLAYLISTS_HEADING = "Playlists";
+	var EMPTY_SAVED_SEARCHES = "No saved searches yet.";
+	var EMPTY_PLAYLISTS = "No playlists yet.";
+	var EMPTY_PLAYLISTS_HINT = "Use the + button on a post";
+	var NEW_PLAYLIST = "New playlist";
+	var OPEN_PLAYLIST = "Open playlist";
+	var SAVE_NAME_ID = "rdw-save-name";
+	var PLAYLIST_NAME_ID = "rdw-playlist-name";
+	var COLLECTIONS_TAB_CSS = `
+.${TAB_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.${TAB_CLASS} .${SECTION_HEADING_CLASS} {
+  margin: 0;
+}
+
+.${TAB_CLASS} .${ROW_MAIN_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.${TAB_CLASS} .${PLAYLIST_META_CLASS} {
+  margin: 0;
+  color: var(--rdw-fg-muted, #555);
+  font-size: 12px;
+}
+
+.${TAB_CLASS} .${PLAYLIST_PARTS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.${TAB_CLASS} .${PLAYLIST_PART_CLASS} {
+  color: var(--rdw-link, #0b57d0);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.${TAB_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
+  outline: 2px solid var(--rdw-focus, #4c8bf5);
+  outline-offset: 2px;
+}
+
+.${TAB_CLASS} .${CSS_CLASS.itemName}:disabled {
+  color: var(--rdw-fg-muted, #555);
+  cursor: not-allowed;
+}
+`.trim();
+	var mode = { kind: "list" };
+	var nameDraft = "";
+	function postsLabel(count) {
+		return `${String(count)} post${count === 1 ? "" : "s"}`;
+	}
+	function listSavedSearches() {
+		return load().collections.filter((entry) => !isPlaylist(entry));
+	}
+	function playlistPostCount(playlist) {
+		return playlist.postIds?.length ?? 0;
+	}
+	function openSearch(collection) {
+		window.location.assign(buildSearchUrl(collection.tags));
+	}
+	function openPlaylistPart(query) {
+		window.location.assign(buildUpdatesSearchUrl(query));
+	}
+	function buildNameForm(inputId, onSubmit, onCancel, render) {
+		const form = document.createElement("form");
+		form.className = CSS_CLASS.form;
+		const field = document.createElement("div");
+		field.className = CSS_CLASS.field;
+		const label = document.createElement("label");
+		label.className = CSS_CLASS.label;
+		label.htmlFor = inputId;
+		label.textContent = UI_TEXT.nameLabel;
+		const input = document.createElement("input");
+		input.id = inputId;
+		input.className = CSS_CLASS.input;
+		input.type = "text";
+		input.required = true;
+		input.value = nameDraft;
+		input.addEventListener("input", () => {
+			nameDraft = input.value;
+		});
+		field.append(label, input);
+		const actions = document.createElement("div");
+		actions.className = CSS_CLASS.formActions;
+		const saveBtn = document.createElement("button");
+		saveBtn.type = "submit";
+		saveBtn.className = CSS_CLASS.primaryButton;
+		saveBtn.textContent = UI_TEXT.save;
+		const cancelBtn = document.createElement("button");
+		cancelBtn.type = "button";
+		cancelBtn.className = CSS_CLASS.secondaryButton;
+		cancelBtn.textContent = UI_TEXT.cancel;
+		cancelBtn.addEventListener("click", () => {
+			onCancel();
+			render();
+		});
+		actions.append(saveBtn, cancelBtn);
+		form.append(field, actions);
+		form.addEventListener("submit", (event) => {
+			event.preventDefault();
+			onSubmit();
+		});
+		queueMicrotask(() => {
+			input.focus();
+			input.select();
+		});
+		return form;
+	}
+	function buildConfirmDelete(collection, render) {
+		const fragment = document.createDocumentFragment();
+		const prompt = document.createElement("p");
+		prompt.className = CSS_CLASS.hint;
+		prompt.textContent = `${UI_TEXT.confirmDelete} (${collection.name})`;
+		const actions = document.createElement("div");
+		actions.className = CSS_CLASS.confirmRow;
+		const confirmBtn = document.createElement("button");
+		confirmBtn.type = "button";
+		confirmBtn.className = CSS_CLASS.dangerButton;
+		confirmBtn.textContent = UI_TEXT.confirm;
+		confirmBtn.addEventListener("click", () => {
+			deleteCollection(collection.id);
+			mode = { kind: "list" };
+			nameDraft = "";
+			render();
+		});
+		const cancelBtn = document.createElement("button");
+		cancelBtn.type = "button";
+		cancelBtn.className = CSS_CLASS.secondaryButton;
+		cancelBtn.textContent = UI_TEXT.cancel;
+		cancelBtn.addEventListener("click", () => {
+			mode = { kind: "list" };
+			render();
+		});
+		actions.append(confirmBtn, cancelBtn);
+		fragment.append(prompt, actions);
+		return fragment;
+	}
+	function buildRenameDeleteActions(collection, render) {
+		const actions = document.createElement("div");
+		actions.className = CSS_CLASS.itemActions;
+		const renameBtn = document.createElement("button");
+		renameBtn.type = "button";
+		renameBtn.className = CSS_CLASS.iconButton;
+		renameBtn.textContent = UI_TEXT.rename;
+		renameBtn.setAttribute("aria-label", `${UI_TEXT.rename}: ${collection.name}`);
+		renameBtn.addEventListener("click", () => {
+			nameDraft = collection.name;
+			mode = {
+				kind: "rename",
+				id: collection.id
+			};
+			render();
+		});
+		const deleteBtn = document.createElement("button");
+		deleteBtn.type = "button";
+		deleteBtn.className = CSS_CLASS.iconButton;
+		deleteBtn.textContent = UI_TEXT.delete;
+		deleteBtn.setAttribute("aria-label", `${UI_TEXT.delete}: ${collection.name}`);
+		deleteBtn.addEventListener("click", () => {
+			mode = {
+				kind: "confirm-delete",
+				id: collection.id
+			};
+			render();
+		});
+		actions.append(renameBtn, deleteBtn);
+		return actions;
+	}
+	function buildSavedSearchRow(collection, render) {
+		const item = document.createElement("li");
+		item.className = CSS_CLASS.listItem;
+		if (mode.kind === "rename" && mode.id === collection.id) {
+			item.append(buildNameForm(`rdw-rename-${collection.id}`, () => {
+				const nextName = nameDraft.trim();
+				if (nextName.length === 0) return;
+				renameCollection(collection.id, nextName);
+				mode = { kind: "list" };
+				nameDraft = "";
+				render();
+			}, () => {
+				mode = { kind: "list" };
+			}, render));
+			return item;
+		}
+		if (mode.kind === "confirm-delete" && mode.id === collection.id) {
+			item.append(buildConfirmDelete(collection, render));
+			return item;
+		}
+		const main = document.createElement("div");
+		main.className = ROW_MAIN_CLASS;
+		const nameBtn = document.createElement("button");
+		nameBtn.type = "button";
+		nameBtn.className = CSS_CLASS.itemName;
+		nameBtn.textContent = collection.name;
+		nameBtn.setAttribute("aria-label", `${UI_TEXT.openCollection}: ${collection.name}`);
+		nameBtn.addEventListener("click", () => {
+			openSearch(collection);
+		});
+		main.append(nameBtn, buildRenameDeleteActions(collection, render));
+		item.append(main);
+		return item;
+	}
+	function buildSaveSearchControls(render) {
+		const wrap = document.createElement("div");
+		const searchTags = readTagsFromLocation(window.location.search);
+		const canSave = searchTags !== null && searchTags.length > 0;
+		if (mode.kind === "save-search") {
+			wrap.append(buildNameForm(SAVE_NAME_ID, () => {
+				const tags = readTagsFromLocation(window.location.search);
+				if (tags === null || tags.length === 0) {
+					mode = { kind: "list" };
+					render();
+					return;
+				}
+				const name = nameDraft.trim();
+				if (name.length === 0) return;
+				addCollection(name, tags);
+				mode = { kind: "list" };
+				nameDraft = "";
+				render();
+			}, () => {
+				mode = { kind: "list" };
+			}, render));
+			return wrap;
+		}
+		const saveBtn = document.createElement("button");
+		saveBtn.type = "button";
+		saveBtn.className = CSS_CLASS.primaryButton;
+		saveBtn.textContent = UI_TEXT.saveCurrent;
+		saveBtn.disabled = !canSave;
+		saveBtn.addEventListener("click", () => {
+			const tags = readTagsFromLocation(window.location.search);
+			if (tags === null || tags.length === 0) return;
+			nameDraft = serialize(tags);
+			mode = { kind: "save-search" };
+			render();
+		});
+		wrap.append(saveBtn);
+		if (!canSave) {
+			const hint = document.createElement("p");
+			hint.className = CSS_CLASS.hint;
+			hint.textContent = UI_TEXT.notOnSearchPage;
+			wrap.append(hint);
+		}
+		return wrap;
+	}
+	function buildSavedSearchesSection(render) {
+		const section = document.createElement("section");
+		section.className = CSS_CLASS.section;
+		const heading = document.createElement("h3");
+		heading.className = `${CSS_CLASS.sectionTitle} ${SECTION_HEADING_CLASS}`;
+		heading.textContent = SAVED_SEARCHES_HEADING;
+		section.append(heading, buildSaveSearchControls(render));
+		const saved = listSavedSearches();
+		if (saved.length === 0) {
+			const empty = document.createElement("p");
+			empty.className = CSS_CLASS.hint;
+			empty.textContent = EMPTY_SAVED_SEARCHES;
+			section.append(empty);
+			return section;
+		}
+		const list = document.createElement("ul");
+		list.className = CSS_CLASS.list;
+		for (const collection of saved) list.append(buildSavedSearchRow(collection, render));
+		section.append(list);
+		return section;
+	}
+	function buildPlaylistParts(queries) {
+		if (queries.length <= 1) return null;
+		const parts = document.createElement("ul");
+		parts.className = PLAYLIST_PARTS_CLASS;
+		parts.setAttribute("aria-label", "Playlist parts");
+		for (let index = 0; index < queries.length; index += 1) {
+			const query = queries[index];
+			if (query === void 0) continue;
+			const item = document.createElement("li");
+			const link = document.createElement("a");
+			link.className = PLAYLIST_PART_CLASS;
+			link.href = buildUpdatesSearchUrl(query);
+			link.textContent = String(index + 1);
+			item.append(link);
+			parts.append(item);
+		}
+		return parts;
+	}
+	function buildPlaylistRow(playlist, render) {
+		const item = document.createElement("li");
+		item.className = CSS_CLASS.listItem;
+		if (mode.kind === "rename" && mode.id === playlist.id) {
+			item.append(buildNameForm(`rdw-rename-${playlist.id}`, () => {
+				const nextName = nameDraft.trim();
+				if (nextName.length === 0) return;
+				renameCollection(playlist.id, nextName);
+				mode = { kind: "list" };
+				nameDraft = "";
+				render();
+			}, () => {
+				mode = { kind: "list" };
+			}, render));
+			return item;
+		}
+		if (mode.kind === "confirm-delete" && mode.id === playlist.id) {
+			item.append(buildConfirmDelete(playlist, render));
+			return item;
+		}
+		const count = playlistPostCount(playlist);
+		const queries = buildPlaylistQueries(playlist.postIds ?? [], getPlaylistChunkSize());
+		const main = document.createElement("div");
+		main.className = ROW_MAIN_CLASS;
+		const nameBtn = document.createElement("button");
+		nameBtn.type = "button";
+		nameBtn.className = CSS_CLASS.itemName;
+		nameBtn.textContent = playlist.name;
+		nameBtn.setAttribute("aria-label", `${OPEN_PLAYLIST}: ${playlist.name}`);
+		nameBtn.disabled = !(count > 0 && queries.length > 0);
+		nameBtn.addEventListener("click", () => {
+			const first = queries[0];
+			if (first === void 0) return;
+			openPlaylistPart(first);
+		});
+		main.append(nameBtn, buildRenameDeleteActions(playlist, render));
+		item.append(main);
+		const meta = document.createElement("p");
+		meta.className = PLAYLIST_META_CLASS;
+		meta.textContent = postsLabel(count);
+		item.append(meta);
+		const parts = buildPlaylistParts(queries);
+		if (parts !== null) item.append(parts);
+		return item;
+	}
+	function buildCreatePlaylistControls(render) {
+		const wrap = document.createElement("div");
+		if (mode.kind === "create-playlist") {
+			wrap.append(buildNameForm(PLAYLIST_NAME_ID, () => {
+				const name = nameDraft.trim();
+				if (name.length === 0) return;
+				createPlaylist(name);
+				mode = { kind: "list" };
+				nameDraft = "";
+				render();
+			}, () => {
+				mode = { kind: "list" };
+			}, render));
+			return wrap;
+		}
+		const createBtn = document.createElement("button");
+		createBtn.type = "button";
+		createBtn.className = CSS_CLASS.primaryButton;
+		createBtn.textContent = NEW_PLAYLIST;
+		createBtn.addEventListener("click", () => {
+			nameDraft = "";
+			mode = { kind: "create-playlist" };
+			render();
+		});
+		wrap.append(createBtn);
+		return wrap;
+	}
+	function buildPlaylistsSection(render) {
+		const section = document.createElement("section");
+		section.className = CSS_CLASS.section;
+		const heading = document.createElement("h3");
+		heading.className = `${CSS_CLASS.sectionTitle} ${SECTION_HEADING_CLASS}`;
+		heading.textContent = PLAYLISTS_HEADING;
+		section.append(heading, buildCreatePlaylistControls(render));
+		const playlists = listPlaylists();
+		if (playlists.length === 0) {
+			const empty = document.createElement("p");
+			empty.className = CSS_CLASS.hint;
+			empty.textContent = EMPTY_PLAYLISTS;
+			const hint = document.createElement("p");
+			hint.className = CSS_CLASS.hint;
+			hint.textContent = EMPTY_PLAYLISTS_HINT;
+			section.append(empty, hint);
+			return section;
+		}
+		const list = document.createElement("ul");
+		list.className = CSS_CLASS.list;
+		for (const playlist of playlists) list.append(buildPlaylistRow(playlist, render));
+		section.append(list);
+		return section;
+	}
+	function createCollectionsTab() {
+		const root = document.createElement("div");
+		root.className = `${PANEL_UI_CLASS.scrollRegion} ${TAB_CLASS}`;
+		const render = () => {
+			root.replaceChildren(buildSavedSearchesSection(render), buildPlaylistsSection(render));
+		};
+		render();
+		return root;
 	}
 	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
 	var MY_FAVORITES_LINK_SELECTOR$1 = "li#my-favorites-container a[href*=\"page=favorites\"]";
@@ -3560,6 +4408,10 @@
 }
 
 ${FAVORITES_SYNC_SECTION_CSS}
+
+${BLACKLIST_SECTION_CSS}
+
+${COLLECTIONS_TAB_CSS}
 `;
 	var CARD_CSS = `
 .${CSS_CLASS.cardFav} {
@@ -3706,10 +4558,10 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   align-items: center;
 }
 `;
-	var unsubscribeThumbsAdded$2;
+	var unsubscribeThumbsAdded$3;
 	function ensureThumbsAddedSubscription() {
-		if (unsubscribeThumbsAdded$2 !== void 0) return;
-		unsubscribeThumbsAdded$2 = onThumbsAdded((root) => {
+		if (unsubscribeThumbsAdded$3 !== void 0) return;
+		unsubscribeThumbsAdded$3 = onThumbsAdded((root) => {
 			mountCards(root);
 		});
 	}
@@ -3720,7 +4572,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}`;
 		document.head.append(style);
 	}
-	function findThumbLink(thumb, postId) {
+	function findThumbLink$1(thumb, postId) {
 		const byId = thumb.querySelector(`#p${postId}`);
 		if (byId instanceof HTMLAnchorElement) return byId;
 		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
@@ -3728,7 +4580,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	}
 	function attachFavButton(thumb, postId, marked) {
 		if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
-		const link = findThumbLink(thumb, postId);
+		const link = findThumbLink$1(thumb, postId);
 		if (link === null) return;
 		ensureThumbAnchor(thumb);
 		const button = createFavButton(postId, marked);
@@ -3796,7 +4648,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const last = tokens[tokens.length - 1];
 		return last !== void 0 && ID_FILTER_PATTERN.test(last);
 	}
-	function removeExistingBar(root) {
+	function removeExistingBar$1(root) {
 		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
 		if (existing !== null) existing.remove();
 	}
@@ -3923,7 +4775,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const isFull = isFullUpdatesQuery(tagsParam, artistTags);
 		const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
 		if (!isFull && !isPartial) return;
-		removeExistingBar(root);
+		removeExistingBar$1(root);
 		ensureDocumentStyles();
 		const imageList = root.querySelector(SITE_SELECTORS.imageList);
 		if (imageList === null) {
@@ -3936,9 +4788,9 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		}
 		mountFullBar(imageList, search, tagsParam);
 	}
-	var FEATURE_ID$6 = "feed";
-	var FEATURE_LABEL$5 = "Feed in site menu";
-	var FEATURE_PAGES$5 = [
+	var FEATURE_ID$8 = "feed";
+	var FEATURE_LABEL$7 = "Feed in site menu";
+	var FEATURE_PAGES$7 = [
 		"list",
 		"post",
 		"favorites",
@@ -3951,13 +4803,13 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	var CURRENT_PAGE_CLASS = "current-page";
 	var NO_ARTISTS_TITLE = "Follow artists to build your feed";
 	var MISSING_POSTS_WARN = "feed: Posts menu item not found";
-	var FEATURE_CSS$5 = `
-body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
+	var FEATURE_CSS$7 = `
+body.${featureBodyClass(FEATURE_ID$8)} span.thumb.new img.preview {
   outline: 2px solid #4c8bf5;
   outline-offset: 2px;
 }
 `;
-	var unsubscribeThumbsAdded$1;
+	var unsubscribeThumbsAdded$2;
 	function findPostsMenuItem() {
 		const content = document.getElementById(CONTENT_ID$1);
 		const anchors = document.querySelectorAll("a");
@@ -4025,8 +4877,8 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		}
 	}
 	function ensureNewThumbsSubscription() {
-		if (unsubscribeThumbsAdded$1 !== void 0) return;
-		unsubscribeThumbsAdded$1 = onThumbsAdded((root) => {
+		if (unsubscribeThumbsAdded$2 !== void 0) return;
+		unsubscribeThumbsAdded$2 = onThumbsAdded((root) => {
 			markNewThumbs(root, getSeenPostId());
 		});
 	}
@@ -4042,14 +4894,14 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		mountUpdatesBar(document, ctx.search);
 	}
 	var feedFeature = {
-		id: FEATURE_ID$6,
-		label: FEATURE_LABEL$5,
-		pages: [...FEATURE_PAGES$5],
+		id: FEATURE_ID$8,
+		label: FEATURE_LABEL$7,
+		pages: [...FEATURE_PAGES$7],
 		defaultEnabled: true,
-		css: FEATURE_CSS$5,
+		css: FEATURE_CSS$7,
 		mount: mountFeed
 	};
-	var FEATURE_ID$5 = "grid-density";
+	var FEATURE_ID$7 = "grid-density";
 	var COMPACT_PX = 150;
 	var LARGE_PX = 250;
 	var MASONRY_VALUE = "masonry";
@@ -4057,7 +4909,7 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 	var MASONRY_COLUMN_GAP_PX = 10;
 	var MASONRY_THUMB_MARGIN = "0 0 10px";
 	function sizeCss(choiceValue, px) {
-		const bodyClass = featureChoiceBodyClass(FEATURE_ID$5, choiceValue);
+		const bodyClass = featureChoiceBodyClass(FEATURE_ID$7, choiceValue);
 		return [
 			`body.${bodyClass} span.thumb,`,
 			`body.${bodyClass} span.thumb > a {`,
@@ -4071,7 +4923,7 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		].join("\n");
 	}
 	function masonryCss() {
-		const bodyClass = featureChoiceBodyClass(FEATURE_ID$5, MASONRY_VALUE);
+		const bodyClass = featureChoiceBodyClass(FEATURE_ID$7, MASONRY_VALUE);
 		return [
 			`body.${bodyClass} div.image-list {`,
 			`  display: block !important;`,
@@ -4101,7 +4953,7 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		].join("\n");
 	}
 	var gridDensityFeature = {
-		id: FEATURE_ID$5,
+		id: FEATURE_ID$7,
 		label: "Grid size",
 		pages: ["list", "favorites"],
 		defaultEnabled: true,
@@ -4140,7 +4992,7 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 	var SEEN_DIM_OPACITY = "0.65";
 	var SEEN_DIM_HOVER_OPACITY = "1";
 	var EVENT_PAGESHOW = "pageshow";
-	var unsubscribeThumbsAdded;
+	var unsubscribeThumbsAdded$1;
 	var pageshowBound = false;
 	function stampSeenOnThumbs(root = document) {
 		const marks = load().marks;
@@ -4157,8 +5009,8 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		reloadFromStorage();
 		stampSeenOnThumbs(document);
 	}
-	function ensureListSubscriptions() {
-		if (unsubscribeThumbsAdded === void 0) unsubscribeThumbsAdded = onThumbsAdded((root) => {
+	function ensureListSubscriptions$1() {
+		if (unsubscribeThumbsAdded$1 === void 0) unsubscribeThumbsAdded$1 = onThumbsAdded((root) => {
 			stampSeenOnThumbs(root);
 		});
 		if (!pageshowBound) {
@@ -4178,7 +5030,7 @@ body.${featureBodyClass(FEATURE_ID$6)} span.thumb.new img.preview {
 		}
 		if (ctx.pageKind !== "list") return;
 		stampSeenOnThumbs(document);
-		ensureListSubscriptions();
+		ensureListSubscriptions$1();
 	}
 	var seenDimFeature = {
 		id: SEEN_DIM_FEATURE_ID,
@@ -4197,57 +5049,6 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 `,
 		mount: mountSeenDim
 	};
-	var COOKIE_PAIR_SEPARATOR$1 = ";";
-	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
-	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
-	var USER_ENTRY_PREFIX = "user:";
-	var RATING_ENTRY_PREFIX = "rating:";
-	function readCookieValue$1(name) {
-		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR$1);
-		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
-		for (const pair of pairs) {
-			const trimmed = pair.trim();
-			if (!trimmed.startsWith(prefix)) continue;
-			return trimmed.slice(prefix.length);
-		}
-		return null;
-	}
-	function readSiteBlacklist() {
-		const raw = readCookieValue$1(SITE_BLACKLIST_COOKIE_NAME);
-		if (raw === null || raw.length === 0) return [];
-		let decoded;
-		try {
-			decoded = decodeURIComponent(decodeURI(raw));
-		} catch {
-			return [];
-		}
-		const result = [];
-		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
-			const trimmed = part.trim().toLowerCase();
-			if (trimmed.length === 0) continue;
-			result.push(trimmed);
-		}
-		return result;
-	}
-	function isBlacklisted(tags, score, rating, list) {
-		if (list.length === 0) return false;
-		const tagSet = new Set();
-		for (const tag of tags) {
-			const normalized = tag.trim().toLowerCase();
-			if (normalized.length > 0) tagSet.add(normalized);
-		}
-		const ratingNorm = rating.trim().toLowerCase();
-		for (const entry of list) {
-			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
-			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
-				const value = entry.slice(7);
-				if (value.length > 0 && value === ratingNorm) return true;
-				continue;
-			}
-			if (tagSet.has(entry)) return true;
-		}
-		return false;
-	}
 	var IMAGE_LIST_SELECTOR = SITE_SELECTORS.imageList;
 	var THUMB_SELECTOR = SITE_SELECTORS.thumb;
 	var PAGINATION_SELECTOR = "div.pagination";
@@ -4289,10 +5090,10 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 			nextUrl: readNextUrl(doc)
 		};
 	}
-	var FEATURE_ID$4 = "infinite-scroll";
-	var FEATURE_LABEL$4 = "Infinite scroll";
-	var FEATURE_PAGES$4 = ["list"];
-	var BODY_FEATURE_CLASS$2 = featureBodyClass(FEATURE_ID$4);
+	var FEATURE_ID$6 = "infinite-scroll";
+	var FEATURE_LABEL$6 = "Infinite scroll";
+	var FEATURE_PAGES$6 = ["list"];
+	var BODY_FEATURE_CLASS$2 = featureBodyClass(FEATURE_ID$6);
 	var ROOT_MARGIN_PX = 800;
 	var ROOT_MARGIN = `${String(ROOT_MARGIN_PX)}px`;
 	var MIN_REQUEST_INTERVAL_MS = 1e3;
@@ -4310,7 +5111,7 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 	var WARN_MISSING = "infinite-scroll: missing image-list or next link; not mounted";
 	var SCORE_TOKEN_PREFIX$1 = "score:";
 	var RATING_TOKEN_PREFIX = "rating:";
-	var FEATURE_CSS$4 = `
+	var FEATURE_CSS$6 = `
 body.${BODY_FEATURE_CLASS$2} .${CLASS_SENTINEL} {
   display: block;
   width: 100%;
@@ -4558,18 +5359,18 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		observer.observe(sentinel);
 	}
 	var infiniteScrollFeature = {
-		id: FEATURE_ID$4,
-		label: FEATURE_LABEL$4,
-		pages: [...FEATURE_PAGES$4],
+		id: FEATURE_ID$6,
+		label: FEATURE_LABEL$6,
+		pages: [...FEATURE_PAGES$6],
 		defaultEnabled: true,
-		css: FEATURE_CSS$4,
+		css: FEATURE_CSS$6,
 		mount: mountInfiniteScroll
 	};
-	var FEATURE_ID$3 = "menu-cleanup";
-	var FEATURE_LABEL$3 = "Clean header menu";
+	var FEATURE_ID$5 = "menu-cleanup";
+	var FEATURE_LABEL$5 = "Clean header menu";
 	var CONTENT_ID = "content";
 	var HIDDEN_CLASS = "rdw-menu-hidden";
-	var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$3);
+	var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$5);
 	var MISSING_MENU_WARN = "Header menu not found";
 	var HIDE_LINK_TEXT_SET = new Set([
 		"iCame Top 100",
@@ -4581,13 +5382,13 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		"About",
 		"TOS"
 	]);
-	var FEATURE_PAGES$3 = [
+	var FEATURE_PAGES$5 = [
 		"list",
 		"post",
 		"favorites",
 		"other"
 	];
-	var FEATURE_CSS$3 = `body.${BODY_FEATURE_CLASS$1} li.${HIDDEN_CLASS} { display:none !important; }`;
+	var FEATURE_CSS$5 = `body.${BODY_FEATURE_CLASS$1} li.${HIDDEN_CLASS} { display:none !important; }`;
 	function isHeaderMenuLink(anchor, content) {
 		const listItem = anchor.closest("li");
 		if (listItem === null) return false;
@@ -4620,13 +5421,672 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		}
 	}
 	var menuCleanupFeature = {
+		id: FEATURE_ID$5,
+		label: FEATURE_LABEL$5,
+		pages: [...FEATURE_PAGES$5],
+		defaultEnabled: true,
+		cssOnly: true,
+		css: FEATURE_CSS$5,
+		mount: mountMenuCleanup
+	};
+	var FEATURE_ID$4 = "playlist-bar";
+	var FEATURE_LABEL$4 = "Playlist header";
+	var FEATURE_PAGES$4 = ["list"];
+	var ROOT_ID$1 = "rdw-playlist-bar";
+	var ROOT_CLASS$1 = "rdw-playlist-bar";
+	var TITLE_CLASS = "rdw-playlist-bar-title";
+	var NAME_CLASS = "rdw-playlist-bar-name";
+	var COUNT_CLASS = "rdw-playlist-bar-count";
+	var PARTS_CLASS = "rdw-playlist-bar-parts";
+	var PART_LABEL_CLASS = "rdw-playlist-bar-part-label";
+	var PART_LINK_CLASS = "rdw-playlist-bar-part-link";
+	var CAPTION_CLASS = "rdw-playlist-bar-caption";
+	var TEXT_POSTS_SUFFIX = " posts";
+	var TEXT_PART_PREFIX = "Part ";
+	var TEXT_PART_OF = " of ";
+	var TEXT_CAPTION = "Posts are ordered by the site (newest first).";
+	var TEXT_PREV = "Previous";
+	var TEXT_NEXT = "Next";
+	var WARN_MISSING_HOST = "playlist-bar: image-list not found; playlist bar not mounted";
+	var BODY_CLASS$1 = featureBodyClass(FEATURE_ID$4);
+	var FEATURE_CSS$4 = `
+body.${BODY_CLASS$1} .${ROOT_CLASS$1} {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #666;
+  border-radius: 2px;
+  background: #f7f7f7;
+  box-sizing: border-box;
+}
+body.${BODY_CLASS$1} .${TITLE_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  max-width: 100%;
+  font: inherit;
+  line-height: 1.3;
+}
+body.${BODY_CLASS$1} .${NAME_CLASS} {
+  font-weight: 600;
+}
+body.${BODY_CLASS$1} .${COUNT_CLASS} {
+  opacity: 0.85;
+}
+body.${BODY_CLASS$1} .${PARTS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  max-width: 100%;
+  font: inherit;
+  line-height: 1.3;
+}
+body.${BODY_CLASS$1} .${PART_LABEL_CLASS} {
+  flex: 0 0 auto;
+}
+body.${BODY_CLASS$1} a.${PART_LINK_CLASS} {
+  color: inherit;
+  text-decoration: underline;
+}
+body.${BODY_CLASS$1} a.${PART_LINK_CLASS}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+body.${BODY_CLASS$1} .${CAPTION_CLASS} {
+  margin: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  opacity: 0.8;
+}
+`.trim();
+	function readTagsParam(search) {
+		return new URLSearchParams(search).get("tags") ?? "";
+	}
+	function idsEqualAsSet(left, right) {
+		if (left.length !== right.length) return false;
+		const set = new Set(left);
+		if (set.size !== left.length) return false;
+		for (const id of right) if (!set.has(id)) return false;
+		return true;
+	}
+	function containsAllIds(postIds, queryIds) {
+		const set = new Set(postIds);
+		for (const id of queryIds) if (!set.has(id)) return false;
+		return true;
+	}
+	function findPlaylistMatch(queryIds) {
+		const chunkSize = getPlaylistChunkSize();
+		const candidates = [];
+		for (const playlist of listPlaylists()) {
+			const postIds = playlist.postIds ?? [];
+			if (!containsAllIds(postIds, queryIds)) continue;
+			const partQueries = buildPlaylistQueries(postIds, chunkSize);
+			let partIndex = -1;
+			for (let index = 0; index < partQueries.length; index += 1) {
+				const chunkQuery = partQueries[index];
+				if (chunkQuery === void 0) continue;
+				const chunkIds = parsePlaylistQuery(chunkQuery);
+				if (chunkIds !== null && idsEqualAsSet(queryIds, chunkIds)) {
+					partIndex = index;
+					break;
+				}
+			}
+			candidates.push({
+				playlist,
+				partIndex,
+				partQueries
+			});
+		}
+		if (candidates.length === 0) return null;
+		return candidates.find((entry) => entry.partIndex >= 0) ?? candidates[0] ?? null;
+	}
+	function buildPlaylistSearchUrl(query) {
+		return buildSearchUrl(parseTags(query));
+	}
+	function removeExistingBar(root) {
+		const existing = root instanceof Document ? root.getElementById(ROOT_ID$1) : root.querySelector(`#${ROOT_ID$1}`);
+		if (existing !== null) existing.remove();
+	}
+	function findImageList(root) {
+		return root.querySelector(SITE_SELECTORS.imageList);
+	}
+	function findFallbackHost(root) {
+		return root.querySelector(SITE_SELECTORS.postListContent) ?? root.querySelector(SITE_SELECTORS.contentRoot);
+	}
+	function insertBar(host, bar, before) {
+		if (before !== null && before.parentElement === host) {
+			host.insertBefore(bar, before);
+			return;
+		}
+		if (before !== null) {
+			before.parentElement?.insertBefore(bar, before);
+			return;
+		}
+		host.insertBefore(bar, host.firstChild);
+	}
+	function formatPostCount(count) {
+		return `${String(count)}${TEXT_POSTS_SUFFIX}`;
+	}
+	function formatPartLabel(partIndex, total) {
+		return `${TEXT_PART_PREFIX}${String(partIndex + 1)}${TEXT_PART_OF}${String(total)}`;
+	}
+	function appendNeighborLink(parent, label, query) {
+		if (query === void 0) return;
+		const link = document.createElement("a");
+		link.className = PART_LINK_CLASS;
+		link.href = buildPlaylistSearchUrl(query);
+		link.textContent = label;
+		parent.append(link);
+	}
+	function buildPartsRow(match) {
+		const { partIndex, partQueries } = match;
+		if (partQueries.length === 0 || partIndex < 0) return null;
+		const row = document.createElement("div");
+		row.className = PARTS_CLASS;
+		const label = document.createElement("span");
+		label.className = PART_LABEL_CLASS;
+		label.textContent = formatPartLabel(partIndex, partQueries.length);
+		row.append(label);
+		if (partQueries.length > 1) {
+			appendNeighborLink(row, TEXT_PREV, partQueries[partIndex - 1]);
+			appendNeighborLink(row, TEXT_NEXT, partQueries[partIndex + 1]);
+		}
+		return row;
+	}
+	function createBar(match) {
+		const bar = document.createElement("div");
+		bar.id = ROOT_ID$1;
+		bar.className = ROOT_CLASS$1;
+		const title = document.createElement("div");
+		title.className = TITLE_CLASS;
+		const name = document.createElement("span");
+		name.className = NAME_CLASS;
+		name.textContent = match.playlist.name;
+		const count = document.createElement("span");
+		count.className = COUNT_CLASS;
+		count.textContent = formatPostCount(match.playlist.postIds?.length ?? 0);
+		title.append(name, count);
+		bar.append(title);
+		const parts = buildPartsRow(match);
+		if (parts !== null) bar.append(parts);
+		const caption = document.createElement("p");
+		caption.className = CAPTION_CLASS;
+		caption.textContent = TEXT_CAPTION;
+		bar.append(caption);
+		return bar;
+	}
+	function mountPlaylistBar(ctx) {
+		removeExistingBar(document);
+		const queryIds = parsePlaylistQuery(readTagsParam(ctx.search));
+		if (queryIds === null) return;
+		const match = findPlaylistMatch(queryIds);
+		if (match === null) return;
+		const imageList = findImageList(document);
+		const bar = createBar(match);
+		if (imageList !== null) {
+			const host = imageList.parentElement;
+			if (host === null) {
+				log.warn(WARN_MISSING_HOST);
+				return;
+			}
+			insertBar(host, bar, imageList);
+			return;
+		}
+		const fallback = findFallbackHost(document);
+		if (fallback === null) {
+			log.warn(WARN_MISSING_HOST);
+			return;
+		}
+		log.warn(WARN_MISSING_HOST);
+		insertBar(fallback, bar, null);
+	}
+	var playlistBarFeature = {
+		id: FEATURE_ID$4,
+		label: FEATURE_LABEL$4,
+		pages: [...FEATURE_PAGES$4],
+		defaultEnabled: true,
+		css: FEATURE_CSS$4,
+		mount: mountPlaylistBar
+	};
+	var FEATURE_ID$3 = "playlist-menu";
+	var FEATURE_LABEL$3 = "Add to playlist button";
+	var FEATURE_PAGES$3 = ["list", "post"];
+	var CLASS_ADD = "rdw-playlist-add";
+	var CLASS_ADD_IN = "rdw-playlist-add--in";
+	var CLASS_MENU = "rdw-playlist-menu";
+	var CLASS_MENU_POPUP = "rdw-playlist-menu--popup";
+	var CLASS_LIST = "rdw-playlist-menu-list";
+	var CLASS_ITEM = "rdw-playlist-menu-item";
+	var CLASS_CHECK = "rdw-playlist-menu-check";
+	var CLASS_NAME = "rdw-playlist-menu-name";
+	var CLASS_NEW = "rdw-playlist-menu-new";
+	var CLASS_NEW_FORM = "rdw-playlist-menu-new-form";
+	var CLASS_NEW_INPUT = "rdw-playlist-menu-new-input";
+	var CLASS_NEW_SUBMIT = "rdw-playlist-menu-new-submit";
+	var ATTR_POST_ID = "data-rdw-post-id";
+	var TEXT_ADD_GLYPH = "+";
+	var TEXT_NEW_PLAYLIST = "New playlist…";
+	var TEXT_CREATE = "Create";
+	var TEXT_CHECK_MARK = "✓";
+	var LABEL_ADD = "Add to playlist";
+	var LABEL_TOGGLE_PREFIX = "Toggle playlist";
+	var LABEL_NEW_NAME = "New playlist name";
+	var MENU_Z_INDEX = 2147483645;
+	var MENU_MIN_WIDTH_PX = 180;
+	var MENU_MAX_HEIGHT_PX = 280;
+	var MENU_GAP_PX = 4;
+	var BUTTON_SIZE_PX = 28;
+	var BUTTON_OFFSET_PX = 4;
+	var BUTTON_BELOW_FAV_TOP_PX = 36;
+	var FOCUS_OUTLINE$1 = "2px solid #4c8bf5";
+	var FOCUS_OUTLINE_OFFSET$1 = "2px";
+	var EVENT_KEYDOWN$1 = "keydown";
+	var EVENT_POINTERDOWN = "pointerdown";
+	var KEY_ESCAPE = "Escape";
+	var KEY_ENTER$1 = "Enter";
+	var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$3)}`;
+	var FEATURE_CSS$3 = `
+${BODY_SELECTOR$1} .${CLASS_ADD} {
+  position: absolute;
+  top: ${String(BUTTON_BELOW_FAV_TOP_PX)}px;
+  right: ${String(BUTTON_OFFSET_PX)}px;
+  position-anchor: --rdw-img;
+  top: calc(anchor(top) + ${String(BUTTON_BELOW_FAV_TOP_PX)}px);
+  right: calc(anchor(right) + ${String(BUTTON_OFFSET_PX)}px);
+  z-index: 5;
+  box-sizing: border-box;
+  min-width: ${String(BUTTON_SIZE_PX)}px;
+  min-height: ${String(BUTTON_SIZE_PX)}px;
+  width: ${String(BUTTON_SIZE_PX)}px;
+  height: ${String(BUTTON_SIZE_PX)}px;
+  padding: 0;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+}
+${BODY_SELECTOR$1} .${THUMB_CLASS}:hover .${CLASS_ADD},
+${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible,
+${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+  opacity: 0.65;
+}
+${BODY_SELECTOR$1} .${THUMB_CLASS} .${CLASS_ADD}:hover,
+${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+  opacity: 1;
+}
+${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
+  outline: ${FOCUS_OUTLINE$1};
+  outline-offset: ${FOCUS_OUTLINE_OFFSET$1};
+}
+${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+  background: #dceeff;
+  border-color: #3a6ea5;
+  color: #1a3a5c;
+}
+${BODY_SELECTOR$1} .${CLASS_MENU} {
+  box-sizing: border-box;
+  min-width: ${String(MENU_MIN_WIDTH_PX)}px;
+  max-height: ${String(MENU_MAX_HEIGHT_PX)}px;
+  overflow: auto;
+  padding: 0.35rem;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #fff;
+  color: #1a1a1a;
+  font: 13px/1.3 Segoe UI, system-ui, sans-serif;
+}
+${BODY_SELECTOR$1} .${CLASS_MENU}.${CLASS_MENU_POPUP} {
+  position: fixed;
+  z-index: ${String(MENU_Z_INDEX)};
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+${BODY_SELECTOR$1} .${CLASS_LIST} {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  list-style: none;
+}
+${BODY_SELECTOR$1} .${CLASS_ITEM} {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.25rem 0.35rem;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+${BODY_SELECTOR$1} .${CLASS_ITEM}:hover,
+${BODY_SELECTOR$1} .${CLASS_ITEM}:focus-visible {
+  background: #e8f0fe;
+}
+${BODY_SELECTOR$1} .${CLASS_ITEM}:focus-visible {
+  outline: ${FOCUS_OUTLINE$1};
+  outline-offset: ${FOCUS_OUTLINE_OFFSET$1};
+}
+${BODY_SELECTOR$1} .${CLASS_CHECK} {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  flex: 0 0 1rem;
+  font-weight: 700;
+}
+${BODY_SELECTOR$1} .${CLASS_NAME} {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+${BODY_SELECTOR$1} .${CLASS_NEW},
+${BODY_SELECTOR$1} .${CLASS_NEW_SUBMIT} {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #666;
+  border-radius: 2px;
+  background: #f5f5f5;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+${BODY_SELECTOR$1} .${CLASS_NEW}:focus-visible,
+${BODY_SELECTOR$1} .${CLASS_NEW_SUBMIT}:focus-visible,
+${BODY_SELECTOR$1} .${CLASS_NEW_INPUT}:focus-visible {
+  outline: ${FOCUS_OUTLINE$1};
+  outline-offset: ${FOCUS_OUTLINE_OFFSET$1};
+}
+${BODY_SELECTOR$1} .${CLASS_NEW_FORM} {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #666;
+  border-radius: 2px;
+  font: inherit;
+}
+`;
+	var unsubscribeThumbsAdded;
+	var openPopup = null;
+	var escapeBound = false;
+	var pointerBound = false;
+	function parsePostId(value) {
+		if (value === null || value.length === 0) return null;
+		const parsed = Number(value);
+		if (!Number.isFinite(parsed)) return null;
+		const truncated = Math.trunc(parsed);
+		return truncated < 0 ? null : truncated;
+	}
+	function postInAnyPlaylist(postId) {
+		return playlistsContaining(postId).length > 0;
+	}
+	function applyAddButtonState(button, postId) {
+		const inPlaylist = postInAnyPlaylist(postId);
+		button.classList.toggle(CLASS_ADD_IN, inPlaylist);
+		button.setAttribute("aria-pressed", inPlaylist ? "true" : "false");
+		button.setAttribute("aria-label", `${LABEL_ADD} ${String(postId)}`);
+	}
+	function findThumbLink(thumb, postId) {
+		const byId = thumb.querySelector(`#p${postId}`);
+		if (byId instanceof HTMLAnchorElement) return byId;
+		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
+		return byHref instanceof HTMLAnchorElement ? byHref : null;
+	}
+	function closeOpenMenu() {
+		if (openPopup === null) return;
+		openPopup.menu.remove();
+		openPopup.trigger.setAttribute("aria-expanded", "false");
+		openPopup = null;
+		unbindGlobalCloseListeners();
+	}
+	function onDocumentKeydown(event) {
+		if (event.key !== KEY_ESCAPE) return;
+		if (openPopup === null) return;
+		event.preventDefault();
+		closeOpenMenu();
+	}
+	function onDocumentPointerDown(event) {
+		if (openPopup === null) return;
+		const target = event.target;
+		if (!(target instanceof Node)) return;
+		if (openPopup.menu.contains(target) || openPopup.trigger.contains(target)) return;
+		closeOpenMenu();
+	}
+	function bindGlobalCloseListeners() {
+		if (!escapeBound) {
+			escapeBound = true;
+			document.addEventListener(EVENT_KEYDOWN$1, onDocumentKeydown);
+		}
+		if (!pointerBound) {
+			pointerBound = true;
+			document.addEventListener(EVENT_POINTERDOWN, onDocumentPointerDown, true);
+		}
+	}
+	function unbindGlobalCloseListeners() {
+		if (escapeBound) {
+			document.removeEventListener(EVENT_KEYDOWN$1, onDocumentKeydown);
+			escapeBound = false;
+		}
+		if (pointerBound) {
+			document.removeEventListener(EVENT_POINTERDOWN, onDocumentPointerDown, true);
+			pointerBound = false;
+		}
+	}
+	function positionMenuNear(menu, anchor) {
+		const rect = anchor.getBoundingClientRect();
+		const viewportWidth = window.innerWidth;
+		const viewportHeight = window.innerHeight;
+		menu.style.visibility = "hidden";
+		menu.style.left = "0";
+		menu.style.top = "0";
+		document.body.append(menu);
+		const menuWidth = menu.offsetWidth;
+		const menuHeight = menu.offsetHeight;
+		let left = rect.right - menuWidth;
+		if (left < MENU_GAP_PX) left = Math.min(rect.left, viewportWidth - menuWidth - MENU_GAP_PX);
+		left = Math.max(MENU_GAP_PX, Math.min(left, viewportWidth - menuWidth - MENU_GAP_PX));
+		let top = rect.bottom + MENU_GAP_PX;
+		if (top + menuHeight > viewportHeight - MENU_GAP_PX) top = rect.top - menuHeight - MENU_GAP_PX;
+		if (top < MENU_GAP_PX) top = MENU_GAP_PX;
+		menu.style.left = `${String(left)}px`;
+		menu.style.top = `${String(top)}px`;
+		menu.style.visibility = "";
+	}
+	function syncAddButtonsForPost(postId) {
+		const buttons = document.querySelectorAll(`button.${CLASS_ADD}[${ATTR_POST_ID}="${String(postId)}"]`);
+		for (const node of buttons) {
+			if (!(node instanceof HTMLButtonElement)) continue;
+			applyAddButtonState(node, postId);
+		}
+	}
+	function fillPlaylistList(list, postId) {
+		list.replaceChildren();
+		const playlists = listPlaylists();
+		const memberIds = new Set(playlistsContaining(postId).map((item) => item.id));
+		for (const playlist of playlists) {
+			const item = document.createElement("button");
+			item.type = "button";
+			item.className = CLASS_ITEM;
+			item.setAttribute("role", "menuitemcheckbox");
+			const checked = memberIds.has(playlist.id);
+			item.setAttribute("aria-checked", checked ? "true" : "false");
+			item.setAttribute("aria-label", `${LABEL_TOGGLE_PREFIX} ${playlist.name}`);
+			const check = document.createElement("span");
+			check.className = CLASS_CHECK;
+			check.setAttribute("aria-hidden", "true");
+			check.textContent = checked ? TEXT_CHECK_MARK : "";
+			const name = document.createElement("span");
+			name.className = CLASS_NAME;
+			name.textContent = playlist.name;
+			item.append(check, name);
+			item.addEventListener("click", (event) => {
+				event.preventDefault();
+				event.stopPropagation();
+				if (memberIds.has(playlist.id)) removePostFromPlaylist(playlist.id, postId);
+				else addPostToPlaylist(playlist.id, postId);
+				fillPlaylistList(list, postId);
+				syncAddButtonsForPost(postId);
+			});
+			list.append(item);
+		}
+	}
+	function showNewPlaylistForm(host, list, postId, onCreated) {
+		host.replaceChildren();
+		const form = document.createElement("div");
+		form.className = CLASS_NEW_FORM;
+		const input = document.createElement("input");
+		input.type = "text";
+		input.className = CLASS_NEW_INPUT;
+		input.setAttribute("aria-label", LABEL_NEW_NAME);
+		input.autocomplete = "off";
+		const submit = document.createElement("button");
+		submit.type = "button";
+		submit.className = CLASS_NEW_SUBMIT;
+		submit.textContent = TEXT_CREATE;
+		const commit = () => {
+			const name = input.value.trim();
+			if (name.length === 0) return;
+			addPostToPlaylist(createPlaylist(name).id, postId);
+			fillPlaylistList(list, postId);
+			syncAddButtonsForPost(postId);
+			onCreated?.();
+		};
+		submit.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			commit();
+		});
+		input.addEventListener("keydown", (event) => {
+			if (event.key !== KEY_ENTER$1) return;
+			event.preventDefault();
+			event.stopPropagation();
+			commit();
+		});
+		form.append(input, submit);
+		host.append(form);
+		input.focus();
+	}
+	function mountNewPlaylistControl(host, list, postId, onCreated) {
+		host.replaceChildren();
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CLASS_NEW;
+		button.textContent = TEXT_NEW_PLAYLIST;
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			showNewPlaylistForm(host, list, postId, onCreated);
+		});
+		host.append(button);
+	}
+	function createPlaylistMenu(postId, options) {
+		const root = document.createElement("div");
+		root.className = CLASS_MENU;
+		root.setAttribute("role", "menu");
+		root.setAttribute(ATTR_POST_ID, String(postId));
+		const list = document.createElement("div");
+		list.className = CLASS_LIST;
+		list.setAttribute("role", "group");
+		fillPlaylistList(list, postId);
+		const newHost = document.createElement("div");
+		mountNewPlaylistControl(newHost, list, postId, options?.onCreated);
+		root.append(list, newHost);
+		return root;
+	}
+	function openMenuForButton(button, postId) {
+		if (openPopup !== null && openPopup.trigger === button) {
+			closeOpenMenu();
+			return;
+		}
+		closeOpenMenu();
+		const menu = createPlaylistMenu(postId, { onCreated: () => {
+			closeOpenMenu();
+		} });
+		menu.classList.add(CLASS_MENU_POPUP);
+		positionMenuNear(menu, button);
+		button.setAttribute("aria-expanded", "true");
+		openPopup = {
+			menu,
+			trigger: button,
+			postId
+		};
+		bindGlobalCloseListeners();
+	}
+	function attachAddButton(thumb, postId) {
+		if (thumb.querySelector(`button.${CLASS_ADD}`) !== null) return;
+		const numericId = parsePostId(postId);
+		if (numericId === null) return;
+		const link = findThumbLink(thumb, postId);
+		if (link === null) return;
+		ensureThumbAnchor(thumb);
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CLASS_ADD;
+		button.textContent = TEXT_ADD_GLYPH;
+		button.setAttribute(ATTR_POST_ID, String(numericId));
+		button.setAttribute("aria-haspopup", "menu");
+		button.setAttribute("aria-expanded", "false");
+		applyAddButtonState(button, numericId);
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			openMenuForButton(button, numericId);
+		});
+		link.after(button);
+	}
+	function stampPlaylistButtons(root = document) {
+		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+		for (const thumb of thumbs) {
+			if (!(thumb instanceof HTMLElement)) continue;
+			const postId = extractPostIdFromThumb(thumb);
+			if (postId === null) continue;
+			attachAddButton(thumb, postId);
+		}
+	}
+	function ensureListSubscriptions() {
+		if (unsubscribeThumbsAdded !== void 0) return;
+		unsubscribeThumbsAdded = onThumbsAdded((root) => {
+			stampPlaylistButtons(root);
+		});
+	}
+	function mountPlaylistMenu(ctx) {
+		if (ctx.pageKind !== "list") return;
+		stampPlaylistButtons(document);
+		ensureListSubscriptions();
+	}
+	var playlistMenuFeature = {
 		id: FEATURE_ID$3,
 		label: FEATURE_LABEL$3,
 		pages: [...FEATURE_PAGES$3],
 		defaultEnabled: true,
-		cssOnly: true,
 		css: FEATURE_CSS$3,
-		mount: mountMenuCleanup
+		mount: mountPlaylistMenu
 	};
 	var FEATURE_ID$2 = "post-actions";
 	var FEATURE_LABEL$2 = "Post side panel";
@@ -4956,6 +6416,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			const scoreLabel = scoreRow.querySelector(`.${CLASS_SCORE}`);
 			const scoreEl = scoreLabel instanceof HTMLElement ? scoreLabel : null;
 			panel.append(createPostFavControl(postId, scoreEl));
+			panel.append(createPlaylistMenu(Number(postId)));
 			const original = findOriginalAnchor();
 			if (original !== null) panel.append(createOriginalLink(original.href));
 			panel.append(scoreRow);
@@ -5530,6 +6991,14 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		syncFromInput(refs);
 		navigateTokens(next);
 	}
+	function appendCollectionOptions(host, collections) {
+		for (const collection of collections) {
+			const option = document.createElement("option");
+			option.value = collection.id;
+			option.textContent = collection.name;
+			host.append(option);
+		}
+	}
 	function rebuildCollectionsSelect(select) {
 		const previous = select.value;
 		select.replaceChildren();
@@ -5540,11 +7009,19 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		placeholder.selected = true;
 		select.append(placeholder);
 		const collections = load().collections;
-		for (const collection of collections) {
-			const option = document.createElement("option");
-			option.value = collection.id;
-			option.textContent = collection.name;
-			select.append(option);
+		const searches = collections.filter((entry) => !isPlaylist(entry));
+		const playlists = collections.filter((entry) => isPlaylist(entry));
+		if (searches.length > 0) {
+			const group = document.createElement("optgroup");
+			group.label = "Saved searches";
+			appendCollectionOptions(group, searches);
+			select.append(group);
+		}
+		if (playlists.length > 0) {
+			const group = document.createElement("optgroup");
+			group.label = "Playlists";
+			appendCollectionOptions(group, playlists);
+			select.append(group);
 		}
 		if (previous.length > 0 && collections.some((collection) => collection.id === previous)) select.value = previous;
 	}
@@ -5690,6 +7167,12 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			const collection = load().collections.find((entry) => entry.id === id);
 			refs.collectionsSelect.value = "";
 			if (collection === void 0) return;
+			if (isPlaylist(collection)) {
+				const first = buildPlaylistQueries(collection.postIds ?? [], getPlaylistChunkSize())[0];
+				if (first === void 0) return;
+				window.location.assign(buildUpdatesSearchUrl(first));
+				return;
+			}
 			window.location.assign(buildSearchUrl(collection.tags));
 		});
 		refs.saveBtn.type = "button";
@@ -5918,6 +7401,8 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		},
 		searchToolsFeature,
 		seenDimFeature,
+		playlistMenuFeature,
+		playlistBarFeature,
 		infiniteScrollFeature,
 		postActionsFeature,
 		gridDensityFeature
@@ -6242,6 +7727,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
 	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
 	var UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
+	var PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
 	var ARTIST_FILTER_ID = "rdw-artist-filter";
 	var PANEL_FEATURE_STATE_ID = "panel";
 	var PANEL_TABS = [
@@ -6366,224 +7852,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		});
 		return tablist;
 	}
-	function buildSaveSection(controller) {
-		const saveSection = document.createElement("section");
-		saveSection.className = CSS_CLASS.section;
-		const searchTags = controller.currentSearchTags();
-		const canSave = searchTags !== null && searchTags.length > 0;
-		if (controller.getMode().kind === "save") {
-			const form = document.createElement("form");
-			form.className = CSS_CLASS.form;
-			const field = document.createElement("div");
-			field.className = CSS_CLASS.field;
-			const label = document.createElement("label");
-			label.className = CSS_CLASS.label;
-			label.htmlFor = "rdw-save-name";
-			label.textContent = UI_TEXT.nameLabel;
-			const input = document.createElement("input");
-			input.id = "rdw-save-name";
-			input.className = CSS_CLASS.input;
-			input.type = "text";
-			input.required = true;
-			input.value = controller.getNameDraft();
-			input.addEventListener("input", () => {
-				controller.setNameDraft(input.value);
-			});
-			field.append(label, input);
-			const actions = document.createElement("div");
-			actions.className = CSS_CLASS.formActions;
-			const saveBtn = document.createElement("button");
-			saveBtn.type = "submit";
-			saveBtn.className = CSS_CLASS.primaryButton;
-			saveBtn.textContent = UI_TEXT.save;
-			const cancelBtn = document.createElement("button");
-			cancelBtn.type = "button";
-			cancelBtn.className = CSS_CLASS.secondaryButton;
-			cancelBtn.textContent = UI_TEXT.cancel;
-			cancelBtn.addEventListener("click", () => {
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			actions.append(saveBtn, cancelBtn);
-			form.append(field, actions);
-			form.addEventListener("submit", (event) => {
-				event.preventDefault();
-				const tags = controller.currentSearchTags();
-				if (tags === null || tags.length === 0) {
-					controller.setMode({ kind: "list" });
-					controller.render();
-					return;
-				}
-				const name = controller.getNameDraft().trim();
-				if (name.length === 0) return;
-				addCollection(name, tags);
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			saveSection.append(form);
-			queueMicrotask(() => {
-				input.focus();
-				input.select();
-			});
-			return saveSection;
-		}
-		const saveBtn = document.createElement("button");
-		saveBtn.type = "button";
-		saveBtn.className = CSS_CLASS.primaryButton;
-		saveBtn.textContent = UI_TEXT.saveCurrent;
-		saveBtn.disabled = !canSave;
-		saveBtn.addEventListener("click", () => {
-			const tags = controller.currentSearchTags();
-			if (tags === null || tags.length === 0) return;
-			controller.setNameDraft(serialize(tags));
-			controller.setMode({ kind: "save" });
-			controller.render();
-		});
-		saveSection.append(saveBtn);
-		if (!canSave) {
-			const hint = document.createElement("p");
-			hint.className = CSS_CLASS.hint;
-			hint.textContent = UI_TEXT.notOnSearchPage;
-			saveSection.append(hint);
-		}
-		return saveSection;
-	}
-	function buildCollectionRow(collection, controller) {
-		const item = document.createElement("li");
-		item.className = CSS_CLASS.listItem;
-		const mode = controller.getMode();
-		if (mode.kind === "rename" && mode.id === collection.id) {
-			const form = document.createElement("form");
-			form.className = CSS_CLASS.form;
-			const field = document.createElement("div");
-			field.className = CSS_CLASS.field;
-			const label = document.createElement("label");
-			label.className = CSS_CLASS.label;
-			label.htmlFor = `rdw-rename-${collection.id}`;
-			label.textContent = UI_TEXT.nameLabel;
-			const input = document.createElement("input");
-			input.id = `rdw-rename-${collection.id}`;
-			input.className = CSS_CLASS.input;
-			input.type = "text";
-			input.required = true;
-			input.value = controller.getNameDraft();
-			input.addEventListener("input", () => {
-				controller.setNameDraft(input.value);
-			});
-			field.append(label, input);
-			const actions = document.createElement("div");
-			actions.className = CSS_CLASS.formActions;
-			const saveBtn = document.createElement("button");
-			saveBtn.type = "submit";
-			saveBtn.className = CSS_CLASS.primaryButton;
-			saveBtn.textContent = UI_TEXT.save;
-			const cancelBtn = document.createElement("button");
-			cancelBtn.type = "button";
-			cancelBtn.className = CSS_CLASS.secondaryButton;
-			cancelBtn.textContent = UI_TEXT.cancel;
-			cancelBtn.addEventListener("click", () => {
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			actions.append(saveBtn, cancelBtn);
-			form.append(field, actions);
-			form.addEventListener("submit", (event) => {
-				event.preventDefault();
-				const nextName = controller.getNameDraft().trim();
-				if (nextName.length === 0) return;
-				renameCollection(collection.id, nextName);
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			item.append(form);
-			queueMicrotask(() => {
-				input.focus();
-				input.select();
-			});
-			return item;
-		}
-		if (mode.kind === "confirm-delete" && mode.id === collection.id) {
-			const prompt = document.createElement("p");
-			prompt.className = CSS_CLASS.hint;
-			prompt.textContent = `${UI_TEXT.confirmDelete} (${collection.name})`;
-			const actions = document.createElement("div");
-			actions.className = CSS_CLASS.confirmRow;
-			const confirmBtn = document.createElement("button");
-			confirmBtn.type = "button";
-			confirmBtn.className = CSS_CLASS.dangerButton;
-			confirmBtn.textContent = UI_TEXT.confirm;
-			confirmBtn.addEventListener("click", () => {
-				deleteCollection(collection.id);
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			const cancelBtn = document.createElement("button");
-			cancelBtn.type = "button";
-			cancelBtn.className = CSS_CLASS.secondaryButton;
-			cancelBtn.textContent = UI_TEXT.cancel;
-			cancelBtn.addEventListener("click", () => {
-				controller.setMode({ kind: "list" });
-				controller.render();
-			});
-			actions.append(confirmBtn, cancelBtn);
-			item.append(prompt, actions);
-			return item;
-		}
-		const nameBtn = document.createElement("button");
-		nameBtn.type = "button";
-		nameBtn.className = CSS_CLASS.itemName;
-		nameBtn.textContent = collection.name;
-		nameBtn.setAttribute("aria-label", `${UI_TEXT.openCollection}: ${collection.name}`);
-		nameBtn.addEventListener("click", () => {
-			window.location.assign(buildSearchUrl(collection.tags));
-		});
-		const actions = document.createElement("div");
-		actions.className = CSS_CLASS.itemActions;
-		const renameBtn = document.createElement("button");
-		renameBtn.type = "button";
-		renameBtn.className = CSS_CLASS.iconButton;
-		renameBtn.textContent = UI_TEXT.rename;
-		renameBtn.setAttribute("aria-label", `${UI_TEXT.rename}: ${collection.name}`);
-		renameBtn.addEventListener("click", () => {
-			controller.setNameDraft(collection.name);
-			controller.setMode({
-				kind: "rename",
-				id: collection.id
-			});
-			controller.render();
-		});
-		const deleteBtn = document.createElement("button");
-		deleteBtn.type = "button";
-		deleteBtn.className = CSS_CLASS.iconButton;
-		deleteBtn.textContent = UI_TEXT.delete;
-		deleteBtn.setAttribute("aria-label", `${UI_TEXT.delete}: ${collection.name}`);
-		deleteBtn.addEventListener("click", () => {
-			controller.setMode({
-				kind: "confirm-delete",
-				id: collection.id
-			});
-			controller.render();
-		});
-		actions.append(renameBtn, deleteBtn);
-		item.append(nameBtn, actions);
-		return item;
-	}
-	function buildCollectionsSection(collections, controller) {
-		const collectionsSection = document.createElement("section");
-		collectionsSection.className = CSS_CLASS.section;
-		if (collections.length === 0) {
-			const empty = document.createElement("p");
-			empty.className = CSS_CLASS.hint;
-			empty.textContent = UI_TEXT.emptyCollections;
-			collectionsSection.append(empty);
-			return collectionsSection;
-		}
-		const list = document.createElement("ul");
-		list.className = CSS_CLASS.list;
-		for (const collection of collections) list.append(buildCollectionRow(collection, controller));
-		collectionsSection.append(list);
-		return collectionsSection;
-	}
 	function buildFeatureSettingsRows() {
 		const rows = [];
 		for (const feature of FEATURES) {
@@ -6705,6 +7973,27 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		});
 		groupField.append(groupLabel, groupInput);
 		section.append(groupField);
+		const playlistField = document.createElement("div");
+		playlistField.className = CSS_CLASS.field;
+		const playlistLabel = document.createElement("label");
+		playlistLabel.className = CSS_CLASS.label;
+		playlistLabel.htmlFor = PLAYLIST_CHUNK_SIZE_ID;
+		playlistLabel.textContent = UI_TEXT.playlistChunkSizeLabel;
+		const playlistInput = document.createElement("input");
+		playlistInput.id = PLAYLIST_CHUNK_SIZE_ID;
+		playlistInput.className = CSS_CLASS.input;
+		playlistInput.type = "number";
+		playlistInput.min = "1";
+		playlistInput.step = "1";
+		playlistInput.value = String(getPlaylistChunkSize());
+		playlistInput.addEventListener("change", () => {
+			const value = Number(playlistInput.value);
+			setPlaylistChunkSize(Number.isFinite(value) ? value : 0);
+			controller.render();
+		});
+		playlistField.append(playlistLabel, playlistInput);
+		section.append(playlistField);
+		section.append(createBlacklistSection());
 		const toolbar = document.createElement("div");
 		toolbar.className = CSS_CLASS.toolbar;
 		const exportBtn = document.createElement("button");
@@ -6867,12 +8156,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		scroll.append(favRow, favoritesSyncSection);
 		return scroll;
 	}
-	function buildCollectionsTab(collections, controller) {
-		const scroll = document.createElement("div");
-		scroll.className = PANEL_UI_CLASS.scrollRegion;
-		scroll.append(buildSaveSection(controller), buildCollectionsSection(collections, controller));
-		return scroll;
-	}
 	function buildFooter() {
 		const footer = document.createElement("div");
 		footer.className = PANEL_UI_CLASS.footer;
@@ -6910,9 +8193,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		root.append(panel, toggle);
 		target.append(host);
 		let open = false;
-		let mode = { kind: "list" };
 		let importError = "";
-		let nameDraft = "";
 		let artistFilter = "";
 		let persisted = readPersistedPanelState();
 		let activeTab = persisted.tab;
@@ -6964,14 +8245,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			if (removed !== void 0) clearTimeout(removed.timer);
 		}
 		const controller = {
-			getMode: () => mode,
-			setMode: (next) => {
-				mode = next;
-			},
-			getNameDraft: () => nameDraft,
-			setNameDraft: (value) => {
-				nameDraft = value;
-			},
 			getArtistFilter: () => artistFilter,
 			setArtistFilter: (value) => {
 				artistFilter = value;
@@ -7003,7 +8276,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			render: () => {
 				render();
 			},
-			currentSearchTags: () => readTagsFromLocation(window.location.search),
 			getActiveTab: () => activeTab,
 			setActiveTab: (tab) => {
 				activeTab = tab;
@@ -7053,7 +8325,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 				const focusTarget = panel.querySelector(`[role="tab"][aria-selected="true"]`);
 				if (focusTarget instanceof HTMLElement) focusTarget.focus();
 			} else {
-				mode = { kind: "list" };
 				importError = "";
 				toggle.focus();
 			}
@@ -7070,7 +8341,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 				panelEl.setAttribute("role", "tabpanel");
 				panelEl.setAttribute("aria-labelledby", `rdw-tab-${tab}`);
 				panelEl.hidden = !(tab === activeTab);
-				if (tab === "collections") panelEl.append(buildCollectionsTab(data.collections, controller));
+				if (tab === "collections") panelEl.append(createCollectionsTab());
 				else if (tab === "artists") panelEl.append(buildArtistsTab(data.artists, controller));
 				else if (tab === "favorites") panelEl.append(buildFavoritesTab());
 				else panelEl.append(buildSettingsTab(controller, applyThemeClass));
@@ -7101,7 +8372,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 				try {
 					importJson(typeof reader.result === "string" ? reader.result : "");
 					importError = "";
-					mode = { kind: "list" };
 					render();
 				} catch (error) {
 					importError = error instanceof Error ? error.message : "Unknown import error";

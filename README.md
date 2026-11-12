@@ -12,12 +12,12 @@ Managers that honor `@updateURL` / `@downloadURL` can auto-check that same raw U
 
 Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
-## Stage 1 — collections
+## Stage 1 — collections & playlists
 
 - Floating toggle (bottom-right) opens a Shadow DOM panel
-- Save the current `page=post&s=list` search when `tags` is non-empty
-- Open / rename / delete collections (delete asks for confirmation inside the panel)
-- Export and import JSON via the panel
+- **Saved searches:** save the current `page=post&s=list` search when `tags` is non-empty; open / rename / delete
+- **Playlists:** named sets of post ids (`kind: "posts"`); create from the Collections tab or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Playlist part size**)
+- Export and import JSON via the panel (playlists travel with collections; blacklist does not)
 
 ## Stage 2 — favorites
 
@@ -44,7 +44,11 @@ Storage uses `GM_getValue` / `GM_setValue`.
 
 Panel setting **Dark theme (site)** toggles the site’s own `theme` cookie (`dark` vs absent) and swaps `css/desktop.css` ↔ `css/desktop-dark.css`. The script does not inject its own dark CSS.
 
-## Stage 4 — page tweaks (features, 0.7.0)
+## Blacklist (site cookie)
+
+Settings → **Blacklist** edits this browser’s `tag_blacklist` cookie (add/remove chips). Changes write immediately; reload the page to apply filtering. Account settings on the site are not updated and may overwrite the cookie after login. Export/import never includes the blacklist.
+
+## Stage 4 — page tweaks (features, 0.8.0)
 
 Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox or choice control. CSS-only modules (menu cleanup, grid size, dim seen) apply immediately; other modules and the master tweaks switch reload the page.
 
@@ -53,10 +57,12 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `feed` | Feed in site menu | on | all | Adds a Feed menu item; on feed list pages mounts the updates bar and outlines new thumbs |
 | `menu-cleanup` | Clean header menu | on | all | Hides unused header links |
 | `tag-groups` | Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
-| `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form |
+| `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form (playlists in a separate optgroup) |
 | `seen-dim` | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid (also restamps infinite-scroll thumbs) |
+| `playlist-menu` | Add to playlist button | on | list, post | **+** on thumbs (list) and playlist menu under Favorite (post side panel) |
+| `playlist-bar` | Playlist header | on | list | Name / part links / post count above a playlist `id:` search |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
-| `post-actions` | Post actions | on | post | Favorite / Original / Score bar (and Options proxies) on the post page |
+| `post-actions` | Post actions | on | post | Favorite / playlist / Original / Score bar (and Options proxies) on the post page |
 | `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry |
 
 **Disable a module:** open the panel → Settings → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
@@ -74,6 +80,13 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
         { "tag": "cat", "type": "include" },
         { "tag": "dog", "type": "exclude" }
       ]
+    },
+    {
+      "id": "uuid-2",
+      "name": "Watch later",
+      "kind": "posts",
+      "tags": [],
+      "postIds": [12345, 67890]
     }
   ],
   "artists": [{ "tag": "nyx_x" }],
@@ -85,6 +98,7 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
     "gridFavButtons": true,
     "tweaksEnabled": true,
     "updatesGroupSize": 0,
+    "playlistChunkSize": 40,
     "features": { "menu-cleanup": true },
     "featureChoice": { "grid-density": "default" },
     "featureState": {}
@@ -95,9 +109,11 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 }
 ```
 
-- `settings` / `updates` / `favIds` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `seenPostId: 0`
+- Collections without `kind` (or `kind: "search"`) are saved searches; `kind: "posts"` are playlists with `postIds`
+- `settings` / `updates` / `favIds` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `playlistChunkSize: 40`, `seenPostId: 0`
 - Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); legacy `marks.*.fav` becomes fav ids; `seenPostId` keeps the maximum of current and imported
 - Runtime fav ids are stored under `ruledesk-web.favs` (not inside the main storage key)
+- Blacklist is never part of export/import
 
 ## Scripts
 

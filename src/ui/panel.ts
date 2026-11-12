@@ -16,35 +16,32 @@ import {
   isFeatureEnabled,
 } from "../features/runtime";
 import { log } from "../log";
-import {
-  buildSearchUrl,
-  readTagsFromLocation,
-  serialize,
-} from "../search/query";
-import type { ArtistEntry, Collection } from "../storage/schema";
+import { buildSearchUrl } from "../search/query";
+import type { ArtistEntry } from "../storage/schema";
 import {
   addArtist,
-  addCollection,
-  deleteCollection,
   exportJson,
   getFeatureState,
   getGridFavButtonsEnabled,
+  getPlaylistChunkSize,
   getSeenPostId,
   getTweaksEnabled,
   getUpdatesGroupSize,
   importJson,
   load,
   removeArtist,
-  renameCollection,
   setFeatureChoiceValue,
   setFeatureEnabled,
   setFeatureState,
   setGridFavButtonsEnabled,
+  setPlaylistChunkSize,
   setTweaksEnabled,
   setUpdatesGroupSize,
 } from "../storage/store";
 import { getSiteTheme, setSiteTheme } from "../site/theme";
+import { createBlacklistSection } from "./blacklist-section";
 import { setGridFavButtonsVisible } from "./cards";
+import { createCollectionsTab } from "./collections-tab";
 import { createFavoritesSyncSection } from "./favorites-sync-section";
 import { PANEL_CSS, PANEL_UI_CLASS } from "./styles";
 
@@ -54,6 +51,7 @@ const GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
 const FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
 const FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
 const UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
+const PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
 const ARTIST_FILTER_ID = "rdw-artist-filter";
 
 const PANEL_FEATURE_STATE_ID = "panel";
@@ -92,22 +90,12 @@ type PanelPersistedState = {
   height: number;
 };
 
-type PanelMode =
-  | { kind: "list" }
-  | { kind: "save" }
-  | { kind: "rename"; id: string }
-  | { kind: "confirm-delete"; id: string };
-
 type PendingUnfollow = {
   tag: string;
   timer: ReturnType<typeof setTimeout>;
 };
 
 type PanelController = {
-  getMode: () => PanelMode;
-  setMode: (mode: PanelMode) => void;
-  getNameDraft: () => string;
-  setNameDraft: (value: string) => void;
   getArtistFilter: () => string;
   setArtistFilter: (value: string) => void;
   getImportError: () => string;
@@ -116,7 +104,6 @@ type PanelController = {
   downloadExport: () => void;
   close: () => void;
   render: () => void;
-  currentSearchTags: () => ReturnType<typeof readTagsFromLocation>;
   getActiveTab: () => PanelTab;
   setActiveTab: (tab: PanelTab) => void;
   beginUnfollow: (tag: string) => void;
@@ -256,277 +243,6 @@ function buildTabList(controller: PanelController): HTMLElement {
   });
 
   return tablist;
-}
-
-function buildSaveSection(controller: PanelController): HTMLElement {
-  const saveSection = document.createElement("section");
-  saveSection.className = CSS_CLASS.section;
-
-  const searchTags = controller.currentSearchTags();
-  const canSave = searchTags !== null && searchTags.length > 0;
-  const mode = controller.getMode();
-
-  if (mode.kind === "save") {
-    const form = document.createElement("form");
-    form.className = CSS_CLASS.form;
-
-    const field = document.createElement("div");
-    field.className = CSS_CLASS.field;
-
-    const label = document.createElement("label");
-    label.className = CSS_CLASS.label;
-    label.htmlFor = "rdw-save-name";
-    label.textContent = UI_TEXT.nameLabel;
-
-    const input = document.createElement("input");
-    input.id = "rdw-save-name";
-    input.className = CSS_CLASS.input;
-    input.type = "text";
-    input.required = true;
-    input.value = controller.getNameDraft();
-    input.addEventListener("input", () => {
-      controller.setNameDraft(input.value);
-    });
-
-    field.append(label, input);
-
-    const actions = document.createElement("div");
-    actions.className = CSS_CLASS.formActions;
-
-    const saveBtn = document.createElement("button");
-    saveBtn.type = "submit";
-    saveBtn.className = CSS_CLASS.primaryButton;
-    saveBtn.textContent = UI_TEXT.save;
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.type = "button";
-    cancelBtn.className = CSS_CLASS.secondaryButton;
-    cancelBtn.textContent = UI_TEXT.cancel;
-    cancelBtn.addEventListener("click", () => {
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-
-    actions.append(saveBtn, cancelBtn);
-    form.append(field, actions);
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const tags = controller.currentSearchTags();
-      if (tags === null || tags.length === 0) {
-        controller.setMode({ kind: "list" });
-        controller.render();
-        return;
-      }
-      const name = controller.getNameDraft().trim();
-      if (name.length === 0) {
-        return;
-      }
-      addCollection(name, tags);
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-    saveSection.append(form);
-    queueMicrotask(() => {
-      input.focus();
-      input.select();
-    });
-    return saveSection;
-  }
-
-  const saveBtn = document.createElement("button");
-  saveBtn.type = "button";
-  saveBtn.className = CSS_CLASS.primaryButton;
-  saveBtn.textContent = UI_TEXT.saveCurrent;
-  saveBtn.disabled = !canSave;
-  saveBtn.addEventListener("click", () => {
-    const tags = controller.currentSearchTags();
-    if (tags === null || tags.length === 0) {
-      return;
-    }
-    controller.setNameDraft(serialize(tags));
-    controller.setMode({ kind: "save" });
-    controller.render();
-  });
-  saveSection.append(saveBtn);
-  if (!canSave) {
-    const hint = document.createElement("p");
-    hint.className = CSS_CLASS.hint;
-    hint.textContent = UI_TEXT.notOnSearchPage;
-    saveSection.append(hint);
-  }
-  return saveSection;
-}
-
-function buildCollectionRow(
-  collection: Collection,
-  controller: PanelController,
-): HTMLElement {
-  const item = document.createElement("li");
-  item.className = CSS_CLASS.listItem;
-  const mode = controller.getMode();
-
-  if (mode.kind === "rename" && mode.id === collection.id) {
-    const form = document.createElement("form");
-    form.className = CSS_CLASS.form;
-
-    const field = document.createElement("div");
-    field.className = CSS_CLASS.field;
-
-    const label = document.createElement("label");
-    label.className = CSS_CLASS.label;
-    label.htmlFor = `rdw-rename-${collection.id}`;
-    label.textContent = UI_TEXT.nameLabel;
-
-    const input = document.createElement("input");
-    input.id = `rdw-rename-${collection.id}`;
-    input.className = CSS_CLASS.input;
-    input.type = "text";
-    input.required = true;
-    input.value = controller.getNameDraft();
-    input.addEventListener("input", () => {
-      controller.setNameDraft(input.value);
-    });
-
-    field.append(label, input);
-
-    const actions = document.createElement("div");
-    actions.className = CSS_CLASS.formActions;
-
-    const saveBtn = document.createElement("button");
-    saveBtn.type = "submit";
-    saveBtn.className = CSS_CLASS.primaryButton;
-    saveBtn.textContent = UI_TEXT.save;
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.type = "button";
-    cancelBtn.className = CSS_CLASS.secondaryButton;
-    cancelBtn.textContent = UI_TEXT.cancel;
-    cancelBtn.addEventListener("click", () => {
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-
-    actions.append(saveBtn, cancelBtn);
-    form.append(field, actions);
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const nextName = controller.getNameDraft().trim();
-      if (nextName.length === 0) {
-        return;
-      }
-      renameCollection(collection.id, nextName);
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-    item.append(form);
-    queueMicrotask(() => {
-      input.focus();
-      input.select();
-    });
-    return item;
-  }
-
-  if (mode.kind === "confirm-delete" && mode.id === collection.id) {
-    const prompt = document.createElement("p");
-    prompt.className = CSS_CLASS.hint;
-    prompt.textContent = `${UI_TEXT.confirmDelete} (${collection.name})`;
-
-    const actions = document.createElement("div");
-    actions.className = CSS_CLASS.confirmRow;
-
-    const confirmBtn = document.createElement("button");
-    confirmBtn.type = "button";
-    confirmBtn.className = CSS_CLASS.dangerButton;
-    confirmBtn.textContent = UI_TEXT.confirm;
-    confirmBtn.addEventListener("click", () => {
-      deleteCollection(collection.id);
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.type = "button";
-    cancelBtn.className = CSS_CLASS.secondaryButton;
-    cancelBtn.textContent = UI_TEXT.cancel;
-    cancelBtn.addEventListener("click", () => {
-      controller.setMode({ kind: "list" });
-      controller.render();
-    });
-
-    actions.append(confirmBtn, cancelBtn);
-    item.append(prompt, actions);
-    return item;
-  }
-
-  const nameBtn = document.createElement("button");
-  nameBtn.type = "button";
-  nameBtn.className = CSS_CLASS.itemName;
-  nameBtn.textContent = collection.name;
-  nameBtn.setAttribute(
-    "aria-label",
-    `${UI_TEXT.openCollection}: ${collection.name}`,
-  );
-  nameBtn.addEventListener("click", () => {
-    window.location.assign(buildSearchUrl(collection.tags));
-  });
-
-  const actions = document.createElement("div");
-  actions.className = CSS_CLASS.itemActions;
-
-  const renameBtn = document.createElement("button");
-  renameBtn.type = "button";
-  renameBtn.className = CSS_CLASS.iconButton;
-  renameBtn.textContent = UI_TEXT.rename;
-  renameBtn.setAttribute(
-    "aria-label",
-    `${UI_TEXT.rename}: ${collection.name}`,
-  );
-  renameBtn.addEventListener("click", () => {
-    controller.setNameDraft(collection.name);
-    controller.setMode({ kind: "rename", id: collection.id });
-    controller.render();
-  });
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.type = "button";
-  deleteBtn.className = CSS_CLASS.iconButton;
-  deleteBtn.textContent = UI_TEXT.delete;
-  deleteBtn.setAttribute(
-    "aria-label",
-    `${UI_TEXT.delete}: ${collection.name}`,
-  );
-  deleteBtn.addEventListener("click", () => {
-    controller.setMode({ kind: "confirm-delete", id: collection.id });
-    controller.render();
-  });
-
-  actions.append(renameBtn, deleteBtn);
-  item.append(nameBtn, actions);
-  return item;
-}
-
-function buildCollectionsSection(
-  collections: Collection[],
-  controller: PanelController,
-): HTMLElement {
-  const collectionsSection = document.createElement("section");
-  collectionsSection.className = CSS_CLASS.section;
-
-  if (collections.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = CSS_CLASS.hint;
-    empty.textContent = UI_TEXT.emptyCollections;
-    collectionsSection.append(empty);
-    return collectionsSection;
-  }
-
-  const list = document.createElement("ul");
-  list.className = CSS_CLASS.list;
-  for (const collection of collections) {
-    list.append(buildCollectionRow(collection, controller));
-  }
-  collectionsSection.append(list);
-  return collectionsSection;
 }
 
 function buildFeatureSettingsRows(): HTMLElement[] {
@@ -677,6 +393,29 @@ function buildSettingsTab(
   });
   groupField.append(groupLabel, groupInput);
   section.append(groupField);
+
+  const playlistField = document.createElement("div");
+  playlistField.className = CSS_CLASS.field;
+  const playlistLabel = document.createElement("label");
+  playlistLabel.className = CSS_CLASS.label;
+  playlistLabel.htmlFor = PLAYLIST_CHUNK_SIZE_ID;
+  playlistLabel.textContent = UI_TEXT.playlistChunkSizeLabel;
+  const playlistInput = document.createElement("input");
+  playlistInput.id = PLAYLIST_CHUNK_SIZE_ID;
+  playlistInput.className = CSS_CLASS.input;
+  playlistInput.type = "number";
+  playlistInput.min = "1";
+  playlistInput.step = "1";
+  playlistInput.value = String(getPlaylistChunkSize());
+  playlistInput.addEventListener("change", () => {
+    const value = Number(playlistInput.value);
+    setPlaylistChunkSize(Number.isFinite(value) ? value : 0);
+    controller.render();
+  });
+  playlistField.append(playlistLabel, playlistInput);
+  section.append(playlistField);
+
+  section.append(createBlacklistSection());
 
   const toolbar = document.createElement("div");
   toolbar.className = CSS_CLASS.toolbar;
@@ -903,19 +642,6 @@ function buildFavoritesTab(): HTMLElement {
   return scroll;
 }
 
-function buildCollectionsTab(
-  collections: Collection[],
-  controller: PanelController,
-): HTMLElement {
-  const scroll = document.createElement("div");
-  scroll.className = PANEL_UI_CLASS.scrollRegion;
-  scroll.append(
-    buildSaveSection(controller),
-    buildCollectionsSection(collections, controller),
-  );
-  return scroll;
-}
-
 function buildFooter(): HTMLElement {
   const footer = document.createElement("div");
   footer.className = PANEL_UI_CLASS.footer;
@@ -964,9 +690,7 @@ export function mountPanel(target: ParentNode = document.body): void {
   target.append(host);
 
   let open = false;
-  let mode: PanelMode = { kind: "list" };
   let importError = "";
-  let nameDraft = "";
   let artistFilter = "";
   let persisted = readPersistedPanelState();
   let activeTab: PanelTab = persisted.tab;
@@ -1048,14 +772,6 @@ export function mountPanel(target: ParentNode = document.body): void {
   }
 
   const controller: PanelController = {
-    getMode: () => mode,
-    setMode: (next) => {
-      mode = next;
-    },
-    getNameDraft: () => nameDraft,
-    setNameDraft: (value) => {
-      nameDraft = value;
-    },
     getArtistFilter: () => artistFilter,
     setArtistFilter: (value) => {
       artistFilter = value;
@@ -1087,7 +803,6 @@ export function mountPanel(target: ParentNode = document.body): void {
     render: () => {
       render();
     },
-    currentSearchTags: () => readTagsFromLocation(window.location.search),
     getActiveTab: () => activeTab,
     setActiveTab: (tab) => {
       activeTab = tab;
@@ -1144,7 +859,6 @@ export function mountPanel(target: ParentNode = document.body): void {
         focusTarget.focus();
       }
     } else {
-      mode = { kind: "list" };
       importError = "";
       toggle.focus();
     }
@@ -1167,7 +881,7 @@ export function mountPanel(target: ParentNode = document.body): void {
       panelEl.hidden = !isActive;
 
       if (tab === "collections") {
-        panelEl.append(buildCollectionsTab(data.collections, controller));
+        panelEl.append(createCollectionsTab());
       } else if (tab === "artists") {
         panelEl.append(buildArtistsTab(data.artists, controller));
       } else if (tab === "favorites") {
@@ -1226,7 +940,6 @@ export function mountPanel(target: ParentNode = document.body): void {
         const text = typeof reader.result === "string" ? reader.result : "";
         importJson(text);
         importError = "";
-        mode = { kind: "list" };
         render();
       } catch (error) {
         importError =

@@ -12,13 +12,17 @@ import {
 import { log } from "../log";
 import {
   buildFeedUrl,
+  buildPlaylistQueries,
   buildSearchUrl,
+  buildUpdatesSearchUrl,
   isFullUpdatesQuery,
   isPartialUpdatesQuery,
   parseTags,
 } from "../search/query";
+import { isPlaylist } from "../storage/schema";
 import {
   addCollection,
+  getPlaylistChunkSize,
   getUpdatesGroupSize,
   listArtistTags,
   load,
@@ -752,6 +756,18 @@ function applyControlNavigation(
   navigateTokens(next);
 }
 
+function appendCollectionOptions(
+  host: HTMLElement,
+  collections: ReturnType<typeof load>["collections"],
+): void {
+  for (const collection of collections) {
+    const option = document.createElement("option");
+    option.value = collection.id;
+    option.textContent = collection.name;
+    host.append(option);
+  }
+}
+
 function rebuildCollectionsSelect(select: HTMLSelectElement): void {
   const previous = select.value;
   select.replaceChildren();
@@ -763,11 +779,21 @@ function rebuildCollectionsSelect(select: HTMLSelectElement): void {
   select.append(placeholder);
 
   const collections = load().collections;
-  for (const collection of collections) {
-    const option = document.createElement("option");
-    option.value = collection.id;
-    option.textContent = collection.name;
-    select.append(option);
+  const searches = collections.filter((entry) => !isPlaylist(entry));
+  const playlists = collections.filter((entry) => isPlaylist(entry));
+
+  if (searches.length > 0) {
+    const group = document.createElement("optgroup");
+    group.label = "Saved searches";
+    appendCollectionOptions(group, searches);
+    select.append(group);
+  }
+
+  if (playlists.length > 0) {
+    const group = document.createElement("optgroup");
+    group.label = "Playlists";
+    appendCollectionOptions(group, playlists);
+    select.append(group);
   }
 
   if (
@@ -966,6 +992,18 @@ function buildCollectionsRow(refs: MountRefs): HTMLDivElement {
     const collection = load().collections.find((entry) => entry.id === id);
     refs.collectionsSelect.value = "";
     if (collection === undefined) {
+      return;
+    }
+    if (isPlaylist(collection)) {
+      const queries = buildPlaylistQueries(
+        collection.postIds ?? [],
+        getPlaylistChunkSize(),
+      );
+      const first = queries[0];
+      if (first === undefined) {
+        return;
+      }
+      window.location.assign(buildUpdatesSearchUrl(first));
       return;
     }
     window.location.assign(buildSearchUrl(collection.tags));
