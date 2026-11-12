@@ -1,9 +1,9 @@
 {
   "name": "ruledesk-web",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Userscript for rule34.xxx: named tag search collections (stage 1)",
+  "description": "Userscript for rule34.xxx: collections and list-card favorites",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

@@ -169,7 +169,9 @@ describe("store", () => {
     save(before);
     expect(() =>
       importJson(JSON.stringify({ version: 1, collections: "nope" })),
-    ).toThrow();
+    ).toThrow(
+      /^File is not a RuleDesk Web export: collections: /,
+    );
     expect(load()).toEqual(before);
   });
 
