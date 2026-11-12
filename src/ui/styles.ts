@@ -250,9 +250,13 @@ export const PANEL_CSS = `
 `;
 
 export const CARD_CSS = `
-.${CSS_CLASS.imgWrap} {
-  display: block;
+.${CSS_CLASS.thumb} {
   position: relative;
+  anchor-scope: --rdw-img;
+}
+
+.${CSS_CLASS.thumb} img.preview {
+  anchor-name: --rdw-img;
 }
 
 .${CSS_CLASS.cardFav} {
@@ -276,12 +280,20 @@ export const CARD_CSS = `
   opacity: 0;
 }
 
-.${CSS_CLASS.imgWrap}:hover .${CSS_CLASS.cardFav},
+@supports (anchor-name: --a) {
+  .${CSS_CLASS.cardFav} {
+    position-anchor: --rdw-img;
+    top: calc(anchor(top) + 4px);
+    right: calc(anchor(right) + 4px);
+  }
+}
+
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav},
 .${CSS_CLASS.cardFav}:focus-visible {
   opacity: 0.65;
 }
 
-.${CSS_CLASS.imgWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.thumb} .${CSS_CLASS.cardFav}:hover,
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
@@ -308,6 +320,11 @@ export const CARD_CSS = `
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
   cursor: wait;
+}
+
+.${CSS_CLASS.thumb}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
+.${CSS_CLASS.thumb}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
+  display: none !important;
 }
 
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {

@@ -13,7 +13,7 @@ export default defineConfig({
         namespace: "https://github.com/kazekaze93/ruledesk-web",
         description:
           "Collections, favorites, and artist updates for rule34.xxx",
-        version: "0.4.2",
+        version: "0.4.3",
         match: ["https://rule34.xxx/*"],
         "run-at": "document-idle",
         grant: ["GM_getValue", "GM_setValue"],

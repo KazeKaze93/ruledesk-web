@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.4.2
+// @version      0.4.3
 // @description  Collections, favorites, and artist updates for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -86,6 +86,8 @@
 		seenNothing: "Nothing marked as seen yet.",
 		markAllSeen: "Mark all seen",
 		markedSeenConfirm: "Marked as seen up to post #",
+		alreadyMarkedSeenPrefix: "Everything here is already marked as seen (up to #",
+		alreadyMarkedSeenSuffix: ")",
 		reloadUpdates: "Reload updates",
 		goToPageOneToMark: "Go to page 1 to mark everything as seen",
 		noNewPosts: "No new posts",
@@ -125,7 +127,7 @@
 		error: "rdw-error",
 		confirmRow: "rdw-confirm-row",
 		hidden: "rdw-hidden",
-		imgWrap: "rdw-img-wrap",
+		thumb: "rdw-thumb",
 		cardFav: "rdw-card-fav",
 		cardFavMarked: "rdw-card-fav--marked",
 		cardFavError: "rdw-card-fav--error",
@@ -149,7 +151,6 @@
 		thumb: "span.thumb",
 		thumbLink: "a[href*=\"s=view\"]",
 		previewImage: "img.preview",
-		imgWrap: `span.${CSS_CLASS.imgWrap}`,
 		cardFavButton: `button.${CSS_CLASS.cardFav}`,
 		favoritesDeleteLink: "a[onclick]",
 		tagSidebar: "ul#tag-sidebar",
@@ -2133,10 +2134,6 @@
 			return { status: "error" };
 		}
 	}
-	function stopLinkActivation(event) {
-		event.preventDefault();
-		event.stopPropagation();
-	}
 	function favAriaLabel(postId, marked) {
 		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
 	}
@@ -2179,13 +2176,8 @@
 		button.textContent = UI_TEXT.cardFavGlyph;
 		applyFavButtonState(button, marked ? "marked" : "idle", postId);
 		button.addEventListener("click", (event) => {
-			stopLinkActivation(event);
-			handleFavToggleClick(button, postId);
-		});
-		button.addEventListener("keydown", (event) => {
-			if (!(event instanceof KeyboardEvent)) return;
-			if (event.key !== "Enter" && event.key !== " ") return;
-			stopLinkActivation(event);
+			event.preventDefault();
+			event.stopPropagation();
 			handleFavToggleClick(button, postId);
 		});
 		return button;
@@ -2468,9 +2460,13 @@
 }
 `;
 	var CARD_CSS = `
-.${CSS_CLASS.imgWrap} {
-  display: block;
+.${CSS_CLASS.thumb} {
   position: relative;
+  anchor-scope: --rdw-img;
+}
+
+.${CSS_CLASS.thumb} img.preview {
+  anchor-name: --rdw-img;
 }
 
 .${CSS_CLASS.cardFav} {
@@ -2494,12 +2490,20 @@
   opacity: 0;
 }
 
-.${CSS_CLASS.imgWrap}:hover .${CSS_CLASS.cardFav},
+@supports (anchor-name: --a) {
+  .${CSS_CLASS.cardFav} {
+    position-anchor: --rdw-img;
+    top: calc(anchor(top) + 4px);
+    right: calc(anchor(right) + 4px);
+  }
+}
+
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav},
 .${CSS_CLASS.cardFav}:focus-visible {
   opacity: 0.65;
 }
 
-.${CSS_CLASS.imgWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.thumb} .${CSS_CLASS.cardFav}:hover,
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
@@ -2526,6 +2530,11 @@
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
   cursor: wait;
+}
+
+.${CSS_CLASS.thumb}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
+.${CSS_CLASS.thumb}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
+  display: none !important;
 }
 
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
@@ -2617,26 +2626,13 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
 		return byHref instanceof HTMLAnchorElement ? byHref : null;
 	}
-	function ensureImgWrap(link, image) {
-		const parent = image.parentElement;
-		if (parent instanceof HTMLElement && parent.classList.contains(CSS_CLASS.imgWrap)) return parent;
-		const wrap = document.createElement("span");
-		wrap.className = CSS_CLASS.imgWrap;
-		image.replaceWith(wrap);
-		wrap.append(image);
-		if (wrap.parentElement !== link) link.append(wrap);
-		return wrap;
-	}
 	function attachFavButton(thumb, postId, marked) {
 		if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
 		const link = findThumbLink(thumb, postId);
 		if (link === null) return;
-		const image = link.querySelector(SITE_SELECTORS.previewImage);
-		if (!(image instanceof HTMLImageElement)) return;
-		const wrap = ensureImgWrap(link, image);
-		if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
+		thumb.classList.add(CSS_CLASS.thumb);
 		const button = createFavButton(postId, marked);
-		wrap.append(button);
+		link.after(button);
 	}
 	function applyGridFavVisibilityClass(visible) {
 		document.body.classList.toggle(CSS_CLASS.gridFavsHidden, !visible);
@@ -3412,15 +3408,29 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			insertBeforeImageList(imageList, bar);
 			return;
 		}
+		const pageMax = maxThumbPostId(imageList);
+		const seen = getSeenPostId();
 		const actions = document.createElement("div");
 		actions.className = CSS_CLASS.updatesBarActions;
+		if (pageMax <= seen) {
+			const hint = document.createElement("p");
+			hint.className = CSS_CLASS.hint;
+			hint.textContent = `${UI_TEXT.alreadyMarkedSeenPrefix}${String(seen)}${UI_TEXT.alreadyMarkedSeenSuffix}`;
+			const openLink = document.createElement("a");
+			openLink.className = CSS_CLASS.itemName;
+			openLink.href = buildReloadHref(artistTags, seen);
+			openLink.textContent = UI_TEXT.openUpdates;
+			actions.append(hint, openLink);
+			bar.append(actions);
+			insertBeforeImageList(imageList, bar);
+			return;
+		}
 		const markButton = document.createElement("button");
 		markButton.type = "button";
 		markButton.className = CSS_CLASS.primaryButton;
 		markButton.textContent = UI_TEXT.markAllSeen;
 		markButton.addEventListener("click", () => {
-			const pageMax = maxThumbPostId(imageList);
-			const nextSeen = Math.max(getSeenPostId(), pageMax);
+			const nextSeen = Math.max(getSeenPostId(), maxThumbPostId(imageList));
 			setSeenPostId(nextSeen);
 			bar.replaceChildren();
 			const confirm = document.createElement("p");

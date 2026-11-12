@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CSS_CLASS, KEY_ENTER, STORAGE_KEY } from "../src/config/constants";
+import { CSS_CLASS, STORAGE_KEY } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
 import { load, save, setGridFavButtonsEnabled } from "../src/storage/store";
 import { mountCards } from "../src/ui/cards";
+import { CARD_CSS } from "../src/ui/styles";
 import { addFavorite, removeFavorite } from "../src/site/favorites";
 
 const memory = new Map<string, unknown>();
@@ -73,7 +74,7 @@ describe("mountCards", () => {
     vi.unstubAllGlobals();
   });
 
-  it("wraps the preview image inside the link and does not duplicate on remount", () => {
+  it("keeps the preview link children intact and places the button after the link", () => {
     const root = document.createElement("div");
     root.append(buildThumb("111"), buildThumb("222"));
     document.body.append(root);
@@ -81,24 +82,34 @@ describe("mountCards", () => {
     mountCards(root, "?page=post&s=list&tags=cat");
     mountCards(root, "?page=post&s=list&tags=cat");
 
-    const wraps = root.querySelectorAll(`span.${CSS_CLASS.imgWrap}`);
     const buttons = root.querySelectorAll(`button.${CSS_CLASS.cardFav}`);
-    expect(wraps).toHaveLength(2);
     expect(buttons).toHaveLength(2);
 
+    const thumb = root.querySelector("#s111");
     const link = root.querySelector("#p111");
+    expect(thumb).toBeInstanceOf(HTMLElement);
     expect(link).toBeInstanceOf(HTMLAnchorElement);
-    if (!(link instanceof HTMLAnchorElement)) {
+    if (!(thumb instanceof HTMLElement) || !(link instanceof HTMLAnchorElement)) {
       return;
     }
-    const wrap = link.querySelector(`span.${CSS_CLASS.imgWrap}`);
-    expect(wrap).not.toBeNull();
-    expect(wrap?.querySelector("img.preview")).not.toBeNull();
-    expect(wrap?.querySelector(`button.${CSS_CLASS.cardFav}`)).not.toBeNull();
-    expect(wrap?.parentElement).toBe(link);
+
+    expect(thumb.classList.contains(CSS_CLASS.thumb)).toBe(true);
+    expect(link.children).toHaveLength(1);
+    expect(link.children[0]?.classList.contains("preview")).toBe(true);
+    expect(link.nextElementSibling).toBe(
+      thumb.querySelector(`button.${CSS_CLASS.cardFav}`),
+    );
+    expect(root.querySelectorAll(".rdw-img-wrap")).toHaveLength(0);
   });
 
-  it("stops click and Enter from bubbling to the preview link", () => {
+  it("includes CSS anchor positioning rules", () => {
+    expect(CARD_CSS).toContain("anchor-name:");
+    expect(CARD_CSS).toContain("position-anchor:");
+    expect(CARD_CSS).toContain("@supports (anchor-name: --a)");
+    expect(CARD_CSS).not.toContain("rdw-img-wrap");
+  });
+
+  it("stops click from bubbling to the preview link", () => {
     const root = document.createElement("div");
     root.append(buildThumb("111"));
     document.body.append(root);
@@ -127,19 +138,6 @@ describe("mountCards", () => {
     button.dispatchEvent(clickEvent);
     expect(clickEvent.defaultPrevented).toBe(true);
     expect(linkClicks).toBe(0);
-
-    let linkKeydowns = 0;
-    link.addEventListener("keydown", () => {
-      linkKeydowns += 1;
-    });
-    const keyEvent = new KeyboardEvent("keydown", {
-      key: KEY_ENTER,
-      bubbles: true,
-      cancelable: true,
-    });
-    button.dispatchEvent(keyEvent);
-    expect(keyEvent.defaultPrevented).toBe(true);
-    expect(linkKeydowns).toBe(0);
   });
 
   it("marks buttons from stored fav marks", () => {

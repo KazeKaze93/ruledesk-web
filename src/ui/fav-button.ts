@@ -1,17 +1,7 @@
-import {
-  CSS_CLASS,
-  KEY_ENTER,
-  KEY_SPACE,
-  UI_TEXT,
-} from "../config/constants";
+import { CSS_CLASS, UI_TEXT } from "../config/constants";
 import { log } from "../log";
 import { addFavorite, removeFavorite } from "../site/favorites";
 import { setPostFavMark } from "../storage/store";
-
-function stopLinkActivation(event: Event): void {
-  event.preventDefault();
-  event.stopPropagation();
-}
 
 export type FavButtonState =
   | "idle"
@@ -85,17 +75,8 @@ export function createFavButton(
   button.textContent = UI_TEXT.cardFavGlyph;
   applyFavButtonState(button, marked ? "marked" : "idle", postId);
   button.addEventListener("click", (event: Event) => {
-    stopLinkActivation(event);
-    void handleFavToggleClick(button, postId);
-  });
-  button.addEventListener("keydown", (event: Event) => {
-    if (!(event instanceof KeyboardEvent)) {
-      return;
-    }
-    if (event.key !== KEY_ENTER && event.key !== KEY_SPACE) {
-      return;
-    }
-    stopLinkActivation(event);
+    event.preventDefault();
+    event.stopPropagation();
     void handleFavToggleClick(button, postId);
   });
   return button;

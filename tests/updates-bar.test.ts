@@ -54,7 +54,8 @@ describe("mountUpdatesBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("marks all seen on a full query page 1 and records the max thumb id", () => {
+  it("shows Mark all seen when page max id is greater than seen", () => {
+    seedArtists(10);
     buildListPage(["10", "42", "7"]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
@@ -66,6 +67,20 @@ describe("mountUpdatesBar", () => {
     expect(getSeenPostId()).toBe(42);
     expect(bar?.textContent).toContain("42");
     expect(bar?.querySelector("a")?.textContent).toBe("Reload updates");
+  });
+
+  it("hides Mark all seen when page max id is already covered", () => {
+    seedArtists(42);
+    buildListPage(["10", "42", "7"]);
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar?.querySelector("button")).toBeNull();
+    expect(bar?.textContent).toContain(
+      "Everything here is already marked as seen (up to #42)",
+    );
+    expect(bar?.querySelector("a")?.textContent).toBe(UI_TEXT.openUpdates);
+    expect(getSeenPostId()).toBe(42);
   });
 
   it("shows page-1 hint when pid > 0 on a full query", () => {

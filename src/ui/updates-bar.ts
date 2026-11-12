@@ -150,16 +150,33 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
     return;
   }
 
+  const pageMax = maxThumbPostId(imageList);
+  const seen = getSeenPostId();
   const actions = document.createElement("div");
   actions.className = CSS_CLASS.updatesBarActions;
+
+  if (pageMax <= seen) {
+    const hint = document.createElement("p");
+    hint.className = CSS_CLASS.hint;
+    hint.textContent = `${UI_TEXT.alreadyMarkedSeenPrefix}${String(seen)}${UI_TEXT.alreadyMarkedSeenSuffix}`;
+
+    const openLink = document.createElement("a");
+    openLink.className = CSS_CLASS.itemName;
+    openLink.href = buildReloadHref(artistTags, seen);
+    openLink.textContent = UI_TEXT.openUpdates;
+
+    actions.append(hint, openLink);
+    bar.append(actions);
+    insertBeforeImageList(imageList, bar);
+    return;
+  }
 
   const markButton = document.createElement("button");
   markButton.type = "button";
   markButton.className = CSS_CLASS.primaryButton;
   markButton.textContent = UI_TEXT.markAllSeen;
   markButton.addEventListener("click", () => {
-    const pageMax = maxThumbPostId(imageList);
-    const nextSeen = Math.max(getSeenPostId(), pageMax);
+    const nextSeen = Math.max(getSeenPostId(), maxThumbPostId(imageList));
     setSeenPostId(nextSeen);
 
     bar.replaceChildren();

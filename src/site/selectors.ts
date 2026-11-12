@@ -4,7 +4,6 @@ export const SITE_SELECTORS = {
   thumb: "span.thumb",
   thumbLink: 'a[href*="s=view"]',
   previewImage: "img.preview",
-  imgWrap: `span.${CSS_CLASS.imgWrap}`,
   cardFavButton: `button.${CSS_CLASS.cardFav}`,
   favoritesDeleteLink: "a[onclick]",
   tagSidebar: "ul#tag-sidebar",

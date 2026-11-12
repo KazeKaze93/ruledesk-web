@@ -65,10 +65,7 @@ export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const KEY_ENTER = "Enter";
-export const KEY_SPACE = " ";
-
-export const USERSCRIPT_VERSION = "0.4.2";
+export const USERSCRIPT_VERSION = "0.4.3";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -117,6 +114,8 @@ export const UI_TEXT = {
   seenNothing: "Nothing marked as seen yet.",
   markAllSeen: "Mark all seen",
   markedSeenConfirm: "Marked as seen up to post #",
+  alreadyMarkedSeenPrefix: "Everything here is already marked as seen (up to #",
+  alreadyMarkedSeenSuffix: ")",
   reloadUpdates: "Reload updates",
   goToPageOneToMark: "Go to page 1 to mark everything as seen",
   noNewPosts: "No new posts",
@@ -159,7 +158,7 @@ export const CSS_CLASS = {
   error: "rdw-error",
   confirmRow: "rdw-confirm-row",
   hidden: "rdw-hidden",
-  imgWrap: "rdw-img-wrap",
+  thumb: "rdw-thumb",
   cardFav: "rdw-card-fav",
   cardFavMarked: "rdw-card-fav--marked",
   cardFavError: "rdw-card-fav--error",

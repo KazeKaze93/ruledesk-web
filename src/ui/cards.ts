@@ -30,27 +30,6 @@ function findThumbLink(thumb: HTMLElement, postId: string): HTMLAnchorElement | 
   return byHref instanceof HTMLAnchorElement ? byHref : null;
 }
 
-function ensureImgWrap(
-  link: HTMLAnchorElement,
-  image: HTMLImageElement,
-): HTMLElement {
-  const parent = image.parentElement;
-  if (
-    parent instanceof HTMLElement &&
-    parent.classList.contains(CSS_CLASS.imgWrap)
-  ) {
-    return parent;
-  }
-  const wrap = document.createElement("span");
-  wrap.className = CSS_CLASS.imgWrap;
-  image.replaceWith(wrap);
-  wrap.append(image);
-  if (wrap.parentElement !== link) {
-    link.append(wrap);
-  }
-  return wrap;
-}
-
 function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): void {
   if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) {
     return;
@@ -61,18 +40,9 @@ function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): v
     return;
   }
 
-  const image = link.querySelector(SITE_SELECTORS.previewImage);
-  if (!(image instanceof HTMLImageElement)) {
-    return;
-  }
-
-  const wrap = ensureImgWrap(link, image);
-  if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) {
-    return;
-  }
-
+  thumb.classList.add(CSS_CLASS.thumb);
   const button = createFavButton(postId, marked);
-  wrap.append(button);
+  link.after(button);
 }
 
 function applyGridFavVisibilityClass(visible: boolean): void {
