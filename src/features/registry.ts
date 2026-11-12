@@ -1,16 +1,20 @@
+import { feedFeature } from "./feed";
 import { gridDensityFeature } from "./grid-density";
 import { seenDimFeature } from "./grid-marks";
+import { infiniteScrollFeature } from "./infinite-scroll";
 import { menuCleanupFeature } from "./menu-cleanup";
 import { postActionsFeature } from "./post-actions";
-import { searchTokensFeature } from "./search-tokens";
+import { searchToolsFeature } from "./search-tools";
 import { tagGroupsFeature } from "./tag-groups";
 import type { Feature } from "./types";
 
 export const FEATURES: Feature[] = [
+  feedFeature,
   menuCleanupFeature,
   tagGroupsFeature,
-  searchTokensFeature,
+  searchToolsFeature,
   seenDimFeature,
+  infiniteScrollFeature,
   postActionsFeature,
   gridDensityFeature,
 ];

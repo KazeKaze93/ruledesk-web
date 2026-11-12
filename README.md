@@ -36,7 +36,7 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 - On a full Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
 - Empty Updates pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
-No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click) and `favorites-sync.ts` (explicit Sync / Resume).
+No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click), `favorites-sync.ts` (explicit Sync / Resume), and `next-page.ts` (infinite scroll page loads).
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
@@ -44,20 +44,22 @@ Storage uses `GM_getValue` / `GM_setValue`.
 
 Panel setting **Dark theme (site)** toggles the site’s own `theme` cookie (`dark` vs absent) and swaps `css/desktop.css` ↔ `css/desktop-dark.css`. The script does not inject its own dark CSS.
 
-## Stage 4 — page tweaks (features)
+## Stage 4 — page tweaks (features, 0.7.0)
 
-Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox; some have a choice (e.g. grid size). CSS-only modules (menu cleanup, grid size, dim seen) apply immediately; other modules and the master tweaks switch reload the page.
+Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox or choice control. CSS-only modules (menu cleanup, grid size, dim seen) apply immediately; other modules and the master tweaks switch reload the page.
 
-| Module | Default | Pages | What it does |
-|---|---|---|---|
-| Clean header menu | on | all | Hides unused header links |
-| Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
-| Show search tags as a list under the search field | on | list, post | Token chips under the site search form |
-| Dim seen posts | on | list, post | Marks opened posts; dims them in the grid |
-| Post actions | on | post | Favorite / Follow / Original / Score bar above the post sidebar |
-| Grid size | on | list, favorites | compact / default / large |
+| Module id | Label | Default | Pages | What it does |
+|---|---|---|---|---|
+| `feed` | Feed in site menu | on | all | Adds a Feed menu item; on feed list pages mounts the updates bar and outlines new thumbs |
+| `menu-cleanup` | Clean header menu | on | all | Hides unused header links |
+| `tag-groups` | Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
+| `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form |
+| `seen-dim` | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid (also restamps infinite-scroll thumbs) |
+| `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
+| `post-actions` | Post actions | on | post | Favorite / Original / Score bar (and Options proxies) on the post page |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry |
 
-Turn a module off in Settings, or disable **Enable page tweaks** to unload all of them.
+**Disable a module:** open the panel → Settings → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 
 ## Export format
 

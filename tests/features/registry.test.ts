@@ -3,13 +3,22 @@ import { describe, expect, it } from "vitest";
 import { FEATURES } from "../../src/features/registry";
 
 describe("FEATURES registry", () => {
-  it("does not register removed or legacy modules", () => {
+  it("registers 0.7.0 modules in order and omits removed ones", () => {
     const ids = FEATURES.map((feature) => feature.id);
+    expect(ids).toEqual([
+      "feed",
+      "menu-cleanup",
+      "tag-groups",
+      "search-tools",
+      "seen-dim",
+      "infinite-scroll",
+      "post-actions",
+      "grid-density",
+    ]);
     expect(ids).not.toContain("top-bar");
     expect(ids).not.toContain("dark-theme");
     expect(ids).not.toContain("pager");
     expect(ids).not.toContain("followed-badge");
-    expect(ids).toContain("search-tokens");
-    expect(ids).toContain("seen-dim");
+    expect(ids).not.toContain("search-tokens");
   });
 });
