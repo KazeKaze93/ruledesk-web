@@ -1,30 +1,17 @@
 import {
   CSS_CLASS,
   DOCUMENT_STYLE_ID,
-  SEARCH_PAGE,
-  SEARCH_PARAM_PAGE,
-  SEARCH_PARAM_SECTION,
-  SEARCH_SECTION,
-  UI_TEXT,
 } from "../config/constants";
-import { log } from "../log";
-import { addFavorite } from "../site/favorites";
+import { detectPageKind } from "../site/pages";
 import {
   SITE_SELECTORS,
   extractPostIdFromThumb,
 } from "../site/selectors";
-import { load, setPostFavMark } from "../storage/store";
+import { getGridFavButtonsEnabled, load } from "../storage/store";
+import { createFavButton } from "./fav-button";
 import { CARD_CSS } from "./styles";
 
-function isPostListPage(search: string): boolean {
-  const params = new URLSearchParams(search);
-  return (
-    params.get(SEARCH_PARAM_PAGE) === SEARCH_PAGE &&
-    params.get(SEARCH_PARAM_SECTION) === SEARCH_SECTION
-  );
-}
-
-function ensureDocumentStyles(): void {
+export function ensureDocumentStyles(): void {
   if (document.getElementById(DOCUMENT_STYLE_ID) !== null) {
     return;
   }
@@ -34,32 +21,31 @@ function ensureDocumentStyles(): void {
   document.head.append(style);
 }
 
-function applyButtonState(
-  button: HTMLButtonElement,
-  state: "idle" | "pending" | "marked" | "error",
-  errorTitle?: string,
-): void {
-  button.classList.remove(
-    CSS_CLASS.cardFavMarked,
-    CSS_CLASS.cardFavError,
-    CSS_CLASS.cardFavPending,
-  );
-  button.disabled = state === "pending";
-  button.setAttribute("aria-pressed", state === "marked" ? "true" : "false");
-  button.removeAttribute("title");
+function findThumbLink(thumb: HTMLElement, postId: string): HTMLAnchorElement | null {
+  const byId = thumb.querySelector(`#p${postId}`);
+  if (byId instanceof HTMLAnchorElement) {
+    return byId;
+  }
+  const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
+  return byHref instanceof HTMLAnchorElement ? byHref : null;
+}
 
-  if (state === "pending") {
-    button.classList.add(CSS_CLASS.cardFavPending);
-    return;
+function ensureThumbWrap(
+  thumb: HTMLElement,
+  link: HTMLAnchorElement,
+): HTMLElement {
+  const parent = link.parentElement;
+  if (
+    parent instanceof HTMLElement &&
+    parent.classList.contains(CSS_CLASS.thumbWrap)
+  ) {
+    return parent;
   }
-  if (state === "marked") {
-    button.classList.add(CSS_CLASS.cardFavMarked);
-    return;
-  }
-  if (state === "error") {
-    button.classList.add(CSS_CLASS.cardFavError);
-    button.title = errorTitle ?? UI_TEXT.cardFavErrorTitle;
-  }
+  const wrap = document.createElement("span");
+  wrap.className = CSS_CLASS.thumbWrap;
+  link.replaceWith(wrap);
+  wrap.append(link);
+  return wrap;
 }
 
 function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): void {
@@ -67,63 +53,46 @@ function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): v
     return;
   }
 
-  thumb.classList.add(CSS_CLASS.thumb);
+  const link = findThumbLink(thumb, postId);
+  if (link === null) {
+    return;
+  }
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = CSS_CLASS.cardFav;
-  button.textContent = UI_TEXT.cardFavGlyph;
-  button.setAttribute(
-    "aria-label",
-    `${UI_TEXT.cardFavLabel} ${postId}`,
-  );
-  applyButtonState(button, marked ? "marked" : "idle");
+  const wrap = ensureThumbWrap(thumb, link);
+  if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) {
+    return;
+  }
 
-  button.addEventListener("click", (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void handleFavClick(button, postId);
-  });
-
-  thumb.append(button);
+  const button = createFavButton(postId, marked);
+  wrap.append(button);
 }
 
-async function handleFavClick(
-  button: HTMLButtonElement,
-  postId: string,
-): Promise<void> {
-  if (button.disabled || button.getAttribute("aria-pressed") === "true") {
-    return;
+function applyGridFavVisibilityClass(visible: boolean): void {
+  document.body.classList.toggle(CSS_CLASS.gridFavsHidden, !visible);
+}
+
+export function setGridFavButtonsVisible(visible: boolean): void {
+  applyGridFavVisibilityClass(visible);
+  if (visible && detectPageKind(window.location.search) === "list") {
+    mountCards();
   }
-
-  applyButtonState(button, "pending");
-  const result = await addFavorite(postId);
-
-  if (result.status === "added" || result.status === "already") {
-    setPostFavMark(postId, true);
-    applyButtonState(button, "marked");
-    return;
-  }
-
-  if (result.status === "not_logged_in") {
-    applyButtonState(button, "error", UI_TEXT.cardFavErrorTitle);
-    log.warn("Favorite requires login", postId);
-    return;
-  }
-
-  applyButtonState(button, "error", UI_TEXT.cardFavErrorTitle);
-  log.warn("Favorite failed", postId, result);
 }
 
 export function mountCards(
   root: ParentNode = document,
   search: string = window.location.search,
 ): void {
-  if (!isPostListPage(search)) {
+  if (detectPageKind(search) !== "list") {
     return;
   }
 
   ensureDocumentStyles();
+  const enabled = getGridFavButtonsEnabled();
+  applyGridFavVisibilityClass(enabled);
+  if (!enabled) {
+    return;
+  }
+
   const marks = load().marks;
   const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
 

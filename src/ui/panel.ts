@@ -13,10 +13,13 @@ import {
   addCollection,
   deleteCollection,
   exportJson,
+  getGridFavButtonsEnabled,
   importJson,
   load,
   renameCollection,
+  setGridFavButtonsEnabled,
 } from "../storage/store";
+import { setGridFavButtonsVisible } from "./cards";
 import { PANEL_CSS } from "./styles";
 
 type PanelMode =
@@ -336,6 +339,38 @@ function buildCollectionsSection(
   return collectionsSection;
 }
 
+function buildSettingsSection(): HTMLElement {
+  const section = document.createElement("section");
+  section.className = CSS_CLASS.section;
+
+  const title = document.createElement("h3");
+  title.className = CSS_CLASS.sectionTitle;
+  title.textContent = UI_TEXT.settingsHeading;
+
+  const row = document.createElement("div");
+  row.className = CSS_CLASS.checkboxRow;
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.id = "rdw-grid-fav-buttons";
+  checkbox.className = CSS_CLASS.checkbox;
+  checkbox.checked = getGridFavButtonsEnabled();
+  checkbox.addEventListener("change", () => {
+    const enabled = checkbox.checked;
+    setGridFavButtonsEnabled(enabled);
+    setGridFavButtonsVisible(enabled);
+  });
+
+  const label = document.createElement("label");
+  label.className = CSS_CLASS.label;
+  label.htmlFor = checkbox.id;
+  label.textContent = UI_TEXT.gridFavButtonsLabel;
+
+  row.append(checkbox, label);
+  section.append(title, row);
+  return section;
+}
+
 function buildToolbar(controller: PanelController): HTMLElement {
   const toolbar = document.createElement("div");
   toolbar.className = CSS_CLASS.toolbar;
@@ -479,6 +514,7 @@ export function mountPanel(target: ParentNode = document.body): void {
     body.className = CSS_CLASS.body;
 
     const saveSection = buildSaveSection(controller);
+    const settingsSection = buildSettingsSection();
     const collectionsSection = buildCollectionsSection(collections, controller);
     const toolbar = buildToolbar(controller);
 
@@ -486,9 +522,15 @@ export function mountPanel(target: ParentNode = document.body): void {
       const error = document.createElement("p");
       error.className = CSS_CLASS.error;
       error.textContent = `${UI_TEXT.importErrorPrefix} ${controller.getImportError()}`;
-      body.append(saveSection, collectionsSection, toolbar, error);
+      body.append(
+        saveSection,
+        settingsSection,
+        collectionsSection,
+        toolbar,
+        error,
+      );
     } else {
-      body.append(saveSection, collectionsSection, toolbar);
+      body.append(saveSection, settingsSection, collectionsSection, toolbar);
     }
 
     panel.append(buildHeader(controller), body);

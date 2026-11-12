@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.2.0
-// @description  Collections and list-card favorites for rule34.xxx (local marks + same-origin fav)
+// @version      0.3.0
+// @description  Collections and favorites UX for rule34.xxx (local marks + same-origin fav)
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @match        https://rule34.xxx/*
@@ -22,6 +22,9 @@
 	var SEARCH_SECTION = "list";
 	var SEARCH_PARAM_PAGE = "page";
 	var SEARCH_PARAM_TAGS = "tags";
+	var FAVORITES_PAGE = "favorites";
+	var FAVORITES_SECTION_DELETE = "delete";
+	var FAVORITES_PARAM_RETURN_PID = "return_pid";
 	var ADDFAV_PATH = "/public/addfav.php";
 	var VOTE_PATH = "/index.php";
 	var VOTE_PARAM_PAGE = "page";
@@ -37,6 +40,7 @@
 	var PANEL_ROOT_ID = "ruledesk-web-root";
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
+	var POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
 	var UI_TEXT = {
 		toggleOpen: "Open RuleDesk",
 		toggleClose: "Close RuleDesk",
@@ -56,9 +60,14 @@
 		import: "Import",
 		importErrorPrefix: "Import failed:",
 		notOnSearchPage: "Open a post list search with tags to save it.",
-		cardFavLabel: "Add post to favorites",
+		settingsHeading: "Settings",
+		gridFavButtonsLabel: "Show favorite buttons in grid",
+		cardFavAddLabel: "Add post to favorites",
+		cardFavRemoveLabel: "Remove post from favorites",
 		cardFavGlyph: "★",
-		cardFavErrorTitle: "Could not add to favorites"
+		cardFavErrorNotLoggedIn: "Log in to use favorites",
+		cardFavErrorRequest: "Favorite request failed",
+		postFavMissingNative: "Native addFav link not found; post-page toggle not mounted"
 	};
 	var CSS_CLASS = {
 		host: "rdw-host",
@@ -83,103 +92,61 @@
 		field: "rdw-field",
 		label: "rdw-label",
 		input: "rdw-input",
+		checkboxRow: "rdw-checkbox-row",
+		checkbox: "rdw-checkbox",
 		formActions: "rdw-form-actions",
 		toolbar: "rdw-toolbar",
 		hint: "rdw-hint",
 		error: "rdw-error",
 		confirmRow: "rdw-confirm-row",
 		hidden: "rdw-hidden",
-		thumb: "rdw-thumb",
+		thumbWrap: "rdw-thumb-wrap",
 		cardFav: "rdw-card-fav",
 		cardFavMarked: "rdw-card-fav--marked",
 		cardFavError: "rdw-card-fav--error",
-		cardFavPending: "rdw-card-fav--pending"
+		cardFavPending: "rdw-card-fav--pending",
+		gridFavsHidden: "rdw-grid-favs-hidden",
+		postFavItem: "rdw-post-fav-item",
+		postFavButton: "rdw-post-fav-button"
 	};
-	function isDebugEnabled() {
-		try {
-			return GM_getValue(DEBUG_KEY, void 0) === true;
-		} catch {
-			return false;
-		}
+	function detectPageKind(search) {
+		const params = new URLSearchParams(search);
+		const page = params.get(SEARCH_PARAM_PAGE);
+		const section = params.get("s");
+		if (page === "post" && section === "list") return "list";
+		if (page === "post" && section === "view") return "post";
+		if (page === "favorites" && section === "view") return "favorites";
+		return "other";
 	}
-	var log = {
-		debug(message, ...details) {
-			if (!isDebugEnabled()) return;
-			console.debug(`[ruledesk-web] ${message}`, ...details);
-		},
-		info(message, ...details) {
-			if (!isDebugEnabled()) return;
-			console.info(`[ruledesk-web] ${message}`, ...details);
-		},
-		warn(message, ...details) {
-			console.warn(`[ruledesk-web] ${message}`, ...details);
-		},
-		error(message, ...details) {
-			console.error(`[ruledesk-web] ${message}`, ...details);
-		}
-	};
-	function buildAddFavUrl(postId) {
-		const params = new URLSearchParams();
-		params.set("id", postId);
-		return `${SITE_ORIGIN}${ADDFAV_PATH}?${params.toString()}`;
-	}
-	function buildVoteUrl(postId) {
-		const params = new URLSearchParams();
-		params.set(VOTE_PARAM_PAGE, VOTE_PAGE);
-		params.set("s", VOTE_SECTION);
-		params.set("id", postId);
-		params.set(VOTE_PARAM_TYPE, "up");
-		return `${SITE_ORIGIN}${VOTE_PATH}?${params.toString()}`;
-	}
-	async function fetchText(url) {
-		const response = await fetch(url, {
-			method: "GET",
-			credentials: FETCH_CREDENTIALS
-		});
-		if (!response.ok) throw new Error(`HTTP ${String(response.status)}`);
-		return (await response.text()).trim();
-	}
-	function parseVoteScore(raw) {
-		if (raw.length === 0) return;
-		const score = Number(raw);
-		if (!Number.isFinite(score)) return;
-		return score;
-	}
-	async function addFavorite(postId) {
-		let addResponse;
-		try {
-			addResponse = await fetchText(buildAddFavUrl(postId));
-		} catch (error) {
-			log.warn("addfav request failed", postId, error);
-			return { status: "error" };
-		}
-		if (addResponse === "1") return { status: "already" };
-		if (addResponse === "2") return { status: "not_logged_in" };
-		if (addResponse !== "3") {
-			log.warn("Unexpected addfav response", postId, addResponse);
-			return { status: "error" };
-		}
-		try {
-			const score = parseVoteScore(await fetchText(buildVoteUrl(postId)));
-			if (score === void 0) return { status: "added" };
-			return {
-				status: "added",
-				score
-			};
-		} catch (error) {
-			log.warn("vote request failed after addfav", postId, error);
-			return { status: "added" };
-		}
+	function readPostIdFromSearch(search) {
+		const params = new URLSearchParams(search);
+		const page = params.get(SEARCH_PARAM_PAGE);
+		const section = params.get("s");
+		const id = params.get("id");
+		if (page !== "post" || section !== "view") return null;
+		if (id === null || id.trim().length === 0) return null;
+		if (!/^\d+$/.test(id)) return null;
+		return id;
 	}
 	var SITE_SELECTORS = {
 		thumb: "span.thumb",
 		thumbLink: "a[href*=\"s=view\"]",
 		previewImage: "img.preview",
-		cardFavButton: "button.rdw-card-fav"
+		thumbWrap: `span.${CSS_CLASS.thumbWrap}`,
+		cardFavButton: `button.${CSS_CLASS.cardFav}`,
+		nativeAddFavLink: "a[onclick*=\"addFav(\"]",
+		favoritesDeleteLink: "a[onclick]"
 	};
 	var THUMB_ID_PATTERN = /^s(\d+)$/;
+	var FAVORITES_DELETE_ID_PATTERN = /s=delete&id=(\d+)/;
 	function extractPostIdFromThumb(thumb) {
 		const match = THUMB_ID_PATTERN.exec(thumb.id);
+		if (match === null) return null;
+		const postId = match[1];
+		return postId === void 0 ? null : postId;
+	}
+	function extractPostIdFromFavoritesDeleteOnclick(onclick) {
+		const match = FAVORITES_DELETE_ID_PATTERN.exec(onclick);
 		if (match === null) return null;
 		const postId = match[1];
 		return postId === void 0 ? null : postId;
@@ -1596,6 +1563,29 @@
 			innerType
 		});
 	}
+	function isDebugEnabled() {
+		try {
+			return GM_getValue(DEBUG_KEY, void 0) === true;
+		} catch {
+			return false;
+		}
+	}
+	var log = {
+		debug(message, ...details) {
+			if (!isDebugEnabled()) return;
+			console.debug(`[ruledesk-web] ${message}`, ...details);
+		},
+		info(message, ...details) {
+			if (!isDebugEnabled()) return;
+			console.info(`[ruledesk-web] ${message}`, ...details);
+		},
+		warn(message, ...details) {
+			console.warn(`[ruledesk-web] ${message}`, ...details);
+		},
+		error(message, ...details) {
+			console.error(`[ruledesk-web] ${message}`, ...details);
+		}
+	};
 	var TagTypeSchema = _enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
 	var TagEntrySchema = object({
 		tag: string().check(_minLength(1)),
@@ -1614,15 +1604,20 @@
 		version: literal(1),
 		collections: array(CollectionSchema),
 		artists: array(ArtistEntrySchema),
-		marks: record(string(), object({ fav: optional(boolean()) }))
+		marks: record(string(), object({ fav: optional(boolean()) })),
+		settings: optional(object({ gridFavButtons: boolean() }))
 	});
 	function createDefaultStorage() {
 		return {
 			version: 1,
 			collections: [],
 			artists: [],
-			marks: {}
+			marks: {},
+			settings: { gridFavButtons: true }
 		};
+	}
+	function resolveGridFavButtons(data) {
+		return data.settings?.gridFavButtons ?? true;
 	}
 	function getGmGetValue() {
 		return GM_getValue;
@@ -1699,6 +1694,26 @@
 		};
 		save(data);
 	}
+	function setPostFavMarks(postIds, fav) {
+		if (postIds.length === 0) return;
+		const data = load();
+		for (const postId of postIds) {
+			const previous = data.marks[postId] ?? {};
+			data.marks[postId] = {
+				...previous,
+				fav
+			};
+		}
+		save(data);
+	}
+	function getGridFavButtonsEnabled() {
+		return resolveGridFavButtons(load());
+	}
+	function setGridFavButtonsEnabled(enabled) {
+		const data = load();
+		data.settings = { gridFavButtons: enabled };
+		save(data);
+	}
 	function exportJson() {
 		const data = load();
 		return `${JSON.stringify(data, null, 2)}\n`;
@@ -1714,6 +1729,11 @@
 		for (const item of current) byTag.set(item.tag, item);
 		for (const item of incoming) byTag.set(item.tag, item);
 		return Array.from(byTag.values());
+	}
+	function mergeSettings(current, incoming) {
+		if (incoming === void 0) return current;
+		if (current === void 0) return incoming;
+		return { gridFavButtons: incoming.gridFavButtons };
 	}
 	function importJson(raw) {
 		let json;
@@ -1734,10 +1754,191 @@
 			marks: {
 				...current.marks,
 				...incoming.marks
-			}
+			},
+			settings: mergeSettings(current.settings, incoming.settings)
 		};
+		if (merged.settings === void 0) merged.settings = { gridFavButtons: true };
 		save(merged);
 		return merged;
+	}
+	var removeClickBound = false;
+	function collectFavoritePostIds(root) {
+		const ids = [];
+		const seen = new Set();
+		const links = root.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
+		for (const link of links) {
+			if (!(link instanceof HTMLAnchorElement)) continue;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null || seen.has(postId)) continue;
+			seen.add(postId);
+			ids.push(postId);
+		}
+		return ids;
+	}
+	function bindRemoveClickCapture() {
+		if (removeClickBound) return;
+		removeClickBound = true;
+		document.addEventListener("click", (event) => {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const link = target.closest("a");
+			if (!(link instanceof HTMLAnchorElement)) return;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) return;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) return;
+			setPostFavMark(postId, false);
+		}, true);
+	}
+	function syncFavoritesPage(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "favorites") return;
+		setPostFavMarks(collectFavoritePostIds(root), true);
+		bindRemoveClickCapture();
+	}
+	function buildAddFavUrl(postId) {
+		const params = new URLSearchParams();
+		params.set("id", postId);
+		return `${SITE_ORIGIN}${ADDFAV_PATH}?${params.toString()}`;
+	}
+	function buildVoteUrl(postId) {
+		const params = new URLSearchParams();
+		params.set(VOTE_PARAM_PAGE, VOTE_PAGE);
+		params.set("s", VOTE_SECTION);
+		params.set("id", postId);
+		params.set(VOTE_PARAM_TYPE, "up");
+		return `${SITE_ORIGIN}${VOTE_PATH}?${params.toString()}`;
+	}
+	function buildRemoveFavUrl(postId) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_DELETE);
+		params.set("id", postId);
+		params.set(FAVORITES_PARAM_RETURN_PID, "0");
+		return `${SITE_ORIGIN}${SEARCH_PATH}?${params.toString()}`;
+	}
+	async function fetchText(url) {
+		const response = await fetch(url, {
+			method: "GET",
+			credentials: FETCH_CREDENTIALS
+		});
+		if (!response.ok) throw new Error(`HTTP ${String(response.status)}`);
+		return (await response.text()).trim();
+	}
+	function parseVoteScore(raw) {
+		if (raw.length === 0) return;
+		const score = Number(raw);
+		if (!Number.isFinite(score)) return;
+		return score;
+	}
+	async function addFavorite(postId) {
+		let addResponse;
+		try {
+			addResponse = await fetchText(buildAddFavUrl(postId));
+		} catch (error) {
+			log.warn("addfav request failed", postId, error);
+			return { status: "error" };
+		}
+		if (addResponse === "1") return { status: "already" };
+		if (addResponse === "2") return { status: "not_logged_in" };
+		if (addResponse !== "3") {
+			log.warn("Unexpected addfav response", postId, addResponse);
+			return { status: "error" };
+		}
+		try {
+			const score = parseVoteScore(await fetchText(buildVoteUrl(postId)));
+			if (score === void 0) return { status: "added" };
+			return {
+				status: "added",
+				score
+			};
+		} catch (error) {
+			log.warn("vote request failed after addfav", postId, error);
+			return { status: "added" };
+		}
+	}
+	async function removeFavorite(postId) {
+		try {
+			const response = await fetch(buildRemoveFavUrl(postId), {
+				method: "GET",
+				credentials: FETCH_CREDENTIALS
+			});
+			if (!response.ok) {
+				log.warn("remove favorite HTTP error", postId, response.status);
+				return { status: "error" };
+			}
+			return { status: "removed" };
+		} catch (error) {
+			log.warn("remove favorite request failed", postId, error);
+			return { status: "error" };
+		}
+	}
+	function favAriaLabel(postId, marked) {
+		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
+	}
+	function applyFavButtonState(button, state, postId, errorTitle) {
+		if (state === "pending") {
+			button.disabled = true;
+			button.classList.add(CSS_CLASS.cardFavPending);
+			return;
+		}
+		button.classList.remove(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError, CSS_CLASS.cardFavPending);
+		button.disabled = false;
+		const marked = state === "marked";
+		button.setAttribute("aria-pressed", marked ? "true" : "false");
+		button.setAttribute("aria-label", favAriaLabel(postId, marked));
+		button.removeAttribute("title");
+		if (state === "marked") {
+			button.classList.add(CSS_CLASS.cardFavMarked);
+			return;
+		}
+		if (state === "error") {
+			button.classList.add(CSS_CLASS.cardFavError);
+			button.title = errorTitle ?? UI_TEXT.cardFavErrorRequest;
+		}
+	}
+	function createFavButton(postId, marked, className = CSS_CLASS.cardFav) {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = className;
+		button.textContent = UI_TEXT.cardFavGlyph;
+		applyFavButtonState(button, marked ? "marked" : "idle", postId);
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			handleFavToggleClick(button, postId);
+		});
+		return button;
+	}
+	async function handleFavToggleClick(button, postId) {
+		if (button.disabled) return;
+		const currentlyMarked = button.getAttribute("aria-pressed") === "true";
+		applyFavButtonState(button, "pending", postId);
+		if (currentlyMarked) {
+			const result = await removeFavorite(postId);
+			if (result.status === "removed") {
+				setPostFavMark(postId, false);
+				applyFavButtonState(button, "idle", postId);
+				return;
+			}
+			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
+			log.warn("Remove favorite failed", postId, result);
+			return;
+		}
+		const result = await addFavorite(postId);
+		if (result.status === "added" || result.status === "already") {
+			setPostFavMark(postId, true);
+			applyFavButtonState(button, "marked", postId);
+			return;
+		}
+		if (result.status === "not_logged_in") {
+			applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorNotLoggedIn);
+			log.warn("Favorite requires login", postId);
+			return;
+		}
+		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
+		log.warn("Favorite failed", postId, result);
 	}
 	var PANEL_CSS = `
 :host {
@@ -1885,7 +2086,8 @@
 .${CSS_CLASS.secondaryButton}:focus-visible,
 .${CSS_CLASS.dangerButton}:focus-visible,
 .${CSS_CLASS.close}:focus-visible,
-.${CSS_CLASS.input}:focus-visible {
+.${CSS_CLASS.input}:focus-visible,
+.${CSS_CLASS.checkbox}:focus-visible {
   outline: 2px solid #4c8bf5;
   outline-offset: 2px;
 }
@@ -1897,6 +2099,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.${CSS_CLASS.checkboxRow} {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.${CSS_CLASS.checkbox} {
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 .${CSS_CLASS.iconButton},
@@ -1975,7 +2189,8 @@
 }
 `;
 	var CARD_CSS = `
-.${CSS_CLASS.thumb} {
+.${CSS_CLASS.thumbWrap} {
+  display: inline-block;
   position: relative;
 }
 
@@ -1992,11 +2207,24 @@
   padding: 0;
   border: 1px solid #333;
   border-radius: 4px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
   color: #333;
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
+  opacity: 0;
+}
+
+.${CSS_CLASS.thumbWrap}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.cardFav}:focus-visible {
+  opacity: 0.65;
+}
+
+.${CSS_CLASS.thumbWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
+  opacity: 1;
 }
 
 .${CSS_CLASS.cardFav}:focus-visible {
@@ -2018,14 +2246,49 @@
 
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
+  cursor: wait;
+}
+
+body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
+  display: none !important;
+}
+
+.${CSS_CLASS.postFavButton} {
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font: inherit;
+}
+
+.${CSS_CLASS.postFavButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavMarked} {
+  background: #ffe08a;
+  border-color: #a67c00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavError} {
+  background: #f8d7da;
+  border-color: #a12828;
+  color: #a12828;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavPending},
+.${CSS_CLASS.postFavButton}:disabled {
   opacity: 0.55;
   cursor: wait;
 }
 `;
-	function isPostListPage(search) {
-		const params = new URLSearchParams(search);
-		return params.get("page") === "post" && params.get("s") === "list";
-	}
 	function ensureDocumentStyles() {
 		if (document.getElementById("ruledesk-web-document-style") !== null) return;
 		const style = document.createElement("style");
@@ -2033,60 +2296,43 @@
 		style.textContent = CARD_CSS;
 		document.head.append(style);
 	}
-	function applyButtonState(button, state, errorTitle) {
-		button.classList.remove(CSS_CLASS.cardFavMarked, CSS_CLASS.cardFavError, CSS_CLASS.cardFavPending);
-		button.disabled = state === "pending";
-		button.setAttribute("aria-pressed", state === "marked" ? "true" : "false");
-		button.removeAttribute("title");
-		if (state === "pending") {
-			button.classList.add(CSS_CLASS.cardFavPending);
-			return;
-		}
-		if (state === "marked") {
-			button.classList.add(CSS_CLASS.cardFavMarked);
-			return;
-		}
-		if (state === "error") {
-			button.classList.add(CSS_CLASS.cardFavError);
-			button.title = errorTitle ?? UI_TEXT.cardFavErrorTitle;
-		}
+	function findThumbLink(thumb, postId) {
+		const byId = thumb.querySelector(`#p${postId}`);
+		if (byId instanceof HTMLAnchorElement) return byId;
+		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
+		return byHref instanceof HTMLAnchorElement ? byHref : null;
+	}
+	function ensureThumbWrap(thumb, link) {
+		const parent = link.parentElement;
+		if (parent instanceof HTMLElement && parent.classList.contains(CSS_CLASS.thumbWrap)) return parent;
+		const wrap = document.createElement("span");
+		wrap.className = CSS_CLASS.thumbWrap;
+		link.replaceWith(wrap);
+		wrap.append(link);
+		return wrap;
 	}
 	function attachFavButton(thumb, postId, marked) {
 		if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
-		thumb.classList.add(CSS_CLASS.thumb);
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = CSS_CLASS.cardFav;
-		button.textContent = UI_TEXT.cardFavGlyph;
-		button.setAttribute("aria-label", `${UI_TEXT.cardFavLabel} ${postId}`);
-		applyButtonState(button, marked ? "marked" : "idle");
-		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			handleFavClick(button, postId);
-		});
-		thumb.append(button);
+		const link = findThumbLink(thumb, postId);
+		if (link === null) return;
+		const wrap = ensureThumbWrap(thumb, link);
+		if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
+		const button = createFavButton(postId, marked);
+		wrap.append(button);
 	}
-	async function handleFavClick(button, postId) {
-		if (button.disabled || button.getAttribute("aria-pressed") === "true") return;
-		applyButtonState(button, "pending");
-		const result = await addFavorite(postId);
-		if (result.status === "added" || result.status === "already") {
-			setPostFavMark(postId, true);
-			applyButtonState(button, "marked");
-			return;
-		}
-		if (result.status === "not_logged_in") {
-			applyButtonState(button, "error", UI_TEXT.cardFavErrorTitle);
-			log.warn("Favorite requires login", postId);
-			return;
-		}
-		applyButtonState(button, "error", UI_TEXT.cardFavErrorTitle);
-		log.warn("Favorite failed", postId, result);
+	function applyGridFavVisibilityClass(visible) {
+		document.body.classList.toggle(CSS_CLASS.gridFavsHidden, !visible);
+	}
+	function setGridFavButtonsVisible(visible) {
+		applyGridFavVisibilityClass(visible);
+		if (visible && detectPageKind(window.location.search) === "list") mountCards();
 	}
 	function mountCards(root = document, search = window.location.search) {
-		if (!isPostListPage(search)) return;
+		if (detectPageKind(search) !== "list") return;
 		ensureDocumentStyles();
+		const enabled = getGridFavButtonsEnabled();
+		applyGridFavVisibilityClass(enabled);
+		if (!enabled) return;
 		const marks = load().marks;
 		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
 		for (const thumb of thumbs) {
@@ -2369,6 +2615,32 @@
 		collectionsSection.append(list);
 		return collectionsSection;
 	}
+	function buildSettingsSection() {
+		const section = document.createElement("section");
+		section.className = CSS_CLASS.section;
+		const title = document.createElement("h3");
+		title.className = CSS_CLASS.sectionTitle;
+		title.textContent = UI_TEXT.settingsHeading;
+		const row = document.createElement("div");
+		row.className = CSS_CLASS.checkboxRow;
+		const checkbox = document.createElement("input");
+		checkbox.type = "checkbox";
+		checkbox.id = "rdw-grid-fav-buttons";
+		checkbox.className = CSS_CLASS.checkbox;
+		checkbox.checked = getGridFavButtonsEnabled();
+		checkbox.addEventListener("change", () => {
+			const enabled = checkbox.checked;
+			setGridFavButtonsEnabled(enabled);
+			setGridFavButtonsVisible(enabled);
+		});
+		const label = document.createElement("label");
+		label.className = CSS_CLASS.label;
+		label.htmlFor = checkbox.id;
+		label.textContent = UI_TEXT.gridFavButtonsLabel;
+		row.append(checkbox, label);
+		section.append(title, row);
+		return section;
+	}
 	function buildToolbar(controller) {
 		const toolbar = document.createElement("div");
 		toolbar.className = CSS_CLASS.toolbar;
@@ -2488,14 +2760,15 @@
 			const body = document.createElement("div");
 			body.className = CSS_CLASS.body;
 			const saveSection = buildSaveSection(controller);
+			const settingsSection = buildSettingsSection();
 			const collectionsSection = buildCollectionsSection(collections, controller);
 			const toolbar = buildToolbar(controller);
 			if (controller.getImportError().length > 0) {
 				const error = document.createElement("p");
 				error.className = CSS_CLASS.error;
 				error.textContent = `${UI_TEXT.importErrorPrefix} ${controller.getImportError()}`;
-				body.append(saveSection, collectionsSection, toolbar, error);
-			} else body.append(saveSection, collectionsSection, toolbar);
+				body.append(saveSection, settingsSection, collectionsSection, toolbar, error);
+			} else body.append(saveSection, settingsSection, collectionsSection, toolbar);
 			panel.append(buildHeader(controller), body);
 		}
 		function render() {
@@ -2534,6 +2807,32 @@
 			reader.readAsText(file);
 		});
 	}
+	function mountPostPageToggle(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "post") return;
+		const postId = readPostIdFromSearch(search);
+		if (postId === null) return;
+		if (root.querySelector(`#ruledesk-web-post-fav`) !== null) return;
+		const nativeLink = root.querySelector(SITE_SELECTORS.nativeAddFavLink);
+		if (!(nativeLink instanceof HTMLAnchorElement)) {
+			log.warn(UI_TEXT.postFavMissingNative);
+			return;
+		}
+		const nativeItem = nativeLink.closest("li");
+		if (!(nativeItem instanceof HTMLLIElement)) {
+			log.warn(UI_TEXT.postFavMissingNative);
+			return;
+		}
+		ensureDocumentStyles();
+		const button = createFavButton(postId, load().marks[postId]?.fav === true, CSS_CLASS.postFavButton);
+		button.id = POST_FAV_BUTTON_ID;
+		const item = document.createElement("li");
+		item.className = CSS_CLASS.postFavItem;
+		item.append(button);
+		nativeItem.after(item);
+	}
 	mountPanel();
-	mountCards();
+	var pageKind = detectPageKind(window.location.search);
+	if (pageKind === "list") mountCards();
+	else if (pageKind === "post") mountPostPageToggle();
+	else if (pageKind === "favorites") syncFavoritesPage();
 })();

@@ -1,6 +1,6 @@
 {
   "name": "ruledesk-web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Userscript for rule34.xxx: collections and list-card favorites",

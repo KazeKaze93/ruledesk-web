@@ -12,8 +12,8 @@ export default defineConfig({
         name: "RuleDesk Web",
         namespace: "https://github.com/kazekaze93/ruledesk-web",
         description:
-          "Collections and list-card favorites for rule34.xxx (local marks + same-origin fav)",
-        version: "0.2.0",
+          "Collections and favorites UX for rule34.xxx (local marks + same-origin fav)",
+        version: "0.3.0",
         match: ["https://rule34.xxx/*"],
         "run-at": "document-idle",
         grant: ["GM_getValue", "GM_setValue"],
