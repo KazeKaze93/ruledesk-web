@@ -1,4 +1,6 @@
+import { TAG_TYPE_INCLUDE } from "../config/constants";
 import { log } from "../log";
+import { normalizeArtistTag, readTagsFromLocation } from "../search/query";
 import {
   isFollowingArtist,
   load,
@@ -23,15 +25,18 @@ const SEEN_DIM_FEATURE_ID = "seen-dim";
 const FOLLOWED_BADGE_CLASS = "rdw-followed-badge";
 const SEEN_CLASS = "rdw-seen";
 
-const FOLLOWED_BADGE_TEXT = "Following";
 const FOLLOWED_BADGE_LABEL = "Following badge";
+const FOLLOWED_BADGE_TITLE_PREFIX = "Following: ";
 const SEEN_DIM_LABEL = "Dim seen posts";
 
 const BADGE_OFFSET_PX = "4px";
+const BADGE_SIZE_PX = "10px";
+const BADGE_MAX_WIDTH_PX = "20px";
 const SEEN_DIM_OPACITY = "0.4";
 const SEEN_DIM_HOVER_OPACITY = "1";
 
 const ALT_TAG_SEPARATOR = " ";
+const BADGE_TAG_JOIN = ", ";
 
 function findThumbLink(thumb: HTMLElement, postId: string | null): HTMLAnchorElement | null {
   if (postId !== null) {
@@ -44,32 +49,76 @@ function findThumbLink(thumb: HTMLElement, postId: string | null): HTMLAnchorEle
   return byHref instanceof HTMLAnchorElement ? byHref : null;
 }
 
-function thumbHasFollowedArtist(thumb: HTMLElement): boolean {
+function collectIncludeTags(search: string): Set<string> {
+  const entries = readTagsFromLocation(search);
+  const includes = new Set<string>();
+  if (entries === null) {
+    return includes;
+  }
+  for (const entry of entries) {
+    if (entry.type !== TAG_TYPE_INCLUDE) {
+      continue;
+    }
+    const normalized = normalizeArtistTag(entry.tag);
+    if (normalized !== null) {
+      includes.add(normalized);
+    }
+  }
+  return includes;
+}
+
+function followedBadgeCaption(tags: readonly string[]): string {
+  return `${FOLLOWED_BADGE_TITLE_PREFIX}${tags.join(BADGE_TAG_JOIN)}`;
+}
+
+function findBadgeArtistTags(
+  thumb: HTMLElement,
+  includeTags: Set<string>,
+): string[] {
   const preview = thumb.querySelector(SITE_SELECTORS.previewImage);
   if (!(preview instanceof HTMLImageElement)) {
     log.warn("followed-badge: missing img.preview on thumb", thumb.id);
-    return false;
+    return [];
   }
   const alt = preview.alt.trim();
   if (alt.length === 0) {
-    return false;
+    return [];
   }
-  for (const tag of alt.split(ALT_TAG_SEPARATOR)) {
-    if (tag.length === 0) {
+  const matched: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of alt.split(ALT_TAG_SEPARATOR)) {
+    if (raw.length === 0) {
       continue;
     }
-    if (isFollowingArtist(tag)) {
-      return true;
+    if (!isFollowingArtist(raw)) {
+      continue;
     }
+    const normalized = normalizeArtistTag(raw);
+    if (normalized === null) {
+      continue;
+    }
+    if (includeTags.has(normalized)) {
+      continue;
+    }
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    matched.push(normalized);
   }
-  return false;
+  return matched;
 }
 
-function ensureFollowedBadge(thumb: HTMLElement): void {
+function ensureFollowedBadge(
+  thumb: HTMLElement,
+  includeTags: Set<string>,
+): void {
   if (thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`) !== null) {
     return;
   }
-  if (!thumbHasFollowedArtist(thumb)) {
+
+  const artistTags = findBadgeArtistTags(thumb, includeTags);
+  if (artistTags.length === 0) {
     return;
   }
 
@@ -82,20 +131,22 @@ function ensureFollowedBadge(thumb: HTMLElement): void {
 
   ensureThumbAnchor(thumb);
 
+  const caption = followedBadgeCaption(artistTags);
   const badge = document.createElement("span");
   badge.className = FOLLOWED_BADGE_CLASS;
-  badge.textContent = FOLLOWED_BADGE_TEXT;
-  badge.setAttribute("aria-hidden", "true");
+  badge.title = caption;
+  badge.setAttribute("aria-label", caption);
   link.after(badge);
 }
 
-function mountFollowedBadge(_ctx: FeatureContext): void {
+function mountFollowedBadge(ctx: FeatureContext): void {
+  const includeTags = collectIncludeTags(ctx.search);
   const thumbs = document.querySelectorAll(SITE_SELECTORS.thumb);
   for (const thumb of thumbs) {
     if (!(thumb instanceof HTMLElement)) {
       continue;
     }
-    ensureFollowedBadge(thumb);
+    ensureFollowedBadge(thumb, includeTags);
   }
 }
 
@@ -142,14 +193,16 @@ body.${featureBodyClass(FOLLOWED_BADGE_FEATURE_ID)} .${FOLLOWED_BADGE_CLASS} {
   left: ${BADGE_OFFSET_PX};
   z-index: 5;
   box-sizing: border-box;
-  padding: 2px 6px;
+  display: block;
+  width: ${BADGE_SIZE_PX};
+  height: ${BADGE_SIZE_PX};
+  max-width: ${BADGE_MAX_WIDTH_PX};
+  padding: 0;
   border: 1px solid #333;
-  border-radius: 3px;
+  border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
-  color: #333;
-  font-size: 11px;
-  line-height: 1.2;
   pointer-events: none;
+  overflow: hidden;
 }
 
 @supports (anchor-name: --a) {

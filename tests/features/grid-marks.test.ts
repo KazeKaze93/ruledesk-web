@@ -67,6 +67,14 @@ function buildThumb(postId: string, alt: string): HTMLSpanElement {
   return thumb;
 }
 
+function listSearchWithTags(tags: string): string {
+  const params = new URLSearchParams();
+  params.set("page", "post");
+  params.set("s", "list");
+  params.set("tags", tags);
+  return `?${params.toString()}`;
+}
+
 describe("followedBadgeFeature", () => {
   beforeEach(() => {
     installGmMocks();
@@ -79,7 +87,7 @@ describe("followedBadgeFeature", () => {
     vi.restoreAllMocks();
   });
 
-  it("appends a Following badge when a followed artist is in alt", () => {
+  it("appends a compact Following marker when a followed artist is in alt and not in search", () => {
     addArtist("artist_a");
     const thumb = buildThumb("111", "tag_x artist_a tag_y");
     document.body.append(thumb);
@@ -89,11 +97,56 @@ describe("followedBadgeFeature", () => {
     const badge = thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`);
     const link = thumb.querySelector("#p111");
     expect(badge).toBeInstanceOf(HTMLSpanElement);
-    expect(badge?.textContent).toBe("Following");
-    expect(badge?.getAttribute("aria-hidden")).toBe("true");
+    expect(badge?.textContent).toBe("");
+    expect(badge?.getAttribute("aria-label")).toBe("Following: artist_a");
+    expect(badge?.getAttribute("title")).toBe("Following: artist_a");
+    expect(badge?.getAttribute("aria-hidden")).toBeNull();
     expect(link?.nextElementSibling).toBe(badge);
     expect(link?.querySelector(`.${FOLLOWED_BADGE_CLASS}`)).toBeNull();
     expect(thumb.classList.contains(THUMB_CLASS)).toBe(true);
+  });
+
+  it("does not badge when the followed artist is already an include token", () => {
+    addArtist("artist_a");
+    const thumb = buildThumb("111", "tag_x artist_a tag_y");
+    document.body.append(thumb);
+
+    followedBadgeFeature.mount(
+      makeCtx("list", listSearchWithTags("artist_a score:>10")),
+    );
+
+    expect(thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`)).toBeNull();
+  });
+
+  it("does not badge when the followed artist is inside an updates OR-group", () => {
+    addArtist("artist_a");
+    addArtist("artist_b");
+    const thumb = buildThumb("111", "artist_a tag_x");
+    document.body.append(thumb);
+
+    followedBadgeFeature.mount(
+      makeCtx(
+        "list",
+        listSearchWithTags("( artist_a ~ artist_b ) id:>100"),
+      ),
+    );
+
+    expect(thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`)).toBeNull();
+  });
+
+  it("still badges a different followed artist not present in search includes", () => {
+    addArtist("artist_a");
+    addArtist("artist_c");
+    const thumb = buildThumb("111", "artist_c tag_x");
+    document.body.append(thumb);
+
+    followedBadgeFeature.mount(
+      makeCtx("list", listSearchWithTags("artist_a")),
+    );
+
+    const badge = thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`);
+    expect(badge).toBeInstanceOf(HTMLSpanElement);
+    expect(badge?.getAttribute("aria-label")).toBe("Following: artist_c");
   });
 
   it("does not duplicate the badge on remount", () => {
@@ -118,10 +171,13 @@ describe("followedBadgeFeature", () => {
     expect(thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`)).toBeNull();
   });
 
-  it("scopes CSS under body.rdw-f-followed-badge and anchors top-left", () => {
+  it("scopes CSS under body.rdw-f-followed-badge with compact max-width and anchors top-left", () => {
     const bodyClass = featureBodyClass(followedBadgeFeature.id);
     expect(followedBadgeFeature.css).toContain(`body.${bodyClass}`);
     expect(followedBadgeFeature.css).toContain(FOLLOWED_BADGE_CLASS);
+    expect(followedBadgeFeature.css).toContain("max-width: 20px");
+    expect(followedBadgeFeature.css).toContain("border-radius: 50%");
+    expect(followedBadgeFeature.css).toContain("pointer-events: none");
     expect(followedBadgeFeature.css).toContain("@supports (anchor-name: --a)");
     expect(followedBadgeFeature.css).toContain("position-anchor:");
     expect(followedBadgeFeature.css).toContain("anchor(top)");
