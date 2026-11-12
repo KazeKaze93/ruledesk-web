@@ -8,7 +8,7 @@ import {
 } from "./types";
 
 const FEATURE_ID = "tag-groups";
-const FEATURE_LABEL = "Collapsible tag groups";
+const FEATURE_LABEL = "Collapse General and Meta tags";
 const TAG_SIDEBAR_SELECTOR = "ul#tag-sidebar";
 const TOGGLE_CLASS = "rdw-tag-group-toggle";
 const COLLAPSED_CLASS = "rdw-tag-group-collapsed";

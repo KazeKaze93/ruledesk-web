@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PANEL_ROOT_ID, SEARCH_PARAM_PID } from "../../src/config/constants";
 import { pagerFeature } from "../../src/features/pager";
 import {
-  TOPBAR_SLOT_PAGER_ID,
   featureBodyClass,
   type FeatureContext,
 } from "../../src/features/types";
@@ -60,13 +59,6 @@ function buildImageList(): HTMLDivElement {
   list.className = "image-list";
   document.body.append(list);
   return list;
-}
-
-function buildSlot(): HTMLDivElement {
-  const slot = document.createElement("div");
-  slot.id = TOPBAR_SLOT_PAGER_ID;
-  document.body.append(slot);
-  return slot;
 }
 
 function pagerRoot(): HTMLElement | null {
@@ -160,24 +152,14 @@ describe("pagerFeature", () => {
     expect(next?.getAttribute("href")).toContain(`${SEARCH_PARAM_PID}=84`);
   });
 
-  it("inserts into topbar pager slot when present", () => {
-    const slot = buildSlot();
-    buildImageList();
-    buildPagination(42);
-    pagerFeature.mount(makeCtx("?page=post&s=list&tags=T"));
-    const root = pagerRoot();
-    expect(root).not.toBeNull();
-    expect(slot.contains(root)).toBe(true);
-    expect(root?.previousElementSibling).toBeNull();
-  });
-
-  it("inserts before image-list when slot is missing", () => {
+  it("always inserts before image-list", () => {
     const list = buildImageList();
     buildPagination(42);
     pagerFeature.mount(makeCtx("?page=post&s=list&tags=T"));
     const root = pagerRoot();
     expect(root).not.toBeNull();
     expect(root?.nextElementSibling).toBe(list);
+    expect(list.previousElementSibling).toBe(root);
   });
 
   it("navigates with ArrowLeft/ArrowRight via location.assign", () => {

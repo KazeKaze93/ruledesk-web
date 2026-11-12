@@ -1,7 +1,6 @@
 import { PANEL_ROOT_ID, SEARCH_PARAM_PID } from "../config/constants";
 import { log } from "../log";
 import {
-  TOPBAR_SLOT_PAGER_ID,
   featureBodyClass,
   type Feature,
   type FeatureContext,
@@ -27,8 +26,7 @@ const TEXT_SEP = "|";
 const LABEL_PREV = "Previous page";
 const LABEL_NEXT = "Next page";
 
-const WARN_NO_HOST =
-  "pager: topbar slot and image-list missing; pager not mounted";
+const WARN_NO_HOST = "pager: image-list missing; pager not mounted";
 
 const BODY_CLASS = featureBodyClass(PAGER_ID);
 
@@ -180,16 +178,12 @@ function buildPagerRoot(
   return root;
 }
 
-function findHost(): { host: Element; mode: "slot" | "before-list" } | null {
-  const slot = document.getElementById(TOPBAR_SLOT_PAGER_ID);
-  if (slot !== null) {
-    return { host: slot, mode: "slot" };
-  }
+function findImageList(): Element | null {
   const imageList = document.querySelector(SELECTOR_IMAGE_LIST);
-  if (imageList !== null && imageList.parentNode !== null) {
-    return { host: imageList, mode: "before-list" };
+  if (imageList === null || imageList.parentNode === null) {
+    return null;
   }
-  return null;
+  return imageList;
 }
 
 function removeExistingPager(): void {
@@ -249,8 +243,8 @@ function mountPager(ctx: FeatureContext): void {
   const nextHref =
     hasNext && nextPid !== null ? hrefForPid(ctx.search, nextPid) : null;
 
-  const hostInfo = findHost();
-  if (hostInfo === null) {
+  const imageList = findImageList();
+  if (imageList === null) {
     detachKeyboardNav();
     log.warn(WARN_NO_HOST);
     return;
@@ -258,12 +252,7 @@ function mountPager(ctx: FeatureContext): void {
 
   removeExistingPager();
   const root = buildPagerRoot(pageNumber, prevHref, nextHref);
-
-  if (hostInfo.mode === "slot") {
-    hostInfo.host.replaceChildren(root);
-  } else {
-    hostInfo.host.parentNode?.insertBefore(root, hostInfo.host);
-  }
+  imageList.parentNode?.insertBefore(root, imageList);
 
   attachKeyboardNav(prevHref, nextHref);
 }

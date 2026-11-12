@@ -133,7 +133,7 @@ describe("tagGroupsFeature", () => {
 
   it("exports feature contract fields", () => {
     expect(tagGroupsFeature.id).toBe("tag-groups");
-    expect(tagGroupsFeature.label).toBe("Collapsible tag groups");
+    expect(tagGroupsFeature.label).toBe("Collapse General and Meta tags");
     expect(tagGroupsFeature.pages).toEqual(["list", "post"]);
     expect(tagGroupsFeature.defaultEnabled).toBe(true);
   });

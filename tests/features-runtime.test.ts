@@ -26,6 +26,7 @@ import {
 } from "../src/storage/store";
 
 const memory = new Map<string, unknown>();
+const ORIGINAL_FEATURES = [...FEATURES];
 
 function installGmMocks(): void {
   memory.clear();
@@ -46,6 +47,11 @@ function installGmMocks(): void {
 
 function clearFeatures(): void {
   FEATURES.length = 0;
+}
+
+function restoreFeatures(): void {
+  FEATURES.length = 0;
+  FEATURES.push(...ORIGINAL_FEATURES);
 }
 
 function makeFeature(
@@ -81,7 +87,7 @@ describe("features runtime", () => {
   });
 
   afterEach(() => {
-    clearFeatures();
+    restoreFeatures();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -261,7 +267,7 @@ describe("features runtime", () => {
   it("respects stored feature enabled flags and choice helpers", () => {
     FEATURES.push(
       makeFeature({
-        id: "dark-theme",
+        id: "sample-feature",
         pages: ["list"],
         defaultEnabled: false,
         choice: {
@@ -274,13 +280,33 @@ describe("features runtime", () => {
       }),
     );
 
-    expect(isFeatureEnabled("dark-theme")).toBe(false);
-    expect(getFeatureChoice("dark-theme")).toBe("a");
+    expect(isFeatureEnabled("sample-feature")).toBe(false);
+    expect(getFeatureChoice("sample-feature")).toBe("a");
 
-    setFeatureEnabled("dark-theme", true);
-    setFeatureChoiceValue("dark-theme", "b");
-    expect(isFeatureEnabled("dark-theme")).toBe(true);
-    expect(getFeatureChoice("dark-theme")).toBe("b");
+    setFeatureEnabled("sample-feature", true);
+    setFeatureChoiceValue("sample-feature", "b");
+    expect(isFeatureEnabled("sample-feature")).toBe(true);
+    expect(getFeatureChoice("sample-feature")).toBe("b");
+  });
+
+  it("ignores stale top-bar and dark-theme settings keys after registry removal", () => {
+    const data = createDefaultStorage();
+    data.settings = {
+      gridFavButtons: true,
+      tweaksEnabled: true,
+      updatesGroupSize: 0,
+      features: {
+        "top-bar": true,
+        "dark-theme": false,
+        pager: true,
+      },
+    };
+    save(data);
+
+    expect(load().settings?.features?.["top-bar"]).toBe(true);
+    expect(load().settings?.features?.["dark-theme"]).toBe(false);
+    expect(isFeatureEnabled("top-bar")).toBe(false);
+    expect(isFeatureEnabled("dark-theme")).toBe(false);
   });
 
   it("setPostSeenMark writes seen without clearing fav", () => {

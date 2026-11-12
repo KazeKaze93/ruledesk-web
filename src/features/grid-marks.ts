@@ -30,13 +30,14 @@ const FOLLOWED_BADGE_TITLE_PREFIX = "Following: ";
 const SEEN_DIM_LABEL = "Dim seen posts";
 
 const BADGE_OFFSET_PX = "4px";
-const BADGE_SIZE_PX = "10px";
-const BADGE_MAX_WIDTH_PX = "20px";
+const BADGE_SIZE_PX = "18px";
+const BADGE_FONT_SIZE_PX = "12px";
 const SEEN_DIM_OPACITY = "0.4";
 const SEEN_DIM_HOVER_OPACITY = "1";
 
 const ALT_TAG_SEPARATOR = " ";
 const BADGE_TAG_JOIN = ", ";
+const BADGE_CHECKMARK = "✓";
 
 function findThumbLink(thumb: HTMLElement, postId: string | null): HTMLAnchorElement | null {
   if (postId !== null) {
@@ -134,6 +135,7 @@ function ensureFollowedBadge(
   const caption = followedBadgeCaption(artistTags);
   const badge = document.createElement("span");
   badge.className = FOLLOWED_BADGE_CLASS;
+  badge.textContent = BADGE_CHECKMARK;
   badge.title = caption;
   badge.setAttribute("aria-label", caption);
   link.after(badge);
@@ -193,14 +195,18 @@ body.${featureBodyClass(FOLLOWED_BADGE_FEATURE_ID)} .${FOLLOWED_BADGE_CLASS} {
   left: ${BADGE_OFFSET_PX};
   z-index: 5;
   box-sizing: border-box;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: ${BADGE_SIZE_PX};
   height: ${BADGE_SIZE_PX};
-  max-width: ${BADGE_MAX_WIDTH_PX};
   padding: 0;
   border: 1px solid #333;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: ${BADGE_FONT_SIZE_PX};
+  line-height: 1;
   pointer-events: none;
   overflow: hidden;
 }

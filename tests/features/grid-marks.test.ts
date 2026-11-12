@@ -87,7 +87,7 @@ describe("followedBadgeFeature", () => {
     vi.restoreAllMocks();
   });
 
-  it("appends a compact Following marker when a followed artist is in alt and not in search", () => {
+  it("appends a checkmark Following badge when a followed artist is in alt and not in search", () => {
     addArtist("artist_a");
     const thumb = buildThumb("111", "tag_x artist_a tag_y");
     document.body.append(thumb);
@@ -97,7 +97,7 @@ describe("followedBadgeFeature", () => {
     const badge = thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`);
     const link = thumb.querySelector("#p111");
     expect(badge).toBeInstanceOf(HTMLSpanElement);
-    expect(badge?.textContent).toBe("");
+    expect(badge?.textContent).toBe("✓");
     expect(badge?.getAttribute("aria-label")).toBe("Following: artist_a");
     expect(badge?.getAttribute("title")).toBe("Following: artist_a");
     expect(badge?.getAttribute("aria-hidden")).toBeNull();
@@ -171,17 +171,36 @@ describe("followedBadgeFeature", () => {
     expect(thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`)).toBeNull();
   });
 
-  it("scopes CSS under body.rdw-f-followed-badge with compact max-width and anchors top-left", () => {
+  it("scopes CSS under body.rdw-f-followed-badge with 18px circle and anchors top-left", () => {
     const bodyClass = featureBodyClass(followedBadgeFeature.id);
     expect(followedBadgeFeature.css).toContain(`body.${bodyClass}`);
     expect(followedBadgeFeature.css).toContain(FOLLOWED_BADGE_CLASS);
-    expect(followedBadgeFeature.css).toContain("max-width: 20px");
+    expect(followedBadgeFeature.css).toContain("width: 18px");
+    expect(followedBadgeFeature.css).toContain("height: 18px");
     expect(followedBadgeFeature.css).toContain("border-radius: 50%");
     expect(followedBadgeFeature.css).toContain("pointer-events: none");
     expect(followedBadgeFeature.css).toContain("@supports (anchor-name: --a)");
     expect(followedBadgeFeature.css).toContain("position-anchor:");
     expect(followedBadgeFeature.css).toContain("anchor(top)");
     expect(followedBadgeFeature.css).toContain("anchor(left)");
+  });
+
+  it("joins multiple followed artists in title and aria-label", () => {
+    addArtist("artist_a");
+    addArtist("artist_b");
+    const thumb = buildThumb("111", "artist_a tag_x artist_b");
+    document.body.append(thumb);
+
+    followedBadgeFeature.mount(makeCtx("list", "?page=post&s=list"));
+
+    const badge = thumb.querySelector(`.${FOLLOWED_BADGE_CLASS}`);
+    expect(badge?.textContent).toBe("✓");
+    expect(badge?.getAttribute("aria-label")).toBe(
+      "Following: artist_a, artist_b",
+    );
+    expect(badge?.getAttribute("title")).toBe(
+      "Following: artist_a, artist_b",
+    );
   });
 
   it("does not throw on empty DOM", () => {

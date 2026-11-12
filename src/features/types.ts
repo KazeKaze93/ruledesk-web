@@ -1,9 +1,5 @@
 import type { PageKind } from "../site/pages";
 
-export const TOPBAR_ID = "rdw-topbar";
-export const TOPBAR_SLOT_LEFT_ID = "rdw-topbar-slot-left";
-export const TOPBAR_SLOT_PAGER_ID = "rdw-topbar-slot-pager";
-
 export const THUMB_CLASS = "rdw-thumb";
 export const THUMB_ANCHOR_NAME = "--rdw-img";
 
