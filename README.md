@@ -21,9 +21,8 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 ## Stage 2 — favorites
 
-- On the post list grid, a star sits on the image corner (hover / focus to reveal; marked stars stay visible)
+- On the post list grid, a star sits on the preview image corner (hover / focus to reveal; marked stars stay visible)
 - Click toggles favorite: same-origin `addfav` (+ vote on new add) or favorites delete
-- Post page: toggle in a new `<li>` after the native Add to favorites row (if that link exists)
 - Favorites page: no DOM changes; IDs are read from Remove links into local `marks`, and Remove clicks clear the mark
 - Panel setting **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
 
@@ -32,7 +31,8 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 - Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages
 - Panel **Artists** section: add/remove, open Updates search groups, set artists-per-search, see last seen post
 - **Updates** is a normal site search: `( artist1 ~ artist2 ) id:>N` (no background polling)
-- On an Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only)
+- On a full Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only)
+- Empty Updates pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
 No `api.rule34.xxx`. The only `fetch` calls are favorite add/remove on user click.
 

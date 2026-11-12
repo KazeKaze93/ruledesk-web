@@ -4,13 +4,14 @@ export const SITE_SELECTORS = {
   thumb: "span.thumb",
   thumbLink: 'a[href*="s=view"]',
   previewImage: "img.preview",
-  thumbWrap: `span.${CSS_CLASS.thumbWrap}`,
+  imgWrap: `span.${CSS_CLASS.imgWrap}`,
   cardFavButton: `button.${CSS_CLASS.cardFav}`,
-  nativeAddFavLink: 'a[onclick*="addFav("]',
   favoritesDeleteLink: "a[onclick]",
   tagSidebar: "ul#tag-sidebar",
   tagTypeArtist: "li.tag-type-artist",
   imageList: "div.image-list",
+  postListContent: "#post-list div.content",
+  contentRoot: "#content",
   artistFollowButton: `button.${CSS_CLASS.artistFollow}`,
 } as const;
 

@@ -250,8 +250,8 @@ export const PANEL_CSS = `
 `;
 
 export const CARD_CSS = `
-.${CSS_CLASS.thumbWrap} {
-  display: inline-block;
+.${CSS_CLASS.imgWrap} {
+  display: block;
   position: relative;
 }
 
@@ -276,12 +276,12 @@ export const CARD_CSS = `
   opacity: 0;
 }
 
-.${CSS_CLASS.thumbWrap}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.imgWrap}:hover .${CSS_CLASS.cardFav},
 .${CSS_CLASS.cardFav}:focus-visible {
   opacity: 0.65;
 }
 
-.${CSS_CLASS.thumbWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.imgWrap} .${CSS_CLASS.cardFav}:hover,
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
@@ -308,11 +308,6 @@ export const CARD_CSS = `
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
   cursor: wait;
-}
-
-.${CSS_CLASS.thumbWrap}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
-.${CSS_CLASS.thumbWrap}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
-  display: none !important;
 }
 
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
@@ -389,41 +384,5 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-
-.${CSS_CLASS.postFavButton} {
-  box-sizing: border-box;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 4px 10px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: #fff;
-  color: #333;
-  cursor: pointer;
-  font: inherit;
-}
-
-.${CSS_CLASS.postFavButton}:focus-visible {
-  outline: 2px solid #4c8bf5;
-  outline-offset: 2px;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavMarked} {
-  background: #ffe08a;
-  border-color: #a67c00;
-  color: #5c4500;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavError} {
-  background: #f8d7da;
-  border-color: #a12828;
-  color: #a12828;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavPending},
-.${CSS_CLASS.postFavButton}:disabled {
-  opacity: 0.55;
-  cursor: wait;
 }
 `;

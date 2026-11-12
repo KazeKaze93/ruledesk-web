@@ -23,9 +23,10 @@ function installGmMocks(): void {
   });
 }
 
-function seedArtists(): void {
+function seedArtists(seenPostId = 0): void {
   const data = createDefaultStorage();
   data.artists = [{ tag: "a" }, { tag: "b" }];
+  data.updates = { seenPostId };
   save(data);
 }
 
@@ -96,5 +97,58 @@ describe("mountUpdatesBar", () => {
     mountUpdatesBar(document, "?page=post&s=list&tags=a");
     expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
     expect(getSeenPostId()).toBe(0);
+  });
+
+  it("mounts empty-page bar into #post-list div.content when image-list is missing", () => {
+    seedArtists(19300000);
+    const postList = document.createElement("div");
+    postList.id = "post-list";
+    const content = document.createElement("div");
+    content.className = "content";
+    const chickens = document.createElement("p");
+    chickens.textContent = "Nobody here but us chickens!";
+    content.append(chickens);
+    postList.append(content);
+    document.body.append(postList);
+
+    mountUpdatesBar(
+      document,
+      "?page=post&s=list&tags=(+a+~+b+)+id%3A%3E19300000",
+    );
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar).not.toBeNull();
+    expect(content.firstElementChild).toBe(bar);
+    expect(bar?.textContent).toContain("No new posts since #19300000");
+    expect(bar?.querySelector("a")?.textContent).toBe(
+      UI_TEXT.showAllFollowedPosts,
+    );
+    expect(bar?.querySelector("a")?.getAttribute("href")).toContain(
+      "tags=%28+a+~+b+%29",
+    );
+    expect(bar?.querySelector("a")?.getAttribute("href")).not.toContain(
+      "id%3A%3E",
+    );
+  });
+
+  it("falls back to #content when post-list content is missing", () => {
+    seedArtists(7);
+    const content = document.createElement("div");
+    content.id = "content";
+    document.body.append(content);
+
+    mountUpdatesBar(document, "?page=post&s=list&tags=a+id%3A%3E7");
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(content.firstElementChild).toBe(bar);
+    expect(bar?.textContent).toContain("No new posts since #7");
+  });
+
+  it("does not mount when image-list and both hosts are missing", () => {
+    mountUpdatesBar(
+      document,
+      "?page=post&s=list&tags=(+a+~+b+)+id%3A%3E1",
+    );
+    expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
   });
 });

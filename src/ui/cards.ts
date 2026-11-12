@@ -30,21 +30,24 @@ function findThumbLink(thumb: HTMLElement, postId: string): HTMLAnchorElement | 
   return byHref instanceof HTMLAnchorElement ? byHref : null;
 }
 
-function ensureThumbWrap(
-  thumb: HTMLElement,
+function ensureImgWrap(
   link: HTMLAnchorElement,
+  image: HTMLImageElement,
 ): HTMLElement {
-  const parent = link.parentElement;
+  const parent = image.parentElement;
   if (
     parent instanceof HTMLElement &&
-    parent.classList.contains(CSS_CLASS.thumbWrap)
+    parent.classList.contains(CSS_CLASS.imgWrap)
   ) {
     return parent;
   }
   const wrap = document.createElement("span");
-  wrap.className = CSS_CLASS.thumbWrap;
-  link.replaceWith(wrap);
-  wrap.append(link);
+  wrap.className = CSS_CLASS.imgWrap;
+  image.replaceWith(wrap);
+  wrap.append(image);
+  if (wrap.parentElement !== link) {
+    link.append(wrap);
+  }
   return wrap;
 }
 
@@ -58,7 +61,12 @@ function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): v
     return;
   }
 
-  const wrap = ensureThumbWrap(thumb, link);
+  const image = link.querySelector(SITE_SELECTORS.previewImage);
+  if (!(image instanceof HTMLImageElement)) {
+    return;
+  }
+
+  const wrap = ensureImgWrap(link, image);
   if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) {
     return;
   }

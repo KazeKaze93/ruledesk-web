@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CSS_CLASS, STORAGE_KEY } from "../src/config/constants";
+import { CSS_CLASS, KEY_ENTER, STORAGE_KEY } from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
 import { load, save, setGridFavButtonsEnabled } from "../src/storage/store";
 import { mountCards } from "../src/ui/cards";
@@ -73,7 +73,7 @@ describe("mountCards", () => {
     vi.unstubAllGlobals();
   });
 
-  it("wraps the preview link and adds one button without duplicating on remount", () => {
+  it("wraps the preview image inside the link and does not duplicate on remount", () => {
     const root = document.createElement("div");
     root.append(buildThumb("111"), buildThumb("222"));
     document.body.append(root);
@@ -81,13 +81,65 @@ describe("mountCards", () => {
     mountCards(root, "?page=post&s=list&tags=cat");
     mountCards(root, "?page=post&s=list&tags=cat");
 
-    const wraps = root.querySelectorAll(`span.${CSS_CLASS.thumbWrap}`);
+    const wraps = root.querySelectorAll(`span.${CSS_CLASS.imgWrap}`);
     const buttons = root.querySelectorAll(`button.${CSS_CLASS.cardFav}`);
     expect(wraps).toHaveLength(2);
     expect(buttons).toHaveLength(2);
-    expect(root.querySelector(`#p111`)?.parentElement?.classList.contains(
-      CSS_CLASS.thumbWrap,
-    )).toBe(true);
+
+    const link = root.querySelector("#p111");
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+    const wrap = link.querySelector(`span.${CSS_CLASS.imgWrap}`);
+    expect(wrap).not.toBeNull();
+    expect(wrap?.querySelector("img.preview")).not.toBeNull();
+    expect(wrap?.querySelector(`button.${CSS_CLASS.cardFav}`)).not.toBeNull();
+    expect(wrap?.parentElement).toBe(link);
+  });
+
+  it("stops click and Enter from bubbling to the preview link", () => {
+    const root = document.createElement("div");
+    root.append(buildThumb("111"));
+    document.body.append(root);
+    mountCards(root, "?page=post&s=list");
+
+    const link = root.querySelector("#p111");
+    const button = root.querySelector(`button.${CSS_CLASS.cardFav}`);
+    expect(link).toBeInstanceOf(HTMLAnchorElement);
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    if (
+      !(link instanceof HTMLAnchorElement) ||
+      !(button instanceof HTMLButtonElement)
+    ) {
+      return;
+    }
+
+    let linkClicks = 0;
+    link.addEventListener("click", () => {
+      linkClicks += 1;
+    });
+
+    const clickEvent = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+    });
+    button.dispatchEvent(clickEvent);
+    expect(clickEvent.defaultPrevented).toBe(true);
+    expect(linkClicks).toBe(0);
+
+    let linkKeydowns = 0;
+    link.addEventListener("keydown", () => {
+      linkKeydowns += 1;
+    });
+    const keyEvent = new KeyboardEvent("keydown", {
+      key: KEY_ENTER,
+      bubbles: true,
+      cancelable: true,
+    });
+    button.dispatchEvent(keyEvent);
+    expect(keyEvent.defaultPrevented).toBe(true);
+    expect(linkKeydowns).toBe(0);
   });
 
   it("marks buttons from stored fav marks", () => {
@@ -181,25 +233,6 @@ describe("mountCards", () => {
     expect(button.getAttribute("aria-pressed")).toBe("true");
     expect(button.classList.contains(CSS_CLASS.cardFavMarked)).toBe(true);
     expect(load().marks["111"]?.fav).toBe(true);
-  });
-
-  it("hides the star with CSS when the preview link is display:none", () => {
-    const root = document.createElement("div");
-    const thumb = buildThumb("111");
-    root.append(thumb);
-    document.body.append(root);
-    mountCards(root, "?page=post&s=list");
-
-    const link = root.querySelector("#p111");
-    expect(link).toBeInstanceOf(HTMLAnchorElement);
-    if (!(link instanceof HTMLAnchorElement)) {
-      return;
-    }
-    link.setAttribute("style", "display: none");
-
-    const styleTag = document.getElementById("ruledesk-web-document-style");
-    expect(styleTag?.textContent ?? "").toContain('display: none');
-    expect(styleTag?.textContent ?? "").toContain(CSS_CLASS.cardFav);
   });
 });
 

@@ -63,10 +63,12 @@ export const DEFAULT_SEEN_POST_ID = 0;
 export const PANEL_ROOT_ID = "ruledesk-web-root";
 export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
-export const POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.4.1";
+export const KEY_ENTER = "Enter";
+export const KEY_SPACE = " ";
+
+export const USERSCRIPT_VERSION = "0.4.2";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -97,8 +99,6 @@ export const UI_TEXT = {
   cardFavGlyph: "★",
   cardFavErrorNotLoggedIn: "Log in to use favorites",
   cardFavErrorRequest: "Favorite request failed",
-  postFavMissingNative:
-    "Native addFav link not found; post-page toggle not mounted",
   artistsHeading: "Artists",
   artistsEmpty: "No artists followed yet.",
   artistTagLabel: "Artist tag",
@@ -120,9 +120,12 @@ export const UI_TEXT = {
   reloadUpdates: "Reload updates",
   goToPageOneToMark: "Go to page 1 to mark everything as seen",
   noNewPosts: "No new posts",
+  noNewPostsSince: "No new posts since #",
+  showAllFollowedPosts: "Show all posts from followed artists",
   updatesPartialHint:
     "This search covers only part of your artists. Marking as seen works when all artists are in one search (set “Artists per search” to 0).",
-  updatesBarMissingList: "image-list not found; updates bar not mounted",
+  updatesBarMissingHost:
+    "updates empty host not found; updates bar not mounted",
 } as const;
 
 export const CSS_CLASS = {
@@ -156,14 +159,12 @@ export const CSS_CLASS = {
   error: "rdw-error",
   confirmRow: "rdw-confirm-row",
   hidden: "rdw-hidden",
-  thumbWrap: "rdw-thumb-wrap",
+  imgWrap: "rdw-img-wrap",
   cardFav: "rdw-card-fav",
   cardFavMarked: "rdw-card-fav--marked",
   cardFavError: "rdw-card-fav--error",
   cardFavPending: "rdw-card-fav--pending",
   gridFavsHidden: "rdw-grid-favs-hidden",
-  postFavItem: "rdw-post-fav-item",
-  postFavButton: "rdw-post-fav-button",
   artistFollow: "rdw-artist-follow",
   artistFollowMarked: "rdw-artist-follow--marked",
   updatesBar: "rdw-updates-bar",

@@ -59,7 +59,6 @@ function applyFollowState(button: HTMLButtonElement, following: boolean): void {
   const tag = button.dataset.rdwArtistTag ?? "";
   button.setAttribute("aria-label", `${label}: ${tag}`);
   button.textContent = label;
-  button.title = label;
 }
 
 function attachFollowButton(li: HTMLElement, tag: string): void {

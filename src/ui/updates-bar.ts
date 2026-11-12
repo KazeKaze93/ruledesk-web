@@ -11,6 +11,7 @@ import {
   buildUpdatesSearchUrl,
   isFullUpdatesQuery,
   isPartialUpdatesQuery,
+  stripUpdatesIdFilter,
 } from "../search/query";
 import { detectPageKind } from "../site/pages";
 import {
@@ -64,8 +65,13 @@ function buildReloadHref(artistTags: string[], seenPostId: number): string {
   return buildUpdatesSearchUrl(first);
 }
 
-function insertBar(imageList: Element, bar: HTMLElement): void {
-  imageList.parentElement?.insertBefore(bar, imageList);
+function removeExistingBar(root: ParentNode): void {
+  const existing = root instanceof Document
+    ? root.getElementById(UPDATES_BAR_ID)
+    : root.querySelector(`#${UPDATES_BAR_ID}`);
+  if (existing !== null) {
+    existing.remove();
+  }
 }
 
 function createBarShell(): HTMLDivElement {
@@ -75,13 +81,51 @@ function createBarShell(): HTMLDivElement {
   return bar;
 }
 
+function insertBeforeImageList(imageList: Element, bar: HTMLElement): void {
+  imageList.parentElement?.insertBefore(bar, imageList);
+}
+
+function findEmptyUpdatesHost(root: ParentNode): Element | null {
+  return (
+    root.querySelector(SITE_SELECTORS.postListContent) ??
+    root.querySelector(SITE_SELECTORS.contentRoot)
+  );
+}
+
+function mountEmptyPageBar(root: ParentNode, tagsParam: string): void {
+  const host = findEmptyUpdatesHost(root);
+  if (host === null) {
+    log.warn(UI_TEXT.updatesBarMissingHost);
+    return;
+  }
+
+  const bar = createBarShell();
+  const seen = getSeenPostId();
+
+  const text = document.createElement("p");
+  text.className = CSS_CLASS.hint;
+  text.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
+
+  const link = document.createElement("a");
+  link.className = CSS_CLASS.itemName;
+  link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
+  link.textContent = UI_TEXT.showAllFollowedPosts;
+
+  const wrap = document.createElement("div");
+  wrap.className = CSS_CLASS.updatesBarActions;
+  wrap.append(text, link);
+  bar.append(wrap);
+
+  host.insertBefore(bar, host.firstChild);
+}
+
 function mountPartialBar(imageList: Element): void {
   const bar = createBarShell();
   const hint = document.createElement("p");
   hint.className = CSS_CLASS.hint;
   hint.textContent = UI_TEXT.updatesPartialHint;
   bar.append(hint);
-  insertBar(imageList, bar);
+  insertBeforeImageList(imageList, bar);
 }
 
 function mountFullBar(imageList: Element, search: string, artistTags: string[]): void {
@@ -92,7 +136,7 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
     empty.className = CSS_CLASS.hint;
     empty.textContent = UI_TEXT.noNewPosts;
     bar.append(empty);
-    insertBar(imageList, bar);
+    insertBeforeImageList(imageList, bar);
     return;
   }
 
@@ -102,7 +146,7 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
     hint.className = CSS_CLASS.hint;
     hint.textContent = UI_TEXT.goToPageOneToMark;
     bar.append(hint);
-    insertBar(imageList, bar);
+    insertBeforeImageList(imageList, bar);
     return;
   }
 
@@ -136,7 +180,7 @@ function mountFullBar(imageList: Element, search: string, artistTags: string[]):
 
   actions.append(markButton);
   bar.append(actions);
-  insertBar(imageList, bar);
+  insertBeforeImageList(imageList, bar);
 }
 
 export function mountUpdatesBar(
@@ -160,20 +204,14 @@ export function mountUpdatesBar(
     return;
   }
 
+  removeExistingBar(root);
+  ensureDocumentStyles();
+
   const imageList = root.querySelector(SITE_SELECTORS.imageList);
   if (imageList === null) {
-    log.warn(UI_TEXT.updatesBarMissingList);
+    mountEmptyPageBar(root, tagsParam);
     return;
   }
-
-  const existing = root instanceof Document
-    ? root.getElementById(UPDATES_BAR_ID)
-    : root.querySelector(`#${UPDATES_BAR_ID}`);
-  if (existing !== null) {
-    existing.remove();
-  }
-
-  ensureDocumentStyles();
 
   if (isPartial) {
     mountPartialBar(imageList);

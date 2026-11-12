@@ -68,6 +68,7 @@ describe("mountArtistSidebar", () => {
     expect(buttons[0]?.textContent).toBe("Follow");
     expect(buttons[0]?.getAttribute("aria-pressed")).toBe("false");
     expect(buttons[0]?.getAttribute("aria-label")).toContain("nyx_x");
+    expect(buttons[0]?.hasAttribute("title")).toBe(false);
   });
 
   it("reads the tag from the list href on post markup and reflects marks", () => {
@@ -81,6 +82,8 @@ describe("mountArtistSidebar", () => {
     const button = document.querySelector(`button.${CSS_CLASS.artistFollow}`);
     expect(button?.textContent).toBe("Following");
     expect(button?.getAttribute("aria-pressed")).toBe("true");
+    expect(button?.hasAttribute("title")).toBe(false);
     expect(load().artists).toEqual([{ tag: "nyx_x" }]);
   });
 });
+

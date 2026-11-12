@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.4.1
+// @version      0.4.2
 // @description  Collections, favorites, and artist updates for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -41,7 +41,6 @@
 	var PANEL_ROOT_ID = "ruledesk-web-root";
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
-	var POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 	var UI_TEXT = {
 		toggleOpen: "Open RuleDesk",
@@ -69,7 +68,6 @@
 		cardFavGlyph: "★",
 		cardFavErrorNotLoggedIn: "Log in to use favorites",
 		cardFavErrorRequest: "Favorite request failed",
-		postFavMissingNative: "Native addFav link not found; post-page toggle not mounted",
 		artistsHeading: "Artists",
 		artistsEmpty: "No artists followed yet.",
 		artistTagLabel: "Artist tag",
@@ -91,8 +89,10 @@
 		reloadUpdates: "Reload updates",
 		goToPageOneToMark: "Go to page 1 to mark everything as seen",
 		noNewPosts: "No new posts",
+		noNewPostsSince: "No new posts since #",
+		showAllFollowedPosts: "Show all posts from followed artists",
 		updatesPartialHint: "This search covers only part of your artists. Marking as seen works when all artists are in one search (set “Artists per search” to 0).",
-		updatesBarMissingList: "image-list not found; updates bar not mounted"
+		updatesBarMissingHost: "updates empty host not found; updates bar not mounted"
 	};
 	var CSS_CLASS = {
 		host: "rdw-host",
@@ -125,14 +125,12 @@
 		error: "rdw-error",
 		confirmRow: "rdw-confirm-row",
 		hidden: "rdw-hidden",
-		thumbWrap: "rdw-thumb-wrap",
+		imgWrap: "rdw-img-wrap",
 		cardFav: "rdw-card-fav",
 		cardFavMarked: "rdw-card-fav--marked",
 		cardFavError: "rdw-card-fav--error",
 		cardFavPending: "rdw-card-fav--pending",
 		gridFavsHidden: "rdw-grid-favs-hidden",
-		postFavItem: "rdw-post-fav-item",
-		postFavButton: "rdw-post-fav-button",
 		artistFollow: "rdw-artist-follow",
 		artistFollowMarked: "rdw-artist-follow--marked",
 		updatesBar: "rdw-updates-bar",
@@ -147,27 +145,18 @@
 		if (page === "favorites" && section === "view") return "favorites";
 		return "other";
 	}
-	function readPostIdFromSearch(search) {
-		const params = new URLSearchParams(search);
-		const page = params.get(SEARCH_PARAM_PAGE);
-		const section = params.get("s");
-		const id = params.get("id");
-		if (page !== "post" || section !== "view") return null;
-		if (id === null || id.trim().length === 0) return null;
-		if (!/^\d+$/.test(id)) return null;
-		return id;
-	}
 	var SITE_SELECTORS = {
 		thumb: "span.thumb",
 		thumbLink: "a[href*=\"s=view\"]",
 		previewImage: "img.preview",
-		thumbWrap: `span.${CSS_CLASS.thumbWrap}`,
+		imgWrap: `span.${CSS_CLASS.imgWrap}`,
 		cardFavButton: `button.${CSS_CLASS.cardFav}`,
-		nativeAddFavLink: "a[onclick*=\"addFav(\"]",
 		favoritesDeleteLink: "a[onclick]",
 		tagSidebar: "ul#tag-sidebar",
 		tagTypeArtist: "li.tag-type-artist",
 		imageList: "div.image-list",
+		postListContent: "#post-list div.content",
+		contentRoot: "#content",
 		artistFollowButton: `button.${CSS_CLASS.artistFollow}`
 	};
 	var THUMB_ID_PATTERN = /^s(\d+)$/;
@@ -1692,6 +1681,13 @@
 	function buildUpdatesSearchUrl(query) {
 		return buildSearchUrl(parseTags(query));
 	}
+	function stripUpdatesIdFilter(tagsParam) {
+		const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
+		if (tokens.length === 0) return "";
+		const last = tokens[tokens.length - 1];
+		if (last !== void 0 && UPDATES_ID_TOKEN_PATTERN.test(last)) return tokens.slice(0, -1).join(" ");
+		return tokens.join(" ");
+	}
 	function trackedArtistSet(artistTags) {
 		const tracked = new Set();
 		for (const raw of artistTags) {
@@ -2137,6 +2133,10 @@
 			return { status: "error" };
 		}
 	}
+	function stopLinkActivation(event) {
+		event.preventDefault();
+		event.stopPropagation();
+	}
 	function favAriaLabel(postId, marked) {
 		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
 	}
@@ -2179,8 +2179,13 @@
 		button.textContent = UI_TEXT.cardFavGlyph;
 		applyFavButtonState(button, marked ? "marked" : "idle", postId);
 		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
+			stopLinkActivation(event);
+			handleFavToggleClick(button, postId);
+		});
+		button.addEventListener("keydown", (event) => {
+			if (!(event instanceof KeyboardEvent)) return;
+			if (event.key !== "Enter" && event.key !== " ") return;
+			stopLinkActivation(event);
 			handleFavToggleClick(button, postId);
 		});
 		return button;
@@ -2463,8 +2468,8 @@
 }
 `;
 	var CARD_CSS = `
-.${CSS_CLASS.thumbWrap} {
-  display: inline-block;
+.${CSS_CLASS.imgWrap} {
+  display: block;
   position: relative;
 }
 
@@ -2489,12 +2494,12 @@
   opacity: 0;
 }
 
-.${CSS_CLASS.thumbWrap}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.imgWrap}:hover .${CSS_CLASS.cardFav},
 .${CSS_CLASS.cardFav}:focus-visible {
   opacity: 0.65;
 }
 
-.${CSS_CLASS.thumbWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.imgWrap} .${CSS_CLASS.cardFav}:hover,
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
@@ -2521,11 +2526,6 @@
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
   cursor: wait;
-}
-
-.${CSS_CLASS.thumbWrap}:has(> a[style*="display: none"]) .${CSS_CLASS.cardFav},
-.${CSS_CLASS.thumbWrap}:has(> a[style*="display:none"]) .${CSS_CLASS.cardFav} {
-  display: none !important;
 }
 
 body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
@@ -2603,42 +2603,6 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   gap: 8px;
   align-items: center;
 }
-
-.${CSS_CLASS.postFavButton} {
-  box-sizing: border-box;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 4px 10px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: #fff;
-  color: #333;
-  cursor: pointer;
-  font: inherit;
-}
-
-.${CSS_CLASS.postFavButton}:focus-visible {
-  outline: 2px solid #4c8bf5;
-  outline-offset: 2px;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavMarked} {
-  background: #ffe08a;
-  border-color: #a67c00;
-  color: #5c4500;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavError} {
-  background: #f8d7da;
-  border-color: #a12828;
-  color: #a12828;
-}
-
-.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavPending},
-.${CSS_CLASS.postFavButton}:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
 `;
 	function ensureDocumentStyles() {
 		if (document.getElementById("ruledesk-web-document-style") !== null) return;
@@ -2653,20 +2617,23 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
 		return byHref instanceof HTMLAnchorElement ? byHref : null;
 	}
-	function ensureThumbWrap(thumb, link) {
-		const parent = link.parentElement;
-		if (parent instanceof HTMLElement && parent.classList.contains(CSS_CLASS.thumbWrap)) return parent;
+	function ensureImgWrap(link, image) {
+		const parent = image.parentElement;
+		if (parent instanceof HTMLElement && parent.classList.contains(CSS_CLASS.imgWrap)) return parent;
 		const wrap = document.createElement("span");
-		wrap.className = CSS_CLASS.thumbWrap;
-		link.replaceWith(wrap);
-		wrap.append(link);
+		wrap.className = CSS_CLASS.imgWrap;
+		image.replaceWith(wrap);
+		wrap.append(image);
+		if (wrap.parentElement !== link) link.append(wrap);
 		return wrap;
 	}
 	function attachFavButton(thumb, postId, marked) {
 		if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
 		const link = findThumbLink(thumb, postId);
 		if (link === null) return;
-		const wrap = ensureThumbWrap(thumb, link);
+		const image = link.querySelector(SITE_SELECTORS.previewImage);
+		if (!(image instanceof HTMLImageElement)) return;
+		const wrap = ensureImgWrap(link, image);
 		if (wrap.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
 		const button = createFavButton(postId, marked);
 		wrap.append(button);
@@ -2721,7 +2688,6 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const tag = button.dataset.rdwArtistTag ?? "";
 		button.setAttribute("aria-label", `${label}: ${tag}`);
 		button.textContent = label;
-		button.title = label;
 	}
 	function attachFollowButton(li, tag) {
 		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
@@ -3360,29 +3326,6 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			reader.readAsText(file);
 		});
 	}
-	function mountPostPageToggle(root = document, search = window.location.search) {
-		if (detectPageKind(search) !== "post") return;
-		const postId = readPostIdFromSearch(search);
-		if (postId === null) return;
-		if (root.querySelector(`#ruledesk-web-post-fav`) !== null) return;
-		const nativeLink = root.querySelector(SITE_SELECTORS.nativeAddFavLink);
-		if (!(nativeLink instanceof HTMLAnchorElement)) {
-			log.warn(UI_TEXT.postFavMissingNative);
-			return;
-		}
-		const nativeItem = nativeLink.closest("li");
-		if (!(nativeItem instanceof HTMLLIElement)) {
-			log.warn(UI_TEXT.postFavMissingNative);
-			return;
-		}
-		ensureDocumentStyles();
-		const button = createFavButton(postId, load().marks[postId]?.fav === true, CSS_CLASS.postFavButton);
-		button.id = POST_FAV_BUTTON_ID;
-		const item = document.createElement("li");
-		item.className = CSS_CLASS.postFavItem;
-		item.append(button);
-		nativeItem.after(item);
-	}
 	function readPid(search) {
 		const raw = new URLSearchParams(search).get("pid");
 		if (raw === null || raw.trim().length === 0) return 0;
@@ -3406,8 +3349,9 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		if (first === void 0) return window.location.href;
 		return buildUpdatesSearchUrl(first);
 	}
-	function insertBar(imageList, bar) {
-		imageList.parentElement?.insertBefore(bar, imageList);
+	function removeExistingBar(root) {
+		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
+		if (existing !== null) existing.remove();
 	}
 	function createBarShell() {
 		const bar = document.createElement("div");
@@ -3415,13 +3359,40 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		bar.className = CSS_CLASS.updatesBar;
 		return bar;
 	}
+	function insertBeforeImageList(imageList, bar) {
+		imageList.parentElement?.insertBefore(bar, imageList);
+	}
+	function findEmptyUpdatesHost(root) {
+		return root.querySelector(SITE_SELECTORS.postListContent) ?? root.querySelector(SITE_SELECTORS.contentRoot);
+	}
+	function mountEmptyPageBar(root, tagsParam) {
+		const host = findEmptyUpdatesHost(root);
+		if (host === null) {
+			log.warn(UI_TEXT.updatesBarMissingHost);
+			return;
+		}
+		const bar = createBarShell();
+		const seen = getSeenPostId();
+		const text = document.createElement("p");
+		text.className = CSS_CLASS.hint;
+		text.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
+		const link = document.createElement("a");
+		link.className = CSS_CLASS.itemName;
+		link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
+		link.textContent = UI_TEXT.showAllFollowedPosts;
+		const wrap = document.createElement("div");
+		wrap.className = CSS_CLASS.updatesBarActions;
+		wrap.append(text, link);
+		bar.append(wrap);
+		host.insertBefore(bar, host.firstChild);
+	}
 	function mountPartialBar(imageList) {
 		const bar = createBarShell();
 		const hint = document.createElement("p");
 		hint.className = CSS_CLASS.hint;
 		hint.textContent = UI_TEXT.updatesPartialHint;
 		bar.append(hint);
-		insertBar(imageList, bar);
+		insertBeforeImageList(imageList, bar);
 	}
 	function mountFullBar(imageList, search, artistTags) {
 		const bar = createBarShell();
@@ -3430,7 +3401,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			empty.className = CSS_CLASS.hint;
 			empty.textContent = UI_TEXT.noNewPosts;
 			bar.append(empty);
-			insertBar(imageList, bar);
+			insertBeforeImageList(imageList, bar);
 			return;
 		}
 		if (readPid(search) > 0) {
@@ -3438,7 +3409,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 			hint.className = CSS_CLASS.hint;
 			hint.textContent = UI_TEXT.goToPageOneToMark;
 			bar.append(hint);
-			insertBar(imageList, bar);
+			insertBeforeImageList(imageList, bar);
 			return;
 		}
 		const actions = document.createElement("div");
@@ -3466,7 +3437,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		});
 		actions.append(markButton);
 		bar.append(actions);
-		insertBar(imageList, bar);
+		insertBeforeImageList(imageList, bar);
 	}
 	function mountUpdatesBar(root = document, search = window.location.search) {
 		if (detectPageKind(search) !== "list") return;
@@ -3476,14 +3447,13 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		const isFull = isFullUpdatesQuery(tagsParam, artistTags);
 		const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
 		if (!isFull && !isPartial) return;
+		removeExistingBar(root);
+		ensureDocumentStyles();
 		const imageList = root.querySelector(SITE_SELECTORS.imageList);
 		if (imageList === null) {
-			log.warn(UI_TEXT.updatesBarMissingList);
+			mountEmptyPageBar(root, tagsParam);
 			return;
 		}
-		const existing = root instanceof Document ? root.getElementById(UPDATES_BAR_ID) : root.querySelector(`#${UPDATES_BAR_ID}`);
-		if (existing !== null) existing.remove();
-		ensureDocumentStyles();
 		if (isPartial) {
 			mountPartialBar(imageList);
 			return;
@@ -3496,8 +3466,6 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		mountCards();
 		mountArtistSidebar();
 		mountUpdatesBar();
-	} else if (pageKind === "post") {
-		mountPostPageToggle();
-		mountArtistSidebar();
-	} else if (pageKind === "favorites") syncFavoritesPage();
+	} else if (pageKind === "post") mountArtistSidebar();
+	else if (pageKind === "favorites") syncFavoritesPage();
 })();

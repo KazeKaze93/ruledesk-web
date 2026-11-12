@@ -154,6 +154,18 @@ export function buildUpdatesSearchUrl(query: string): string {
   return buildSearchUrl(parseTags(query));
 }
 
+export function stripUpdatesIdFilter(tagsParam: string): string {
+  const tokens = tagsParam.trim().split(/\s+/).filter((token) => token.length > 0);
+  if (tokens.length === 0) {
+    return "";
+  }
+  const last = tokens[tokens.length - 1];
+  if (last !== undefined && UPDATES_ID_TOKEN_PATTERN.test(last)) {
+    return tokens.slice(0, -1).join(TAG_SEPARATOR);
+  }
+  return tokens.join(TAG_SEPARATOR);
+}
+
 type ParsedUpdatesQuery = {
   tags: string[];
   hasIdFilter: boolean;
