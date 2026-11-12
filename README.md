@@ -16,15 +16,18 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 - Floating toggle (bottom-right) opens a Shadow DOM panel
 - Save the current `page=post&s=list` search when `tags` is non-empty
-- Open / rename / delete collections (delete confirms inside the panel)
+- Open / rename / delete collections (delete asks for confirmation inside the panel)
 - Export and import JSON via the panel
 
-## Stage 2 — list card favorites
+## Stage 2 — favorites
 
-- On `page=post&s=list` only, each `span.thumb` gets a favorite button
-- Click runs the same-origin GETs the site uses (`/public/addfav.php`, then vote-up only when newly added)
-- Local `marks[postId].fav` remembers which posts were added; marked buttons restore on reload
-- No `api.rule34.xxx`, no background or bulk requests
+- On the post list grid, a star sits on the image corner (hover / focus to reveal; marked stars stay visible)
+- Click toggles favorite: same-origin `addfav` (+ vote on new add) or favorites delete
+- Post page: toggle in a new `<li>` after the native Add to favorites row (if that link exists)
+- Favorites page: no DOM changes; IDs are read from Remove links into local `marks`, and Remove clicks clear the mark
+- Panel setting **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
+
+No `api.rule34.xxx`. Favorite network calls happen only on user click, one post at a time.
 
 Storage uses `GM_getValue` / `GM_setValue`. Favorite clicks use normal `fetch` with `credentials: "same-origin"`.
 
@@ -46,13 +49,17 @@ Storage uses `GM_getValue` / `GM_setValue`. Favorite clicks use normal `fetch` w
   "artists": [],
   "marks": {
     "12345": { "fav": true }
+  },
+  "settings": {
+    "gridFavButtons": true
   }
 }
 ```
 
+- `settings` is optional; missing means `gridFavButtons: true`
 - `artists[].lastSeenPostId` is a non-negative integer (reserved for a later stage)
 - Import merges collections by `id` (incoming wins). Duplicate names are allowed.
-- Marks merge by post id (incoming object replaces the previous one for that id)
+- Marks merge by post id; settings from the import replace current settings when present
 
 ## Scripts
 

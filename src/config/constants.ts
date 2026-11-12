@@ -8,9 +8,17 @@ export const SITE_ORIGIN = "https://rule34.xxx";
 export const SEARCH_PATH = "/index.php";
 export const SEARCH_PAGE = "post";
 export const SEARCH_SECTION = "list";
+export const SEARCH_SECTION_VIEW = "view";
 export const SEARCH_PARAM_PAGE = "page";
 export const SEARCH_PARAM_SECTION = "s";
 export const SEARCH_PARAM_TAGS = "tags";
+export const SEARCH_PARAM_ID = "id";
+
+export const FAVORITES_PAGE = "favorites";
+export const FAVORITES_SECTION_VIEW = "view";
+export const FAVORITES_SECTION_DELETE = "delete";
+export const FAVORITES_PARAM_RETURN_PID = "return_pid";
+export const FAVORITES_RETURN_PID_DEFAULT = "0";
 
 export const ADDFAV_PATH = "/public/addfav.php";
 export const ADDFAV_PARAM_ID = "id";
@@ -42,11 +50,14 @@ export const EXPORT_MIME = "application/json";
 export const IMPORT_SCHEMA_ERROR_PREFIX =
   "File is not a RuleDesk Web export";
 
+export const DEFAULT_GRID_FAV_BUTTONS = true;
+
 export const PANEL_ROOT_ID = "ruledesk-web-root";
 export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
+export const POST_FAV_BUTTON_ID = "ruledesk-web-post-fav";
 
-export const USERSCRIPT_VERSION = "0.2.0";
+export const USERSCRIPT_VERSION = "0.3.0";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -70,9 +81,15 @@ export const UI_TEXT = {
   import: "Import",
   importErrorPrefix: "Import failed:",
   notOnSearchPage: "Open a post list search with tags to save it.",
-  cardFavLabel: "Add post to favorites",
+  settingsHeading: "Settings",
+  gridFavButtonsLabel: "Show favorite buttons in grid",
+  cardFavAddLabel: "Add post to favorites",
+  cardFavRemoveLabel: "Remove post from favorites",
   cardFavGlyph: "★",
-  cardFavErrorTitle: "Could not add to favorites",
+  cardFavErrorNotLoggedIn: "Log in to use favorites",
+  cardFavErrorRequest: "Favorite request failed",
+  postFavMissingNative:
+    "Native addFav link not found; post-page toggle not mounted",
 } as const;
 
 export const CSS_CLASS = {
@@ -98,15 +115,20 @@ export const CSS_CLASS = {
   field: "rdw-field",
   label: "rdw-label",
   input: "rdw-input",
+  checkboxRow: "rdw-checkbox-row",
+  checkbox: "rdw-checkbox",
   formActions: "rdw-form-actions",
   toolbar: "rdw-toolbar",
   hint: "rdw-hint",
   error: "rdw-error",
   confirmRow: "rdw-confirm-row",
   hidden: "rdw-hidden",
-  thumb: "rdw-thumb",
+  thumbWrap: "rdw-thumb-wrap",
   cardFav: "rdw-card-fav",
   cardFavMarked: "rdw-card-fav--marked",
   cardFavError: "rdw-card-fav--error",
   cardFavPending: "rdw-card-fav--pending",
+  gridFavsHidden: "rdw-grid-favs-hidden",
+  postFavItem: "rdw-post-fav-item",
+  postFavButton: "rdw-post-fav-button",
 } as const;

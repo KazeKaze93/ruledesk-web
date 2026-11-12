@@ -185,4 +185,16 @@ describe("store", () => {
     save(data);
     expect(JSON.parse(exportJson())).toEqual(data);
   });
+
+  it("loads legacy storage without settings", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: { "7": { fav: true } },
+    });
+    const data = load();
+    expect(data.settings).toBeUndefined();
+    expect(data.marks["7"]?.fav).toBe(true);
+  });
 });

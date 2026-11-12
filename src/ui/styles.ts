@@ -146,7 +146,8 @@ export const PANEL_CSS = `
 .${CSS_CLASS.secondaryButton}:focus-visible,
 .${CSS_CLASS.dangerButton}:focus-visible,
 .${CSS_CLASS.close}:focus-visible,
-.${CSS_CLASS.input}:focus-visible {
+.${CSS_CLASS.input}:focus-visible,
+.${CSS_CLASS.checkbox}:focus-visible {
   outline: 2px solid #4c8bf5;
   outline-offset: 2px;
 }
@@ -158,6 +159,18 @@ export const PANEL_CSS = `
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.${CSS_CLASS.checkboxRow} {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.${CSS_CLASS.checkbox} {
+  width: 16px;
+  height: 16px;
+  margin: 0;
 }
 
 .${CSS_CLASS.iconButton},
@@ -237,7 +250,8 @@ export const PANEL_CSS = `
 `;
 
 export const CARD_CSS = `
-.${CSS_CLASS.thumb} {
+.${CSS_CLASS.thumbWrap} {
+  display: inline-block;
   position: relative;
 }
 
@@ -254,11 +268,24 @@ export const CARD_CSS = `
   padding: 0;
   border: 1px solid #333;
   border-radius: 4px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.92);
   color: #333;
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
+  opacity: 0;
+}
+
+.${CSS_CLASS.thumbWrap}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.cardFav}:focus-visible {
+  opacity: 0.65;
+}
+
+.${CSS_CLASS.thumbWrap} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
+  opacity: 1;
 }
 
 .${CSS_CLASS.cardFav}:focus-visible {
@@ -280,6 +307,45 @@ export const CARD_CSS = `
 
 .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
 .${CSS_CLASS.cardFav}:disabled {
+  cursor: wait;
+}
+
+body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
+  display: none !important;
+}
+
+.${CSS_CLASS.postFavButton} {
+  box-sizing: border-box;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+  font: inherit;
+}
+
+.${CSS_CLASS.postFavButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavMarked} {
+  background: #ffe08a;
+  border-color: #a67c00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavError} {
+  background: #f8d7da;
+  border-color: #a12828;
+  color: #a12828;
+}
+
+.${CSS_CLASS.postFavButton}.${CSS_CLASS.cardFavPending},
+.${CSS_CLASS.postFavButton}:disabled {
   opacity: 0.55;
   cursor: wait;
 }

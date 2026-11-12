@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { addFavorite } from "../src/site/favorites";
+import { addFavorite, removeFavorite } from "../src/site/favorites";
 
 function mockFetchSequence(
   responses: Array<{ ok?: boolean; body: string } | Error>,
@@ -69,5 +69,33 @@ describe("addFavorite", () => {
     mockFetchSequence([{ body: "3" }, { body: "ok" }]);
     await expect(addFavorite("99")).resolves.toEqual({ status: "added" });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("removeFavorite", () => {
+  beforeEach(() => {
+    vi.stubGlobal("GM_getValue", () => undefined);
+    vi.stubGlobal("GM_setValue", () => undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("returns removed when response.ok", async () => {
+    mockFetchSequence([{ body: "<html>ok</html>" }]);
+    await expect(removeFavorite("55")).resolves.toEqual({ status: "removed" });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns error when response is not ok", async () => {
+    mockFetchSequence([{ ok: false, body: "no" }]);
+    await expect(removeFavorite("55")).resolves.toEqual({ status: "error" });
+  });
+
+  it("returns error on network failure", async () => {
+    mockFetchSequence([new Error("offline")]);
+    await expect(removeFavorite("55")).resolves.toEqual({ status: "error" });
   });
 });

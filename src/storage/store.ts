@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 
 import {
+  DEFAULT_GRID_FAV_BUTTONS,
   IMPORT_SCHEMA_ERROR_PREFIX,
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
@@ -10,8 +11,10 @@ import {
   CollectionSchema,
   StorageSchema,
   createDefaultStorage,
+  resolveGridFavButtons,
   type Collection,
   type MarkFlags,
+  type Settings,
   type StorageData,
   type TagEntry,
 } from "./schema";
@@ -117,6 +120,31 @@ export function setPostFavMark(postId: string, fav: boolean): void {
   save(data);
 }
 
+export function setPostFavMarks(postIds: string[], fav: boolean): void {
+  if (postIds.length === 0) {
+    return;
+  }
+  const data = load();
+  for (const postId of postIds) {
+    const previous: MarkFlags = data.marks[postId] ?? {};
+    data.marks[postId] = { ...previous, fav };
+  }
+  save(data);
+}
+
+export function getGridFavButtonsEnabled(): boolean {
+  return resolveGridFavButtons(load());
+}
+
+export function setGridFavButtonsEnabled(enabled: boolean): void {
+  const data = load();
+  const settings: Settings = {
+    gridFavButtons: enabled,
+  };
+  data.settings = settings;
+  save(data);
+}
+
 export function exportJson(): string {
   const data = load();
   return `${JSON.stringify(data, null, 2)}\n`;
@@ -150,6 +178,21 @@ function mergeArtists(
   return Array.from(byTag.values());
 }
 
+function mergeSettings(
+  current: StorageData["settings"],
+  incoming: StorageData["settings"],
+): StorageData["settings"] {
+  if (incoming === undefined) {
+    return current;
+  }
+  if (current === undefined) {
+    return incoming;
+  }
+  return {
+    gridFavButtons: incoming.gridFavButtons,
+  };
+}
+
 export function importJson(raw: string): StorageData {
   let json: unknown;
   try {
@@ -172,7 +215,11 @@ export function importJson(raw: string): StorageData {
       ...current.marks,
       ...incoming.marks,
     },
+    settings: mergeSettings(current.settings, incoming.settings),
   };
+  if (merged.settings === undefined) {
+    merged.settings = { gridFavButtons: DEFAULT_GRID_FAV_BUTTONS };
+  }
   save(merged);
   return merged;
 }
