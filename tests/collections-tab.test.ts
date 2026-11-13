@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "preact/test-utils";
 
 import { UI_TEXT } from "../src/config/constants";
 import { buildPlaylistQueries, buildSearchUrl } from "../src/search/query";
@@ -18,7 +19,7 @@ import {
   COLLECTIONS_TAB_CSS,
   createCollectionsTab,
   resetCollectionsTabState,
-} from "../src/ui/collections-tab";
+} from "../src/ui/panel";
 
 const memory = new Map<string, unknown>();
 
@@ -49,6 +50,12 @@ function stubLocation(search: string): {
     reload: vi.fn(),
   });
   return { assign };
+}
+
+function click(el: Element): void {
+  act(() => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
 }
 
 function findButton(
@@ -99,17 +106,23 @@ describe("createCollectionsTab", () => {
     expect(root.textContent).toContain("No playlists yet.");
     expect(root.textContent).toContain("Use the + button on a post");
 
-    findButton(root, "New playlist")?.click();
+    const newPlaylist = findButton(root, "New playlist");
+    expect(newPlaylist).not.toBeNull();
+    if (newPlaylist !== null) {
+      click(newPlaylist);
+    }
     const input = root.querySelector("#rdw-playlist-name");
     expect(input).toBeInstanceOf(HTMLInputElement);
     if (!(input instanceof HTMLInputElement)) {
       throw new Error("expected playlist name input");
     }
-    input.value = "Later";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    root.querySelector("form")?.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true }),
-    );
+    act(() => {
+      input.value = "Later";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      input.form?.requestSubmit();
+    });
 
     expect(listPlaylists().map((item) => item.name)).toEqual(["Later"]);
     expect(root.textContent).toContain("Later");
@@ -133,7 +146,9 @@ describe("createCollectionsTab", () => {
 
     const openBtn = findButtonByAria(root, "Open playlist: Watch");
     expect(openBtn?.disabled).toBe(false);
-    openBtn?.click();
+    if (openBtn !== null) {
+      click(openBtn);
+    }
 
     const expected = buildPlaylistQueries(
       [30, 20, 10],
@@ -190,7 +205,9 @@ describe("createCollectionsTab", () => {
     expect(root.textContent).toContain("Cats");
 
     const openBtn = findButtonByAria(root, `${UI_TEXT.openCollection}: Cats`);
-    openBtn?.click();
+    if (openBtn !== null) {
+      click(openBtn);
+    }
     expect(assign).toHaveBeenCalledWith(
       buildSearchUrl([
         { tag: "cat", type: "include" },
@@ -198,39 +215,55 @@ describe("createCollectionsTab", () => {
       ]),
     );
 
-    findButton(root, UI_TEXT.saveCurrent)?.click();
+    const saveCurrent = findButton(root, UI_TEXT.saveCurrent);
+    expect(saveCurrent).not.toBeNull();
+    if (saveCurrent !== null) {
+      click(saveCurrent);
+    }
     const saveInput = root.querySelector("#rdw-save-name");
     expect(saveInput).toBeInstanceOf(HTMLInputElement);
     if (!(saveInput instanceof HTMLInputElement)) {
       throw new Error("expected save name input");
     }
-    saveInput.value = "My search";
-    saveInput.dispatchEvent(new Event("input", { bubbles: true }));
-    root.querySelector("form")?.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true }),
-    );
+    act(() => {
+      saveInput.value = "My search";
+      saveInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      saveInput.form?.requestSubmit();
+    });
     expect(
       load().collections.some((entry) => entry.name === "My search"),
     ).toBe(true);
 
     const renameBtn = findButtonByAria(root, `${UI_TEXT.rename}: Cats`);
-    renameBtn?.click();
+    if (renameBtn !== null) {
+      click(renameBtn);
+    }
     const renameInput = root.querySelector('input[id^="rdw-rename-"]');
     expect(renameInput).toBeInstanceOf(HTMLInputElement);
     if (!(renameInput instanceof HTMLInputElement)) {
       throw new Error("expected rename input");
     }
-    renameInput.value = "Felines";
-    renameInput.dispatchEvent(new Event("input", { bubbles: true }));
-    root.querySelector("form")?.dispatchEvent(
-      new Event("submit", { bubbles: true, cancelable: true }),
-    );
+    act(() => {
+      renameInput.value = "Felines";
+      renameInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      renameInput.form?.requestSubmit();
+    });
     expect(
       load().collections.some((entry) => entry.name === "Felines"),
     ).toBe(true);
 
-    findButtonByAria(root, `${UI_TEXT.delete}: Felines`)?.click();
-    findButton(root, UI_TEXT.confirm)?.click();
+    const deleteBtn = findButtonByAria(root, `${UI_TEXT.delete}: Felines`);
+    if (deleteBtn !== null) {
+      click(deleteBtn);
+    }
+    const confirmBtn = findButton(root, UI_TEXT.confirm);
+    if (confirmBtn !== null) {
+      click(confirmBtn);
+    }
     expect(
       load().collections.some((entry) => entry.name === "Felines"),
     ).toBe(false);

@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "preact/test-utils";
 
 import {
+  APPEARANCE_THEME_DARK,
+  APPEARANCE_THEME_LIGHT,
   CSS_CLASS,
   PANEL_ROOT_ID,
   USERSCRIPT_VERSION,
@@ -12,9 +15,23 @@ import {
   getFeatureState,
   load,
   save,
+  setAppearance,
   setFeatureState,
 } from "../src/storage/store";
-import { PANEL_UI_CLASS } from "../src/ui/styles";
+import {
+  measureBorderBoxSize,
+  mountPanel,
+  PANEL_MIN_HEIGHT_PX,
+  PANEL_MIN_WIDTH_PX,
+  PANEL_UI_CLASS,
+  sizesEqual,
+} from "../src/ui/panel";
+
+function click(el: Element): void {
+  act(() => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true }));
+  });
+}
 
 /** Isolate panel tests from the live registry while mutating FEATURES. */
 vi.mock("../src/features/registry", () => {
@@ -23,7 +40,6 @@ vi.mock("../src/features/registry", () => {
 });
 
 import { FEATURES } from "../src/features/registry";
-import { mountPanel } from "../src/ui/panel";
 
 const memory = new Map<string, unknown>();
 const ORIGINAL_FEATURES = [...FEATURES];
@@ -68,7 +84,7 @@ function openPanel(): ShadowRoot {
   if (!(toggle instanceof HTMLButtonElement)) {
     throw new Error("expected toggle button");
   }
-  toggle.click();
+  click(toggle);
   return shadow;
 }
 
@@ -87,6 +103,7 @@ describe("panel tabs redesign", () => {
     clearFeatures();
     document.body.replaceChildren();
     document.body.className = "";
+    document.documentElement.removeAttribute("data-rdw-theme");
     document.cookie = "theme=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
     vi.useRealTimers();
   });
@@ -106,7 +123,7 @@ describe("panel tabs redesign", () => {
     const collections = getTab(shadow, "collections");
     expect(collections.getAttribute("aria-selected")).toBe("true");
 
-    getTab(shadow, "artists").click();
+    click(getTab(shadow, "artists"));
     expect(getTab(shadow, "artists").getAttribute("aria-selected")).toBe(
       "true",
     );
@@ -116,9 +133,11 @@ describe("panel tabs redesign", () => {
 
     const artistsTab = getTab(shadow, "artists");
     artistsTab.focus();
-    artistsTab.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
-    );
+    act(() => {
+      artistsTab.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+    });
     expect(getTab(shadow, "favorites").getAttribute("aria-selected")).toBe(
       "true",
     );
@@ -137,6 +156,15 @@ describe("panel tabs redesign", () => {
     ).toBe(false);
   });
 
+  it("includes Blacklist as its own tab", () => {
+    const shadow = openPanel();
+    expect(getTab(shadow, "blacklist")).toBeInstanceOf(HTMLButtonElement);
+    click(getTab(shadow, "blacklist"));
+    expect(
+      shadow.querySelector("#rdw-tabpanel-blacklist")?.hasAttribute("hidden"),
+    ).toBe(false);
+  });
+
   it("unfollows an artist with a 5s undo window", () => {
     vi.useFakeTimers();
     const data = createDefaultStorage();
@@ -144,7 +172,7 @@ describe("panel tabs redesign", () => {
     save(data);
 
     const shadow = openPanel();
-    getTab(shadow, "artists").click();
+    click(getTab(shadow, "artists"));
 
     const unfollow = shadow.querySelector(
       `button[aria-label="Unfollow nyx_x"]`,
@@ -153,7 +181,7 @@ describe("panel tabs redesign", () => {
     if (!(unfollow instanceof HTMLButtonElement)) {
       throw new Error("expected unfollow button");
     }
-    unfollow.click();
+    click(unfollow);
 
     expect(load().artists.map((entry) => entry.tag)).toEqual(["alpha_beta"]);
     expect(shadow.textContent ?? "").toContain("Unfollowed nyx x");
@@ -164,7 +192,7 @@ describe("panel tabs redesign", () => {
     if (!(undo instanceof HTMLButtonElement)) {
       throw new Error("expected undo button");
     }
-    undo.click();
+    click(undo);
     expect(load().artists.map((entry) => entry.tag).sort()).toEqual([
       "alpha_beta",
       "nyx_x",
@@ -178,9 +206,11 @@ describe("panel tabs redesign", () => {
     if (!(unfollowAgain instanceof HTMLButtonElement)) {
       throw new Error("expected unfollow button");
     }
-    unfollowAgain.click();
+    click(unfollowAgain);
     expect(load().artists.map((entry) => entry.tag)).toEqual(["alpha_beta"]);
-    vi.advanceTimersByTime(5000);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     expect(shadow.textContent ?? "").not.toContain("Unfollowed nyx x");
     expect(load().artists.map((entry) => entry.tag)).toEqual(["alpha_beta"]);
   });
@@ -199,22 +229,26 @@ describe("panel tabs redesign", () => {
     if (!(toggle instanceof HTMLButtonElement)) {
       throw new Error("expected toggle");
     }
-    toggle.click();
+    click(toggle);
     expect(panel.hidden).toBe(true);
 
-    toggle.click();
+    click(toggle);
     expect(panel.hidden).toBe(false);
 
-    document.body.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, composed: true }),
-    );
+    act(() => {
+      document.body.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, composed: true }),
+      );
+    });
     expect(panel.hidden).toBe(true);
 
-    toggle.click();
+    click(toggle);
     expect(panel.hidden).toBe(false);
-    panel.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
+    act(() => {
+      panel.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
     expect(panel.hidden).toBe(true);
   });
 
@@ -238,20 +272,47 @@ describe("panel tabs redesign", () => {
     expect(sizeRule).toContain(`.${CSS_CLASS.panel}{width:420px;height:360px;}`);
   });
 
-  it("applies dark theme class and CSS variables when site theme is dark", () => {
-    const shadow = openPanel();
-    getTab(shadow, "settings").click();
-    const host = document.getElementById(PANEL_ROOT_ID);
-    expect(host).not.toBeNull();
-    expect(host?.classList.contains(PANEL_UI_CLASS.themeDark)).toBe(false);
-
-    const theme = shadow.querySelector("#rdw-site-dark-theme");
-    expect(theme).toBeInstanceOf(HTMLInputElement);
-    if (!(theme instanceof HTMLInputElement)) {
-      throw new Error("expected theme checkbox");
+  it("three save-apply size cycles do not shrink when border-box is unchanged", () => {
+    const sizes: Array<{ width: number; height: number }> = [];
+    let current = { width: 400, height: 300 };
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      const entry = {
+        borderBoxSize: [
+          { inlineSize: current.width, blockSize: current.height },
+        ],
+        contentRect: {
+          width: current.width - 2,
+          height: current.height - 2,
+        },
+      } as unknown as ResizeObserverEntry;
+      const el = document.createElement("div");
+      Object.defineProperty(el, "offsetWidth", { value: current.width });
+      Object.defineProperty(el, "offsetHeight", { value: current.height });
+      const measured = measureBorderBoxSize(entry, el);
+      expect(measured).not.toBeNull();
+      if (measured === null) {
+        throw new Error("expected size");
+      }
+      expect(measured.width).toBeGreaterThanOrEqual(PANEL_MIN_WIDTH_PX);
+      expect(measured.height).toBeGreaterThanOrEqual(PANEL_MIN_HEIGHT_PX);
+      if (sizes.length > 0) {
+        const previous = sizes[sizes.length - 1];
+        expect(previous).toBeDefined();
+        if (previous !== undefined) {
+          expect(sizesEqual(measured, previous)).toBe(true);
+        }
+      }
+      sizes.push(measured);
+      current = measured;
     }
-    theme.checked = true;
-    theme.dispatchEvent(new Event("change"));
+    expect(sizes).toHaveLength(3);
+    expect(sizes[0]).toEqual(sizes[2]);
+  });
+
+  it("applies dark theme class when appearance theme is dark", () => {
+    setAppearance({ theme: APPEARANCE_THEME_DARK });
+    const shadow = openPanel();
+    const host = document.getElementById(PANEL_ROOT_ID);
     expect(host?.classList.contains(PANEL_UI_CLASS.themeDark)).toBe(true);
 
     const cssText = Array.from(shadow.querySelectorAll("style"))
@@ -259,12 +320,23 @@ describe("panel tabs redesign", () => {
       .join("\n");
     expect(cssText).toContain(`:host(.${PANEL_UI_CLASS.themeDark})`);
     expect(cssText).toContain("--rdw-bg:");
+
+    document.getElementById(PANEL_ROOT_ID)?.remove();
+    setAppearance({ theme: APPEARANCE_THEME_LIGHT });
+    clearStorageCache();
+    const hostLight = openPanel();
+    expect(
+      document
+        .getElementById(PANEL_ROOT_ID)
+        ?.classList.contains(PANEL_UI_CLASS.themeDark),
+    ).toBe(false);
+    expect(hostLight.querySelector(`.${PANEL_UI_CLASS.footer}`)).not.toBeNull();
   });
 
-  it("renders choice modules as select-only without a checkbox", () => {
+  it("renders choice modules as select-only without a switch", () => {
     const choiceFeature: Feature = {
-      id: "grid-density",
-      label: "Grid size",
+      id: "demo-choice",
+      label: "Demo choice",
       pages: ["list"],
       defaultEnabled: true,
       cssOnly: true,
@@ -290,30 +362,53 @@ describe("panel tabs redesign", () => {
     FEATURES.push(choiceFeature, toggleFeature);
 
     const shadow = openPanel();
-    getTab(shadow, "settings").click();
+    click(getTab(shadow, "settings"));
 
-    expect(shadow.querySelector("#rdw-feature-grid-density")).toBeNull();
-    const select = shadow.querySelector("#rdw-feature-choice-grid-density");
-    expect(select).toBeInstanceOf(HTMLSelectElement);
+    expect(shadow.querySelector("#rdw-feature-demo-choice")).toBeNull();
+    expect(
+      shadow.querySelector("#rdw-feature-choice-demo-choice"),
+    ).not.toBeNull();
 
     const checkbox = shadow.querySelector("#rdw-feature-menu-cleanup");
-    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    expect(checkbox).toBeInstanceOf(HTMLButtonElement);
+    expect(checkbox?.getAttribute("role")).toBe("switch");
     expect(shadow.querySelector("#rdw-feature-choice-menu-cleanup")).toBeNull();
   });
 
   it("shows the userscript version in the footer", () => {
     const shadow = openPanel();
     const footer = shadow.querySelector(`.${PANEL_UI_CLASS.footer}`);
-    expect(footer?.textContent).toBe(`v${USERSCRIPT_VERSION}`);
+    expect(footer?.textContent ?? "").toContain(`v${USERSCRIPT_VERSION}`);
   });
 
   it("shows artists empty hint and omits manual add / open updates controls", () => {
     const shadow = openPanel();
-    getTab(shadow, "artists").click();
-    expect(shadow.textContent ?? "").toContain(
+    click(getTab(shadow, "artists"));
+    expect(
+      shadow.querySelector("#rdw-tabpanel-artists")?.textContent ?? "",
+    ).toContain(
       "Follow artists with the Follow button next to their name in the tag list.",
     );
     expect(shadow.querySelector("#rdw-artist-tag")).toBeNull();
     expect(shadow.textContent ?? "").not.toContain("Open updates");
+  });
+
+  it("settings page group uses Collapse tags label for tag-groups", () => {
+    FEATURES.push({
+      id: "tag-groups",
+      label: "Collapse tags",
+      pages: ["list"],
+      defaultEnabled: true,
+      cssOnly: true,
+      css: "",
+      mount: () => {},
+    });
+    const shadow = openPanel();
+    click(getTab(shadow, "settings"));
+    const settingsText =
+      shadow.querySelector("#rdw-tabpanel-settings")?.textContent ?? "";
+    expect(settingsText).toContain("Collapse tags");
+    expect(settingsText).toContain("Page");
+    expect(settingsText).toContain("Data");
   });
 });

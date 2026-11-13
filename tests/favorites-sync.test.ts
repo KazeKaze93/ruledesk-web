@@ -24,7 +24,7 @@ import {
   setSyncState,
 } from "../src/storage/favs";
 import { clearStorageCache } from "../src/storage/store";
-import { createFavoritesSyncSection } from "../src/ui/favorites-sync-section";
+import { createFavoritesSyncSection } from "../src/ui/panel";
 
 const USER_ID = 479099;
 const memory = new Map<string, unknown>();
@@ -442,10 +442,9 @@ describe("createFavoritesSyncSection", () => {
   it("renders status, sync controls, warning, and add-only note", () => {
     addFav(5);
     const section = createFavoritesSyncSection();
-    expect(section.querySelector("h3")?.textContent).toBe("Favorites sync");
+    expect(section.textContent).toContain("Favorites sync");
     expect(section.textContent).toContain("1 in local favorites set");
     expect(section.textContent).toContain("Sync favorites");
-    expect(section.textContent).toContain("Resume");
     expect(section.textContent).toContain("Stop");
     expect(section.textContent).toContain(
       "Loads every favorites page, one request per 1.5 s",
@@ -453,6 +452,6 @@ describe("createFavoritesSyncSection", () => {
     expect(section.textContent).toContain(
       "Sync only adds favorites. Posts removed on the site stay in the local set.",
     );
-    expect(section.querySelector("progress")).toBeInstanceOf(HTMLProgressElement);
+    expect(section.querySelector('[role="progressbar"]')).not.toBeNull();
   });
 });

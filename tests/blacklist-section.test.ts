@@ -1,11 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "preact/test-utils";
 
 import { SITE_BLACKLIST_COOKIE_NAME } from "../src/config/constants";
 import { readSiteBlacklist, writeSiteBlacklist } from "../src/site/blacklist";
 import {
   BLACKLIST_SECTION_CSS,
   createBlacklistSection,
-} from "../src/ui/blacklist-section";
+} from "../src/ui/panel";
+
+function click(el: Element): void {
+  act(() => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+}
 
 function clearCookies(): void {
   const cookies = document.cookie.split(";");
@@ -18,16 +25,17 @@ function clearCookies(): void {
 }
 
 function chipLabels(section: HTMLElement): string[] {
-  return Array.from(
-    section.querySelectorAll(".rdw-blacklist-chip-label"),
-  ).map((node) => node.textContent ?? "");
+  return Array.from(section.querySelectorAll(".rdw-chip")).map((node) => {
+    const label = node.querySelector("span");
+    return label?.textContent ?? "";
+  });
 }
 
 function removeButton(
   section: HTMLElement,
   tag: string,
 ): HTMLButtonElement | null {
-  const label = `Remove ${tag} from blacklist`;
+  const label = `Remove ${tag}`;
   const buttons = section.querySelectorAll("button");
   for (const button of buttons) {
     if (button.getAttribute("aria-label") === label) {
@@ -43,6 +51,13 @@ function addInput(section: HTMLElement): HTMLInputElement {
     throw new Error("add input missing");
   }
   return input;
+}
+
+function setInputValue(input: HTMLInputElement, value: string): void {
+  act(() => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 }
 
 function addButton(section: HTMLElement): HTMLButtonElement {
@@ -78,7 +93,7 @@ describe("createBlacklistSection", () => {
 
   it("exports CSS for the panel shadow root", () => {
     expect(BLACKLIST_SECTION_CSS).toContain(".rdw-blacklist");
-    expect(BLACKLIST_SECTION_CSS).toContain(".rdw-blacklist-chip");
+    expect(BLACKLIST_SECTION_CSS).toContain(".rdw-blacklist-chips");
   });
 
   it("renders current tags as chips with remove aria-labels", () => {
@@ -86,10 +101,10 @@ describe("createBlacklistSection", () => {
     const section = createBlacklistSection();
     document.body.append(section);
 
-    expect(section.querySelector("h3")?.textContent).toBe("Blacklist");
+    expect(section.textContent ?? "").toContain("Blacklist");
     expect(chipLabels(section)).toEqual(["gay", "rating:e", "user:someone"]);
     expect(removeButton(section, "gay")?.getAttribute("aria-label")).toBe(
-      "Remove gay from blacklist",
+      "Remove gay",
     );
     expect(section.textContent).toContain(
       "Saved. Reload the page to apply.",
@@ -104,8 +119,8 @@ describe("createBlacklistSection", () => {
     document.body.append(section);
 
     const input = addInput(section);
-    input.value = "Roblox";
-    addButton(section).click();
+    setInputValue(input, "Roblox");
+    click(addButton(section));
 
     expect(chipLabels(section)).toEqual(["roblox"]);
     expect(readSiteBlacklist()).toEqual(["roblox"]);
@@ -117,10 +132,10 @@ describe("createBlacklistSection", () => {
     document.body.append(section);
 
     const input = addInput(section);
-    input.value = "Gay";
-    input.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
-    );
+    setInputValue(input, "Gay");
+    act(() => {
+      input.form?.requestSubmit();
+    });
 
     expect(chipLabels(section)).toEqual(["gay"]);
     expect(readSiteBlacklist()).toEqual(["gay"]);
@@ -131,8 +146,8 @@ describe("createBlacklistSection", () => {
     document.body.append(section);
 
     const input = addInput(section);
-    input.value = "gay, Gay_Sex roblox";
-    addButton(section).click();
+    setInputValue(input, "gay, Gay_Sex roblox");
+    click(addButton(section));
 
     expect(chipLabels(section)).toEqual(["gay", "gay_sex", "roblox"]);
     expect(readSiteBlacklist()).toEqual(["gay", "gay_sex", "roblox"]);
@@ -143,7 +158,11 @@ describe("createBlacklistSection", () => {
     const section = createBlacklistSection();
     document.body.append(section);
 
-    removeButton(section, "gay")?.click();
+    const remove = removeButton(section, "gay");
+    expect(remove).not.toBeNull();
+    if (remove !== null) {
+      click(remove);
+    }
 
     expect(chipLabels(section)).toEqual(["roblox"]);
     expect(readSiteBlacklist()).toEqual(["roblox"]);
@@ -154,7 +173,11 @@ describe("createBlacklistSection", () => {
     const section = createBlacklistSection();
     document.body.append(section);
 
-    removeButton(section, "gay")?.click();
+    const remove = removeButton(section, "gay");
+    expect(remove).not.toBeNull();
+    if (remove !== null) {
+      click(remove);
+    }
 
     expect(chipLabels(section)).toEqual([]);
     expect(readSiteBlacklist()).toEqual([]);
@@ -174,13 +197,17 @@ describe("createBlacklistSection", () => {
 
     expect(chipLabels(section)).toEqual(["rating:e", "user:alice", "gay"]);
 
-    removeButton(section, "gay")?.click();
+    const remove = removeButton(section, "gay");
+    expect(remove).not.toBeNull();
+    if (remove !== null) {
+      click(remove);
+    }
     expect(readSiteBlacklist()).toEqual(["rating:e", "user:alice"]);
     expect(chipLabels(section)).toEqual(["rating:e", "user:alice"]);
 
     const input = addInput(section);
-    input.value = "roblox";
-    addButton(section).click();
+    setInputValue(input, "roblox");
+    click(addButton(section));
 
     expect(readSiteBlacklist()).toEqual([
       "rating:e",
@@ -203,7 +230,7 @@ describe("createBlacklistSection", () => {
 
     const section = createBlacklistSection();
     document.body.append(section);
-    reloadButton(section).click();
+    click(reloadButton(section));
 
     expect(reload).toHaveBeenCalledTimes(1);
   });
