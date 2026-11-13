@@ -337,6 +337,35 @@ describe("feedFeature", () => {
     expect(feedLink?.hasAttribute("title")).toBe(false);
   });
 
+  it("re-reads artists after mount so feed recognition matches fresh storage", () => {
+    seedArtists(["a", "b"]);
+    const { posts } = buildHeaderMenu();
+    const search = "?page=post&s=list&tags=(+a+~+b+)";
+    feedFeature.mount(makeContext("list", search));
+    expect(
+      document
+        .getElementById(FEED_MENU_ITEM_ID)
+        ?.classList.contains(CURRENT_PAGE_CLASS),
+    ).toBe(true);
+    expect(posts.classList.contains(CURRENT_PAGE_CLASS)).toBe(false);
+
+    const data = createDefaultStorage();
+    data.artists = [{ tag: "a" }, { tag: "b" }, { tag: "new_follow" }];
+    memory.set(STORAGE_KEY, data);
+
+    feedFeature.mount(makeContext("list", search));
+
+    expect(
+      document
+        .getElementById(FEED_MENU_ITEM_ID)
+        ?.classList.contains(CURRENT_PAGE_CLASS),
+    ).toBe(false);
+    expect(posts.classList.contains(CURRENT_PAGE_CLASS)).toBe(true);
+    expect(
+      document.getElementById(FEED_MENU_ITEM_ID)?.querySelector("a")?.href,
+    ).toContain("new_follow");
+  });
+
   it("refreshes Feed href on pageshow when not persisted", () => {
     buildHeaderMenu();
     feedFeature.mount(makeContext());

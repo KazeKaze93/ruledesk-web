@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 
 import {
+  AutocompleteField,
   Button,
   Card,
   Chip,
@@ -221,6 +222,125 @@ describe("kit components", () => {
     expect(shadow.querySelector('[role="listbox"]')).toBeTruthy();
     fireClick(option);
     expect(onChange).toHaveBeenCalledWith("score");
+  });
+
+  it("AutocompleteField opens listbox and selects with Enter", async () => {
+    const onChange = vi.fn();
+    const onSelect = vi.fn();
+    const host = mount(
+      <AutocompleteField
+        label="Artist tag"
+        value="ny"
+        onChange={onChange}
+        onSelect={onSelect}
+        suggestions={[
+          { label: "nyx_x (2691)", value: "nyx_x", type: "artist" },
+          { label: "nyan (10)", value: "nyan", type: "general" },
+        ]}
+      />,
+    );
+    await flushEffects();
+    const input = host.querySelector('input[role="combobox"]');
+    expect(input).toBeInstanceOf(HTMLInputElement);
+    expect(host.querySelector('[role="listbox"]')).toBeTruthy();
+    expect(host.querySelectorAll('[role="option"]').length).toBe(2);
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("expected combobox");
+    }
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+      );
+    });
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+    });
+    expect(onChange).toHaveBeenCalledWith("nyx_x");
+    expect(onSelect).toHaveBeenCalledWith({
+      label: "nyx_x (2691)",
+      value: "nyx_x",
+      type: "artist",
+    });
+    expect(host.querySelector('[role="listbox"]')).toBeNull();
+  });
+
+  it("AutocompleteField Escape and outside click close the list", async () => {
+    const host = mount(
+      <AutocompleteField
+        label="Add tag"
+        value="ga"
+        onChange={() => undefined}
+        suggestions={[{ label: "gay (1)", value: "gay" }]}
+      />,
+    );
+    await flushEffects();
+    expect(host.querySelector('[role="listbox"]')).toBeTruthy();
+    const input = host.querySelector('input[role="combobox"]');
+    expect(input).toBeInstanceOf(HTMLInputElement);
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error("expected combobox");
+    }
+    act(() => {
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(host.querySelector('[role="listbox"]')).toBeNull();
+  });
+
+  it("AutocompleteField outside mousedown uses composedPath", async () => {
+    const { host, shadow } = mountShadow(
+      <AutocompleteField
+        label="Add tag"
+        value="ga"
+        onChange={() => undefined}
+        suggestions={[{ label: "gay (1)", value: "gay" }]}
+      />,
+    );
+    await flushEffects();
+    expect(shadow.querySelector('[role="listbox"]')).toBeTruthy();
+    const root = shadow.querySelector(".rdw-ac");
+    const option = shadow.querySelector('[role="option"]');
+    expect(root).toBeTruthy();
+    expect(option).toBeTruthy();
+    if (root === null || option === null) {
+      throw new Error("expected autocomplete root and option");
+    }
+    act(() => {
+      const event = new MouseEvent("mousedown", {
+        bubbles: true,
+        composed: true,
+      });
+      Object.defineProperty(event, "target", {
+        configurable: true,
+        value: host,
+      });
+      Object.defineProperty(event, "composedPath", {
+        configurable: true,
+        value: () => [option, root, shadow, host, document, window],
+      });
+      document.dispatchEvent(event);
+    });
+    expect(shadow.querySelector('[role="listbox"]')).toBeTruthy();
+
+    act(() => {
+      const event = new MouseEvent("mousedown", {
+        bubbles: true,
+        composed: true,
+      });
+      Object.defineProperty(event, "target", {
+        configurable: true,
+        value: host,
+      });
+      Object.defineProperty(event, "composedPath", {
+        configurable: true,
+        value: () => [host, document, window],
+      });
+      document.dispatchEvent(event);
+    });
+    expect(shadow.querySelector('[role="listbox"]')).toBeNull();
   });
 
   it("TextField and NumberField emit changes", () => {

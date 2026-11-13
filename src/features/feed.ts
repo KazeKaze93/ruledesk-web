@@ -229,6 +229,7 @@ function isFeedPage(search: string, artistTags: string[]): boolean {
 function applyCurrentPageHighlight(
   feedItem: HTMLLIElement,
   onFeed: boolean,
+  pageKind: FeatureContext["pageKind"],
 ): void {
   const postsItem = findPostsMenuItem();
   if (onFeed) {
@@ -237,6 +238,10 @@ function applyCurrentPageHighlight(
     return;
   }
   feedItem.classList.remove(CURRENT_PAGE_CLASS);
+  // List searches that are not the feed keep the site's Posts current-page.
+  if (pageKind === "list") {
+    postsItem?.classList.add(CURRENT_PAGE_CLASS);
+  }
 }
 
 function markNewThumbs(root: ParentNode, seenPostId: number): void {
@@ -277,9 +282,11 @@ function mountFeed(ctx: FeatureContext): void {
     return;
   }
 
+  // Fresh GM read — bfcache/stale load() cache must not diverge from href builders.
+  reloadFromStorage();
   const artistTags = listArtistTags();
   const onFeed = isFeedPage(ctx.search, artistTags);
-  applyCurrentPageHighlight(feedItem, onFeed);
+  applyCurrentPageHighlight(feedItem, onFeed, ctx.pageKind);
 
   if (!onFeed || ctx.pageKind !== "list") {
     return;

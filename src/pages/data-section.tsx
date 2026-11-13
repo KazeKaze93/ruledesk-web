@@ -25,11 +25,15 @@ const FILE_CLASS = "rdw-data-file";
 const HEADING = "Data";
 const INCLUDE_BACKGROUND_LABEL = "Include background image";
 const INCLUDE_BACKGROUND_ID = "rdw-backup-include-bg";
+const INCLUDE_FAVORITES_LABEL = "Include favorites";
+const INCLUDE_FAVORITES_ID = "rdw-backup-include-favs";
+const FAVORITES_EXPORT_HINT =
+  "Favorites restore via Favorites sync. Include them in the file only if you need to copy the local fav list.";
 const IMPORT_MODE_LABEL = "Import mode";
 const EXPORT_LABEL = UI_TEXT.export;
 const IMPORT_LABEL = UI_TEXT.import;
 const STORAGE_HINT =
-  "Collections, artists, settings, and favorites live in Tampermonkey storage. Blacklist and site theme are browser cookies and are not included in this file.";
+  "Collections, artists, and settings live in Tampermonkey storage. Favorites are optional in this file. Blacklist and site theme are browser cookies and are not included.";
 
 const MODE_OPTIONS = [
   { value: IMPORT_MODE_MERGE, label: "Merge" },
@@ -94,6 +98,7 @@ export function DataSection(props: DataSectionProps = {}): JSX.Element {
   const includeHeading = props.includeHeading !== false;
   const fileRef = useRef<HTMLInputElement>(null);
   const [includeBackground, setIncludeBackground] = useState(false);
+  const [includeFavorites, setIncludeFavorites] = useState(false);
   const [mode, setMode] = useState<BackupImportMode>(IMPORT_MODE_MERGE);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState("");
@@ -109,6 +114,13 @@ export function DataSection(props: DataSectionProps = {}): JSX.Element {
           checked={includeBackground}
           onChange={setIncludeBackground}
         />
+        <Switch
+          id={INCLUDE_FAVORITES_ID}
+          label={INCLUDE_FAVORITES_LABEL}
+          checked={includeFavorites}
+          onChange={setIncludeFavorites}
+        />
+        <p className={HINT_CLASS}>{FAVORITES_EXPORT_HINT}</p>
         <Segmented
           label={IMPORT_MODE_LABEL}
           options={[...MODE_OPTIONS]}
@@ -128,7 +140,10 @@ export function DataSection(props: DataSectionProps = {}): JSX.Element {
             onClick={() => {
               setError("");
               setSummary("");
-              exportBackupDownload({ includeBackground });
+              exportBackupDownload({
+                includeBackground,
+                includeFavorites,
+              });
             }}
           >
             {EXPORT_LABEL}

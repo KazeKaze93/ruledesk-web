@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.10.0
+// @version      0.11.0
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -102,8 +102,8 @@
 		artistDuplicate: "Already following this artist.",
 		openUpdates: "Open updates",
 		openUpdatesGroup: "Updates",
-		updatesGroupSizeLabel: "Artists per search (0 = no limit)",
-		playlistChunkSizeLabel: "Playlist part size",
+		updatesGroupSizeLabel: "Artists per search (0 = 400)",
+		playlistChunkSizeLabel: "Collection part size",
 		seenUpTo: "Seen up to post #",
 		seenNothing: "Nothing marked as seen yet.",
 		markAllSeen: "Mark all seen",
@@ -1427,6 +1427,22 @@
 			return def.innerType._zod.run(payload, ctx);
 		};
 	});
+	var $ZodNullable = $constructor("$ZodNullable", (inst, def) => {
+		$ZodType.init(inst, def);
+		defineLazyInternal(inst, "optin", (zod) => zod.def.innerType._zod.optin);
+		defineLazyInternal(inst, "optout", (zod) => zod.def.innerType._zod.optout);
+		defineLazyInternal(inst, "pattern", (zod) => {
+			const pattern = zod.def.innerType._zod.pattern;
+			return pattern ? new RegExp(`^(${cleanRegex(pattern.source)}|null)$`) : void 0;
+		});
+		defineLazyInternal(inst, "values", (zod) => {
+			return zod.def.innerType._zod.values ? new Set([...zod.def.innerType._zod.values, null]) : void 0;
+		});
+		inst._zod.parse = (payload, ctx) => {
+			if (payload.value === null) return payload;
+			return def.innerType._zod.run(payload, ctx);
+		};
+	});
 	function snapshotChecks(def) {
 		if (def.checks) def.checks = [...def.checks];
 		return def;
@@ -1646,6 +1662,16 @@
 	function optional(innerType) {
 		return new ZodMiniOptional({
 			type: "optional",
+			innerType
+		});
+	}
+	var ZodMiniNullable = $constructor("ZodMiniNullable", (inst, def) => {
+		$ZodNullable.init(inst, def);
+		ZodMiniType.init(inst, def);
+	});
+	function nullable(innerType) {
+		return new ZodMiniNullable({
+			type: "nullable",
 			innerType
 		});
 	}
@@ -1871,6 +1897,218 @@
 		}
 		return ids;
 	}
+	var MARKS_KEEP_LIMIT = 2e4;
+	var MARKS_PRUNE_OVERFLOW_RATIO = .1;
+	function marksPruneThreshold(keepLimit = MARKS_KEEP_LIMIT) {
+		return keepLimit + Math.floor(keepLimit * MARKS_PRUNE_OVERFLOW_RATIO);
+	}
+	function postIdSortKey(postId) {
+		const parsed = Number(postId);
+		if (!Number.isFinite(parsed)) return Number.NEGATIVE_INFINITY;
+		return Math.trunc(parsed);
+	}
+	function pruneMarksIfNeeded(marks, keepLimit = MARKS_KEEP_LIMIT) {
+		const entries = Object.entries(marks);
+		const threshold = marksPruneThreshold(keepLimit);
+		if (entries.length <= threshold) return {
+			marks,
+			pruned: false
+		};
+		const sorted = [...entries].sort((left, right) => postIdSortKey(right[0]) - postIdSortKey(left[0]));
+		const next = {};
+		for (const [postId, flags] of sorted.slice(0, keepLimit)) next[postId] = flags;
+		return {
+			marks: next,
+			pruned: true
+		};
+	}
+	var TOKEN_VAR = {
+		bg: "--rdw-bg",
+		surface: "--rdw-surface",
+		surface2: "--rdw-surface-2",
+		border: "--rdw-border",
+		text: "--rdw-text",
+		muted: "--rdw-muted",
+		accent: "--rdw-accent",
+		accentSoft: "--rdw-accent-soft",
+		danger: "--rdw-danger",
+		dangerSoft: "--rdw-danger-soft",
+		tagArtist: "--rdw-tag-artist",
+		tagCharacter: "--rdw-tag-character",
+		tagCopyright: "--rdw-tag-copyright",
+		tagMetadata: "--rdw-tag-metadata",
+		radiusS: "--rdw-radius-s",
+		radiusM: "--rdw-radius-m",
+		radiusL: "--rdw-radius-l",
+		shadow1: "--rdw-shadow-1",
+		shadow2: "--rdw-shadow-2",
+		font: "--rdw-font",
+		backgroundImage: "--rdw-background-image",
+		backgroundDim: "--rdw-background-dim"
+	};
+	var LIGHT_PALETTE = {
+		bg: "#f3f5f7",
+		surface: "#ffffff",
+		surface2: "#f4f6f8",
+		border: "#cfd6dd",
+		text: "#1c2228",
+		muted: "#66727e",
+		accent: "#2f6fed",
+		accentSoft: "#e8f0fe",
+		danger: "#c0392b",
+		dangerSoft: "#fdecea",
+		tagArtist: "#b00020",
+		tagCharacter: "#0a7a2f",
+		tagCopyright: "#8e24aa",
+		tagMetadata: "#ff8800",
+		radiusS: "6px",
+		radiusM: "8px",
+		radiusL: "10px",
+		shadow1: "0 1px 2px rgba(0, 0, 0, 0.06)",
+		shadow2: "0 8px 24px rgba(0, 0, 0, 0.25)",
+		font: "system-ui, \"Segoe UI\", sans-serif"
+	};
+	var DARK_PALETTE = {
+		bg: "#16181c",
+		surface: "#1e2228",
+		surface2: "#262b33",
+		border: "#3a424c",
+		text: "#e8edf2",
+		muted: "#8a96a3",
+		accent: "#4c8bf5",
+		accentSoft: "#1a2f5a",
+		danger: "#e57373",
+		dangerSoft: "#3d1f1f",
+		tagArtist: "#ff6b81",
+		tagCharacter: "#5dcea0",
+		tagCopyright: "#ce93d8",
+		tagMetadata: "#ffb74d",
+		radiusS: "6px",
+		radiusM: "8px",
+		radiusL: "10px",
+		shadow1: "0 1px 2px rgba(0, 0, 0, 0.35)",
+		shadow2: "0 8px 24px rgba(0, 0, 0, 0.55)",
+		font: "system-ui, \"Segoe UI\", sans-serif"
+	};
+	var HEX_SHORT_PATTERN = /^#([0-9a-fA-F]{3})$/;
+	var HEX_LONG_PATTERN = /^#([0-9a-fA-F]{6})$/;
+	var SRGB_LINEAR_THRESHOLD = .03928;
+	var SRGB_LINEAR_DIVISOR = 12.92;
+	var SRGB_GAMMA = 2.4;
+	var SRGB_A = .055;
+	var SRGB_B = 1.055;
+	var LUMA_R = .2126;
+	var LUMA_G = .7152;
+	var LUMA_B = .0722;
+	function paletteForMode(mode) {
+		return mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+	}
+	function channelToLinear(channel) {
+		const c = channel / 255;
+		if (c <= SRGB_LINEAR_THRESHOLD) return c / SRGB_LINEAR_DIVISOR;
+		return ((c + SRGB_A) / SRGB_B) ** SRGB_GAMMA;
+	}
+	function parseHexColor(value) {
+		const short = HEX_SHORT_PATTERN.exec(value.trim());
+		if (short !== null) {
+			const hex = short[1];
+			if (hex === void 0) return null;
+			return {
+				r: Number.parseInt(hex[0] + hex[0], 16),
+				g: Number.parseInt(hex[1] + hex[1], 16),
+				b: Number.parseInt(hex[2] + hex[2], 16)
+			};
+		}
+		const long = HEX_LONG_PATTERN.exec(value.trim());
+		if (long !== null) {
+			const hex = long[1];
+			if (hex === void 0) return null;
+			return {
+				r: Number.parseInt(hex.slice(0, 2), 16),
+				g: Number.parseInt(hex.slice(2, 4), 16),
+				b: Number.parseInt(hex.slice(4, 6), 16)
+			};
+		}
+		return null;
+	}
+	function relativeLuminance(hex) {
+		const rgb = parseHexColor(hex);
+		if (rgb === null) return null;
+		const r = channelToLinear(rgb.r);
+		const g = channelToLinear(rgb.g);
+		const b = channelToLinear(rgb.b);
+		return LUMA_R * r + LUMA_G * g + LUMA_B * b;
+	}
+	function customBaseFromLegacyBg(bg) {
+		if (bg === void 0) return "light";
+		const luma = relativeLuminance(bg);
+		if (luma !== null && luma < .5) return "dark";
+		return "light";
+	}
+	function escapeCssValue(value) {
+		return value.replace(/</g, "\\3c ");
+	}
+	function tokensToCssDeclarations(palette) {
+		return [
+			`${TOKEN_VAR.bg}: ${escapeCssValue(palette.bg)};`,
+			`${TOKEN_VAR.surface}: ${escapeCssValue(palette.surface)};`,
+			`${TOKEN_VAR.surface2}: ${escapeCssValue(palette.surface2)};`,
+			`${TOKEN_VAR.border}: ${escapeCssValue(palette.border)};`,
+			`${TOKEN_VAR.text}: ${escapeCssValue(palette.text)};`,
+			`${TOKEN_VAR.muted}: ${escapeCssValue(palette.muted)};`,
+			`${TOKEN_VAR.accent}: ${escapeCssValue(palette.accent)};`,
+			`${TOKEN_VAR.accentSoft}: ${escapeCssValue(palette.accentSoft)};`,
+			`${TOKEN_VAR.danger}: ${escapeCssValue(palette.danger)};`,
+			`${TOKEN_VAR.dangerSoft}: ${escapeCssValue(palette.dangerSoft)};`,
+			`${TOKEN_VAR.tagArtist}: ${escapeCssValue(palette.tagArtist)};`,
+			`${TOKEN_VAR.tagCharacter}: ${escapeCssValue(palette.tagCharacter)};`,
+			`${TOKEN_VAR.tagCopyright}: ${escapeCssValue(palette.tagCopyright)};`,
+			`${TOKEN_VAR.tagMetadata}: ${escapeCssValue(palette.tagMetadata)};`,
+			`${TOKEN_VAR.radiusS}: ${escapeCssValue(palette.radiusS)};`,
+			`${TOKEN_VAR.radiusM}: ${escapeCssValue(palette.radiusM)};`,
+			`${TOKEN_VAR.radiusL}: ${escapeCssValue(palette.radiusL)};`,
+			`${TOKEN_VAR.shadow1}: ${escapeCssValue(palette.shadow1)};`,
+			`${TOKEN_VAR.shadow2}: ${escapeCssValue(palette.shadow2)};`,
+			`${TOKEN_VAR.font}: ${escapeCssValue(palette.font)};`
+		].join("\n  ");
+	}
+	function buildTokensCss(palette, selector = ":root") {
+		return `${selector} {\n  ${tokensToCssDeclarations(palette)}\n}\n`;
+	}
+	function applyTokenProperties(target, palette) {
+		target.style.setProperty(TOKEN_VAR.bg, palette.bg);
+		target.style.setProperty(TOKEN_VAR.surface, palette.surface);
+		target.style.setProperty(TOKEN_VAR.surface2, palette.surface2);
+		target.style.setProperty(TOKEN_VAR.border, palette.border);
+		target.style.setProperty(TOKEN_VAR.text, palette.text);
+		target.style.setProperty(TOKEN_VAR.muted, palette.muted);
+		target.style.setProperty(TOKEN_VAR.accent, palette.accent);
+		target.style.setProperty(TOKEN_VAR.accentSoft, palette.accentSoft);
+		target.style.setProperty(TOKEN_VAR.danger, palette.danger);
+		target.style.setProperty(TOKEN_VAR.dangerSoft, palette.dangerSoft);
+		target.style.setProperty(TOKEN_VAR.tagArtist, palette.tagArtist);
+		target.style.setProperty(TOKEN_VAR.tagCharacter, palette.tagCharacter);
+		target.style.setProperty(TOKEN_VAR.tagCopyright, palette.tagCopyright);
+		target.style.setProperty(TOKEN_VAR.tagMetadata, palette.tagMetadata);
+		target.style.setProperty(TOKEN_VAR.radiusS, palette.radiusS);
+		target.style.setProperty(TOKEN_VAR.radiusM, palette.radiusM);
+		target.style.setProperty(TOKEN_VAR.radiusL, palette.radiusL);
+		target.style.setProperty(TOKEN_VAR.shadow1, palette.shadow1);
+		target.style.setProperty(TOKEN_VAR.shadow2, palette.shadow2);
+		target.style.setProperty(TOKEN_VAR.font, palette.font);
+	}
+	function applyCustomThemeProperties(target, custom) {
+		if (custom.backgroundImage !== void 0 && custom.backgroundImage.length > 0) target.style.setProperty(TOKEN_VAR.backgroundImage, `url("${custom.backgroundImage.replace(/"/g, "\\\"")}")`);
+		if (custom.backgroundDim !== void 0) target.style.setProperty(TOKEN_VAR.backgroundDim, String(custom.backgroundDim));
+	}
+	function clearCustomThemeProperties(target) {
+		target.style.removeProperty(TOKEN_VAR.accent);
+		target.style.removeProperty(TOKEN_VAR.bg);
+		target.style.removeProperty(TOKEN_VAR.surface);
+		target.style.removeProperty(TOKEN_VAR.text);
+		target.style.removeProperty(TOKEN_VAR.backgroundImage);
+		target.style.removeProperty(TOKEN_VAR.backgroundDim);
+	}
 	var TagTypeSchema = _enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
 	var CollectionKindSchema = _enum([COLLECTION_KIND_SEARCH, COLLECTION_KIND_POSTS]);
 	var TagEntrySchema = object({
@@ -1896,16 +2134,30 @@
 		APPEARANCE_THEME_DARK,
 		APPEARANCE_THEME_CUSTOM
 	]);
+	var APPEARANCE_CUSTOM_BASE_LIGHT = "light";
+	var APPEARANCE_CUSTOM_BASE_DARK = "dark";
+	var AppearanceCustomBaseSchema = _enum([APPEARANCE_CUSTOM_BASE_LIGHT, APPEARANCE_CUSTOM_BASE_DARK]);
+	var AppearanceCustomSchema = object({
+		base: AppearanceCustomBaseSchema,
+		backgroundImage: optional(string()),
+		backgroundDim: optional(number())
+	});
+	var AppearanceCustomStoredSchema = object({
+		base: optional(AppearanceCustomBaseSchema),
+		accent: optional(string()),
+		bg: optional(string()),
+		surface: optional(string()),
+		text: optional(string()),
+		backgroundImage: optional(string()),
+		backgroundDim: optional(number())
+	});
 	var AppearanceSchema = object({
 		theme: AppearanceThemeSchema,
-		custom: optional(object({
-			accent: string(),
-			bg: string(),
-			surface: string(),
-			text: string(),
-			backgroundImage: optional(string()),
-			backgroundDim: optional(number())
-		}))
+		custom: optional(AppearanceCustomSchema)
+	});
+	var AppearanceStoredSchema = object({
+		theme: AppearanceThemeSchema,
+		custom: optional(AppearanceCustomStoredSchema)
 	});
 	var SettingsSchema = object({
 		gridFavButtons: boolean(),
@@ -1915,7 +2167,7 @@
 		features: optional(record(string(), boolean())),
 		featureChoice: optional(record(string(), string())),
 		featureState: optional(record(string(), unknown())),
-		appearance: optional(AppearanceSchema)
+		appearance: optional(AppearanceStoredSchema)
 	});
 	var UpdatesSchema = object({ seenPostId: int().check(_nonnegative()) });
 	var StorageSchema = object({
@@ -1933,6 +2185,9 @@
 		tabId: string().check(_minLength(1)),
 		beatAt: number()
 	});
+	var FAVS_SYNC_MODE_INCREMENTAL = "incremental";
+	var FAVS_SYNC_MODE_FULL = "full";
+	var FavsSyncModeSchema = _enum([FAVS_SYNC_MODE_INCREMENTAL, FAVS_SYNC_MODE_FULL]);
 	var FavsSyncSchema = object({
 		nextPid: int(),
 		lastPid: int(),
@@ -1940,7 +2195,8 @@
 		finishedAt: optional(string()),
 		running: optional(boolean()),
 		userId: optional(int()),
-		lock: optional(FavsSyncLockSchema)
+		lock: optional(FavsSyncLockSchema),
+		mode: optional(FavsSyncModeSchema)
 	});
 	var FavsSchema = object({
 		version: literal(1),
@@ -1998,6 +2254,19 @@
 	function createDefaultAppearance() {
 		return { theme: DEFAULT_APPEARANCE_THEME };
 	}
+	function normalizeAppearanceCustom(raw) {
+		const next = { base: raw.base === "light" || raw.base === "dark" ? raw.base : customBaseFromLegacyBg(raw.bg) };
+		if (raw.backgroundImage !== void 0) next.backgroundImage = raw.backgroundImage;
+		if (raw.backgroundDim !== void 0) next.backgroundDim = raw.backgroundDim;
+		return next;
+	}
+	function normalizeAppearance(stored) {
+		if (stored.custom === void 0) return { theme: stored.theme };
+		return {
+			theme: stored.theme,
+			custom: normalizeAppearanceCustom(stored.custom)
+		};
+	}
 	function createDefaultStorage() {
 		return {
 			version: 1,
@@ -2014,7 +2283,9 @@
 		};
 	}
 	function resolveAppearance(data) {
-		return data.settings?.appearance ?? createDefaultAppearance();
+		const stored = data.settings?.appearance;
+		if (stored === void 0) return createDefaultAppearance();
+		return normalizeAppearance(stored);
 	}
 	function resolveGridFavButtons(data) {
 		return data.settings?.gridFavButtons ?? true;
@@ -2078,7 +2349,12 @@
 		return parsed.data;
 	}
 	function writeMainStorage(data) {
-		getGmSetValue$2()(STORAGE_KEY, StorageSchema.parse(data));
+		const pruned = pruneMarksIfNeeded(data.marks);
+		const next = pruned.pruned ? {
+			...data,
+			marks: pruned.marks
+		} : data;
+		getGmSetValue$2()(STORAGE_KEY, StorageSchema.parse(next));
 	}
 	function migrateMarksFavToFavs() {
 		const main = readMainStorageRaw();
@@ -2200,6 +2476,23 @@
 		writeFavsData(next);
 		cacheHydrated = true;
 	}
+	function extractFavIdsFromMarks(marks) {
+		const favIds = [];
+		const nextMarks = {};
+		for (const [postId, flags] of Object.entries(marks)) {
+			if (flags.fav === true) {
+				const normalized = normalizePostId$1(postId);
+				if (normalized !== null) favIds.push(normalized);
+			}
+			const nextFlags = {};
+			if (flags.seen === true) nextFlags.seen = true;
+			if (Object.keys(nextFlags).length > 0) nextMarks[postId] = nextFlags;
+		}
+		return {
+			marks: nextMarks,
+			favIds
+		};
+	}
 	var cachedStorage = null;
 	var storageCacheHydrated = false;
 	function getGmGetValue$1() {
@@ -2283,7 +2576,12 @@
 	}
 	function save(data) {
 		const parsed = StorageSchema.parse(data);
-		writeData(parsed);
+		const pruned = pruneMarksIfNeeded(parsed.marks);
+		const toWrite = pruned.pruned ? {
+			...parsed,
+			marks: pruned.marks
+		} : parsed;
+		writeData(toWrite);
 		migrateMarksFavToFavs();
 		const after = readRaw();
 		if (after === void 0 || after === null) {
@@ -2292,7 +2590,7 @@
 		}
 		const reparsed = StorageSchema.safeParse(after);
 		if (!reparsed.success) {
-			setStorageCache(parsed);
+			setStorageCache(toWrite);
 			return;
 		}
 		setStorageCache(reparsed.data);
@@ -2459,11 +2757,14 @@
 		save(data);
 	}
 	function getUpdatesGroupSize() {
-		return resolveUpdatesGroupSize(load());
+		const stored = resolveUpdatesGroupSize(load());
+		if (!Number.isFinite(stored) || stored <= 0) return 400;
+		return Math.min(Math.floor(stored), 400);
 	}
 	function setUpdatesGroupSize(size) {
 		const data = load();
-		const safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+		let safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+		if (safeSize > 400) safeSize = 400;
 		data.settings = {
 			...currentSettings(data),
 			updatesGroupSize: safeSize
@@ -2516,7 +2817,7 @@
 		save(data);
 	}
 	function listArtistTags() {
-		return load().artists.map((entry) => entry.tag);
+		return reloadFromStorage().artists.map((entry) => entry.tag);
 	}
 	function isFollowingArtist(tag) {
 		const normalized = normalizeArtistTag(tag);
@@ -2526,7 +2827,7 @@
 	function addArtist(tag) {
 		const normalized = normalizeArtistTag(tag);
 		if (normalized === null) throw new Error("Invalid artist tag");
-		const data = load();
+		const data = reloadFromStorage();
 		if (data.artists.some((entry) => entry.tag === normalized)) throw new Error("Duplicate artist tag");
 		const entry = ArtistEntrySchema.parse({ tag: normalized });
 		data.artists.push(entry);
@@ -2536,7 +2837,7 @@
 	function removeArtist(tag) {
 		const normalized = normalizeArtistTag(tag);
 		if (normalized === null) return false;
-		const data = load();
+		const data = reloadFromStorage();
 		const next = data.artists.filter((entry) => entry.tag !== normalized);
 		if (next.length === data.artists.length) return false;
 		data.artists = next;
@@ -2766,7 +3067,6 @@ body.${BODY_FEATURE_CLASS$3} span.thumb.${CLASS_BLACKLISTED$1} {
 		settings: "RuleDesk"
 	};
 	var MY_FAVORITES_CONTAINER_ID = "my-favorites-container";
-	var MY_FAVORITES_LINK_SELECTOR$2 = "li#my-favorites-container a[href*=\"page=favorites\"]";
 	var FEED_MENU_ITEM_ID = "rdw-feed-menu";
 	var PANEL_UI_CLASS = {
 		artistMeta: "rdw-artist-meta",
@@ -3800,10 +4100,14 @@ ${ICON_BUTTON_CSS}
 		if (detectPageKind(search) !== "list") return;
 		const tagsParam = new URLSearchParams(search).get(SEARCH_PARAM_TAGS);
 		if (tagsParam === null || tagsParam.trim().length === 0) return;
+		reloadFromStorage();
 		const artistTags = listArtistTags();
 		const isFull = isFullUpdatesQuery(tagsParam, artistTags);
 		const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
-		if (!isFull && !isPartial) return;
+		if (!isFull && !isPartial) {
+			removeExistingBar$1(root);
+			return;
+		}
 		removeExistingBar$1(root);
 		ensureDocumentStyles();
 		const imageList = root.querySelector(SITE_SELECTORS.imageList);
@@ -3835,7 +4139,7 @@ ${ICON_BUTTON_CSS}
 	var NEW_PLAQUE_TOP_PX = 6;
 	var NEW_PLAQUE_ACCENT = "#2f6fed";
 	var EVENT_PAGESHOW$1 = "pageshow";
-	var EVENT_CLICK$1 = "click";
+	var EVENT_CLICK$2 = "click";
 	var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$8);
 	var FEATURE_CSS$7 = `
 body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS} {
@@ -3910,8 +4214,8 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 			window.addEventListener(EVENT_PAGESHOW$1, onPageShow$1);
 		}
 		if (boundFeedLink === feedLink) return;
-		if (boundFeedLink !== null) boundFeedLink.removeEventListener(EVENT_CLICK$1, onFeedClick);
-		feedLink.addEventListener(EVENT_CLICK$1, onFeedClick);
+		if (boundFeedLink !== null) boundFeedLink.removeEventListener(EVENT_CLICK$2, onFeedClick);
+		feedLink.addEventListener(EVENT_CLICK$2, onFeedClick);
 		boundFeedLink = feedLink;
 	}
 	function ensureFeedMenuItem() {
@@ -3946,7 +4250,7 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 		if (tagsParam === null || tagsParam.trim().length === 0) return false;
 		return isFullUpdatesQuery(tagsParam, artistTags) || isPartialUpdatesQuery(tagsParam, artistTags);
 	}
-	function applyCurrentPageHighlight(feedItem, onFeed) {
+	function applyCurrentPageHighlight(feedItem, onFeed, pageKind) {
 		const postsItem = findPostsMenuItem$1();
 		if (onFeed) {
 			postsItem?.classList.remove(CURRENT_PAGE_CLASS);
@@ -3954,6 +4258,7 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 			return;
 		}
 		feedItem.classList.remove(CURRENT_PAGE_CLASS);
+		if (pageKind === "list") postsItem?.classList.add(CURRENT_PAGE_CLASS);
 	}
 	function markNewThumbs(root, seenPostId) {
 		if (seenPostId === 0) return;
@@ -3978,9 +4283,10 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 	function mountFeed(ctx) {
 		const feedItem = ensureFeedMenuItem();
 		if (feedItem === null) return;
+		reloadFromStorage();
 		const artistTags = listArtistTags();
 		const onFeed = isFeedPage(ctx.search, artistTags);
-		applyCurrentPageHighlight(feedItem, onFeed);
+		applyCurrentPageHighlight(feedItem, onFeed, ctx.pageKind);
 		if (!onFeed || ctx.pageKind !== "list") return;
 		markNewThumbs(document, getSeenPostId());
 		ensureNewThumbsSubscription();
@@ -3998,9 +4304,16 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 	var COMPACT_PX = 150;
 	var LARGE_PX = 250;
 	var MASONRY_VALUE = "masonry";
-	var MASONRY_COLUMN_WIDTH_PX = 200;
-	var MASONRY_COLUMN_GAP_PX = 10;
-	var MASONRY_THUMB_MARGIN = "0 0 10px";
+	var MASONRY_LIST_SCOPE = "#post-list";
+	var MASONRY_COLUMN_WIDTH_PX = 240;
+	var MASONRY_COLUMN_GAP_PX = 4;
+	var MASONRY_LIST_WIDTH_PERCENT = 100;
+	var MASONRY_THUMB_WIDTH_PERCENT = 100;
+	var MASONRY_THUMB_MARGIN_TOP_PX = 0;
+	var MASONRY_THUMB_MARGIN_INLINE_PX = 0;
+	var MASONRY_THUMB_MARGIN_BOTTOM_PX = 4;
+	var MASONRY_PREVIEW_WIDTH_PERCENT = 100;
+	var MASONRY_BORDER_RADIUS_PX = 4;
 	function sizeCss(choiceValue, px) {
 		const bodyClass = featureChoiceBodyClass(FEATURE_ID$7, choiceValue);
 		return [
@@ -4016,32 +4329,35 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 		].join("\n");
 	}
 	function masonryCss() {
-		const bodyClass = featureChoiceBodyClass(FEATURE_ID$7, MASONRY_VALUE);
+		const scope = `body.${featureChoiceBodyClass(FEATURE_ID$7, MASONRY_VALUE)} ${MASONRY_LIST_SCOPE}`;
+		const thumbMargin = `${MASONRY_THUMB_MARGIN_TOP_PX}px ${MASONRY_THUMB_MARGIN_INLINE_PX}px ${MASONRY_THUMB_MARGIN_BOTTOM_PX}px`;
 		return [
-			`body.${bodyClass} div.image-list {`,
+			`${scope} div.image-list {`,
 			`  display: block !important;`,
+			`  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,
 			`  column-width: ${MASONRY_COLUMN_WIDTH_PX}px !important;`,
 			`  column-gap: ${MASONRY_COLUMN_GAP_PX}px !important;`,
 			`}`,
-			`body.${bodyClass} span.thumb {`,
+			`${scope} span.thumb {`,
 			`  display: block !important;`,
-			`  width: auto !important;`,
+			`  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
 			`  height: auto !important;`,
-			`  margin: ${MASONRY_THUMB_MARGIN} !important;`,
+			`  margin: ${thumbMargin} !important;`,
 			`  break-inside: avoid !important;`,
 			`}`,
-			`body.${bodyClass} span.thumb > a {`,
+			`${scope} span.thumb > a {`,
 			`  display: block !important;`,
-			`  width: auto !important;`,
+			`  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
 			`  height: auto !important;`,
 			`}`,
-			`body.${bodyClass} span.thumb img.preview {`,
+			`${scope} span.thumb img.preview {`,
 			`  display: block !important;`,
-			`  width: 100% !important;`,
+			`  width: ${MASONRY_PREVIEW_WIDTH_PERCENT}% !important;`,
 			`  height: auto !important;`,
 			`  max-width: none !important;`,
 			`  max-height: none !important;`,
 			`  margin: 0 !important;`,
+			`  border-radius: ${MASONRY_BORDER_RADIUS_PX}px !important;`,
 			`}`
 		].join("\n");
 	}
@@ -4524,7 +4840,7 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		mount: mountMenuCleanup
 	};
 	var FEATURE_ID$4 = "playlist-bar";
-	var FEATURE_LABEL$4 = "Playlist header";
+	var FEATURE_LABEL$4 = "Collection header";
 	var FEATURE_PAGES$4 = ["list"];
 	var ROOT_ID$1 = "rdw-playlist-bar";
 	var ROOT_CLASS$1 = "rdw-playlist-bar";
@@ -4749,7 +5065,7 @@ body.${BODY_CLASS$1} .${CAPTION_CLASS} {
 		mount: mountPlaylistBar
 	};
 	var FEATURE_ID$3 = "playlist-menu";
-	var FEATURE_LABEL$3 = "Add to playlist button";
+	var FEATURE_LABEL$3 = "Add to collection button";
 	var FEATURE_PAGES$3 = ["list", "post"];
 	var CLASS_ADD = "rdw-playlist-add";
 	var CLASS_ADD_IN = "rdw-playlist-add--in";
@@ -4765,12 +5081,12 @@ body.${BODY_CLASS$1} .${CAPTION_CLASS} {
 	var CLASS_NEW_SUBMIT = "rdw-playlist-menu-new-submit";
 	var ATTR_POST_ID = "data-rdw-post-id";
 	var TEXT_ADD_GLYPH = "+";
-	var TEXT_NEW_PLAYLIST = "New playlist…";
+	var TEXT_NEW_PLAYLIST = "New collection…";
 	var TEXT_CREATE = "Create";
 	var TEXT_CHECK_MARK = "✓";
-	var LABEL_ADD = "Add to playlist";
-	var LABEL_TOGGLE_PREFIX = "Toggle playlist";
-	var LABEL_NEW_NAME = "New playlist name";
+	var LABEL_ADD = "Add to collection";
+	var LABEL_TOGGLE_PREFIX = "Toggle collection";
+	var LABEL_NEW_NAME = "New collection name";
 	var MENU_Z_INDEX = 2147483645;
 	var MENU_MIN_WIDTH_PX = 180;
 	var MENU_MAX_HEIGHT_PX = 280;
@@ -4782,8 +5098,8 @@ body.${BODY_CLASS$1} .${CAPTION_CLASS} {
 	var FOCUS_OUTLINE_OFFSET$1 = "2px";
 	var EVENT_KEYDOWN = "keydown";
 	var EVENT_POINTERDOWN = "pointerdown";
-	var KEY_ESCAPE = "Escape";
-	var KEY_ENTER$1 = "Enter";
+	var KEY_ESCAPE$1 = "Escape";
+	var KEY_ENTER$2 = "Enter";
 	var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$3)}`;
 	var FEATURE_CSS$3 = `
 ${BODY_SELECTOR$1} .${CLASS_ADD} {
@@ -4962,7 +5278,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
 		unbindGlobalCloseListeners();
 	}
 	function onDocumentKeydown(event) {
-		if (event.key !== KEY_ESCAPE) return;
+		if (event.key !== KEY_ESCAPE$1) return;
 		if (openPopup === null) return;
 		event.preventDefault();
 		closeOpenMenu();
@@ -5079,7 +5395,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
 			commit();
 		});
 		input.addEventListener("keydown", (event) => {
-			if (event.key !== KEY_ENTER$1) return;
+			if (event.key !== KEY_ENTER$2) return;
 			event.preventDefault();
 			event.stopPropagation();
 			commit();
@@ -5701,6 +6017,202 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	}
 	function G(n, t) {
 		return "function" == typeof t ? t(n) : t;
+	}
+	var KEY_ARROW_DOWN = "ArrowDown";
+	var KEY_ARROW_UP = "ArrowUp";
+	var KEY_ENTER$1 = "Enter";
+	var KEY_ESCAPE = "Escape";
+	var NO_ACTIVE_INDEX = -1;
+	var AUTOCOMPLETE_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-ac {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-ac__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-ac__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-ac__input::placeholder {
+  color: var(--rdw-muted);
+}
+.rdw-ac__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-ac__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  box-shadow: var(--rdw-shadow-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.rdw-ac__option {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--rdw-radius-s);
+  font-size: 12px;
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-ac__option[aria-selected="true"],
+.rdw-ac__option:hover {
+  background: var(--rdw-surface-2);
+}
+`;
+	function AutocompleteField(props) {
+		const autoId = P();
+		const listId = P();
+		const inputId = props.id ?? autoId;
+		const rootRef = T(null);
+		const [open, setOpen] = d(false);
+		const [activeIndex, setActiveIndex] = d(NO_ACTIVE_INDEX);
+		const suggestions = props.suggestions;
+		const hasSuggestions = suggestions.length > 0;
+		const listOpen = open && hasSuggestions && props.disabled !== true;
+		A(() => {
+			setActiveIndex(NO_ACTIVE_INDEX);
+			if (hasSuggestions) setOpen(true);
+			else setOpen(false);
+		}, [suggestions, hasSuggestions]);
+		A(() => {
+			if (!listOpen) return;
+			const onPointerDown = (event) => {
+				const root = rootRef.current;
+				if (root === null) return;
+				if (!event.composedPath().includes(root)) {
+					setOpen(false);
+					setActiveIndex(NO_ACTIVE_INDEX);
+				}
+			};
+			document.addEventListener("mousedown", onPointerDown);
+			return () => {
+				document.removeEventListener("mousedown", onPointerDown);
+			};
+		}, [listOpen]);
+		const selectOption = (option) => {
+			props.onChange(option.value);
+			props.onSelect?.(option);
+			setOpen(false);
+			setActiveIndex(NO_ACTIVE_INDEX);
+		};
+		const className = ["rdw-ac", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		const activeOption = activeIndex >= 0 && activeIndex < suggestions.length ? suggestions[activeIndex] : void 0;
+		return a$1($, { children: [a$1("style", { children: AUTOCOMPLETE_FIELD_CSS }), a$1("div", {
+			className,
+			ref: rootRef,
+			children: [
+				props.label !== void 0 ? a$1("label", {
+					className: "rdw-ac__label",
+					htmlFor: inputId,
+					children: props.label
+				}) : null,
+				a$1("input", {
+					id: inputId,
+					className: "rdw-ac__input rdw-kit-focusable",
+					type: "text",
+					role: "combobox",
+					"aria-autocomplete": "list",
+					"aria-expanded": listOpen,
+					"aria-controls": listId,
+					"aria-activedescendant": activeOption !== void 0 ? `${listId}-opt-${String(activeIndex)}` : void 0,
+					value: props.value,
+					placeholder: props.placeholder,
+					disabled: props.disabled,
+					"aria-label": props["aria-label"] ?? props.label,
+					autoComplete: "off",
+					onInput: (event) => {
+						props.onChange(event.currentTarget.value);
+					},
+					onFocus: () => {
+						if (hasSuggestions) setOpen(true);
+					},
+					onKeyDown: (event) => {
+						if (event.key === KEY_ESCAPE) {
+							if (listOpen) {
+								event.preventDefault();
+								setOpen(false);
+								setActiveIndex(NO_ACTIVE_INDEX);
+							}
+							return;
+						}
+						if (event.key === KEY_ARROW_DOWN) {
+							if (!hasSuggestions) return;
+							event.preventDefault();
+							setOpen(true);
+							setActiveIndex((current) => {
+								if (current < 0) return 0;
+								return Math.min(current + 1, suggestions.length - 1);
+							});
+							return;
+						}
+						if (event.key === KEY_ARROW_UP) {
+							if (!listOpen) return;
+							event.preventDefault();
+							setActiveIndex((current) => {
+								if (current <= 0) return NO_ACTIVE_INDEX;
+								return current - 1;
+							});
+							return;
+						}
+						if (event.key === KEY_ENTER$1) {
+							if (listOpen && activeOption !== void 0) {
+								event.preventDefault();
+								selectOption(activeOption);
+							}
+						}
+					}
+				}),
+				listOpen ? a$1("ul", {
+					className: "rdw-ac__list",
+					role: "listbox",
+					id: listId,
+					tabIndex: -1,
+					children: suggestions.map((option, index) => a$1("li", {
+						id: `${listId}-opt-${String(index)}`,
+						role: "option",
+						className: "rdw-ac__option rdw-kit-focusable",
+						"aria-selected": index === activeIndex,
+						onMouseDown: (event) => {
+							event.preventDefault();
+						},
+						onClick: () => {
+							selectOption(option);
+						},
+						children: option.label
+					}, `${option.value}:${option.type ?? ""}:${option.label}`))
+				}) : null
+			]
+		})] });
 	}
 	var BUTTON_CSS = `
 ${KIT_FOCUS_CSS}
@@ -6533,7 +7045,7 @@ ${KIT_FOCUS_CSS}
 	var KEY_ENTER = "Enter";
 	var EVENT_INPUT = "input";
 	var EVENT_CHANGE = "change";
-	var EVENT_CLICK = "click";
+	var EVENT_CLICK$1 = "click";
 	var EVENT_AWESOMPLETE_SELECT = "awesomplete-selectcomplete";
 	var WARN_NO_FORM = "search-tools: search form not found; not mounted";
 	var BODY_CLASS = featureBodyClass(FEATURE_ID$1);
@@ -7018,7 +7530,7 @@ ${KIT_FOCUS_CSS}
 					applyViewRef.current({ navigate: false });
 				}, 0);
 			};
-			if (sidebar !== null) sidebar.addEventListener(EVENT_CLICK, onSidebarClick);
+			if (sidebar !== null) sidebar.addEventListener(EVENT_CLICK$1, onSidebarClick);
 			const pollId = window.setInterval(() => {
 				if (document.hidden) return;
 				if (input.value === lastPolledValueRef.current) return;
@@ -7029,7 +7541,7 @@ ${KIT_FOCUS_CSS}
 				input.removeEventListener(EVENT_INPUT, onSiteInput);
 				input.removeEventListener(EVENT_CHANGE, onSiteInput);
 				input.removeEventListener(EVENT_AWESOMPLETE_SELECT, onSiteInput);
-				if (sidebar !== null) sidebar.removeEventListener(EVENT_CLICK, onSidebarClick);
+				if (sidebar !== null) sidebar.removeEventListener(EVENT_CLICK$1, onSidebarClick);
 				window.clearInterval(pollId);
 			};
 		}, [input]);
@@ -7548,141 +8060,17 @@ ${KIT_FOCUS_CSS}
 			}
 		}
 	}
-	var TOKEN_VAR = {
-		bg: "--rdw-bg",
-		surface: "--rdw-surface",
-		surface2: "--rdw-surface-2",
-		border: "--rdw-border",
-		text: "--rdw-text",
-		muted: "--rdw-muted",
-		accent: "--rdw-accent",
-		accentSoft: "--rdw-accent-soft",
-		danger: "--rdw-danger",
-		dangerSoft: "--rdw-danger-soft",
-		tagArtist: "--rdw-tag-artist",
-		tagCharacter: "--rdw-tag-character",
-		tagCopyright: "--rdw-tag-copyright",
-		tagMetadata: "--rdw-tag-metadata",
-		radiusS: "--rdw-radius-s",
-		radiusM: "--rdw-radius-m",
-		radiusL: "--rdw-radius-l",
-		shadow1: "--rdw-shadow-1",
-		shadow2: "--rdw-shadow-2",
-		font: "--rdw-font",
-		backgroundImage: "--rdw-background-image",
-		backgroundDim: "--rdw-background-dim"
-	};
-	var LIGHT_PALETTE = {
-		bg: "#f3f5f7",
-		surface: "#ffffff",
-		surface2: "#f4f6f8",
-		border: "#cfd6dd",
-		text: "#1c2228",
-		muted: "#66727e",
-		accent: "#2f6fed",
-		accentSoft: "#e8f0fe",
-		danger: "#c0392b",
-		dangerSoft: "#fdecea",
-		tagArtist: "#b00020",
-		tagCharacter: "#0a7a2f",
-		tagCopyright: "#8e24aa",
-		tagMetadata: "#ff8800",
-		radiusS: "6px",
-		radiusM: "8px",
-		radiusL: "10px",
-		shadow1: "0 1px 2px rgba(0, 0, 0, 0.06)",
-		shadow2: "0 8px 24px rgba(0, 0, 0, 0.25)",
-		font: "system-ui, \"Segoe UI\", sans-serif"
-	};
-	var DARK_PALETTE = {
-		bg: "#16181c",
-		surface: "#1e2228",
-		surface2: "#262b33",
-		border: "#3a424c",
-		text: "#e8edf2",
-		muted: "#8a96a3",
-		accent: "#4c8bf5",
-		accentSoft: "#1a2f5a",
-		danger: "#e57373",
-		dangerSoft: "#3d1f1f",
-		tagArtist: "#ff6b81",
-		tagCharacter: "#5dcea0",
-		tagCopyright: "#ce93d8",
-		tagMetadata: "#ffb74d",
-		radiusS: "6px",
-		radiusM: "8px",
-		radiusL: "10px",
-		shadow1: "0 1px 2px rgba(0, 0, 0, 0.35)",
-		shadow2: "0 8px 24px rgba(0, 0, 0, 0.55)",
-		font: "system-ui, \"Segoe UI\", sans-serif"
-	};
-	function paletteForMode(mode) {
-		return mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
-	}
-	function escapeCssValue(value) {
-		return value.replace(/</g, "\\3c ");
-	}
-	function tokensToCssDeclarations(palette) {
-		return [
-			`${TOKEN_VAR.bg}: ${escapeCssValue(palette.bg)};`,
-			`${TOKEN_VAR.surface}: ${escapeCssValue(palette.surface)};`,
-			`${TOKEN_VAR.surface2}: ${escapeCssValue(palette.surface2)};`,
-			`${TOKEN_VAR.border}: ${escapeCssValue(palette.border)};`,
-			`${TOKEN_VAR.text}: ${escapeCssValue(palette.text)};`,
-			`${TOKEN_VAR.muted}: ${escapeCssValue(palette.muted)};`,
-			`${TOKEN_VAR.accent}: ${escapeCssValue(palette.accent)};`,
-			`${TOKEN_VAR.accentSoft}: ${escapeCssValue(palette.accentSoft)};`,
-			`${TOKEN_VAR.danger}: ${escapeCssValue(palette.danger)};`,
-			`${TOKEN_VAR.dangerSoft}: ${escapeCssValue(palette.dangerSoft)};`,
-			`${TOKEN_VAR.tagArtist}: ${escapeCssValue(palette.tagArtist)};`,
-			`${TOKEN_VAR.tagCharacter}: ${escapeCssValue(palette.tagCharacter)};`,
-			`${TOKEN_VAR.tagCopyright}: ${escapeCssValue(palette.tagCopyright)};`,
-			`${TOKEN_VAR.tagMetadata}: ${escapeCssValue(palette.tagMetadata)};`,
-			`${TOKEN_VAR.radiusS}: ${escapeCssValue(palette.radiusS)};`,
-			`${TOKEN_VAR.radiusM}: ${escapeCssValue(palette.radiusM)};`,
-			`${TOKEN_VAR.radiusL}: ${escapeCssValue(palette.radiusL)};`,
-			`${TOKEN_VAR.shadow1}: ${escapeCssValue(palette.shadow1)};`,
-			`${TOKEN_VAR.shadow2}: ${escapeCssValue(palette.shadow2)};`,
-			`${TOKEN_VAR.font}: ${escapeCssValue(palette.font)};`
-		].join("\n  ");
-	}
-	function buildTokensCss(palette, selector = ":root") {
-		return `${selector} {\n  ${tokensToCssDeclarations(palette)}\n}\n`;
-	}
-	function applyCustomThemeProperties(target, custom) {
-		if (custom.accent !== void 0) target.style.setProperty(TOKEN_VAR.accent, custom.accent);
-		if (custom.bg !== void 0) target.style.setProperty(TOKEN_VAR.bg, custom.bg);
-		if (custom.surface !== void 0) target.style.setProperty(TOKEN_VAR.surface, custom.surface);
-		if (custom.text !== void 0) target.style.setProperty(TOKEN_VAR.text, custom.text);
-		if (custom.backgroundImage !== void 0 && custom.backgroundImage.length > 0) target.style.setProperty(TOKEN_VAR.backgroundImage, `url("${custom.backgroundImage.replace(/"/g, "\\\"")}")`);
-		if (custom.backgroundDim !== void 0) target.style.setProperty(TOKEN_VAR.backgroundDim, String(custom.backgroundDim));
-	}
-	function clearCustomThemeProperties(target) {
-		target.style.removeProperty(TOKEN_VAR.accent);
-		target.style.removeProperty(TOKEN_VAR.bg);
-		target.style.removeProperty(TOKEN_VAR.surface);
-		target.style.removeProperty(TOKEN_VAR.text);
-		target.style.removeProperty(TOKEN_VAR.backgroundImage);
-		target.style.removeProperty(TOKEN_VAR.backgroundDim);
-	}
 	function themeEnablesSkin(theme) {
 		return theme === "light" || theme === "dark" || theme === "custom";
 	}
-	function paletteModeForTheme(theme) {
+	function paletteModeForTheme(appearance) {
+		const theme = appearance.theme;
 		if (theme === "dark" || theme === "site-dark") return "dark";
-		if (theme === "custom") return "light";
+		if (theme === "custom") return appearance.custom?.base === "dark" ? "dark" : "light";
 		return "light";
 	}
 	function resolveTokenPalette(appearance) {
-		const base = paletteForMode(paletteModeForTheme(appearance.theme));
-		if (appearance.theme !== "custom" || appearance.custom === void 0) return base;
-		return {
-			...base,
-			accent: appearance.custom.accent,
-			bg: appearance.custom.bg,
-			surface: appearance.custom.surface,
-			text: appearance.custom.text
-		};
+		return paletteForMode(paletteModeForTheme(appearance));
 	}
 	function ensureStyleElement(id) {
 		const existing = document.getElementById(id);
@@ -7698,6 +8086,11 @@ ${KIT_FOCUS_CSS}
 		style.textContent = buildTokensCss(palette, ":root");
 		return style;
 	}
+	function syncPageRootTokens(palette) {
+		const host = document.getElementById(RDW_PAGE_ROOT_ID);
+		if (!(host instanceof HTMLElement)) return;
+		applyTokenProperties(host, palette);
+	}
 	function injectSiteSkinHook(cssText = "") {
 		const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
 		style.textContent = cssText;
@@ -7712,26 +8105,18 @@ ${KIT_FOCUS_CSS}
 	function applyAppearanceToDocument(options) {
 		const { appearance } = options;
 		applyHtmlThemeAttributes(appearance.theme);
-		injectTokenStyles(resolveTokenPalette(appearance));
+		const palette = resolveTokenPalette(appearance);
+		injectTokenStyles(palette);
+		syncPageRootTokens(palette);
 		injectSiteSkinHook(options.siteSkinCss ?? "");
 		const root = document.documentElement;
 		clearCustomThemeProperties(root);
 		if (appearance.theme === "custom" && appearance.custom !== void 0) {
 			const backgroundImage = options.backgroundDataUrl ?? appearance.custom.backgroundImage;
 			applyCustomThemeProperties(root, backgroundImage !== void 0 && backgroundImage.length > 0 ? {
-				accent: appearance.custom.accent,
-				bg: appearance.custom.bg,
-				surface: appearance.custom.surface,
-				text: appearance.custom.text,
 				backgroundImage,
 				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
-			} : {
-				accent: appearance.custom.accent,
-				bg: appearance.custom.bg,
-				surface: appearance.custom.surface,
-				text: appearance.custom.text,
-				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
-			});
+			} : { ...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {} });
 		} else if (options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
 	}
 	var PAGE_CLASS = "rdw-collections-page";
@@ -8107,6 +8492,124 @@ ${KIT_FOCUS_CSS}
 			})]
 		})] });
 	}
+	var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
+	var AUTOCOMPLETE_TAG_TYPE_ARTIST = "artist";
+	var HTTP_TOO_MANY_REQUESTS = 429;
+	var ABORT_ERROR_NAME = "AbortError";
+	var AutocompleteResponseSchema = array(object({
+		label: string(),
+		value: string(),
+		type: optional(nullable(string()))
+	}));
+	function buildAutocompleteUrl(query) {
+		const params = new URLSearchParams();
+		params.set("q", query);
+		return `${SITE_ORIGIN}${AUTOCOMPLETE_PATH}?${params.toString()}`;
+	}
+	function isAbortError$1(error) {
+		if (error instanceof DOMException && error.name === ABORT_ERROR_NAME) return true;
+		if (typeof error !== "object" || error === null || !("name" in error)) return false;
+		return error.name === ABORT_ERROR_NAME;
+	}
+	function normalizeItems(raw) {
+		const result = [];
+		for (const item of raw) {
+			const type = item.type === null || item.type === void 0 ? void 0 : item.type;
+			if (type === void 0) result.push({
+				label: item.label,
+				value: item.value
+			});
+			else result.push({
+				label: item.label,
+				value: item.value,
+				type
+			});
+		}
+		return result;
+	}
+	function preferSuggestionType(items, preferType) {
+		const preferred = [];
+		const rest = [];
+		for (const item of items) if (item.type === preferType) preferred.push(item);
+		else rest.push(item);
+		return [...preferred, ...rest];
+	}
+	async function fetchAutocomplete(query, signal) {
+		const trimmed = query.trim();
+		if (trimmed.length < 2) return [];
+		let response;
+		try {
+			const init = {
+				method: "GET",
+				credentials: FETCH_CREDENTIALS
+			};
+			if (signal !== void 0) init.signal = signal;
+			response = await fetch(buildAutocompleteUrl(trimmed), init);
+		} catch (error) {
+			if (isAbortError$1(error) || signal?.aborted === true) return [];
+			log.error("autocomplete: fetch failed", error);
+			return [];
+		}
+		if (response.status === HTTP_TOO_MANY_REQUESTS) {
+			log.warn("autocomplete: rate limited", response.status);
+			return [];
+		}
+		if (!response.ok) {
+			log.warn("autocomplete: HTTP error", response.status);
+			return [];
+		}
+		let json;
+		try {
+			json = await response.json();
+		} catch (error) {
+			if (isAbortError$1(error) || signal?.aborted === true) return [];
+			log.error("autocomplete: invalid JSON", error);
+			return [];
+		}
+		const parsed = AutocompleteResponseSchema.safeParse(json);
+		if (!parsed.success) {
+			log.error("autocomplete: schema mismatch", parsed.error);
+			return [];
+		}
+		return normalizeItems(parsed.data);
+	}
+	function createAutocompleteQuerier(options = {}) {
+		let timer = null;
+		let controller = null;
+		const preferType = options.preferType;
+		const cancel = () => {
+			if (timer !== null) {
+				clearTimeout(timer);
+				timer = null;
+			}
+			if (controller !== null) {
+				controller.abort();
+				controller = null;
+			}
+		};
+		const query = (text, onResult) => {
+			cancel();
+			const trimmed = text.trim();
+			if (trimmed.length < 2) {
+				onResult([]);
+				return;
+			}
+			timer = setTimeout(() => {
+				timer = null;
+				const next = new AbortController();
+				controller = next;
+				fetchAutocomplete(trimmed, next.signal).then((items) => {
+					if (next.signal.aborted) return;
+					if (controller === next) controller = null;
+					onResult(preferType === void 0 ? items : preferSuggestionType(items, preferType));
+				});
+			}, 300);
+		};
+		return {
+			query,
+			cancel
+		};
+	}
 	var ADD_FORM_CLASS = "rdw-following-add";
 	var ADD_INPUT_ID$1 = "rdw-following-add-tag";
 	var OPEN_POSTS_LABEL = "Open Posts";
@@ -8118,7 +8621,8 @@ ${KIT_FOCUS_CSS}
   gap: 8px;
   align-items: flex-end;
 }
-.${ADD_FORM_CLASS} .rdw-field {
+.${ADD_FORM_CLASS} .rdw-field,
+.${ADD_FORM_CLASS} .rdw-ac {
   flex: 1 1 12rem;
   margin: 0;
 }
@@ -8140,11 +8644,13 @@ ${KIT_FOCUS_CSS}
 				props.onSubmit();
 			},
 			children: [
-				a$1(TextField, {
+				a$1(AutocompleteField, {
 					id: ADD_INPUT_ID$1,
 					label: UI_TEXT.artistTagLabel,
 					value: props.draft,
-					onChange: props.onDraftChange
+					suggestions: props.suggestions,
+					onChange: props.onDraftChange,
+					onSelect: props.onSuggestionSelect
 				}),
 				a$1(Button, {
 					type: "submit",
@@ -8164,10 +8670,14 @@ ${KIT_FOCUS_CSS}
 		const [filter, setFilter] = d("");
 		const [draft, setDraft] = d("");
 		const [addError, setAddError] = d("");
+		const [suggestions, setSuggestions] = d([]);
 		const pendingRef = T(pending);
 		pendingRef.current = pending;
+		const querierRef = T(createAutocompleteQuerier({ preferType: AUTOCOMPLETE_TAG_TYPE_ARTIST }));
 		A(() => {
+			const querier = querierRef.current;
 			return () => {
+				querier.cancel();
 				for (const entry of pendingRef.current) clearTimeout(entry.timer);
 			};
 		}, []);
@@ -8222,6 +8732,8 @@ ${KIT_FOCUS_CSS}
 			}
 			setDraft("");
 			setAddError("");
+			setSuggestions([]);
+			querierRef.current.cancel();
 			setArtists(readArtists());
 		};
 		const pendingTags = new Set(pending.map((entry) => entry.tag));
@@ -8257,9 +8769,15 @@ ${KIT_FOCUS_CSS}
 					a$1(AddArtistForm, {
 						draft,
 						error: addError,
+						suggestions,
 						onDraftChange: (value) => {
 							setDraft(value);
 							if (addError.length > 0) setAddError("");
+							querierRef.current.query(value, setSuggestions);
+						},
+						onSuggestionSelect: () => {
+							querierRef.current.cancel();
+							setSuggestions([]);
 						},
 						onSubmit: onAdd
 					}),
@@ -8479,6 +8997,7 @@ ${KIT_FOCUS_CSS}
 `.trim();
 	var ROOT = `html.${RDW_SKIN_CLASS}`;
 	var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
+	var NOT_OUR_CONTROL = `:not([class*="rdw-"]):not(#rdw-search-tools *)`;
 	var v = {
 		bg: `var(${TOKEN_VAR.bg})`,
 		surface: `var(${TOKEN_VAR.surface})`,
@@ -8707,19 +9226,28 @@ ${ROOT} ul#tag-sidebar {
   list-style: none;
 }
 
+/*
+ * Tag rows: ?/+/- /name (list) or ?/name (post) wrap as inline text;
+ * count stays top-right on the first line (artists-sidebar.test markup).
+ */
 ${ROOT} ul#tag-sidebar > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  position: relative;
   margin: 0 0 5px;
+  padding-right: 4.5em;
   font-size: 12.5px;
+  line-height: 1.35;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+${ROOT} ul#tag-sidebar > li > a {
+  display: inline;
 }
 
 ${ROOT} ul#tag-sidebar > li > h5,
 ${ROOT} ul#tag-sidebar > li > h6 {
-  flex: 1 0 100%;
+  display: block;
   margin-top: 8px;
 }
 
@@ -8731,9 +9259,13 @@ ${ROOT} ul#tag-sidebar > li:first-child > h6 {
 ${ROOT} .tag-count,
 ${ROOT} span.post-count,
 ${ROOT} span.tag-count {
-  margin-left: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-left: 0;
   color: ${v.muted};
   font-size: 12px;
+  line-height: 1.35;
 }
 
 /*
@@ -8837,11 +9369,11 @@ ${ROOT} div.tag-search button[type="submit"]:hover {
   filter: brightness(1.05);
 }
 
-${ROOT} input[type="text"]:focus,
-${ROOT} input[type="password"]:focus,
-${ROOT} input[type="search"]:focus,
-${ROOT} textarea:focus,
-${ROOT} select:focus {
+${ROOT} input[type="text"]${NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="password"]${NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="search"]${NOT_OUR_CONTROL}:focus,
+${ROOT} textarea${NOT_OUR_CONTROL}:focus,
+${ROOT} select${NOT_OUR_CONTROL}:focus {
   background: ${v.surface};
   outline: 2px solid ${v.accent};
   outline-offset: 1px;
@@ -8849,7 +9381,14 @@ ${ROOT} select:focus {
 }
 
 /* —— awesomplete —— */
-${ROOT} .awesomplete > ul {
+/* Site hides closed lists with opacity/scale + display:block; do not undo that. */
+${ROOT} .awesomplete > ul[hidden],
+${ROOT} .awesomplete > ul:empty {
+  display: none !important;
+  pointer-events: none;
+}
+
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty) {
   background: ${v.surface};
   background-image: none;
   border: 1px solid ${v.border};
@@ -8911,7 +9450,14 @@ ${ROOT} img.preview {
   border-radius: ${v.radiusL};
 }
 
-/* Favorites: Remove stays subtle; preview radius matches grid (no thumb size change) */
+/* Favorites: Remove stays subtle; hover must not paint the thumb cell */
+${ROOT} span.thumb,
+${ROOT} span.thumb:hover,
+${ROOT} span.thumb > a,
+${ROOT} span.thumb > a:hover {
+  background-color: transparent;
+}
+
 ${ROOT} span.thumb > a[onclick] {
   color: ${v.muted};
   font-size: 12px;
@@ -8924,7 +9470,7 @@ ${ROOT} span.thumb > a[onclick] {
 
 ${ROOT} span.thumb > a[onclick]:hover {
   color: ${v.danger};
-  background: ${v.dangerSoft};
+  background: transparent;
 }
 
 ${ROOT} span.thumb > a[onclick] b {
@@ -9029,30 +9575,30 @@ ${ROOT} .manual-page-chooser > input[type="submit"] {
   cursor: pointer;
 }
 
-/* —— forms / tables (site chrome outside our panel) —— */
-${ROOT} input,
-${ROOT} select,
-${ROOT} textarea,
-${ROOT} button {
+/* —— forms / tables (site chrome; skip search-tools + any .rdw-* control) —— */
+${ROOT} input${NOT_OUR_CONTROL},
+${ROOT} select${NOT_OUR_CONTROL},
+${ROOT} textarea${NOT_OUR_CONTROL},
+${ROOT} button${NOT_OUR_CONTROL} {
   color: ${v.text};
   font-family: ${v.font};
 }
 
-${ROOT} input[type="text"],
-${ROOT} input[type="password"],
-${ROOT} input[type="search"],
-${ROOT} input[type="number"],
-${ROOT} select,
-${ROOT} textarea {
+${ROOT} input[type="text"]${NOT_OUR_CONTROL},
+${ROOT} input[type="password"]${NOT_OUR_CONTROL},
+${ROOT} input[type="search"]${NOT_OUR_CONTROL},
+${ROOT} input[type="number"]${NOT_OUR_CONTROL},
+${ROOT} select${NOT_OUR_CONTROL},
+${ROOT} textarea${NOT_OUR_CONTROL} {
   background: ${v.surface};
   border: 1px solid ${v.border};
   border-radius: ${v.radiusS};
   color: ${v.text};
 }
 
-${ROOT} button,
-${ROOT} input[type="submit"],
-${ROOT} input[type="button"],
+${ROOT} button${NOT_OUR_CONTROL},
+${ROOT} input[type="submit"]${NOT_OUR_CONTROL},
+${ROOT} input[type="button"]${NOT_OUR_CONTROL},
 ${ROOT} .gdprbutton button {
   background: ${v.surface};
   border: 1px solid ${v.border};
@@ -9062,9 +9608,9 @@ ${ROOT} .gdprbutton button {
   cursor: pointer;
 }
 
-${ROOT} button:hover,
-${ROOT} input[type="submit"]:hover,
-${ROOT} input[type="button"]:hover,
+${ROOT} button${NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="submit"]${NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="button"]${NOT_OUR_CONTROL}:hover,
 ${ROOT} .gdprbutton button:hover {
   background: ${v.accentSoft};
   border-color: ${v.accent};
@@ -9472,6 +10018,14 @@ ${ROOT_DARK} div.has-mail {
   background: ${v.surface2};
   border-color: ${v.tagCharacter};
 }
+
+/*
+ * Script page host sits on site bg for Site default / Site dark (no html.rdw-skin).
+ * Color uses document tokens; Shadow title inherits from the host once tokens sync.
+ */
+#${RDW_PAGE_ROOT_ID} {
+  color: ${v.text};
+}
 `.trim();
 	function getSiteSkinCss() {
 		return SITE_SKIN_CSS;
@@ -9545,19 +10099,9 @@ ${ROOT_DARK} div.has-mail {
 		else clearSiteThemeCookie();
 		applySiteDesktopStylesheet(theme);
 	}
-	var CONTRAST_RATIO_MIN = 4.5;
 	var BACKGROUND_DIM_MAX = .8;
-	var HEX_SHORT_PATTERN = /^#([0-9a-fA-F]{3})$/;
-	var HEX_LONG_PATTERN = /^#([0-9a-fA-F]{6})$/;
-	var SRGB_LINEAR_THRESHOLD = .03928;
-	var SRGB_LINEAR_DIVISOR = 12.92;
-	var SRGB_GAMMA = 2.4;
-	var SRGB_A = .055;
-	var SRGB_B = 1.055;
-	var LUMA_R = .2126;
-	var LUMA_G = .7152;
-	var LUMA_B = .0722;
-	var CONTRAST_OFFSET = .05;
+	var APPEARANCE_BACKGROUND_JPEG_QUALITY = .85;
+	var JPEG_MIME = "image/jpeg";
 	var BODY_BG_IMAGE = "background-image";
 	var BODY_BG_SIZE = "background-size";
 	var BODY_BG_POSITION = "background-position";
@@ -9565,65 +10109,13 @@ ${ROOT_DARK} div.has-mail {
 	var BODY_BG_ATTACHMENT = "background-attachment";
 	function createDefaultCustomTheme() {
 		return {
-			accent: LIGHT_PALETTE.accent,
-			bg: LIGHT_PALETTE.bg,
-			surface: LIGHT_PALETTE.surface,
-			text: LIGHT_PALETTE.text,
+			base: APPEARANCE_CUSTOM_BASE_LIGHT,
 			backgroundDim: 0
 		};
 	}
 	function clampBackgroundDim(value) {
 		if (!Number.isFinite(value)) return 0;
 		return Math.min(BACKGROUND_DIM_MAX, Math.max(0, value));
-	}
-	function channelToLinear(channel) {
-		const c = channel / 255;
-		if (c <= SRGB_LINEAR_THRESHOLD) return c / SRGB_LINEAR_DIVISOR;
-		return ((c + SRGB_A) / SRGB_B) ** SRGB_GAMMA;
-	}
-	function parseHexColor(value) {
-		const short = HEX_SHORT_PATTERN.exec(value.trim());
-		if (short !== null) {
-			const hex = short[1];
-			if (hex === void 0) return null;
-			return {
-				r: Number.parseInt(hex[0] + hex[0], 16),
-				g: Number.parseInt(hex[1] + hex[1], 16),
-				b: Number.parseInt(hex[2] + hex[2], 16)
-			};
-		}
-		const long = HEX_LONG_PATTERN.exec(value.trim());
-		if (long !== null) {
-			const hex = long[1];
-			if (hex === void 0) return null;
-			return {
-				r: Number.parseInt(hex.slice(0, 2), 16),
-				g: Number.parseInt(hex.slice(2, 4), 16),
-				b: Number.parseInt(hex.slice(4, 6), 16)
-			};
-		}
-		return null;
-	}
-	function relativeLuminance(hex) {
-		const rgb = parseHexColor(hex);
-		if (rgb === null) return null;
-		const r = channelToLinear(rgb.r);
-		const g = channelToLinear(rgb.g);
-		const b = channelToLinear(rgb.b);
-		return LUMA_R * r + LUMA_G * g + LUMA_B * b;
-	}
-	function contrastRatio(foreground, background) {
-		const l1 = relativeLuminance(foreground);
-		const l2 = relativeLuminance(background);
-		if (l1 === null || l2 === null) return null;
-		const lighter = Math.max(l1, l2);
-		const darker = Math.min(l1, l2);
-		return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET);
-	}
-	function hasInsufficientTextContrast(text, bg) {
-		const ratio = contrastRatio(text, bg);
-		if (ratio === null) return false;
-		return ratio < CONTRAST_RATIO_MIN;
 	}
 	function escapeUrlForCss(url) {
 		return url.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -9663,6 +10155,77 @@ ${ROOT_DARK} div.has-mail {
 		}
 		forceLightSiteBase();
 	}
+	function getScreenPixelSize() {
+		const dpr = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+		return {
+			width: Math.round(window.screen.width * dpr),
+			height: Math.round(window.screen.height * dpr)
+		};
+	}
+	function computeDownscaleSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+		if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) return {
+			width: 0,
+			height: 0
+		};
+		if (sourceWidth <= maxWidth && sourceHeight <= maxHeight) return {
+			width: Math.round(sourceWidth),
+			height: Math.round(sourceHeight)
+		};
+		const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+		return {
+			width: Math.max(1, Math.round(sourceWidth * scale)),
+			height: Math.max(1, Math.round(sourceHeight * scale))
+		};
+	}
+	function loadImageElement(src) {
+		return new Promise((resolve, reject) => {
+			const image = new Image();
+			image.onload = () => {
+				resolve(image);
+			};
+			image.onerror = () => {
+				reject(new Error("Could not decode image"));
+			};
+			image.src = src;
+		});
+	}
+	function readFileAsDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => {
+				if (typeof reader.result === "string") {
+					resolve(reader.result);
+					return;
+				}
+				reject(new Error("Could not read image file"));
+			};
+			reader.onerror = () => {
+				reject(reader.error ?? new Error("Could not read image file"));
+			};
+			reader.readAsDataURL(file);
+		});
+	}
+	async function prepareBackgroundImageFile(file) {
+		const image = await loadImageElement(await readFileAsDataUrl(file));
+		const sourceWidth = image.naturalWidth;
+		const sourceHeight = image.naturalHeight;
+		const screen = getScreenPixelSize();
+		const sized = computeDownscaleSize(sourceWidth, sourceHeight, screen.width, screen.height);
+		const canvas = document.createElement("canvas");
+		canvas.width = sized.width;
+		canvas.height = sized.height;
+		const context = canvas.getContext("2d");
+		if (context === null) throw new Error("Could not prepare background image");
+		context.drawImage(image, 0, 0, sized.width, sized.height);
+		return {
+			dataUrl: canvas.toDataURL(JPEG_MIME, APPEARANCE_BACKGROUND_JPEG_QUALITY),
+			sourceWidth,
+			sourceHeight,
+			outputWidth: sized.width,
+			outputHeight: sized.height,
+			belowScreen: sourceWidth < screen.width || sourceHeight < screen.height
+		};
+	}
 	function applyAppearanceTheme(options) {
 		const { appearance } = options;
 		syncSiteCookieAndStylesheet(appearance);
@@ -9672,18 +10235,14 @@ ${ROOT_DARK} div.has-mail {
 			...options.backgroundDataUrl !== void 0 ? { backgroundDataUrl: options.backgroundDataUrl } : {}
 		});
 		if (!themeEnablesSkin(appearance.theme)) document.documentElement.classList.remove(RDW_SKIN_CLASS);
-		let contrastWarning = false;
-		let ratio = null;
 		if (appearance.theme === "custom" && appearance.custom !== void 0) {
 			const custom = appearance.custom;
 			applyBodyBackgroundImage(options.backgroundDataUrl ?? custom.backgroundImage, custom.backgroundDim ?? 0);
-			ratio = contrastRatio(custom.text, custom.bg);
-			contrastWarning = ratio !== null && ratio < 4.5;
 			if (custom.backgroundDim !== void 0) document.documentElement.style.setProperty(TOKEN_VAR.backgroundDim, String(clampBackgroundDim(custom.backgroundDim)));
 		} else clearBodyBackground();
 		return {
-			contrastWarning,
-			contrastRatio: ratio
+			contrastWarning: false,
+			contrastRatio: null
 		};
 	}
 	var GRID_FEATURE_ID = gridDensityFeature.id;
@@ -9727,10 +10286,17 @@ ${ROOT_DARK} div.has-mail {
 			label: "Masonry"
 		}
 	];
+	var BASE_OPTIONS = [{
+		value: APPEARANCE_CUSTOM_BASE_LIGHT,
+		label: "Light"
+	}, {
+		value: APPEARANCE_CUSTOM_BASE_DARK,
+		label: "Dark"
+	}];
 	var SECTION_TITLE = "Appearance";
 	var THEME_ROW_LABEL = "Site theme";
 	var THEME_ROW_HINT = "Light, dark or your own";
-	var COLORS_ROW_LABEL = "Accent and background";
+	var BASE_ROW_LABEL = "Base";
 	var BG_IMAGE_LABEL = "Background image";
 	var BG_IMAGE_HINT = "From a link or a file";
 	var BG_URL_PLACEHOLDER = "https://… or data URL";
@@ -9739,25 +10305,9 @@ ${ROOT_DARK} div.has-mail {
 	var REMOVE_LABEL = "Remove";
 	var RESET_LABEL = "Reset to defaults";
 	var GRID_ROW_LABEL = "Grid";
-	var CONTRAST_WARN_TEXT = `Low contrast: text on background is below ${String(CONTRAST_RATIO_MIN)}:1`;
-	var COLOR_FIELDS = [
-		{
-			key: "accent",
-			label: "Accent"
-		},
-		{
-			key: "bg",
-			label: "Background"
-		},
-		{
-			key: "surface",
-			label: "Surface"
-		},
-		{
-			key: "text",
-			label: "Text"
-		}
-	];
+	var SCREEN_HINT_PREFIX = "For this screen use at least ";
+	var IMAGE_SIZE_PREFIX = "Image size: ";
+	var IMAGE_TOO_SMALL_WARN = "This image is smaller than your screen; it may look soft when stretched.";
 	var ACCEPT_IMAGE = "image/*";
 	var APPEARANCE_SECTION_CSS = `
 ${KIT_FOCUS_CSS}
@@ -9794,29 +10344,9 @@ ${KIT_FOCUS_CSS}
   width: 110px;
   flex: none;
 }
-.rdw-appearance__colors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.rdw-appearance__color {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  color: var(--rdw-muted);
-}
-.rdw-appearance__color input[type="color"] {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 2px solid var(--rdw-surface);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px var(--rdw-border);
-  background: transparent;
-  cursor: pointer;
+.rdw-appearance__base {
+  width: 140px;
+  flex: none;
 }
 .rdw-appearance__bg {
   display: grid;
@@ -9841,8 +10371,13 @@ ${KIT_FOCUS_CSS}
   min-width: 80px;
   accent-color: var(--rdw-accent);
 }
+.rdw-appearance__hint {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 11px;
+}
 .rdw-appearance__warn {
-  margin: 4px 8px 0;
+  margin: 0;
   padding: 6px 8px;
   border-radius: var(--rdw-radius-m);
   background: var(--rdw-danger-soft);
@@ -9877,27 +10412,15 @@ ${KIT_FOCUS_CSS}
 	function persistAndApply(appearance) {
 		const parsed = setAppearance(appearance);
 		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
-		return { contrastWarning: applyAppearanceTheme({
+		applyAppearanceTheme({
 			appearance: parsed,
 			siteSkinCss: getSiteSkinCss(),
 			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
-		}).contrastWarning };
-	}
-	function readFileAsDataUrl(file) {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.onload = () => {
-				if (typeof reader.result === "string") {
-					resolve(reader.result);
-					return;
-				}
-				reject(new Error("Could not read image file"));
-			};
-			reader.onerror = () => {
-				reject(reader.error ?? new Error("Could not read image file"));
-			};
-			reader.readAsDataURL(file);
 		});
+	}
+	function formatScreenHint() {
+		const screen = getScreenPixelSize();
+		return `${SCREEN_HINT_PREFIX}${String(screen.width)}x${String(screen.height)}`;
 	}
 	function AppearanceSection(props) {
 		const fileInputId = P();
@@ -9908,18 +10431,14 @@ ${KIT_FOCUS_CSS}
 			return getAppearance().custom?.backgroundImage ?? "";
 		});
 		const [fileError, setFileError] = d("");
-		const [contrastWarning, setContrastWarning] = d(() => {
-			const current = getAppearance();
-			if (current.theme !== "custom" || current.custom === void 0) return false;
-			return hasInsufficientTextContrast(current.custom.text, current.custom.bg);
-		});
+		const [imageMeta, setImageMeta] = d(null);
+		const [screenHint] = d(() => formatScreenHint());
 		const custom = ensureCustom(appearance);
 		const isCustom = appearance.theme === APPEARANCE_THEME_CUSTOM;
 		const hasBackground = (getAppearanceBackgroundDataUrl()?.length ?? 0) > 0 || (custom.backgroundImage?.length ?? 0) > 0 || bgUrlDraft.length > 0;
 		function commitAppearance(next) {
 			setAppearanceState(next);
-			const { contrastWarning: warn } = persistAndApply(next);
-			setContrastWarning(warn);
+			persistAndApply(next);
 			setFileError("");
 		}
 		function onThemeChange(value) {
@@ -9935,24 +10454,26 @@ ${KIT_FOCUS_CSS}
 			}
 			commitAppearance({ theme });
 		}
-		function onColorChange(key, value) {
+		function onBaseChange(value) {
+			if (value !== "light" && value !== "dark") return;
+			const base = value;
+			const current = ensureCustom(getAppearance());
 			commitAppearance({
 				theme: APPEARANCE_THEME_CUSTOM,
 				custom: {
-					...ensureCustom(getAppearance()),
-					[key]: value
+					base,
+					backgroundDim: clampBackgroundDim(current.backgroundDim ?? 0),
+					...current.backgroundImage !== void 0 ? { backgroundImage: current.backgroundImage } : {}
 				}
 			});
 		}
 		function onBgUrlCommit(url) {
 			const trimmed = url.trim();
 			setBgUrlDraft(trimmed);
+			setImageMeta(null);
 			const base = ensureCustom(getAppearance());
 			const nextCustom = {
-				accent: base.accent,
-				bg: base.bg,
-				surface: base.surface,
-				text: base.text,
+				base: base.base,
 				backgroundDim: clampBackgroundDim(base.backgroundDim ?? 0),
 				...trimmed.length > 0 ? { backgroundImage: trimmed } : {}
 			};
@@ -9968,10 +10489,7 @@ ${KIT_FOCUS_CSS}
 			commitAppearance({
 				theme: APPEARANCE_THEME_CUSTOM,
 				custom: {
-					accent: base.accent,
-					bg: base.bg,
-					surface: base.surface,
-					text: base.text,
+					base: base.base,
 					backgroundDim: dim,
 					...base.backgroundImage !== void 0 ? { backgroundImage: base.backgroundImage } : {}
 				}
@@ -9980,16 +10498,19 @@ ${KIT_FOCUS_CSS}
 		async function onFileSelected(file) {
 			if (file === void 0) return;
 			try {
-				setAppearanceBackgroundDataUrl(await readFileAsDataUrl(file));
+				const prepared = await prepareBackgroundImageFile(file);
+				setAppearanceBackgroundDataUrl(prepared.dataUrl);
 				setBgUrlDraft("");
+				setImageMeta({
+					width: prepared.sourceWidth,
+					height: prepared.sourceHeight,
+					belowScreen: prepared.belowScreen
+				});
 				const base = ensureCustom(getAppearance());
 				commitAppearance({
 					theme: APPEARANCE_THEME_CUSTOM,
 					custom: {
-						accent: base.accent,
-						bg: base.bg,
-						surface: base.surface,
-						text: base.text,
+						base: base.base,
 						backgroundDim: clampBackgroundDim(base.backgroundDim ?? 0)
 					}
 				});
@@ -10001,14 +10522,11 @@ ${KIT_FOCUS_CSS}
 		function onRemoveBackground() {
 			clearAppearanceBackgroundDataUrl();
 			setBgUrlDraft("");
-			const base = ensureCustom(getAppearance());
+			setImageMeta(null);
 			commitAppearance({
 				theme: APPEARANCE_THEME_CUSTOM,
 				custom: {
-					accent: base.accent,
-					bg: base.bg,
-					surface: base.surface,
-					text: base.text,
+					base: ensureCustom(getAppearance()).base,
 					backgroundDim: 0
 				}
 			});
@@ -10016,6 +10534,7 @@ ${KIT_FOCUS_CSS}
 		function onResetDefaults() {
 			clearAppearanceBackgroundDataUrl();
 			setBgUrlDraft("");
+			setImageMeta(null);
 			commitAppearance({
 				theme: APPEARANCE_THEME_CUSTOM,
 				custom: createDefaultCustomTheme()
@@ -10049,21 +10568,13 @@ ${KIT_FOCUS_CSS}
 						className: "rdw-appearance__row",
 						children: [a$1("div", {
 							className: "rdw-appearance__row-text",
-							children: a$1("span", { children: COLORS_ROW_LABEL })
-						}), a$1("div", {
-							className: "rdw-appearance__colors",
-							children: COLOR_FIELDS.map((field) => a$1("label", {
-								className: "rdw-appearance__color",
-								children: [a$1("input", {
-									type: "color",
-									className: "rdw-kit-focusable",
-									value: custom[field.key],
-									"aria-label": field.label,
-									onInput: (event) => {
-										onColorChange(field.key, event.currentTarget.value);
-									}
-								}), a$1("span", { children: field.label })]
-							}, field.key))
+							children: a$1("span", { children: BASE_ROW_LABEL })
+						}), a$1(Segmented, {
+							className: "rdw-appearance__base",
+							options: BASE_OPTIONS,
+							value: custom.base,
+							label: BASE_ROW_LABEL,
+							onChange: onBaseChange
 						})]
 					}),
 					a$1("div", {
@@ -10121,6 +10632,24 @@ ${KIT_FOCUS_CSS}
 										})
 									]
 								}),
+								a$1("p", {
+									className: "rdw-appearance__hint",
+									children: screenHint
+								}),
+								imageMeta !== null ? a$1("p", {
+									className: "rdw-appearance__hint",
+									children: [
+										IMAGE_SIZE_PREFIX,
+										String(imageMeta.width),
+										"x",
+										String(imageMeta.height)
+									]
+								}) : null,
+								imageMeta?.belowScreen === true ? a$1("div", {
+									className: "rdw-appearance__warn",
+									role: "status",
+									children: IMAGE_TOO_SMALL_WARN
+								}) : null,
 								hasBackground ? a$1("label", {
 									className: "rdw-appearance__dim",
 									children: [
@@ -10147,11 +10676,6 @@ ${KIT_FOCUS_CSS}
 							]
 						})]
 					}),
-					contrastWarning ? a$1("div", {
-						className: "rdw-appearance__warn",
-						role: "status",
-						children: CONTRAST_WARN_TEXT
-					}) : null,
 					a$1("div", {
 						className: "rdw-appearance__footer",
 						children: a$1(Button, {
@@ -10206,7 +10730,8 @@ ${KIT_FOCUS_CSS}
   gap: 8px;
   align-items: flex-end;
 }
-.${SECTION_CLASS$2} .${ADD_ROW_CLASS} .rdw-field {
+.${SECTION_CLASS$2} .${ADD_ROW_CLASS} .rdw-field,
+.${SECTION_CLASS$2} .${ADD_ROW_CLASS} .rdw-ac {
   flex: 1 1 12rem;
   margin: 0;
 }
@@ -10233,11 +10758,21 @@ ${KIT_FOCUS_CSS}
 		const includeHeading = props.includeHeading !== false;
 		const [tags, setTags] = d(() => readSiteBlacklist());
 		const [draft, setDraft] = d("");
+		const [suggestions, setSuggestions] = d([]);
+		const querierRef = T(createAutocompleteQuerier());
+		A(() => {
+			const querier = querierRef.current;
+			return () => {
+				querier.cancel();
+			};
+		}, []);
 		const addTokens = b(() => {
 			const tokens = parseAddTokens(draft);
 			if (tokens.length === 0) return;
 			setTags(persistTags([...readSiteBlacklist(), ...tokens]));
 			setDraft("");
+			setSuggestions([]);
+			querierRef.current.cancel();
 		}, [draft]);
 		return a$1($, { children: [a$1("style", { children: BLACKLIST_SECTION_CSS }), a$1("section", {
 			className: `rdw-section ${SECTION_CLASS$2}`,
@@ -10259,11 +10794,19 @@ ${KIT_FOCUS_CSS}
 						event.preventDefault();
 						addTokens();
 					},
-					children: [a$1(TextField, {
+					children: [a$1(AutocompleteField, {
 						id: ADD_INPUT_ID,
 						label: ADD_LABEL,
 						value: draft,
-						onChange: setDraft
+						suggestions,
+						onChange: (value) => {
+							setDraft(value);
+							querierRef.current.query(value, setSuggestions);
+						},
+						onSelect: () => {
+							querierRef.current.cancel();
+							setSuggestions([]);
+						}
 					}), a$1(Button, {
 						type: "submit",
 						variant: "primary",
@@ -10285,7 +10828,7 @@ ${KIT_FOCUS_CSS}
 		version: literal(1),
 		exportedAt: string(),
 		storage: StorageSchema,
-		favs: FavsSchema,
+		favs: optional(FavsSchema),
 		background: optional(string())
 	});
 	function getGmGetValue() {
@@ -10374,10 +10917,17 @@ ${KIT_FOCUS_CSS}
 			favCount: favs.ids.length
 		};
 	}
-	function applyImportedState(storage, favs, background, applyBackground) {
+	function storageWithoutMarkFavs(storage) {
+		const stripped = extractFavIdsFromMarks(storage.marks);
+		return {
+			...storage,
+			marks: stripped.marks
+		};
+	}
+	function applyImportedState(storage, favs, background, applyBackground, applyFavs) {
 		snapshotCurrentToBackupKey();
-		save(stripLegacyPanelWindowSize(storage).data);
-		writeFavsForBackup(favs);
+		save(stripLegacyPanelWindowSize(applyFavs ? storage : storageWithoutMarkFavs(storage)).data);
+		if (applyFavs && favs !== void 0) writeFavsForBackup(favs);
 		if (applyBackground) writeBackgroundRaw(background);
 		migrateMarksFavToFavs();
 		clearStorageCache();
@@ -10392,13 +10942,12 @@ ${KIT_FOCUS_CSS}
 	}
 	function buildBackupFile(options) {
 		const storage = load();
-		const favs = readFavsForBackup();
 		const file = {
 			format: BACKUP_FORMAT,
 			version: 1,
 			exportedAt: new Date().toISOString(),
 			storage,
-			favs
+			...options.includeFavorites ? { favs: readFavsForBackup() } : {}
 		};
 		if (options.includeBackground) {
 			const background = readBackgroundRaw();
@@ -10446,10 +10995,12 @@ ${KIT_FOCUS_CSS}
 		};
 		const incoming = parsed.data;
 		const hasBackgroundField = Object.prototype.hasOwnProperty.call(incoming, "background");
+		const hasFavsField = Object.prototype.hasOwnProperty.call(incoming, "favs");
+		const incomingFavs = incoming.favs;
 		try {
 			if (mode === "replace") return {
 				ok: true,
-				summary: applyImportedState(incoming.storage, incoming.favs, hasBackgroundField ? incoming.background : void 0, true)
+				summary: applyImportedState(incoming.storage, hasFavsField ? incomingFavs : void 0, hasBackgroundField ? incoming.background : void 0, true, hasFavsField)
 			};
 			const currentStorage = load();
 			const currentFavs = readFavsForBackup();
@@ -10464,7 +11015,7 @@ ${KIT_FOCUS_CSS}
 			if (mergedStorage.settings === void 0) mergedStorage.settings = createDefaultStorage().settings;
 			return {
 				ok: true,
-				summary: applyImportedState(mergedStorage, mergeFavs(currentFavs, incoming.favs), incoming.background, hasBackgroundField)
+				summary: applyImportedState(mergedStorage, hasFavsField && incomingFavs !== void 0 ? mergeFavs(currentFavs, incomingFavs) : void 0, incoming.background, hasBackgroundField, hasFavsField)
 			};
 		} catch (error) {
 			log.error("backup import failed after parse", error);
@@ -10483,10 +11034,13 @@ ${KIT_FOCUS_CSS}
 	var HEADING$1 = "Data";
 	var INCLUDE_BACKGROUND_LABEL = "Include background image";
 	var INCLUDE_BACKGROUND_ID = "rdw-backup-include-bg";
+	var INCLUDE_FAVORITES_LABEL = "Include favorites";
+	var INCLUDE_FAVORITES_ID = "rdw-backup-include-favs";
+	var FAVORITES_EXPORT_HINT = "Favorites restore via Favorites sync. Include them in the file only if you need to copy the local fav list.";
 	var IMPORT_MODE_LABEL = "Import mode";
 	var EXPORT_LABEL = UI_TEXT.export;
 	var IMPORT_LABEL = UI_TEXT.import;
-	var STORAGE_HINT = "Collections, artists, settings, and favorites live in Tampermonkey storage. Blacklist and site theme are browser cookies and are not included in this file.";
+	var STORAGE_HINT = "Collections, artists, and settings live in Tampermonkey storage. Favorites are optional in this file. Blacklist and site theme are browser cookies and are not included.";
 	var MODE_OPTIONS = [{
 		value: IMPORT_MODE_MERGE,
 		label: "Merge"
@@ -10545,6 +11099,7 @@ ${KIT_FOCUS_CSS}
 		const includeHeading = props.includeHeading !== false;
 		const fileRef = T(null);
 		const [includeBackground, setIncludeBackground] = d(false);
+		const [includeFavorites, setIncludeFavorites] = d(false);
 		const [mode, setMode] = d(IMPORT_MODE_MERGE);
 		const [error, setError] = d("");
 		const [summary, setSummary] = d("");
@@ -10557,6 +11112,16 @@ ${KIT_FOCUS_CSS}
 					label: INCLUDE_BACKGROUND_LABEL,
 					checked: includeBackground,
 					onChange: setIncludeBackground
+				}),
+				a$1(Switch, {
+					id: INCLUDE_FAVORITES_ID,
+					label: INCLUDE_FAVORITES_LABEL,
+					checked: includeFavorites,
+					onChange: setIncludeFavorites
+				}),
+				a$1("p", {
+					className: HINT_CLASS,
+					children: FAVORITES_EXPORT_HINT
 				}),
 				a$1(Segmented, {
 					label: IMPORT_MODE_LABEL,
@@ -10574,7 +11139,10 @@ ${KIT_FOCUS_CSS}
 							onClick: () => {
 								setError("");
 								setSummary("");
-								exportBackupDownload({ includeBackground });
+								exportBackupDownload({
+									includeBackground,
+									includeFavorites
+								});
 							},
 							children: EXPORT_LABEL
 						}),
@@ -10634,6 +11202,8 @@ ${KIT_FOCUS_CSS}
 		3e4,
 		6e4
 	];
+	var FAVORITES_SYNC_MODE_INCREMENTAL = FAVS_SYNC_MODE_INCREMENTAL;
+	var FAVORITES_SYNC_MODE_FULL = FAVS_SYNC_MODE_FULL;
 	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
 	var THUMB_SELECTOR = "span.thumb";
 	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
@@ -10786,6 +11356,19 @@ ${KIT_FOCUS_CSS}
 	function hasPaginator(doc) {
 		return doc.querySelector(PAGINATOR_SELECTOR) !== null;
 	}
+	function readFavoritesSyncMode(sync) {
+		const mode = sync?.mode;
+		if (mode === FAVORITES_SYNC_MODE_INCREMENTAL || mode === FAVORITES_SYNC_MODE_FULL) return mode;
+	}
+	function pageIdsAllInLocalSet(pageIds, local) {
+		if (pageIds.length === 0) return false;
+		for (const id of pageIds) if (!local.has(id)) return false;
+		return true;
+	}
+	function resolveRunMode(unfinished, existing, requested) {
+		if (unfinished) return readFavoritesSyncMode(existing) ?? FAVORITES_SYNC_MODE_FULL;
+		return requested ?? FAVORITES_SYNC_MODE_INCREMENTAL;
+	}
 	function persistSyncProgress(fields) {
 		const state = {
 			nextPid: fields.nextPid,
@@ -10793,6 +11376,7 @@ ${KIT_FOCUS_CSS}
 			startedAt: fields.startedAt,
 			running: fields.running,
 			userId: fields.userId,
+			mode: fields.mode,
 			lock: {
 				tabId: fields.tabId,
 				beatAt: Date.now()
@@ -10889,6 +11473,7 @@ ${KIT_FOCUS_CSS}
 			};
 		}
 		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
+		const mode = resolveRunMode(unfinished, existing, options.mode);
 		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
 		let pid = unfinished ? existing.nextPid : 0;
 		let lastPid = unfinished ? existing.lastPid : 0;
@@ -10907,7 +11492,8 @@ ${KIT_FOCUS_CSS}
 				startedAt,
 				userId,
 				tabId,
-				running: fields.running
+				running: fields.running,
+				mode
 			};
 			if (fields.finishedAt !== void 0) payload.finishedAt = fields.finishedAt;
 			persistSyncProgress(payload);
@@ -10944,7 +11530,8 @@ ${KIT_FOCUS_CSS}
 					log.info("favorites sync: completed on empty trailing page", {
 						total,
 						pages,
-						pid
+						pid,
+						mode
 					});
 					return {
 						status: "completed",
@@ -10978,7 +11565,9 @@ ${KIT_FOCUS_CSS}
 					};
 				}
 				sawNonEmptyPage = true;
-				addFavs(collectFavoriteIdsFromDocument(doc));
+				const ids = collectFavoriteIdsFromDocument(doc);
+				const allKnown = pageIdsAllInLocalSet(ids, loadFavSet());
+				addFavs(ids);
 				total = loadFavSet().size;
 				const nextPid = pid + 50;
 				writeProgress({
@@ -10991,6 +11580,26 @@ ${KIT_FOCUS_CSS}
 					pages,
 					total
 				});
+				if (mode === FAVORITES_SYNC_MODE_INCREMENTAL && allKnown) {
+					const finishedAt = new Date().toISOString();
+					writeProgress({
+						nextPid,
+						lastPid,
+						running: false,
+						finishedAt
+					});
+					log.info("favorites sync: incremental early stop", {
+						total,
+						pages,
+						page,
+						pid
+					});
+					return {
+						status: "completed",
+						total,
+						pages
+					};
+				}
 				if (pid >= lastPid) {
 					const finishedAt = new Date().toISOString();
 					writeProgress({
@@ -11001,7 +11610,8 @@ ${KIT_FOCUS_CSS}
 					});
 					log.info("favorites sync: completed", {
 						total,
-						pages
+						pages,
+						mode
 					});
 					return {
 						status: "completed",
@@ -11020,7 +11630,8 @@ ${KIT_FOCUS_CSS}
 				writeProgress({ running: false });
 				log.info("favorites sync: aborted", {
 					pid,
-					total
+					total,
+					mode
 				});
 				return createAbortResult(total, page, pages);
 			}
@@ -11039,9 +11650,10 @@ ${KIT_FOCUS_CSS}
 	var NOTE_CLASS = "rdw-favs-sync-note";
 	var HEADING = "Favorites sync";
 	var TEXT_SYNC = "Sync favorites";
+	var TEXT_FULL = "Full resync";
 	var TEXT_RESUME = "Resume";
 	var TEXT_STOP = "Stop";
-	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
+	var TEXT_WARNING = "Sync stops at the first page of already-known favorites (newest first). Full resync loads every page. One request per 1.5 s";
 	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
 	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
 	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
@@ -11153,7 +11765,7 @@ ${KIT_FOCUS_CSS}
 			busy: false
 		};
 	}
-	async function startSync(setUi) {
+	async function startSync(setUi, mode) {
 		if (activeSync !== null) return;
 		const controller = new AbortController();
 		const listeners = new Set();
@@ -11177,7 +11789,8 @@ ${KIT_FOCUS_CSS}
 				onProgress: (progress) => {
 					for (const listener of listeners) listener(progress);
 				},
-				signal: controller.signal
+				signal: controller.signal,
+				...mode !== void 0 ? { mode } : {}
 			});
 			if (activeSync?.controller === controller) setUi(applyResult(result));
 		} catch (error) {
@@ -11227,14 +11840,21 @@ ${KIT_FOCUS_CSS}
 				}),
 				a$1("div", {
 					className: ACTIONS_CLASS,
-					children: [!ui.unfinished ? a$1(Button, {
+					children: [!ui.unfinished ? a$1($, { children: [a$1(Button, {
 						variant: "primary",
 						disabled: ui.busy,
 						onClick: () => {
-							startSync(setUi);
+							startSync(setUi, FAVORITES_SYNC_MODE_INCREMENTAL);
 						},
 						children: TEXT_SYNC
-					}) : a$1(Button, {
+					}), a$1(Button, {
+						variant: "secondary",
+						disabled: ui.busy,
+						onClick: () => {
+							startSync(setUi, FAVORITES_SYNC_MODE_FULL);
+						},
+						children: TEXT_FULL
+					})] }) : a$1(Button, {
 						variant: "secondary",
 						disabled: ui.busy,
 						onClick: () => {
@@ -11391,19 +12011,23 @@ ${KIT_FOCUS_CSS}
 				}),
 				a$1(Card, {
 					className: PANEL_UI_CLASS.pageCard,
-					children: [a$1("div", {
-						className: PANEL_UI_CLASS.settingsRow,
-						children: a$1(Switch, {
-							id: GRID_FAV_CHECKBOX_ID,
-							label: UI_TEXT.gridFavButtonsLabel,
-							checked: gridFavEnabled,
-							onChange: (checked) => {
-								setGridFavButtonsEnabled(checked);
-								setGridFavButtonsVisible(checked);
-								setGridFavEnabled(checked);
-							}
-						})
-					}), a$1(FavoritesSyncSection, { includeHeading: true })]
+					children: [
+						a$1(SectionLabel, { children: "Favorites" }),
+						a$1("div", {
+							className: PANEL_UI_CLASS.settingsRow,
+							children: a$1(Switch, {
+								id: GRID_FAV_CHECKBOX_ID,
+								label: UI_TEXT.gridFavButtonsLabel,
+								checked: gridFavEnabled,
+								onChange: (checked) => {
+									setGridFavButtonsEnabled(checked);
+									setGridFavButtonsVisible(checked);
+									setGridFavEnabled(checked);
+								}
+							})
+						}),
+						a$1(FavoritesSyncSection, { includeHeading: false })
+					]
 				}),
 				a$1(Card, {
 					className: PANEL_UI_CLASS.pageCard,
@@ -11412,20 +12036,16 @@ ${KIT_FOCUS_CSS}
 			]
 		});
 	}
-	var THEME_DARK_CLASS = "rdw-theme-dark";
 	var PAGE_SHELL_CLASS = "rdw-page-shell";
 	var PAGE_TITLE_CLASS = "rdw-page-title";
 	var PAGE_HOST_CSS = `
 :host {
   all: initial;
-  ${tokensToCssDeclarations(LIGHT_PALETTE)}
   font-family: var(--rdw-font);
   font-size: 13px;
   line-height: 1.35;
   color: var(--rdw-text);
-}
-:host(.${THEME_DARK_CLASS}) {
-  ${tokensToCssDeclarations(DARK_PALETTE)}
+  background: transparent;
 }
 .${PAGE_SHELL_CLASS} {
   box-sizing: border-box;
@@ -11463,12 +12083,11 @@ ${PAGE_CONTENT_CSS}
 		if (route === "following") return a$1(FollowingPage, {});
 		return a$1(SettingsPage, {});
 	}
-	function isDarkTheme() {
-		const theme = getAppearance().theme;
-		return theme === "dark" || theme === "site-dark";
-	}
 	var hostElement = null;
 	var mountPoint = null;
+	function syncHostTokens(host) {
+		applyTokenProperties(host, resolveTokenPalette(getAppearance()));
+	}
 	function ensureHost(header) {
 		if (hostElement !== null && mountPoint !== null) {
 			if (hostElement.parentElement !== header.parentElement) header.after(hostElement);
@@ -11494,7 +12113,7 @@ ${PAGE_CONTENT_CSS}
 	}
 	function showRdwPage(route, header) {
 		const { host, mount } = ensureHost(header);
-		host.classList.toggle(THEME_DARK_CLASS, isDarkTheme());
+		syncHostTokens(host);
 		Q(a$1(PageShell, {
 			title: titleForRoute(route),
 			children: pageForRoute(route)
@@ -11509,6 +12128,7 @@ ${PAGE_CONTENT_CSS}
 		if (stray !== null) stray.remove();
 	}
 	var CONTENT_ID = "content";
+	var FAVORITES_USER_ID_STUB_PID = 0;
 	var savedSiteCurrent = null;
 	var siteCurrentCaptured = false;
 	function isHeaderMenuListItem(listItem, content) {
@@ -11536,10 +12156,26 @@ ${PAGE_CONTENT_CSS}
 		const header = document.querySelector(HEADER_SELECTOR);
 		return header instanceof HTMLElement ? header : null;
 	}
-	function readSavedFavoritesUserId() {
-		const userId = getSyncState()?.userId;
-		if (userId === void 0 || !Number.isFinite(userId) || userId <= 0) return null;
-		return userId;
+	function persistFavoritesUserId(userId) {
+		if (!Number.isFinite(userId) || userId <= 0) return;
+		const normalized = Math.trunc(userId);
+		const existing = getSyncState();
+		if (existing?.userId === normalized) return;
+		if (existing !== void 0) {
+			setSyncState({
+				...existing,
+				userId: normalized
+			});
+			return;
+		}
+		const now = new Date().toISOString();
+		setSyncState({
+			nextPid: FAVORITES_USER_ID_STUB_PID,
+			lastPid: FAVORITES_USER_ID_STUB_PID,
+			startedAt: now,
+			finishedAt: now,
+			userId: normalized
+		});
 	}
 	function buildFavoritesHrefFromUserId(userId) {
 		const params = new URLSearchParams();
@@ -11548,17 +12184,11 @@ ${PAGE_CONTENT_CSS}
 		params.set("id", String(userId));
 		return `${SEARCH_PATH}?${params.toString()}`;
 	}
-	function resolveFavoritesHref(root = document) {
-		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR$2);
-		if (link instanceof HTMLAnchorElement) {
-			const href = link.getAttribute("href");
-			if (href !== null && href.length > 0) return link.href;
-		}
-		const fromDoc = extractUserIdFromDocument(root);
-		if (fromDoc !== null) return buildFavoritesHrefFromUserId(fromDoc);
-		const saved = readSavedFavoritesUserId();
-		if (saved !== null) return buildFavoritesHrefFromUserId(saved);
-		return null;
+	function resolveFavoritesHref(root = document, search = window.location.search) {
+		const userId = resolveFavoritesUserId(root, search, getSyncState()?.userId);
+		if (userId === null || userId <= 0) return null;
+		persistFavoritesUserId(userId);
+		return buildFavoritesHrefFromUserId(userId);
 	}
 	function ensureMenuLink(id, label, href) {
 		const existing = document.getElementById(id);
@@ -11647,6 +12277,9 @@ ${PAGE_CONTENT_CSS}
 		siteCurrentCaptured = false;
 	}
 	var EVENT_HASHCHANGE = "hashchange";
+	var EVENT_POPSTATE = "popstate";
+	var EVENT_CLICK = "click";
+	var HISTORY_STATE_TITLE = "";
 	var routerBound = false;
 	function ensureOwnPageStyle() {
 		const style = ensureStyleElement(RDW_OWN_PAGE_STYLE_ID);
@@ -11683,6 +12316,39 @@ ${PAGE_CONTENT_CSS}
 	function onHashChange() {
 		syncFromHash();
 	}
+	function onPopState() {
+		syncFromHash();
+	}
+	function isModifiedClick(event) {
+		return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+	}
+	function navigateToRdwRoute(route) {
+		const nextHash = `${RDW_HASH_PREFIX}${route}`;
+		const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+		if (parseRdwHash(window.location.hash) !== null) window.history.replaceState(window.history.state, HISTORY_STATE_TITLE, nextUrl);
+		else window.history.pushState(window.history.state, HISTORY_STATE_TITLE, nextUrl);
+		syncFromHash();
+	}
+	function onDocumentClick(event) {
+		if (event.defaultPrevented || isModifiedClick(event)) return;
+		const target = event.target;
+		if (!(target instanceof Element)) return;
+		const anchor = target.closest("a");
+		if (!(anchor instanceof HTMLAnchorElement)) return;
+		if (anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+		let url;
+		try {
+			url = new URL(anchor.href, window.location.href);
+		} catch {
+			return;
+		}
+		if (url.origin !== window.location.origin) return;
+		if (url.pathname !== window.location.pathname || url.search !== window.location.search) return;
+		const route = parseRdwHash(url.hash);
+		if (route === null) return;
+		event.preventDefault();
+		navigateToRdwRoute(route);
+	}
 	function startRdwPages() {
 		ensureOwnPageStyle();
 		if (findHeader() === null) {
@@ -11693,6 +12359,8 @@ ${PAGE_CONTENT_CSS}
 		if (!routerBound) {
 			routerBound = true;
 			window.addEventListener(EVENT_HASHCHANGE, onHashChange);
+			window.addEventListener(EVENT_POPSTATE, onPopState);
+			document.addEventListener(EVENT_CLICK, onDocumentClick);
 		}
 		syncFromHash();
 	}
@@ -11879,10 +12547,12 @@ ${PAGE_CONTENT_CSS}
 		const after = getSyncState();
 		if (shouldSkipForFreshForeignLock(after, tabId, Date.now())) return false;
 		if (!shouldResumeStaleFavoritesSync(after, Date.now())) return false;
+		const mode = readFavoritesSyncMode(after) ?? FAVORITES_SYNC_MODE_FULL;
 		await runFavoritesSync({
 			tabId,
 			signal: new AbortController().signal,
-			onProgress: () => {}
+			onProgress: () => {},
+			mode
 		});
 		return true;
 	}

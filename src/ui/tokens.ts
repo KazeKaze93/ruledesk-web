@@ -1,5 +1,5 @@
 /**
- * Design tokens for RuleDesk Web UI and (later) site skin.
+ * Design tokens for RuleDesk Web UI and site skin.
  * Light values match docs/design/mock-components.html.
  */
 
@@ -103,8 +103,84 @@ export const DARK_PALETTE: TokenPalette = {
 
 export type PaletteMode = "light" | "dark";
 
+/** WCAG relative-luminance midpoint: below → dark base, else light. */
+export const CUSTOM_BASE_LUMA_THRESHOLD = 0.5;
+
+const HEX_SHORT_PATTERN = /^#([0-9a-fA-F]{3})$/;
+const HEX_LONG_PATTERN = /^#([0-9a-fA-F]{6})$/;
+const SRGB_LINEAR_THRESHOLD = 0.03928;
+const SRGB_LINEAR_DIVISOR = 12.92;
+const SRGB_GAMMA = 2.4;
+const SRGB_A = 0.055;
+const SRGB_B = 1.055;
+const LUMA_R = 0.2126;
+const LUMA_G = 0.7152;
+const LUMA_B = 0.0722;
+
 export function paletteForMode(mode: PaletteMode): TokenPalette {
   return mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+}
+
+function channelToLinear(channel: number): number {
+  const c = channel / 255;
+  if (c <= SRGB_LINEAR_THRESHOLD) {
+    return c / SRGB_LINEAR_DIVISOR;
+  }
+  return ((c + SRGB_A) / SRGB_B) ** SRGB_GAMMA;
+}
+
+/** Parse #rgb / #rrggbb into 0–255 channels; null if unsupported. */
+export function parseHexColor(
+  value: string,
+): { r: number; g: number; b: number } | null {
+  const short = HEX_SHORT_PATTERN.exec(value.trim());
+  if (short !== null) {
+    const hex = short[1];
+    if (hex === undefined) {
+      return null;
+    }
+    return {
+      r: Number.parseInt(hex[0]! + hex[0]!, 16),
+      g: Number.parseInt(hex[1]! + hex[1]!, 16),
+      b: Number.parseInt(hex[2]! + hex[2]!, 16),
+    };
+  }
+  const long = HEX_LONG_PATTERN.exec(value.trim());
+  if (long !== null) {
+    const hex = long[1];
+    if (hex === undefined) {
+      return null;
+    }
+    return {
+      r: Number.parseInt(hex.slice(0, 2), 16),
+      g: Number.parseInt(hex.slice(2, 4), 16),
+      b: Number.parseInt(hex.slice(4, 6), 16),
+    };
+  }
+  return null;
+}
+
+export function relativeLuminance(hex: string): number | null {
+  const rgb = parseHexColor(hex);
+  if (rgb === null) {
+    return null;
+  }
+  const r = channelToLinear(rgb.r);
+  const g = channelToLinear(rgb.g);
+  const b = channelToLinear(rgb.b);
+  return LUMA_R * r + LUMA_G * g + LUMA_B * b;
+}
+
+/** Pick light/dark custom base from a legacy background hex. */
+export function customBaseFromLegacyBg(bg: string | undefined): PaletteMode {
+  if (bg === undefined) {
+    return "light";
+  }
+  const luma = relativeLuminance(bg);
+  if (luma !== null && luma < CUSTOM_BASE_LUMA_THRESHOLD) {
+    return "dark";
+  }
+  return "light";
 }
 
 function escapeCssValue(value: string): string {
@@ -141,11 +217,37 @@ export function buildTokensCss(palette: TokenPalette, selector = ":root"): strin
   return `${selector} {\n  ${tokensToCssDeclarations(palette)}\n}\n`;
 }
 
+/**
+ * Apply palette CSS variables on an element (documentElement or Shadow host).
+ * Inline properties so Shadow :host { all: initial } still sees the tokens.
+ */
+export function applyTokenProperties(
+  target: HTMLElement,
+  palette: TokenPalette,
+): void {
+  target.style.setProperty(TOKEN_VAR.bg, palette.bg);
+  target.style.setProperty(TOKEN_VAR.surface, palette.surface);
+  target.style.setProperty(TOKEN_VAR.surface2, palette.surface2);
+  target.style.setProperty(TOKEN_VAR.border, palette.border);
+  target.style.setProperty(TOKEN_VAR.text, palette.text);
+  target.style.setProperty(TOKEN_VAR.muted, palette.muted);
+  target.style.setProperty(TOKEN_VAR.accent, palette.accent);
+  target.style.setProperty(TOKEN_VAR.accentSoft, palette.accentSoft);
+  target.style.setProperty(TOKEN_VAR.danger, palette.danger);
+  target.style.setProperty(TOKEN_VAR.dangerSoft, palette.dangerSoft);
+  target.style.setProperty(TOKEN_VAR.tagArtist, palette.tagArtist);
+  target.style.setProperty(TOKEN_VAR.tagCharacter, palette.tagCharacter);
+  target.style.setProperty(TOKEN_VAR.tagCopyright, palette.tagCopyright);
+  target.style.setProperty(TOKEN_VAR.tagMetadata, palette.tagMetadata);
+  target.style.setProperty(TOKEN_VAR.radiusS, palette.radiusS);
+  target.style.setProperty(TOKEN_VAR.radiusM, palette.radiusM);
+  target.style.setProperty(TOKEN_VAR.radiusL, palette.radiusL);
+  target.style.setProperty(TOKEN_VAR.shadow1, palette.shadow1);
+  target.style.setProperty(TOKEN_VAR.shadow2, palette.shadow2);
+  target.style.setProperty(TOKEN_VAR.font, palette.font);
+}
+
 export type CustomThemeOverrides = {
-  readonly accent?: string;
-  readonly bg?: string;
-  readonly surface?: string;
-  readonly text?: string;
   readonly backgroundImage?: string;
   readonly backgroundDim?: number;
 };
@@ -158,18 +260,6 @@ export function applyCustomThemeProperties(
   target: HTMLElement,
   custom: CustomThemeOverrides,
 ): void {
-  if (custom.accent !== undefined) {
-    target.style.setProperty(TOKEN_VAR.accent, custom.accent);
-  }
-  if (custom.bg !== undefined) {
-    target.style.setProperty(TOKEN_VAR.bg, custom.bg);
-  }
-  if (custom.surface !== undefined) {
-    target.style.setProperty(TOKEN_VAR.surface, custom.surface);
-  }
-  if (custom.text !== undefined) {
-    target.style.setProperty(TOKEN_VAR.text, custom.text);
-  }
   if (custom.backgroundImage !== undefined && custom.backgroundImage.length > 0) {
     target.style.setProperty(
       TOKEN_VAR.backgroundImage,
@@ -185,6 +275,7 @@ export function applyCustomThemeProperties(
 }
 
 export function clearCustomThemeProperties(target: HTMLElement): void {
+  // Legacy custom color overrides (removed in 0.11) plus image/dim.
   target.style.removeProperty(TOKEN_VAR.accent);
   target.style.removeProperty(TOKEN_VAR.bg);
   target.style.removeProperty(TOKEN_VAR.surface);

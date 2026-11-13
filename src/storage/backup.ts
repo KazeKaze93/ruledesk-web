@@ -9,6 +9,7 @@ import {
 import { log } from "../log";
 import {
   clearFavsCache,
+  extractFavIdsFromMarks,
   loadFavSet,
   migrateMarksFavToFavs,
 } from "./favs";
@@ -38,7 +39,7 @@ export const BackupFileSchema = z.object({
   version: z.literal(BACKUP_VERSION),
   exportedAt: z.string(),
   storage: StorageSchema,
-  favs: FavsSchema,
+  favs: z.optional(FavsSchema),
   background: z.optional(z.string()),
 });
 
@@ -46,6 +47,7 @@ export type BackupFile = z.infer<typeof BackupFileSchema>;
 
 export type BackupExportOptions = {
   readonly includeBackground: boolean;
+  readonly includeFavorites: boolean;
 };
 
 export type BackupImportSummary = {
@@ -195,16 +197,31 @@ function buildSummary(
   };
 }
 
+/**
+ * When the backup omits favs, strip legacy marks.fav so migrateMarksFavToFavs
+ * cannot enlarge the untouched local fav set.
+ */
+function storageWithoutMarkFavs(storage: StorageData): StorageData {
+  const stripped = extractFavIdsFromMarks(storage.marks);
+  return { ...storage, marks: stripped.marks };
+}
+
 function applyImportedState(
   storage: StorageData,
-  favs: FavsData,
+  favs: FavsData | undefined,
   background: string | undefined,
   applyBackground: boolean,
+  applyFavs: boolean,
 ): BackupImportSummary {
   snapshotCurrentToBackupKey();
-  const stripped = stripLegacyPanelWindowSize(storage);
+  const storageToWrite = applyFavs
+    ? storage
+    : storageWithoutMarkFavs(storage);
+  const stripped = stripLegacyPanelWindowSize(storageToWrite);
   save(stripped.data);
-  writeFavsForBackup(favs);
+  if (applyFavs && favs !== undefined) {
+    writeFavsForBackup(favs);
+  }
   if (applyBackground) {
     writeBackgroundRaw(background);
   }
@@ -231,13 +248,12 @@ export function buildBackupFilename(date: Date = new Date()): string {
 /** Build a validated backup object from current Tampermonkey keys. */
 export function buildBackupFile(options: BackupExportOptions): BackupFile {
   const storage = load();
-  const favs = readFavsForBackup();
   const file: BackupFile = {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     storage,
-    favs,
+    ...(options.includeFavorites ? { favs: readFavsForBackup() } : {}),
   };
   if (options.includeBackground) {
     const background = readBackgroundRaw();
@@ -275,6 +291,7 @@ export function exportBackupDownload(options: BackupExportOptions): BackupFile {
 /**
  * Parse and apply a backup JSON string.
  * Invalid input leaves storage/favs/background unchanged.
+ * A file without a `favs` field leaves the local fav set untouched.
  */
 export function importBackupJson(
   raw: string,
@@ -298,14 +315,17 @@ export function importBackupJson(
     incoming,
     "background",
   );
+  const hasFavsField = Object.prototype.hasOwnProperty.call(incoming, "favs");
+  const incomingFavs = incoming.favs;
 
   try {
     if (mode === IMPORT_MODE_REPLACE) {
       const summary = applyImportedState(
         incoming.storage,
-        incoming.favs,
+        hasFavsField ? incomingFavs : undefined,
         hasBackgroundField ? incoming.background : undefined,
         true,
+        hasFavsField,
       );
       return { ok: true, summary };
     }
@@ -326,12 +346,16 @@ export function importBackupJson(
     if (mergedStorage.settings === undefined) {
       mergedStorage.settings = createDefaultStorage().settings;
     }
-    const mergedFavs = mergeFavs(currentFavs, incoming.favs);
+    const mergedFavs =
+      hasFavsField && incomingFavs !== undefined
+        ? mergeFavs(currentFavs, incomingFavs)
+        : undefined;
     const summary = applyImportedState(
       mergedStorage,
       mergedFavs,
       incoming.background,
       hasBackgroundField,
+      hasFavsField,
     );
     return { ok: true, summary };
   } catch (error) {

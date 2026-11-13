@@ -66,11 +66,14 @@ describe("backup export/import", () => {
     });
     clearFavsCache();
 
-    const file = buildBackupFile({ includeBackground: false });
+    const file = buildBackupFile({
+      includeBackground: false,
+      includeFavorites: true,
+    });
     expect(file.format).toBe(BACKUP_FORMAT);
     expect(file.version).toBe(BACKUP_VERSION);
     expect(file.storage.artists.map((entry) => entry.tag)).toEqual(["nyx_x"]);
-    expect(file.favs.ids).toEqual([10, 20]);
+    expect(file.favs?.ids).toEqual([10, 20]);
     expect(file.background).toBeUndefined();
 
     save(createDefaultStorage());
@@ -96,13 +99,63 @@ describe("backup export/import", () => {
     expect(memory.has(STORAGE_BACKUP_KEY)).toBe(true);
   });
 
+  it("omit favorites from export when includeFavorites is false", () => {
+    memory.set(FAVS_STORAGE_KEY, { version: 1, ids: [10, 20] });
+    clearFavsCache();
+    const file = buildBackupFile({
+      includeBackground: false,
+      includeFavorites: false,
+    });
+    expect(file.favs).toBeUndefined();
+    const serialized = serializeBackupFile(file);
+    expect(serialized).not.toContain('"favs"');
+  });
+
+  it("import without favs leaves local fav set untouched", () => {
+    addArtist("keep_artist");
+    memory.set(FAVS_STORAGE_KEY, { version: 1, ids: [99, 100] });
+    clearFavsCache();
+
+    const file = buildBackupFile({
+      includeBackground: false,
+      includeFavorites: false,
+    });
+    file.storage = {
+      ...createDefaultStorage(),
+      artists: [{ tag: "from_file" }],
+      marks: {
+        "7": { fav: true, seen: true },
+      },
+    };
+
+    const result = importBackupJson(
+      serializeBackupFile(file),
+      IMPORT_MODE_REPLACE,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([99, 100]);
+    expect(result.summary.favCount).toBe(2);
+    expect(load().artists.map((entry) => entry.tag)).toEqual(["from_file"]);
+    expect(load().marks["7"]).toEqual({ seen: true });
+    expect(memory.get(FAVS_STORAGE_KEY)).toEqual({
+      version: 1,
+      ids: [99, 100],
+    });
+  });
+
   it("merge keeps existing artists and unions favs; settings come from file", () => {
     addArtist("alpha");
     addCollection("Local", [{ tag: "dog", type: "include" }]);
     memory.set(FAVS_STORAGE_KEY, { version: 1, ids: [1] });
     clearFavsCache();
 
-    const incoming = buildBackupFile({ includeBackground: false });
+    const incoming = buildBackupFile({
+      includeBackground: false,
+      includeFavorites: true,
+    });
     incoming.storage = {
       ...incoming.storage,
       artists: [{ tag: "beta" }],
@@ -166,9 +219,15 @@ describe("backup export/import", () => {
 
   it("includeBackground exports APPEARANCE_BACKGROUND_KEY when set", () => {
     memory.set(APPEARANCE_BACKGROUND_KEY, "data:image/png;base64,abc");
-    const withBg = buildBackupFile({ includeBackground: true });
+    const withBg = buildBackupFile({
+      includeBackground: true,
+      includeFavorites: false,
+    });
     expect(withBg.background).toBe("data:image/png;base64,abc");
-    const withoutBg = buildBackupFile({ includeBackground: false });
+    const withoutBg = buildBackupFile({
+      includeBackground: false,
+      includeFavorites: false,
+    });
     expect(withoutBg.background).toBeUndefined();
   });
 });

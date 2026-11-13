@@ -1,9 +1,13 @@
 import type { JSX } from "preact";
 import { render as preactRender } from "preact";
-import { useCallback, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
+import {
+  createAutocompleteQuerier,
+  type AutocompleteSuggestion,
+} from "../site/autocomplete";
 import { readSiteBlacklist, writeSiteBlacklist } from "../site/blacklist";
-import { Button, Chip, SectionLabel, TextField } from "../ui/kit";
+import { AutocompleteField, Button, Chip, SectionLabel } from "../ui/kit";
 
 const SECTION_CLASS = "rdw-blacklist";
 const CHIPS_CLASS = "rdw-blacklist-chips";
@@ -38,7 +42,8 @@ export const BLACKLIST_SECTION_CSS = `
   gap: 8px;
   align-items: flex-end;
 }
-.${SECTION_CLASS} .${ADD_ROW_CLASS} .rdw-field {
+.${SECTION_CLASS} .${ADD_ROW_CLASS} .rdw-field,
+.${SECTION_CLASS} .${ADD_ROW_CLASS} .rdw-ac {
   flex: 1 1 12rem;
   margin: 0;
 }
@@ -76,6 +81,17 @@ export function BlacklistSection(
   const includeHeading = props.includeHeading !== false;
   const [tags, setTags] = useState<string[]>(() => readSiteBlacklist());
   const [draft, setDraft] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    readonly AutocompleteSuggestion[]
+  >([]);
+  const querierRef = useRef(createAutocompleteQuerier());
+
+  useEffect(() => {
+    const querier = querierRef.current;
+    return () => {
+      querier.cancel();
+    };
+  }, []);
 
   const addTokens = useCallback((): void => {
     const tokens = parseAddTokens(draft);
@@ -84,6 +100,8 @@ export function BlacklistSection(
     }
     setTags(persistTags([...readSiteBlacklist(), ...tokens]));
     setDraft("");
+    setSuggestions([]);
+    querierRef.current.cancel();
   }, [draft]);
 
   return (
@@ -113,11 +131,19 @@ export function BlacklistSection(
             addTokens();
           }}
         >
-          <TextField
+          <AutocompleteField
             id={ADD_INPUT_ID}
             label={ADD_LABEL}
             value={draft}
-            onChange={setDraft}
+            suggestions={suggestions}
+            onChange={(value) => {
+              setDraft(value);
+              querierRef.current.query(value, setSuggestions);
+            }}
+            onSelect={() => {
+              querierRef.current.cancel();
+              setSuggestions([]);
+            }}
           />
           <Button type="submit" variant="primary">
             {ADD_BUTTON}

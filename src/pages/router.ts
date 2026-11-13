@@ -1,6 +1,7 @@
 import { ensureStyleElement } from "../boot/appearance-dom";
 import {
   HEADER_SELECTOR,
+  RDW_HASH_PREFIX,
   RDW_OWN_PAGE_CLASS,
   RDW_OWN_PAGE_STYLE_ID,
   buildOwnPageCss,
@@ -15,6 +16,9 @@ import {
 } from "./menu";
 
 const EVENT_HASHCHANGE = "hashchange";
+const EVENT_POPSTATE = "popstate";
+const EVENT_CLICK = "click";
+const HISTORY_STATE_TITLE = "";
 
 let routerBound = false;
 
@@ -64,6 +68,74 @@ function onHashChange(): void {
   syncFromHash();
 }
 
+function onPopState(): void {
+  syncFromHash();
+}
+
+function isModifiedClick(event: MouseEvent): boolean {
+  return (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  );
+}
+
+/**
+ * First visit to a #rdw/* route pushes history; switching among script pages
+ * replaces so Back returns to the underlying site page.
+ */
+export function navigateToRdwRoute(route: RdwRoute): void {
+  const nextHash = `${RDW_HASH_PREFIX}${route}`;
+  const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+  const alreadyOnScriptPage = parseRdwHash(window.location.hash) !== null;
+  if (alreadyOnScriptPage) {
+    window.history.replaceState(window.history.state, HISTORY_STATE_TITLE, nextUrl);
+  } else {
+    window.history.pushState(window.history.state, HISTORY_STATE_TITLE, nextUrl);
+  }
+  syncFromHash();
+}
+
+function onDocumentClick(event: MouseEvent): void {
+  if (event.defaultPrevented || isModifiedClick(event)) {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+  const anchor = target.closest("a");
+  if (!(anchor instanceof HTMLAnchorElement)) {
+    return;
+  }
+  if (anchor.target === "_blank" || anchor.hasAttribute("download")) {
+    return;
+  }
+  let url: URL;
+  try {
+    url = new URL(anchor.href, window.location.href);
+  } catch {
+    return;
+  }
+  if (url.origin !== window.location.origin) {
+    return;
+  }
+  if (
+    url.pathname !== window.location.pathname ||
+    url.search !== window.location.search
+  ) {
+    return;
+  }
+  const route = parseRdwHash(url.hash);
+  if (route === null) {
+    return;
+  }
+  event.preventDefault();
+  navigateToRdwRoute(route);
+}
+
 /**
  * Install navbar items + hash router. No menu / no page when div#header is absent.
  */
@@ -78,6 +150,8 @@ export function startRdwPages(): void {
   if (!routerBound) {
     routerBound = true;
     window.addEventListener(EVENT_HASHCHANGE, onHashChange);
+    window.addEventListener(EVENT_POPSTATE, onPopState);
+    document.addEventListener(EVENT_CLICK, onDocumentClick);
   }
   syncFromHash();
 }

@@ -16,7 +16,12 @@ import {
   loadFavSet,
   setSyncState,
 } from "../storage/favs";
-import type { FavsSyncState } from "../storage/schema";
+import {
+  FAVS_SYNC_MODE_FULL,
+  FAVS_SYNC_MODE_INCREMENTAL,
+  type FavsSyncMode,
+  type FavsSyncState,
+} from "../storage/schema";
 import { detectPageKind } from "./pages";
 import { extractPostIdFromFavoritesDeleteOnclick } from "./selectors";
 
@@ -31,6 +36,11 @@ export const FAVORITES_SYNC_RETRY_DELAYS_MS = [10_000, 30_000, 60_000] as const;
 
 /** Max characters of document title included in pause/error messages. */
 export const FAVORITES_SYNC_TITLE_SNIPPET_MAX = 80;
+
+/** Re-export schema mode constants for site/UI callers. */
+export type FavoritesSyncMode = FavsSyncMode;
+export const FAVORITES_SYNC_MODE_INCREMENTAL = FAVS_SYNC_MODE_INCREMENTAL;
+export const FAVORITES_SYNC_MODE_FULL = FAVS_SYNC_MODE_FULL;
 
 const MY_FAVORITES_LINK_SELECTOR =
   'li#my-favorites-container a[href*="page=favorites"]';
@@ -68,6 +78,11 @@ export type RunFavoritesSyncOptions = {
   signal: AbortSignal;
   /** Stable id for this tab's sync lock; generated when omitted. */
   tabId?: string;
+  /**
+   * New-run mode. Ignored while resuming an unfinished sync (stored mode wins).
+   * Defaults to {@link FAVORITES_SYNC_MODE_INCREMENTAL} for a fresh run.
+   */
+  mode?: FavoritesSyncMode;
 };
 
 type PageFetchSuccess = {
@@ -325,8 +340,57 @@ type SyncProgressFields = {
   userId: number;
   tabId: string;
   running: boolean;
+  mode: FavoritesSyncMode;
   finishedAt?: string;
 };
+
+/**
+ * Reads sync mode from persisted FavsSyncState.mode.
+ * Missing / unexpected → undefined.
+ */
+export function readFavoritesSyncMode(
+  sync: FavsSyncState | undefined,
+): FavoritesSyncMode | undefined {
+  const mode = sync?.mode;
+  if (
+    mode === FAVORITES_SYNC_MODE_INCREMENTAL ||
+    mode === FAVORITES_SYNC_MODE_FULL
+  ) {
+    return mode;
+  }
+  return undefined;
+}
+
+/**
+ * True when the page has at least one id and every id is already local.
+ * Empty pages are not early-stop (handled by trailing-empty completion).
+ */
+export function pageIdsAllInLocalSet(
+  pageIds: readonly number[],
+  local: ReadonlySet<number>,
+): boolean {
+  if (pageIds.length === 0) {
+    return false;
+  }
+  for (const id of pageIds) {
+    if (!local.has(id)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function resolveRunMode(
+  unfinished: boolean,
+  existing: FavsSyncState | undefined,
+  requested: FavoritesSyncMode | undefined,
+): FavoritesSyncMode {
+  if (unfinished) {
+    // Legacy mid-flight (no mode) keeps full-walk behavior.
+    return readFavoritesSyncMode(existing) ?? FAVORITES_SYNC_MODE_FULL;
+  }
+  return requested ?? FAVORITES_SYNC_MODE_INCREMENTAL;
+}
 
 function persistSyncProgress(fields: SyncProgressFields): FavsSyncState {
   const state: FavsSyncState = {
@@ -335,6 +399,7 @@ function persistSyncProgress(fields: SyncProgressFields): FavsSyncState {
     startedAt: fields.startedAt,
     running: fields.running,
     userId: fields.userId,
+    mode: fields.mode,
     lock: {
       tabId: fields.tabId,
       beatAt: Date.now(),
@@ -478,6 +543,7 @@ export async function runFavoritesSync(
 
   const unfinished =
     existing !== undefined && existing.finishedAt === undefined;
+  const mode = resolveRunMode(unfinished, existing, options.mode);
   const startedAt = unfinished
     ? existing.startedAt
     : new Date().toISOString();
@@ -505,6 +571,7 @@ export async function runFavoritesSync(
       userId,
       tabId,
       running: fields.running,
+      mode,
     };
     if (fields.finishedAt !== undefined) {
       payload.finishedAt = fields.finishedAt;
@@ -547,6 +614,7 @@ export async function runFavoritesSync(
           total,
           pages,
           pid,
+          mode,
         });
         return { status: "completed", total, pages };
       }
@@ -575,6 +643,8 @@ export async function runFavoritesSync(
 
       sawNonEmptyPage = true;
       const ids = collectFavoriteIdsFromDocument(doc);
+      const localBefore = loadFavSet();
+      const allKnown = pageIdsAllInLocalSet(ids, localBefore);
       addFavs(ids);
       total = loadFavSet().size;
 
@@ -586,6 +656,24 @@ export async function runFavoritesSync(
       });
       onProgress({ page, pages, total });
 
+      // Incremental: site lists newest first — stop at first all-known page.
+      if (mode === FAVORITES_SYNC_MODE_INCREMENTAL && allKnown) {
+        const finishedAt = new Date().toISOString();
+        writeProgress({
+          nextPid,
+          lastPid,
+          running: false,
+          finishedAt,
+        });
+        log.info("favorites sync: incremental early stop", {
+          total,
+          pages,
+          page,
+          pid,
+        });
+        return { status: "completed", total, pages };
+      }
+
       if (pid >= lastPid) {
         const finishedAt = new Date().toISOString();
         writeProgress({
@@ -594,7 +682,7 @@ export async function runFavoritesSync(
           running: false,
           finishedAt,
         });
-        log.info("favorites sync: completed", { total, pages });
+        log.info("favorites sync: completed", { total, pages, mode });
         return { status: "completed", total, pages };
       }
 
@@ -608,7 +696,7 @@ export async function runFavoritesSync(
   } catch (error) {
     if (isAbortError(error)) {
       writeProgress({ running: false });
-      log.info("favorites sync: aborted", { pid, total });
+      log.info("favorites sync: aborted", { pid, total, mode });
       return createAbortResult(total, page, pages);
     }
     log.error("favorites sync: unexpected failure", error);

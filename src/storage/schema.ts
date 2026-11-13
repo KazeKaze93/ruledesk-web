@@ -19,7 +19,7 @@ import {
   TAG_TYPE_EXCLUDE,
   TAG_TYPE_INCLUDE,
 } from "../config/constants";
-
+import { customBaseFromLegacyBg } from "../ui/tokens";
 export const TagTypeSchema = z.enum([TAG_TYPE_INCLUDE, TAG_TYPE_EXCLUDE]);
 
 export const CollectionKindSchema = z.enum([
@@ -59,11 +59,31 @@ export const AppearanceThemeSchema = z.enum([
   APPEARANCE_THEME_CUSTOM,
 ]);
 
+export const APPEARANCE_CUSTOM_BASE_LIGHT = "light" as const;
+export const APPEARANCE_CUSTOM_BASE_DARK = "dark" as const;
+
+export const AppearanceCustomBaseSchema = z.enum([
+  APPEARANCE_CUSTOM_BASE_LIGHT,
+  APPEARANCE_CUSTOM_BASE_DARK,
+]);
+
+/** Canonical custom theme: Light/Dark base + optional background image/dim. */
 export const AppearanceCustomSchema = z.object({
-  accent: z.string(),
-  bg: z.string(),
-  surface: z.string(),
-  text: z.string(),
+  base: AppearanceCustomBaseSchema,
+  backgroundImage: z.optional(z.string()),
+  backgroundDim: z.optional(z.number()),
+});
+
+/**
+ * Storage/export parse shape: accepts legacy accent/bg/surface/text so 0.10
+ * blobs still load; normalize via {@link normalizeAppearanceCustom}.
+ */
+export const AppearanceCustomStoredSchema = z.object({
+  base: z.optional(AppearanceCustomBaseSchema),
+  accent: z.optional(z.string()),
+  bg: z.optional(z.string()),
+  surface: z.optional(z.string()),
+  text: z.optional(z.string()),
   backgroundImage: z.optional(z.string()),
   backgroundDim: z.optional(z.number()),
 });
@@ -71,6 +91,11 @@ export const AppearanceCustomSchema = z.object({
 export const AppearanceSchema = z.object({
   theme: AppearanceThemeSchema,
   custom: z.optional(AppearanceCustomSchema),
+});
+
+export const AppearanceStoredSchema = z.object({
+  theme: AppearanceThemeSchema,
+  custom: z.optional(AppearanceCustomStoredSchema),
 });
 
 export const SettingsSchema = z.object({
@@ -81,9 +106,8 @@ export const SettingsSchema = z.object({
   features: z.optional(z.record(z.string(), z.boolean())),
   featureChoice: z.optional(z.record(z.string(), z.string())),
   featureState: z.optional(z.record(z.string(), z.unknown())),
-  appearance: z.optional(AppearanceSchema),
+  appearance: z.optional(AppearanceStoredSchema),
 });
-
 export const UpdatesSchema = z.object({
   seenPostId: z.int().check(z.nonnegative()),
 });
@@ -107,6 +131,15 @@ export const FavsSyncLockSchema = z.object({
   beatAt: z.number(),
 });
 
+/** Package F HANDOFF: incremental stops early; full walks every page. */
+export const FAVS_SYNC_MODE_INCREMENTAL = "incremental" as const;
+export const FAVS_SYNC_MODE_FULL = "full" as const;
+
+export const FavsSyncModeSchema = z.enum([
+  FAVS_SYNC_MODE_INCREMENTAL,
+  FAVS_SYNC_MODE_FULL,
+]);
+
 export const FavsSyncSchema = z.object({
   nextPid: z.int(),
   lastPid: z.int(),
@@ -115,8 +148,8 @@ export const FavsSyncSchema = z.object({
   running: z.optional(z.boolean()),
   userId: z.optional(z.int()),
   lock: z.optional(FavsSyncLockSchema),
+  mode: z.optional(FavsSyncModeSchema),
 });
-
 export const FavsSchema = z.object({
   version: z.literal(FAVS_SCHEMA_VERSION),
   ids: z.array(z.int()),
@@ -141,16 +174,19 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export type ArtistEntry = z.infer<typeof ArtistEntrySchema>;
 export type MarkFlags = z.infer<typeof MarkFlagsSchema>;
 export type AppearanceTheme = z.infer<typeof AppearanceThemeSchema>;
+export type AppearanceCustomBase = z.infer<typeof AppearanceCustomBaseSchema>;
 export type AppearanceCustom = z.infer<typeof AppearanceCustomSchema>;
+export type AppearanceCustomStored = z.infer<typeof AppearanceCustomStoredSchema>;
 export type Appearance = z.infer<typeof AppearanceSchema>;
+export type AppearanceStored = z.infer<typeof AppearanceStoredSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 export type UpdatesState = z.infer<typeof UpdatesSchema>;
 export type StorageData = z.infer<typeof StorageSchema>;
 export type FavsSyncLock = z.infer<typeof FavsSyncLockSchema>;
+export type FavsSyncMode = z.infer<typeof FavsSyncModeSchema>;
 export type FavsSyncState = z.infer<typeof FavsSyncSchema>;
 export type FavsData = z.infer<typeof FavsSchema>;
 export type ExportBlob = z.infer<typeof ExportBlobSchema>;
-
 function isUnknownRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -236,6 +272,42 @@ export function createDefaultAppearance(): Appearance {
   };
 }
 
+/**
+ * Drop legacy custom color fields; pick Light/Dark base from stored base or
+ * luminance of legacy `bg`.
+ */
+export function normalizeAppearanceCustom(
+  raw: AppearanceCustomStored,
+): AppearanceCustom {
+  const base =
+    raw.base === APPEARANCE_CUSTOM_BASE_LIGHT ||
+    raw.base === APPEARANCE_CUSTOM_BASE_DARK
+      ? raw.base
+      : customBaseFromLegacyBg(raw.bg);
+  const next: {
+    base: AppearanceCustomBase;
+    backgroundImage?: string;
+    backgroundDim?: number;
+  } = { base };
+  if (raw.backgroundImage !== undefined) {
+    next.backgroundImage = raw.backgroundImage;
+  }
+  if (raw.backgroundDim !== undefined) {
+    next.backgroundDim = raw.backgroundDim;
+  }
+  return next;
+}
+
+export function normalizeAppearance(stored: AppearanceStored): Appearance {
+  if (stored.custom === undefined) {
+    return { theme: stored.theme };
+  }
+  return {
+    theme: stored.theme,
+    custom: normalizeAppearanceCustom(stored.custom),
+  };
+}
+
 export function createDefaultStorage(): StorageData {
   return {
     version: SCHEMA_VERSION,
@@ -255,7 +327,11 @@ export function createDefaultStorage(): StorageData {
 }
 
 export function resolveAppearance(data: StorageData): Appearance {
-  return data.settings?.appearance ?? createDefaultAppearance();
+  const stored = data.settings?.appearance;
+  if (stored === undefined) {
+    return createDefaultAppearance();
+  }
+  return normalizeAppearance(stored);
 }
 
 export function resolveGridFavButtons(data: StorageData): boolean {

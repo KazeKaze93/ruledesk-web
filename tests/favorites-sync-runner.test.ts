@@ -22,6 +22,7 @@ vi.mock("../src/site/favorites-sync", async (importOriginal) => {
   };
 });
 
+import { FAVORITES_SYNC_MODE_INCREMENTAL } from "../src/site/favorites-sync";
 import {
   FAVORITES_SYNC_LOCK_STALE_MS,
   FAVORITES_SYNC_RESUME_DELAY_MS,
@@ -35,7 +36,7 @@ import {
   setSyncState,
 } from "../src/storage/favs";
 import { clearStorageCache } from "../src/storage/store";
-import type { FavsSyncState } from "../src/storage/schema";
+import type { FavsSyncMode, FavsSyncState } from "../src/storage/schema";
 
 const USER_ID = 479099;
 const FOREIGN_TAB_ID = "foreign-tab";
@@ -59,8 +60,11 @@ function installGmMocks(): void {
   });
 }
 
-function runningSync(lock: FavsSyncState["lock"]): FavsSyncState {
-  return {
+function runningSync(
+  lock: FavsSyncState["lock"],
+  mode?: FavsSyncMode,
+): FavsSyncState {
+  const state: FavsSyncState = {
     nextPid: 100,
     lastPid: 500,
     startedAt: "2026-01-01T00:00:00.000Z",
@@ -68,6 +72,10 @@ function runningSync(lock: FavsSyncState["lock"]): FavsSyncState {
     userId: USER_ID,
     lock,
   };
+  if (mode !== undefined) {
+    state.mode = mode;
+  }
+  return state;
 }
 
 describe("favorites-sync-runner decisions", () => {
@@ -155,5 +163,30 @@ describe("resumeFavoritesSyncIfStale", () => {
 
     expect(started).toBe(false);
     expect(runFavoritesSync).not.toHaveBeenCalled();
+  });
+
+  it("passes stored sync mode through to runFavoritesSync", async () => {
+    const now = Date.now();
+    setSyncState(
+      runningSync(
+        {
+          tabId: FOREIGN_TAB_ID,
+          beatAt: now - FAVORITES_SYNC_LOCK_STALE_MS - 1,
+        },
+        FAVORITES_SYNC_MODE_INCREMENTAL,
+      ),
+    );
+
+    const pending = resumeFavoritesSyncIfStale();
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_RESUME_DELAY_MS);
+    const started = await pending;
+
+    expect(started).toBe(true);
+    expect(runFavoritesSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tabId: getFavoritesSyncRunnerTabId(),
+        mode: FAVORITES_SYNC_MODE_INCREMENTAL,
+      }),
+    );
   });
 });

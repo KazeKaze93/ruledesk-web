@@ -15,7 +15,7 @@ import { THUMB_CLASS, featureBodyClass, type Feature, type FeatureContext } from
 import { onThumbsAdded } from "./runtime";
 
 const FEATURE_ID = "playlist-menu";
-const FEATURE_LABEL = "Add to playlist button";
+const FEATURE_LABEL = "Add to collection button";
 const FEATURE_PAGES = ["list", "post"] as const;
 
 const CLASS_ADD = "rdw-playlist-add";
@@ -34,13 +34,13 @@ const CLASS_NEW_SUBMIT = "rdw-playlist-menu-new-submit";
 const ATTR_POST_ID = "data-rdw-post-id";
 
 const TEXT_ADD_GLYPH = "+";
-const TEXT_NEW_PLAYLIST = "New playlist…";
+const TEXT_NEW_PLAYLIST = "New collection…";
 const TEXT_CREATE = "Create";
 const TEXT_CHECK_MARK = "✓";
 
-const LABEL_ADD = "Add to playlist";
-const LABEL_TOGGLE_PREFIX = "Toggle playlist";
-const LABEL_NEW_NAME = "New playlist name";
+const LABEL_ADD = "Add to collection";
+const LABEL_TOGGLE_PREFIX = "Toggle collection";
+const LABEL_NEW_NAME = "New collection name";
 
 const MENU_Z_INDEX = 2147483645;
 const MENU_MIN_WIDTH_PX = 180;

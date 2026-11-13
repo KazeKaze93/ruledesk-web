@@ -15,7 +15,7 @@ import {
 import { featureBodyClass, type Feature, type FeatureContext } from "./types";
 
 const FEATURE_ID = "playlist-bar";
-const FEATURE_LABEL = "Playlist header";
+const FEATURE_LABEL = "Collection header";
 const FEATURE_PAGES = ["list"] as const;
 
 const ROOT_ID = "rdw-playlist-bar";

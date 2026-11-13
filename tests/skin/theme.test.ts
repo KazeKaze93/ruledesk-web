@@ -13,6 +13,7 @@ import {
   applyAppearanceTheme,
   applyBodyBackgroundImage,
   clampBackgroundDim,
+  computeDownscaleSize,
   contrastRatio,
   CONTRAST_RATIO_MIN,
   createDefaultCustomTheme,
@@ -20,7 +21,7 @@ import {
   parseHexColor,
 } from "../../src/skin/theme";
 import { getSiteTheme } from "../../src/site/theme";
-import { TOKEN_VAR } from "../../src/ui/tokens";
+import { DARK_PALETTE, LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 
 const OTHER_COOKIE = "session=abc123";
 const LIGHT_HREF = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_LIGHT}?v=1`;
@@ -81,6 +82,23 @@ describe("contrast helpers", () => {
   });
 });
 
+describe("computeDownscaleSize", () => {
+  it("never upscales and fits inside the max box", () => {
+    expect(computeDownscaleSize(100, 50, 200, 200)).toEqual({
+      width: 100,
+      height: 50,
+    });
+    expect(computeDownscaleSize(4000, 2000, 1600, 1200)).toEqual({
+      width: 1600,
+      height: 800,
+    });
+    expect(computeDownscaleSize(2000, 4000, 1600, 1200)).toEqual({
+      width: 600,
+      height: 1200,
+    });
+  });
+});
+
 describe("applyAppearanceTheme", () => {
   beforeEach(() => {
     document.head.replaceChildren();
@@ -115,6 +133,9 @@ describe("applyAppearanceTheme", () => {
     expect(document.cookie).not.toContain(`${SITE_THEME_COOKIE_NAME}=`);
     expect(getSiteTheme()).toBe("light");
     expect(link.getAttribute("href")).toBe(LIGHT_HREF);
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      LIGHT_PALETTE.bg,
+    );
   });
 
   it("site-dark removes rdw-skin and sets theme=dark cookie", () => {
@@ -133,6 +154,9 @@ describe("applyAppearanceTheme", () => {
     );
     expect(getSiteTheme()).toBe("dark");
     expect(link.getAttribute("href")).toBe(DARK_HREF);
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      DARK_PALETTE.bg,
+    );
   });
 
   it("light enables rdw-skin, clears cookie, forces light stylesheet", () => {
@@ -164,12 +188,11 @@ describe("applyAppearanceTheme", () => {
     expect(link.getAttribute("href")).toBe(LIGHT_HREF);
   });
 
-  it("custom sets CSS vars, body background with dim, and contrast warning", () => {
+  it("custom dark base injects dark tokens and body background with dim", () => {
     appendStylesheet(LIGHT_HREF);
     const custom = {
       ...createDefaultCustomTheme(),
-      text: "#777777",
-      bg: "#888888",
+      base: "dark" as const,
       backgroundImage: "https://example.com/bg.png",
       backgroundDim: 0.4,
     };
@@ -181,22 +204,20 @@ describe("applyAppearanceTheme", () => {
     expect(document.documentElement.classList.contains(RDW_SKIN_CLASS)).toBe(
       true,
     );
-    expect(
-      document.documentElement.style.getPropertyValue(TOKEN_VAR.text),
-    ).toBe("#777777");
-    expect(
-      document.documentElement.style.getPropertyValue(TOKEN_VAR.bg),
-    ).toBe("#888888");
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      DARK_PALETTE.bg,
+    );
     expect(document.body.style.backgroundImage).toContain(
       "url(\"https://example.com/bg.png\")",
     );
     expect(document.body.style.backgroundImage).toContain("rgba(0, 0, 0, 0.4)");
-    expect(result.contrastWarning).toBe(true);
-    expect(result.contrastRatio).not.toBeNull();
-    expect(result.contrastRatio!).toBeLessThan(CONTRAST_RATIO_MIN);
+    expect(
+      document.documentElement.style.getPropertyValue(TOKEN_VAR.backgroundDim),
+    ).toBe("0.4");
+    expect(result.contrastWarning).toBe(false);
   });
 
-  it("custom without contrast issue does not warn", () => {
+  it("custom without image does not warn", () => {
     appendStylesheet(LIGHT_HREF);
     const result = applyAppearanceTheme({
       appearance: {

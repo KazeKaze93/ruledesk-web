@@ -6,10 +6,10 @@ import { getSiteSkinCss } from "../skin/site-skin";
 import {
   applyAppearanceTheme,
   clampBackgroundDim,
-  CONTRAST_RATIO_MIN,
   createDefaultCustomTheme,
   DEFAULT_BACKGROUND_DIM,
-  hasInsufficientTextContrast,
+  getScreenPixelSize,
+  prepareBackgroundImageFile,
 } from "../skin/theme";
 import {
   APPEARANCE_THEME_CUSTOM,
@@ -21,9 +21,12 @@ import {
 import { gridDensityFeature } from "../features/grid-density";
 import { applyCssOnlyFeatureChoice } from "../features/runtime";
 import {
+  APPEARANCE_CUSTOM_BASE_DARK,
+  APPEARANCE_CUSTOM_BASE_LIGHT,
   AppearanceThemeSchema,
   type Appearance,
   type AppearanceCustom,
+  type AppearanceCustomBase,
 } from "../storage/schema";
 import {
   clearAppearanceBackgroundDataUrl,
@@ -37,6 +40,7 @@ import {
 import { Button } from "./kit/button";
 import { SectionLabel } from "./kit/section-label";
 import { Select, type SelectOption } from "./kit/select";
+import { Segmented, type SegmentedOption } from "./kit/segmented";
 import { TextField } from "./kit/text-field";
 import { KIT_FOCUS_CSS } from "./kit/shared";
 
@@ -57,10 +61,15 @@ const GRID_OPTIONS: readonly SelectOption[] = [
   { value: "masonry", label: "Masonry" },
 ];
 
+const BASE_OPTIONS: readonly SegmentedOption[] = [
+  { value: APPEARANCE_CUSTOM_BASE_LIGHT, label: "Light" },
+  { value: APPEARANCE_CUSTOM_BASE_DARK, label: "Dark" },
+];
+
 const SECTION_TITLE = "Appearance";
 const THEME_ROW_LABEL = "Site theme";
 const THEME_ROW_HINT = "Light, dark or your own";
-const COLORS_ROW_LABEL = "Accent and background";
+const BASE_ROW_LABEL = "Base";
 const BG_IMAGE_LABEL = "Background image";
 const BG_IMAGE_HINT = "From a link or a file";
 const BG_URL_PLACEHOLDER = "https://… or data URL";
@@ -69,17 +78,10 @@ const CHOOSE_LABEL = "Choose…";
 const REMOVE_LABEL = "Remove";
 const RESET_LABEL = "Reset to defaults";
 const GRID_ROW_LABEL = "Grid";
-const CONTRAST_WARN_TEXT = `Low contrast: text on background is below ${String(CONTRAST_RATIO_MIN)}:1`;
-
-const COLOR_FIELDS: readonly {
-  readonly key: "accent" | "bg" | "surface" | "text";
-  readonly label: string;
-}[] = [
-  { key: "accent", label: "Accent" },
-  { key: "bg", label: "Background" },
-  { key: "surface", label: "Surface" },
-  { key: "text", label: "Text" },
-];
+const SCREEN_HINT_PREFIX = "For this screen use at least ";
+const IMAGE_SIZE_PREFIX = "Image size: ";
+const IMAGE_TOO_SMALL_WARN =
+  "This image is smaller than your screen; it may look soft when stretched.";
 
 const ACCEPT_IMAGE = "image/*";
 
@@ -118,29 +120,9 @@ ${KIT_FOCUS_CSS}
   width: 110px;
   flex: none;
 }
-.rdw-appearance__colors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.rdw-appearance__color {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  font-size: 10px;
-  color: var(--rdw-muted);
-}
-.rdw-appearance__color input[type="color"] {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 2px solid var(--rdw-surface);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px var(--rdw-border);
-  background: transparent;
-  cursor: pointer;
+.rdw-appearance__base {
+  width: 140px;
+  flex: none;
 }
 .rdw-appearance__bg {
   display: grid;
@@ -165,8 +147,13 @@ ${KIT_FOCUS_CSS}
   min-width: 80px;
   accent-color: var(--rdw-accent);
 }
+.rdw-appearance__hint {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 11px;
+}
 .rdw-appearance__warn {
-  margin: 4px 8px 0;
+  margin: 0;
   padding: 6px 8px;
   border-radius: var(--rdw-radius-m);
   background: var(--rdw-danger-soft);
@@ -206,36 +193,21 @@ function ensureCustom(appearance: Appearance): AppearanceCustom {
   return appearance.custom ?? createDefaultCustomTheme();
 }
 
-function persistAndApply(appearance: Appearance): {
-  contrastWarning: boolean;
-} {
+function persistAndApply(appearance: Appearance): void {
   const parsed = setAppearance(appearance);
   const backgroundDataUrl = getAppearanceBackgroundDataUrl();
-  const result = applyAppearanceTheme({
+  applyAppearanceTheme({
     appearance: parsed,
     siteSkinCss: getSiteSkinCss(),
     ...(backgroundDataUrl !== undefined
       ? { backgroundDataUrl }
       : {}),
   });
-  return { contrastWarning: result.contrastWarning };
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("Could not read image file"));
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Could not read image file"));
-    };
-    reader.readAsDataURL(file);
-  });
+function formatScreenHint(): string {
+  const screen = getScreenPixelSize();
+  return `${SCREEN_HINT_PREFIX}${String(screen.width)}x${String(screen.height)}`;
 }
 
 export type AppearanceSectionProps = {
@@ -256,13 +228,12 @@ export function AppearanceSection(
     return current.custom?.backgroundImage ?? "";
   });
   const [fileError, setFileError] = useState<string>("");
-  const [contrastWarning, setContrastWarning] = useState<boolean>(() => {
-    const current = getAppearance();
-    if (current.theme !== APPEARANCE_THEME_CUSTOM || current.custom === undefined) {
-      return false;
-    }
-    return hasInsufficientTextContrast(current.custom.text, current.custom.bg);
-  });
+  const [imageMeta, setImageMeta] = useState<{
+    width: number;
+    height: number;
+    belowScreen: boolean;
+  } | null>(null);
+  const [screenHint] = useState<string>(() => formatScreenHint());
 
   const custom = ensureCustom(appearance);
   const isCustom = appearance.theme === APPEARANCE_THEME_CUSTOM;
@@ -273,8 +244,7 @@ export function AppearanceSection(
 
   function commitAppearance(next: Appearance): void {
     setAppearanceState(next);
-    const { contrastWarning: warn } = persistAndApply(next);
-    setContrastWarning(warn);
+    persistAndApply(next);
     setFileError("");
   }
 
@@ -294,14 +264,23 @@ export function AppearanceSection(
     commitAppearance({ theme });
   }
 
-  function onColorChange(
-    key: "accent" | "bg" | "surface" | "text",
-    value: string,
-  ): void {
-    // Read store (not React state) so rapid color inputs do not clobber each other.
+  function onBaseChange(value: string): void {
+    if (
+      value !== APPEARANCE_CUSTOM_BASE_LIGHT &&
+      value !== APPEARANCE_CUSTOM_BASE_DARK
+    ) {
+      return;
+    }
+    const base: AppearanceCustomBase = value;
+    const current = ensureCustom(getAppearance());
     const nextCustom: AppearanceCustom = {
-      ...ensureCustom(getAppearance()),
-      [key]: value,
+      base,
+      backgroundDim: clampBackgroundDim(
+        current.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
+      ),
+      ...(current.backgroundImage !== undefined
+        ? { backgroundImage: current.backgroundImage }
+        : {}),
     };
     commitAppearance({
       theme: APPEARANCE_THEME_CUSTOM,
@@ -312,18 +291,15 @@ export function AppearanceSection(
   function onBgUrlCommit(url: string): void {
     const trimmed = url.trim();
     setBgUrlDraft(trimmed);
+    setImageMeta(null);
     const base = ensureCustom(getAppearance());
     const nextCustom: AppearanceCustom = {
-      accent: base.accent,
-      bg: base.bg,
-      surface: base.surface,
-      text: base.text,
+      base: base.base,
       backgroundDim: clampBackgroundDim(
         base.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
       ),
       ...(trimmed.length > 0 ? { backgroundImage: trimmed } : {}),
     };
-    // URL image lives in appearance; clear dedicated GM blob if switching to URL.
     if (trimmed.length > 0) {
       clearAppearanceBackgroundDataUrl();
     }
@@ -337,10 +313,7 @@ export function AppearanceSection(
     const dim = clampBackgroundDim(raw);
     const base = ensureCustom(getAppearance());
     const nextCustom: AppearanceCustom = {
-      accent: base.accent,
-      bg: base.bg,
-      surface: base.surface,
-      text: base.text,
+      base: base.base,
       backgroundDim: dim,
       ...(base.backgroundImage !== undefined
         ? { backgroundImage: base.backgroundImage }
@@ -357,15 +330,17 @@ export function AppearanceSection(
       return;
     }
     try {
-      const dataUrl = await readFileAsDataUrl(file);
-      setAppearanceBackgroundDataUrl(dataUrl);
+      const prepared = await prepareBackgroundImageFile(file);
+      setAppearanceBackgroundDataUrl(prepared.dataUrl);
       setBgUrlDraft("");
+      setImageMeta({
+        width: prepared.sourceWidth,
+        height: prepared.sourceHeight,
+        belowScreen: prepared.belowScreen,
+      });
       const base = ensureCustom(getAppearance());
       const nextCustom: AppearanceCustom = {
-        accent: base.accent,
-        bg: base.bg,
-        surface: base.surface,
-        text: base.text,
+        base: base.base,
         backgroundDim: clampBackgroundDim(
           base.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
         ),
@@ -384,14 +359,12 @@ export function AppearanceSection(
   function onRemoveBackground(): void {
     clearAppearanceBackgroundDataUrl();
     setBgUrlDraft("");
+    setImageMeta(null);
     const base = ensureCustom(getAppearance());
     commitAppearance({
       theme: APPEARANCE_THEME_CUSTOM,
       custom: {
-        accent: base.accent,
-        bg: base.bg,
-        surface: base.surface,
-        text: base.text,
+        base: base.base,
         backgroundDim: DEFAULT_BACKGROUND_DIM,
       },
     });
@@ -400,6 +373,7 @@ export function AppearanceSection(
   function onResetDefaults(): void {
     clearAppearanceBackgroundDataUrl();
     setBgUrlDraft("");
+    setImageMeta(null);
     const defaults = createDefaultCustomTheme();
     commitAppearance({
       theme: APPEARANCE_THEME_CUSTOM,
@@ -440,24 +414,15 @@ export function AppearanceSection(
           <>
             <div className="rdw-appearance__row">
               <div className="rdw-appearance__row-text">
-                <span>{COLORS_ROW_LABEL}</span>
+                <span>{BASE_ROW_LABEL}</span>
               </div>
-              <div className="rdw-appearance__colors">
-                {COLOR_FIELDS.map((field) => (
-                  <label key={field.key} className="rdw-appearance__color">
-                    <input
-                      type="color"
-                      className="rdw-kit-focusable"
-                      value={custom[field.key]}
-                      aria-label={field.label}
-                      onInput={(event) => {
-                        onColorChange(field.key, event.currentTarget.value);
-                      }}
-                    />
-                    <span>{field.label}</span>
-                  </label>
-                ))}
-              </div>
+              <Segmented
+                className="rdw-appearance__base"
+                options={BASE_OPTIONS}
+                value={custom.base}
+                label={BASE_ROW_LABEL}
+                onChange={onBaseChange}
+              />
             </div>
 
             <div className="rdw-appearance__row rdw-appearance__row--top">
@@ -518,6 +483,18 @@ export function AppearanceSection(
                     }}
                   />
                 </div>
+                <p className="rdw-appearance__hint">{screenHint}</p>
+                {imageMeta !== null ? (
+                  <p className="rdw-appearance__hint">
+                    {IMAGE_SIZE_PREFIX}
+                    {String(imageMeta.width)}x{String(imageMeta.height)}
+                  </p>
+                ) : null}
+                {imageMeta?.belowScreen === true ? (
+                  <div className="rdw-appearance__warn" role="status">
+                    {IMAGE_TOO_SMALL_WARN}
+                  </div>
+                ) : null}
                 {hasBackground ? (
                   <label className="rdw-appearance__dim">
                     <span>{BG_DIM_LABEL}</span>
@@ -548,12 +525,6 @@ export function AppearanceSection(
                 ) : null}
               </div>
             </div>
-
-            {contrastWarning ? (
-              <div className="rdw-appearance__warn" role="status">
-                {CONTRAST_WARN_TEXT}
-              </div>
-            ) : null}
 
             <div className="rdw-appearance__footer">
               <Button variant="ghost" size="s" onClick={onResetDefaults}>

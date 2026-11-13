@@ -10,11 +10,15 @@ import {
 import {
   FAVORITES_SYNC_ERROR_NOT_LOGGED_IN,
   FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
+  FAVORITES_SYNC_MODE_FULL,
+  FAVORITES_SYNC_MODE_INCREMENTAL,
   FAVORITES_SYNC_PAGE_PAUSE_MS,
   FAVORITES_SYNC_PID_STEP,
   FAVORITES_SYNC_RETRY_DELAYS_MS,
   extractUserIdFromDocument,
   extractUserIdFromFavoritesSearch,
+  pageIdsAllInLocalSet,
+  readFavoritesSyncMode,
   resolveFavoritesUserId,
   resolveLastPid,
   runFavoritesSync,
@@ -337,6 +341,7 @@ describe("runFavoritesSync", () => {
     const sync = getSyncState();
     expect(sync?.finishedAt).toEqual(expect.any(String));
     expect(sync?.running).toBe(false);
+    expect(sync?.mode).toBe(FAVORITES_SYNC_MODE_INCREMENTAL);
     expect(sync?.userId).toBe(USER_ID);
     expect(sync?.lock).toEqual({
       tabId: TAB_ID,
@@ -680,5 +685,150 @@ describe("runFavoritesSync", () => {
     });
     expect(result).toEqual({ status: "completed", total: 3, pages: 1 });
     expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([40, 41, 42]);
+  });
+
+  it("incremental mode stops on first page where all ids are already local", async () => {
+    addFav(10);
+    addFav(11);
+    const fetchMock = mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [10, 11],
+          nextPid: FAVORITES_SYNC_PID_STEP,
+          lastPid: FAVORITES_SYNC_PID_STEP,
+        }),
+      },
+      {
+        body: favoritesPageHtml({
+          ids: [12],
+          currentLabel: "2",
+        }),
+      },
+    ]);
+
+    const run = runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+      mode: FAVORITES_SYNC_MODE_INCREMENTAL,
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
+    const result = await run;
+
+    expect(result).toEqual({ status: "completed", total: 2, pages: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(loadFavSet().has(12)).toBe(false);
+    expect(getSyncState()?.mode).toBe(FAVORITES_SYNC_MODE_INCREMENTAL);
+    expect(getSyncState()?.finishedAt).toEqual(expect.any(String));
+    expect(getSyncState()?.running).toBe(false);
+  });
+
+  it("full mode continues past a page of already-known ids", async () => {
+    addFav(10);
+    addFav(11);
+    const fetchMock = mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [10, 11],
+          nextPid: FAVORITES_SYNC_PID_STEP,
+          lastPid: FAVORITES_SYNC_PID_STEP,
+        }),
+      },
+      {
+        body: favoritesPageHtml({
+          ids: [12],
+          currentLabel: "2",
+        }),
+      },
+    ]);
+
+    const run = runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+      mode: FAVORITES_SYNC_MODE_FULL,
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
+    const result = await run;
+
+    expect(result).toEqual({ status: "completed", total: 3, pages: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(loadFavSet().has(12)).toBe(true);
+    expect(getSyncState()?.mode).toBe(FAVORITES_SYNC_MODE_FULL);
+  });
+
+  it("resuming unfinished sync keeps stored mode (ignores requested)", async () => {
+    setSyncState({
+      nextPid: FAVORITES_SYNC_PID_STEP,
+      lastPid: FAVORITES_SYNC_PID_STEP,
+      startedAt: "2020-01-01T00:00:00.000Z",
+      userId: USER_ID,
+      running: false,
+      mode: FAVORITES_SYNC_MODE_INCREMENTAL,
+    });
+    addFav(10);
+    addFav(11);
+    const fetchMock = mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [10, 11],
+          currentLabel: "2",
+        }),
+      },
+    ]);
+
+    const result = await runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+      mode: FAVORITES_SYNC_MODE_FULL,
+    });
+
+    expect(result.status).toBe("completed");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(getSyncState()?.mode).toBe(FAVORITES_SYNC_MODE_INCREMENTAL);
+  });
+});
+
+describe("pageIdsAllInLocalSet", () => {
+  it("is true only when every non-empty page id is local", () => {
+    const local = new Set([1, 2, 3]);
+    expect(pageIdsAllInLocalSet([1, 2], local)).toBe(true);
+    expect(pageIdsAllInLocalSet([1, 9], local)).toBe(false);
+    expect(pageIdsAllInLocalSet([], local)).toBe(false);
+  });
+});
+
+describe("readFavoritesSyncMode", () => {
+  it("returns incremental/full or undefined", () => {
+    expect(
+      readFavoritesSyncMode({
+        nextPid: 0,
+        lastPid: 0,
+        startedAt: "x",
+        mode: FAVORITES_SYNC_MODE_INCREMENTAL,
+      }),
+    ).toBe(FAVORITES_SYNC_MODE_INCREMENTAL);
+    expect(
+      readFavoritesSyncMode({
+        nextPid: 0,
+        lastPid: 0,
+        startedAt: "x",
+        mode: FAVORITES_SYNC_MODE_FULL,
+      }),
+    ).toBe(FAVORITES_SYNC_MODE_FULL);
+    expect(
+      readFavoritesSyncMode({
+        nextPid: 0,
+        lastPid: 0,
+        startedAt: "x",
+      }),
+    ).toBeUndefined();
   });
 });

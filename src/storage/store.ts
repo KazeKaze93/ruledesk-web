@@ -11,6 +11,7 @@ import {
   DEFAULT_TWEAKS_ENABLED,
   DEFAULT_UPDATES_GROUP_SIZE,
   IMPORT_SCHEMA_ERROR_PREFIX,
+  MAX_UPDATES_GROUP_SIZE,
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
 } from "../config/constants";
@@ -24,6 +25,7 @@ import {
   migrateMarksFavToFavs,
   removeFav,
 } from "./favs";
+import { pruneMarksIfNeeded } from "./marks-prune";
 import {
   AppearanceSchema,
   ArtistEntrySchema,
@@ -185,7 +187,11 @@ export function reloadFromStorage(): StorageData {
 
 export function save(data: StorageData): void {
   const parsed = StorageSchema.parse(data);
-  writeData(parsed);
+  const pruned = pruneMarksIfNeeded(parsed.marks);
+  const toWrite = pruned.pruned
+    ? { ...parsed, marks: pruned.marks }
+    : parsed;
+  writeData(toWrite);
   migrateMarksFavToFavs();
   const after = readRaw();
   if (after === undefined || after === null) {
@@ -194,7 +200,7 @@ export function save(data: StorageData): void {
   }
   const reparsed = StorageSchema.safeParse(after);
   if (!reparsed.success) {
-    setStorageCache(parsed);
+    setStorageCache(toWrite);
     return;
   }
   setStorageCache(reparsed.data);
@@ -427,13 +433,24 @@ export function setFeatureState(id: string, value: unknown): void {
   save(data);
 }
 
+/**
+ * Effective artists-per-search pack size for query building.
+ * Stored 0 (default) means MAX_UPDATES_GROUP_SIZE; values above the max are capped.
+ */
 export function getUpdatesGroupSize(): number {
-  return resolveUpdatesGroupSize(load());
+  const stored = resolveUpdatesGroupSize(load());
+  if (!Number.isFinite(stored) || stored <= 0) {
+    return MAX_UPDATES_GROUP_SIZE;
+  }
+  return Math.min(Math.floor(stored), MAX_UPDATES_GROUP_SIZE);
 }
 
 export function setUpdatesGroupSize(size: number): void {
   const data = load();
-  const safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+  let safeSize = Number.isFinite(size) && size >= 0 ? Math.floor(size) : 0;
+  if (safeSize > MAX_UPDATES_GROUP_SIZE) {
+    safeSize = MAX_UPDATES_GROUP_SIZE;
+  }
   data.settings = {
     ...currentSettings(data),
     updatesGroupSize: safeSize,
@@ -515,8 +532,12 @@ export function setSeenPostId(seenPostId: number): void {
   save(data);
 }
 
+/**
+ * Followed artist tags from a fresh GM read (not the in-memory snapshot).
+ * Feed href / recognition and Follow/Unfollow must not diverge across pages.
+ */
 export function listArtistTags(): string[] {
-  return load().artists.map((entry) => entry.tag);
+  return reloadFromStorage().artists.map((entry) => entry.tag);
 }
 
 export function isFollowingArtist(tag: string): boolean {
@@ -532,7 +553,7 @@ export function addArtist(tag: string): ArtistEntry {
   if (normalized === null) {
     throw new Error("Invalid artist tag");
   }
-  const data = load();
+  const data = reloadFromStorage();
   if (data.artists.some((entry) => entry.tag === normalized)) {
     throw new Error("Duplicate artist tag");
   }
@@ -547,7 +568,7 @@ export function removeArtist(tag: string): boolean {
   if (normalized === null) {
     return false;
   }
-  const data = load();
+  const data = reloadFromStorage();
   const next = data.artists.filter((entry) => entry.tag !== normalized);
   if (next.length === data.artists.length) {
     return false;

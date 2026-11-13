@@ -4,9 +4,17 @@ const FEATURE_ID = "grid-density";
 const COMPACT_PX = 150;
 const LARGE_PX = 250;
 const MASONRY_VALUE = "masonry";
-const MASONRY_COLUMN_WIDTH_PX = 200;
-const MASONRY_COLUMN_GAP_PX = 10;
-const MASONRY_THUMB_MARGIN = "0 0 10px";
+/** List-page host for masonry; favorites has no #post-list so rules do not apply. */
+const MASONRY_LIST_SCOPE = "#post-list";
+const MASONRY_COLUMN_WIDTH_PX = 240;
+const MASONRY_COLUMN_GAP_PX = 4;
+const MASONRY_LIST_WIDTH_PERCENT = 100;
+const MASONRY_THUMB_WIDTH_PERCENT = 100;
+const MASONRY_THUMB_MARGIN_TOP_PX = 0;
+const MASONRY_THUMB_MARGIN_INLINE_PX = 0;
+const MASONRY_THUMB_MARGIN_BOTTOM_PX = 4;
+const MASONRY_PREVIEW_WIDTH_PERCENT = 100;
+const MASONRY_BORDER_RADIUS_PX = 4;
 
 function sizeCss(choiceValue: string, px: number): string {
   const bodyClass = featureChoiceBodyClass(FEATURE_ID, choiceValue);
@@ -25,31 +33,35 @@ function sizeCss(choiceValue: string, px: number): string {
 
 function masonryCss(): string {
   const bodyClass = featureChoiceBodyClass(FEATURE_ID, MASONRY_VALUE);
+  const scope = `body.${bodyClass} ${MASONRY_LIST_SCOPE}`;
+  const thumbMargin = `${MASONRY_THUMB_MARGIN_TOP_PX}px ${MASONRY_THUMB_MARGIN_INLINE_PX}px ${MASONRY_THUMB_MARGIN_BOTTOM_PX}px`;
   return [
-    `body.${bodyClass} div.image-list {`,
+    `${scope} div.image-list {`,
     `  display: block !important;`,
+    `  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,
     `  column-width: ${MASONRY_COLUMN_WIDTH_PX}px !important;`,
     `  column-gap: ${MASONRY_COLUMN_GAP_PX}px !important;`,
     `}`,
-    `body.${bodyClass} span.thumb {`,
+    `${scope} span.thumb {`,
     `  display: block !important;`,
-    `  width: auto !important;`,
+    `  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
     `  height: auto !important;`,
-    `  margin: ${MASONRY_THUMB_MARGIN} !important;`,
+    `  margin: ${thumbMargin} !important;`,
     `  break-inside: avoid !important;`,
     `}`,
-    `body.${bodyClass} span.thumb > a {`,
+    `${scope} span.thumb > a {`,
     `  display: block !important;`,
-    `  width: auto !important;`,
+    `  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
     `  height: auto !important;`,
     `}`,
-    `body.${bodyClass} span.thumb img.preview {`,
+    `${scope} span.thumb img.preview {`,
     `  display: block !important;`,
-    `  width: 100% !important;`,
+    `  width: ${MASONRY_PREVIEW_WIDTH_PERCENT}% !important;`,
     `  height: auto !important;`,
     `  max-width: none !important;`,
     `  max-height: none !important;`,
     `  margin: 0 !important;`,
+    `  border-radius: ${MASONRY_BORDER_RADIUS_PX}px !important;`,
     `}`,
   ].join("\n");
 }

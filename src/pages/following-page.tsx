@@ -13,6 +13,11 @@ import {
 } from "../config/constants";
 import { log } from "../log";
 import { buildSearchUrl, normalizeArtistTag } from "../search/query";
+import {
+  AUTOCOMPLETE_TAG_TYPE_ARTIST,
+  createAutocompleteQuerier,
+  type AutocompleteSuggestion,
+} from "../site/autocomplete";
 import type { ArtistEntry } from "../storage/schema";
 import {
   addArtist,
@@ -22,6 +27,7 @@ import {
   removeArtist,
 } from "../storage/store";
 import {
+  AutocompleteField,
   Button,
   Card,
   EmptyState,
@@ -54,7 +60,8 @@ const FOLLOWING_PAGE_CSS = `
   gap: 8px;
   align-items: flex-end;
 }
-.${ADD_FORM_CLASS} .rdw-field {
+.${ADD_FORM_CLASS} .rdw-field,
+.${ADD_FORM_CLASS} .rdw-ac {
   flex: 1 1 12rem;
   margin: 0;
 }
@@ -80,7 +87,9 @@ function readArtists(): ArtistEntry[] {
 function AddArtistForm(props: {
   readonly draft: string;
   readonly error: string;
+  readonly suggestions: readonly AutocompleteSuggestion[];
   readonly onDraftChange: (value: string) => void;
+  readonly onSuggestionSelect: () => void;
   readonly onSubmit: () => void;
 }): JSX.Element {
   return (
@@ -91,11 +100,13 @@ function AddArtistForm(props: {
         props.onSubmit();
       }}
     >
-      <TextField
+      <AutocompleteField
         id={ADD_INPUT_ID}
         label={UI_TEXT.artistTagLabel}
         value={props.draft}
+        suggestions={props.suggestions}
         onChange={props.onDraftChange}
+        onSelect={props.onSuggestionSelect}
       />
       <Button type="submit" variant="primary">
         {UI_TEXT.artistAdd}
@@ -113,11 +124,19 @@ export function FollowingPage(): JSX.Element {
   const [filter, setFilter] = useState("");
   const [draft, setDraft] = useState("");
   const [addError, setAddError] = useState("");
+  const [suggestions, setSuggestions] = useState<
+    readonly AutocompleteSuggestion[]
+  >([]);
   const pendingRef = useRef(pending);
   pendingRef.current = pending;
+  const querierRef = useRef(
+    createAutocompleteQuerier({ preferType: AUTOCOMPLETE_TAG_TYPE_ARTIST }),
+  );
 
   useEffect(() => {
+    const querier = querierRef.current;
     return () => {
+      querier.cancel();
       for (const entry of pendingRef.current) {
         clearTimeout(entry.timer);
       }
@@ -189,6 +208,8 @@ export function FollowingPage(): JSX.Element {
     }
     setDraft("");
     setAddError("");
+    setSuggestions([]);
+    querierRef.current.cancel();
     setArtists(readArtists());
   };
 
@@ -241,11 +262,17 @@ export function FollowingPage(): JSX.Element {
           <AddArtistForm
             draft={draft}
             error={addError}
+            suggestions={suggestions}
             onDraftChange={(value) => {
               setDraft(value);
               if (addError.length > 0) {
                 setAddError("");
               }
+              querierRef.current.query(value, setSuggestions);
+            }}
+            onSuggestionSelect={() => {
+              querierRef.current.cancel();
+              setSuggestions([]);
             }}
             onSubmit={onAdd}
           />

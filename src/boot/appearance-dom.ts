@@ -9,9 +9,15 @@ import {
   SITE_SKIN_STYLE_ID,
   TOKEN_STYLE_ID,
 } from "../config/constants";
-import type { Appearance, AppearanceTheme } from "../storage/schema";
+import { RDW_PAGE_ROOT_ID } from "../pages/constants";
+import {
+  APPEARANCE_CUSTOM_BASE_DARK,
+  type Appearance,
+  type AppearanceTheme,
+} from "../storage/schema";
 import {
   applyCustomThemeProperties,
+  applyTokenProperties,
   buildTokensCss,
   clearCustomThemeProperties,
   DARK_PALETTE,
@@ -33,7 +39,8 @@ export function themeEnablesSkin(theme: AppearanceTheme): boolean {
   );
 }
 
-export function paletteModeForTheme(theme: AppearanceTheme): PaletteMode {
+export function paletteModeForTheme(appearance: Appearance): PaletteMode {
+  const theme = appearance.theme;
   if (
     theme === APPEARANCE_THEME_DARK ||
     theme === APPEARANCE_THEME_SITE_DARK
@@ -41,24 +48,16 @@ export function paletteModeForTheme(theme: AppearanceTheme): PaletteMode {
     return "dark";
   }
   if (theme === APPEARANCE_THEME_CUSTOM) {
-    return "light";
+    return appearance.custom?.base === APPEARANCE_CUSTOM_BASE_DARK
+      ? "dark"
+      : "light";
   }
+  // site / light → light palette for script pages and tokens
   return "light";
 }
 
 export function resolveTokenPalette(appearance: Appearance): TokenPalette {
-  const mode = paletteModeForTheme(appearance.theme);
-  const base = paletteForMode(mode);
-  if (appearance.theme !== APPEARANCE_THEME_CUSTOM || appearance.custom === undefined) {
-    return base;
-  }
-  return {
-    ...base,
-    accent: appearance.custom.accent,
-    bg: appearance.custom.bg,
-    surface: appearance.custom.surface,
-    text: appearance.custom.text,
-  };
+  return paletteForMode(paletteModeForTheme(appearance));
 }
 
 /**
@@ -85,6 +84,18 @@ export function injectTokenStyles(palette: TokenPalette): HTMLStyleElement {
   const style = ensureStyleElement(TOKEN_STYLE_ID);
   style.textContent = buildTokensCss(palette, ":root");
   return style;
+}
+
+/**
+ * Copy the same palette onto #rdw-page-root when present.
+ * Shadow DOM uses :host { all: initial }, so document :root tokens do not inherit.
+ */
+export function syncPageRootTokens(palette: TokenPalette): void {
+  const host = document.getElementById(RDW_PAGE_ROOT_ID);
+  if (!(host instanceof HTMLElement)) {
+    return;
+  }
+  applyTokenProperties(host, palette);
 }
 
 /**
@@ -117,6 +128,7 @@ export type ApplyAppearanceOptions = {
 /**
  * Document-start-safe appearance apply:
  * html class/attr + token CSS (+ empty site-skin hook) + custom setProperty.
+ * Also syncs live #rdw-page-root Shadow host to the same palette.
  */
 export function applyAppearanceToDocument(
   options: ApplyAppearanceOptions,
@@ -125,6 +137,7 @@ export function applyAppearanceToDocument(
   applyHtmlThemeAttributes(appearance.theme);
   const palette = resolveTokenPalette(appearance);
   injectTokenStyles(palette);
+  syncPageRootTokens(palette);
   injectSiteSkinHook(options.siteSkinCss ?? "");
 
   const root = document.documentElement;
@@ -137,20 +150,12 @@ export function applyAppearanceToDocument(
     const overrides =
       backgroundImage !== undefined && backgroundImage.length > 0
         ? {
-            accent: appearance.custom.accent,
-            bg: appearance.custom.bg,
-            surface: appearance.custom.surface,
-            text: appearance.custom.text,
             backgroundImage,
             ...(appearance.custom.backgroundDim !== undefined
               ? { backgroundDim: appearance.custom.backgroundDim }
               : {}),
           }
         : {
-            accent: appearance.custom.accent,
-            bg: appearance.custom.bg,
-            surface: appearance.custom.surface,
-            text: appearance.custom.text,
             ...(appearance.custom.backgroundDim !== undefined
               ? { backgroundDim: appearance.custom.backgroundDim }
               : {}),

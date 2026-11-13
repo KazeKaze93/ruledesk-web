@@ -78,6 +78,8 @@ export const IMPORT_SCHEMA_ERROR_PREFIX =
 export const DEFAULT_GRID_FAV_BUTTONS = true;
 export const DEFAULT_TWEAKS_ENABLED = true;
 export const DEFAULT_UPDATES_GROUP_SIZE = 0;
+/** Max artists in one OR-search; setting 0 means this value (site OR-alt limit ~639). */
+export const MAX_UPDATES_GROUP_SIZE = 400;
 export const DEFAULT_SEEN_POST_ID = 0;
 export const DEFAULT_PLAYLIST_CHUNK_SIZE = 40;
 
@@ -87,11 +89,10 @@ export const COLLECTION_KIND_POSTS = "posts" as const;
 export const PLAYLIST_ID_PREFIX = "id:";
 
 export const PANEL_ROOT_ID = "ruledesk-web-root";
-export const TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 export const DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 export const UPDATES_BAR_ID = "ruledesk-web-updates-bar";
 
-export const USERSCRIPT_VERSION = "0.10.0";
+export const USERSCRIPT_VERSION = "0.11.0";
 export const USERSCRIPT_UPDATE_URL =
   "https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js";
 export const USERSCRIPT_DOWNLOAD_URL = USERSCRIPT_UPDATE_URL;
@@ -149,8 +150,8 @@ export const UI_TEXT = {
   artistDuplicate: "Already following this artist.",
   openUpdates: "Open updates",
   openUpdatesGroup: "Updates",
-  updatesGroupSizeLabel: "Artists per search (0 = no limit)",
-  playlistChunkSizeLabel: "Playlist part size",
+  updatesGroupSizeLabel: "Artists per search (0 = 400)",
+  playlistChunkSizeLabel: "Collection part size",
   seenUpTo: "Seen up to post #",
   seenNothing: "Nothing marked as seen yet.",
   markAllSeen: "Mark all seen",

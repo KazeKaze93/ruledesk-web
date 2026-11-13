@@ -1,3 +1,9 @@
+export {
+  AutocompleteField,
+  AUTOCOMPLETE_FIELD_CSS,
+  type AutocompleteFieldProps,
+  type AutocompleteOption,
+} from "./autocomplete-field";
 export { Button, BUTTON_CSS, type ButtonProps, type ButtonSize, type ButtonVariant } from "./button";
 export { Card, CARD_CSS, type CardProps } from "./card";
 export {

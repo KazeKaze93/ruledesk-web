@@ -75,24 +75,22 @@ describe("boot early appearance", () => {
     expect(bodySpy).not.toHaveBeenCalled();
   });
 
-  it("applies custom theme via setProperty", () => {
+  it("applies custom dark base via token stylesheet", () => {
     applyAppearanceToDocument({
       appearance: {
         theme: "custom",
         custom: {
-          accent: "#112233",
-          bg: "#445566",
-          surface: "#778899",
-          text: "#abcdef",
+          base: "dark",
+          backgroundDim: 0.2,
         },
       },
     });
-    expect(document.documentElement.style.getPropertyValue(TOKEN_VAR.accent)).toBe(
-      "#112233",
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      "#16181c",
     );
-    expect(document.documentElement.style.getPropertyValue(TOKEN_VAR.bg)).toBe(
-      "#445566",
-    );
+    expect(
+      document.documentElement.style.getPropertyValue(TOKEN_VAR.backgroundDim),
+    ).toBe("0.2");
   });
 
   it("does not enable rdw-skin for site theme", () => {

@@ -1,16 +1,9 @@
 import { render as preactRender } from "preact";
 import type { ComponentChild, JSX } from "preact";
 
-import {
-  APPEARANCE_THEME_DARK,
-  APPEARANCE_THEME_SITE_DARK,
-} from "../config/constants";
+import { resolveTokenPalette } from "../boot/appearance-dom";
 import { getAppearance } from "../storage/store";
-import {
-  DARK_PALETTE,
-  LIGHT_PALETTE,
-  tokensToCssDeclarations,
-} from "../ui/tokens";
+import { applyTokenProperties } from "../ui/tokens";
 import { CollectionsPage } from "./collections-page";
 import {
   MENU_LABEL,
@@ -25,21 +18,21 @@ import { FollowingPage } from "./following-page";
 import { PAGE_CONTENT_CSS } from "./page-css";
 import { SettingsPage } from "./settings-page";
 
-const THEME_DARK_CLASS = "rdw-theme-dark";
 const PAGE_SHELL_CLASS = "rdw-page-shell";
 const PAGE_TITLE_CLASS = "rdw-page-title";
 
+/**
+ * Structural shell only — palette tokens come from applyTokenProperties on the
+ * host (same source as document :root via resolveTokenPalette).
+ */
 const PAGE_HOST_CSS = `
 :host {
   all: initial;
-  ${tokensToCssDeclarations(LIGHT_PALETTE)}
   font-family: var(--rdw-font);
   font-size: 13px;
   line-height: 1.35;
   color: var(--rdw-text);
-}
-:host(.${THEME_DARK_CLASS}) {
-  ${tokensToCssDeclarations(DARK_PALETTE)}
+  background: transparent;
 }
 .${PAGE_SHELL_CLASS} {
   box-sizing: border-box;
@@ -96,15 +89,12 @@ function pageForRoute(route: RdwRoute): JSX.Element {
   return <SettingsPage />;
 }
 
-function isDarkTheme(): boolean {
-  const theme = getAppearance().theme;
-  return (
-    theme === APPEARANCE_THEME_DARK || theme === APPEARANCE_THEME_SITE_DARK
-  );
-}
-
 let hostElement: HTMLElement | null = null;
 let mountPoint: HTMLElement | null = null;
+
+function syncHostTokens(host: HTMLElement): void {
+  applyTokenProperties(host, resolveTokenPalette(getAppearance()));
+}
 
 function ensureHost(header: HTMLElement): {
   host: HTMLElement;
@@ -137,7 +127,7 @@ function ensureHost(header: HTMLElement): {
 /** Mount Preact page for route into #rdw-page-root after div#header. */
 export function showRdwPage(route: RdwRoute, header: HTMLElement): void {
   const { host, mount } = ensureHost(header);
-  host.classList.toggle(THEME_DARK_CLASS, isDarkTheme());
+  syncHostTokens(host);
   preactRender(
     <PageShell title={titleForRoute(route)}>{pageForRoute(route)}</PageShell>,
     mount,

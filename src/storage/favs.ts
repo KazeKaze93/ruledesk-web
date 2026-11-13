@@ -3,6 +3,7 @@ import {
   STORAGE_KEY,
 } from "../config/constants";
 import { log } from "../log";
+import { pruneMarksIfNeeded } from "./marks-prune";
 import {
   FavsSchema,
   StorageSchema,
@@ -86,7 +87,9 @@ function readMainStorageRaw(): StorageData | null {
 }
 
 function writeMainStorage(data: StorageData): void {
-  getGmSetValue()(STORAGE_KEY, StorageSchema.parse(data));
+  const pruned = pruneMarksIfNeeded(data.marks);
+  const next = pruned.pruned ? { ...data, marks: pruned.marks } : data;
+  getGmSetValue()(STORAGE_KEY, StorageSchema.parse(next));
 }
 
 /**

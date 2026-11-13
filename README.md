@@ -28,7 +28,7 @@ Own pages mount in `#rdw-page-root` (Shadow DOM) after `div#header` and hide the
 **Collections**
 
 - **Custom Collection:** save the current `page=post&s=list` search when `tags` is non-empty; open / rename / delete
-- **Dynamic Collection:** named sets of post ids (`kind: "posts"`); create from Collections or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Playlist part size**)
+- **Dynamic Collection:** named sets of post ids (`kind: "posts"`); create from Collections or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Collection part size**)
 
 ## Favorites
 
@@ -37,16 +37,17 @@ Own pages mount in `#rdw-page-root` (Shadow DOM) after `div#header` and hide the
 - Local favorite IDs live in a separate GM key (`ruledesk-web.favs`); legacy `marks.*.fav` is migrated on load
 - Favorites page: no DOM changes; IDs are read from Remove links into local favs, and Remove clicks clear the local mark
 - Settings → **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
-- Settings → **Favorites sync**: optional full crawl of the site favorites list (add-only; one page every 1.5 s) via Sync / Resume / Stop; a stale lock can auto-resume in another tab
+- Settings → **Favorites sync**: **Sync favorites** walks newest-first and stops on the first page whose ids are already local; **Full resync** walks every page (add-only; one page every 1.5 s). Resume / Stop and a stale lock can auto-resume in another tab (mode is stored)
 
 ## Artists / Feed
 
-- Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages, or add tags on **Following**
-- Navbar **Feed** opens a normal site search `( artist1 ~ artist2 )` (optional `id:>N` / group size). With no followed artists, Feed points to `#rdw/following`
+- Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages, or add tags on **Following** (tag field uses site autocomplete)
+- Navbar **Feed** opens a normal site search `( artist1 ~ artist2 )` (optional `id:>N` / group size; `0` = up to 400 artists per query). With no followed artists, Feed points to `#rdw/following`
+- Feed href and “is this a Feed page?” both re-read followed artists from storage (including after Follow + Back / bfcache)
 - On a full Feed result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
 - Empty Feed pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
-No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click), `favorites-sync.ts` (explicit Sync / Resume / auto-resume), and `next-page.ts` (infinite scroll page loads).
+No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click), `favorites-sync.ts` (explicit Sync / Resume / auto-resume), `autocomplete.ts` (tag suggestions on Following / Blacklist), and `next-page.ts` (infinite scroll page loads).
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
@@ -59,7 +60,9 @@ Settings → **Appearance** → **Site theme**:
 | **Site default** | Native rule34 look (`html.rdw-skin` off; site `theme` cookie cleared) |
 | **Site dark** | Native site dark CSS (`theme=dark` cookie + `desktop-dark.css`) |
 | **Light** / **Dark** | RuleDesk site skin (`html.rdw-skin`) with the matching token palette |
-| **Custom** | RuleDesk skin with your accent / bg / surface / text colors; optional background image + dim |
+| **Custom** | RuleDesk skin with a Light or Dark base; optional background image + dim (no per-color pickers). Legacy custom accent/bg/surface/text from 0.10 are dropped; base is chosen from the old `bg` brightness |
+
+Own pages (`#rdw/…` Shadow host) use the same palette tokens as the document (`:root` + sync onto `#rdw-page-root`).
 
 **Restore the native site look:** open **RuleDesk** (`#rdw/settings`) → Appearance → Theme → **Site default**.
 
@@ -67,7 +70,7 @@ Default for new installs is **Light** (RuleDesk skin on).
 
 ## Blacklist (site cookie)
 
-Settings → **Blacklist** edits this browser’s `tag_blacklist` cookie (add/remove chips). Changes write immediately; with **Hide blacklisted thumbs** (`blacklist-hide`) enabled, matching thumbs on list pages are hidden without a reload. Account settings on the site are not updated and may overwrite the cookie after login. Export/import and Data backup never include the blacklist cookie.
+Settings → **Blacklist** edits this browser’s `tag_blacklist` cookie (add/remove chips; add field uses site autocomplete). Changes write immediately; with **Hide blacklisted thumbs** (`blacklist-hide`) enabled, matching thumbs on list pages are hidden without a reload. Account settings on the site are not updated and may overwrite the cookie after login. Export/import and Data backup never include the blacklist cookie.
 
 ## Page tweaks (features)
 
@@ -80,18 +83,18 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `tag-groups` | Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
 | `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form |
 | `seen-dim` | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid (also restamps infinite-scroll thumbs) |
-| `playlist-menu` | Add to playlist button | on | list, post | **+** on thumbs (list) and playlist menu under Favorite (post side panel) |
-| `playlist-bar` | Playlist header | on | list | Name / part links / post count above a playlist `id:` search |
+| `playlist-menu` | Add to collection button | on | list, post | **+** on thumbs (list) and collection menu under Favorite (post side panel) |
+| `playlist-bar` | Collection header | on | list | Name / part links / post count above a collection `id:` search |
 | `blacklist-hide` | Hide blacklisted thumbs | on | list | Hides thumbs matching the site blacklist cookie (no reload) |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
-| `post-actions` | Post actions | on | post | Favorite / playlist / Original / Score bar (and Options proxies) on the post page |
-| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (Appearance) |
+| `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS columns on list only; favorites falls back to default) |
 
 **Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 
 ## Data backup
 
-Settings → **Data** exports one JSON file `ruledesk-web-backup-<YYYY-MM-DD>.json` with storage, favs, and optional background image. Import supports **Merge** and **Replace**. This is separate from the older collections-only export format below.
+Settings → **Data** exports one JSON file `ruledesk-web-backup-<YYYY-MM-DD>.json` with storage, optional favs (**Include favorites**, off by default — restore via Favorites sync), and optional background image. Import supports **Merge** and **Replace**; a backup without favs leaves the local fav set unchanged. Seen marks are capped to the newest ~20 000 post ids on write. This is separate from the older collections-only export format below.
 
 Example backup shape (no real data):
 

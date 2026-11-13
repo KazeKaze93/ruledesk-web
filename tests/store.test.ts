@@ -2,26 +2,36 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DEBUG_KEY,
+  MAX_UPDATES_GROUP_SIZE,
   STORAGE_BACKUP_KEY,
   STORAGE_KEY,
 } from "../src/config/constants";
 import { clearFavsCache, isFav } from "../src/storage/favs";
+import {
+  MARKS_KEEP_LIMIT,
+  marksPruneThreshold,
+} from "../src/storage/marks-prune";
 import { createDefaultStorage } from "../src/storage/schema";
 import {
+  addArtist,
   addCollection,
   addPostToPlaylist,
   clearStorageCache,
   createPlaylist,
   exportJson,
   getPlaylistChunkSize,
+  getUpdatesGroupSize,
   importJson,
+  listArtistTags,
   listPlaylists,
   load,
   playlistsContaining,
   reloadFromStorage,
+  removeArtist,
   removePostFromPlaylist,
   save,
   setPlaylistChunkSize,
+  setUpdatesGroupSize,
 } from "../src/storage/store";
 
 const memory = new Map<string, unknown>();
@@ -364,6 +374,89 @@ describe("store", () => {
     setPlaylistChunkSize(7);
     expect(getPlaylistChunkSize()).toBe(7);
     expect(load().settings?.playlistChunkSize).toBe(7);
+  });
+
+  it("getUpdatesGroupSize maps 0 to max 400 and caps higher values", () => {
+    expect(MAX_UPDATES_GROUP_SIZE).toBe(400);
+    expect(getUpdatesGroupSize()).toBe(MAX_UPDATES_GROUP_SIZE);
+    setUpdatesGroupSize(0);
+    expect(load().settings?.updatesGroupSize).toBe(0);
+    expect(getUpdatesGroupSize()).toBe(MAX_UPDATES_GROUP_SIZE);
+    setUpdatesGroupSize(50);
+    expect(getUpdatesGroupSize()).toBe(50);
+    setUpdatesGroupSize(1000);
+    expect(load().settings?.updatesGroupSize).toBe(MAX_UPDATES_GROUP_SIZE);
+    expect(getUpdatesGroupSize()).toBe(MAX_UPDATES_GROUP_SIZE);
+  });
+
+  it("listArtistTags re-reads GM when the in-memory cache is stale", () => {
+    save(createDefaultStorage());
+    expect(listArtistTags()).toEqual([]);
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "from_gm" }],
+      marks: {},
+    });
+    expect(listArtistTags()).toEqual(["from_gm"]);
+  });
+
+  it("addArtist reloads before write so a stale cache cannot drop peers", () => {
+    save({
+      version: 1,
+      collections: [],
+      artists: [{ tag: "alpha" }],
+      marks: {},
+    });
+    expect(load().artists).toEqual([{ tag: "alpha" }]);
+
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "alpha" }, { tag: "beta" }],
+      marks: {},
+    });
+
+    addArtist("gamma");
+    expect(listArtistTags().sort()).toEqual(["alpha", "beta", "gamma"]);
+  });
+
+  it("removeArtist reloads before write so a stale cache cannot drop peers", () => {
+    save({
+      version: 1,
+      collections: [],
+      artists: [{ tag: "alpha" }],
+      marks: {},
+    });
+    expect(load().artists).toEqual([{ tag: "alpha" }]);
+
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "alpha" }, { tag: "beta" }, { tag: "gamma" }],
+      marks: {},
+    });
+
+    expect(removeArtist("beta")).toBe(true);
+    expect(listArtistTags().sort()).toEqual(["alpha", "gamma"]);
+  });
+
+  it("save prunes marks when size exceeds keep limit by 10%", () => {
+    const marks: Record<string, { seen: true }> = {};
+    const overThreshold = marksPruneThreshold() + 1;
+    for (let id = 1; id <= overThreshold; id += 1) {
+      marks[String(id)] = { seen: true };
+    }
+    const data = createDefaultStorage();
+    data.marks = marks;
+    save(data);
+    const stored = load();
+    const ids = Object.keys(stored.marks)
+      .map(Number)
+      .sort((a, b) => a - b);
+    expect(ids).toHaveLength(MARKS_KEEP_LIMIT);
+    expect(ids[0]).toBe(overThreshold - MARKS_KEEP_LIMIT + 1);
+    expect(ids[ids.length - 1]).toBe(overThreshold);
   });
 
   it("export/import includes playlists in collections and omits blacklist", () => {

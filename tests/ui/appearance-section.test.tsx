@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act } from "preact/test-utils";
 
 import {
   DEBUG_KEY,
@@ -19,6 +18,7 @@ import {
   APPEARANCE_SECTION_CSS,
   createAppearanceSection,
 } from "../../src/ui/appearance-section";
+import { DARK_PALETTE, LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 import { fireClick, flushEffects } from "../kit/render";
 
 const memory = new Map<string, unknown>();
@@ -105,6 +105,18 @@ describe("createAppearanceSection", () => {
     document.body.className = "";
     setDocumentCookie("");
     appendStylesheet(LIGHT_HREF);
+    Object.defineProperty(window, "devicePixelRatio", {
+      configurable: true,
+      value: 2,
+    });
+    Object.defineProperty(window.screen, "width", {
+      configurable: true,
+      value: 800,
+    });
+    Object.defineProperty(window.screen, "height", {
+      configurable: true,
+      value: 600,
+    });
   });
 
   afterEach(() => {
@@ -126,7 +138,7 @@ describe("createAppearanceSection", () => {
     expect(host.textContent).toContain("Grid");
   });
 
-  it("theme select applies custom mode with contrast warning", async () => {
+  it("custom mode shows Light/Dark base segmented and screen size hint", async () => {
     host = createAppearanceSection();
     document.body.append(host);
 
@@ -137,31 +149,27 @@ describe("createAppearanceSection", () => {
     await flushEffects();
 
     expect(getAppearance().theme).toBe("custom");
+    expect(getAppearance().custom?.base).toBe("light");
     expect(document.documentElement.classList.contains(RDW_SKIN_CLASS)).toBe(
       true,
     );
     expect(document.cookie).not.toContain(`${SITE_THEME_COOKIE_NAME}=`);
+    expect(host.querySelector('input[type="color"]')).toBeNull();
+    expect(host.textContent).toContain("For this screen use at least 1600x1200");
 
-    const textInput = host.querySelector<HTMLInputElement>(
-      'input[type="color"][aria-label="Text"]',
-    );
-    const bgInput = host.querySelector<HTMLInputElement>(
-      'input[type="color"][aria-label="Background"]',
-    );
-    expect(textInput).toBeTruthy();
-    expect(bgInput).toBeTruthy();
-
-    act(() => {
-      textInput!.value = "#777777";
-      textInput!.dispatchEvent(new Event("input", { bubbles: true }));
-      bgInput!.value = "#888888";
-      bgInput!.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    const darkBase = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[role="radio"]'),
+    ).find((button) => button.textContent === "Dark");
+    expect(darkBase).toBeTruthy();
+    fireClick(darkBase!);
     await flushEffects();
 
-    expect(host.textContent).toContain("Low contrast");
-    expect(getAppearance().custom?.text.toLowerCase()).toBe("#777777");
-    expect(getAppearance().custom?.bg.toLowerCase()).toBe("#888888");
+    expect(getAppearance().custom?.base).toBe("dark");
+    const tokenStyle = document.getElementById(TOKEN_STYLE_ID);
+    expect(tokenStyle?.textContent).toContain(DARK_PALETTE.bg);
+    expect(tokenStyle?.textContent).not.toContain(
+      `${TOKEN_VAR.bg}: ${LIGHT_PALETTE.bg}`,
+    );
   });
 
   it("grid select writes featureChoice grid-density", async () => {
@@ -182,7 +190,7 @@ describe("createAppearanceSection", () => {
     ).toBe(true);
   });
 
-  it("reset to defaults restores custom palette colors", async () => {
+  it("reset to defaults restores light custom base", async () => {
     host = createAppearanceSection();
     document.body.append(host);
 
@@ -190,15 +198,12 @@ describe("createAppearanceSection", () => {
     chooseSelectOption(host, "Custom");
     await flushEffects();
 
-    const accent = host.querySelector<HTMLInputElement>(
-      'input[type="color"][aria-label="Accent"]',
-    );
-    act(() => {
-      accent!.value = "#ff0000";
-      accent!.dispatchEvent(new Event("input", { bubbles: true }));
-    });
+    const darkBase = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[role="radio"]'),
+    ).find((button) => button.textContent === "Dark");
+    fireClick(darkBase!);
     await flushEffects();
-    expect(getAppearance().custom?.accent.toLowerCase()).toBe("#ff0000");
+    expect(getAppearance().custom?.base).toBe("dark");
 
     const reset = Array.from(host.querySelectorAll("button")).find(
       (button) => button.textContent === "Reset to defaults",
@@ -207,6 +212,6 @@ describe("createAppearanceSection", () => {
     fireClick(reset!);
     await flushEffects();
 
-    expect(getAppearance().custom?.accent.toLowerCase()).toBe("#2f6fed");
+    expect(getAppearance().custom?.base).toBe("light");
   });
 });

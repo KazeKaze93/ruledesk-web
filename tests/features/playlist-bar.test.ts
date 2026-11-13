@@ -101,7 +101,7 @@ describe("playlistBarFeature", () => {
 
   it("exports Feature metadata for list", () => {
     expect(playlistBarFeature.id).toBe("playlist-bar");
-    expect(playlistBarFeature.label).toBe("Playlist header");
+    expect(playlistBarFeature.label).toBe("Collection header");
     expect(playlistBarFeature.pages).toEqual(["list"]);
     expect(playlistBarFeature.defaultEnabled).toBe(true);
   });

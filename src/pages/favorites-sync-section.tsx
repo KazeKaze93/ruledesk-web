@@ -4,9 +4,12 @@ import { useEffect, useState } from "preact/hooks";
 
 import { log } from "../log";
 import {
+  FAVORITES_SYNC_MODE_FULL,
+  FAVORITES_SYNC_MODE_INCREMENTAL,
   FAVORITES_SYNC_PAGE_PAUSE_MS,
   FAVORITES_SYNC_PID_STEP,
   runFavoritesSync,
+  type FavoritesSyncMode,
   type FavoritesSyncProgress,
   type FavoritesSyncResult,
 } from "../site/favorites-sync";
@@ -22,9 +25,11 @@ const NOTE_CLASS = "rdw-favs-sync-note";
 
 const HEADING = "Favorites sync";
 const TEXT_SYNC = "Sync favorites";
+const TEXT_FULL = "Full resync";
 const TEXT_RESUME = "Resume";
 const TEXT_STOP = "Stop";
-const TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
+const TEXT_WARNING =
+  "Sync stops at the first page of already-known favorites (newest first). Full resync loads every page. One request per 1.5 s";
 const TEXT_NOTE =
   "Sync only adds favorites. Posts removed on the site stay in the local set.";
 const TEXT_IDLE_COUNT = (count: number): string =>
@@ -184,7 +189,10 @@ function applyResult(result: FavoritesSyncResult): SyncUi {
   };
 }
 
-async function startSync(setUi: (next: SyncUi) => void): Promise<void> {
+async function startSync(
+  setUi: (next: SyncUi) => void,
+  mode?: FavoritesSyncMode,
+): Promise<void> {
   if (activeSync !== null) {
     return;
   }
@@ -214,6 +222,7 @@ async function startSync(setUi: (next: SyncUi) => void): Promise<void> {
         }
       },
       signal: controller.signal,
+      ...(mode !== undefined ? { mode } : {}),
     });
     if (activeSync?.controller === controller) {
       setUi(applyResult(result));
@@ -270,15 +279,26 @@ export function FavoritesSyncSection(
         />
         <div className={ACTIONS_CLASS}>
           {!ui.unfinished ? (
-            <Button
-              variant="primary"
-              disabled={ui.busy}
-              onClick={() => {
-                void startSync(setUi);
-              }}
-            >
-              {TEXT_SYNC}
-            </Button>
+            <>
+              <Button
+                variant="primary"
+                disabled={ui.busy}
+                onClick={() => {
+                  void startSync(setUi, FAVORITES_SYNC_MODE_INCREMENTAL);
+                }}
+              >
+                {TEXT_SYNC}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={ui.busy}
+                onClick={() => {
+                  void startSync(setUi, FAVORITES_SYNC_MODE_FULL);
+                }}
+              >
+                {TEXT_FULL}
+              </Button>
+            </>
           ) : (
             <Button
               variant="secondary"

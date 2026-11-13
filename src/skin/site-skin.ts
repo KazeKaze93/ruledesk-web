@@ -5,10 +5,18 @@
  */
 
 import { RDW_SKIN_CLASS, RDW_THEME_ATTR } from "../config/constants";
+import { RDW_PAGE_ROOT_ID } from "../pages/constants";
 import { TOKEN_VAR } from "../ui/tokens";
 
 const ROOT = `html.${RDW_SKIN_CLASS}`;
 const ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
+
+/** search-tools mount root (id + class in src/features/search-tools.tsx). */
+const SEARCH_TOOLS_ROOT_ID = "rdw-search-tools";
+/** Exclude our light-DOM controls from site button/input chrome. */
+const NOT_RDW_CLASS = ':not([class*="rdw-"])';
+const NOT_SEARCH_TOOLS_DESCENDANT = `:not(#${SEARCH_TOOLS_ROOT_ID} *)`;
+const NOT_OUR_CONTROL = `${NOT_RDW_CLASS}${NOT_SEARCH_TOOLS_DESCENDANT}`;
 
 const v = {
   bg: `var(${TOKEN_VAR.bg})`,
@@ -240,19 +248,28 @@ ${ROOT} ul#tag-sidebar {
   list-style: none;
 }
 
+/*
+ * Tag rows: ?/+/- /name (list) or ?/name (post) wrap as inline text;
+ * count stays top-right on the first line (artists-sidebar.test markup).
+ */
 ${ROOT} ul#tag-sidebar > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  position: relative;
   margin: 0 0 5px;
+  padding-right: 4.5em;
   font-size: 12.5px;
+  line-height: 1.35;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+${ROOT} ul#tag-sidebar > li > a {
+  display: inline;
 }
 
 ${ROOT} ul#tag-sidebar > li > h5,
 ${ROOT} ul#tag-sidebar > li > h6 {
-  flex: 1 0 100%;
+  display: block;
   margin-top: 8px;
 }
 
@@ -264,9 +281,13 @@ ${ROOT} ul#tag-sidebar > li:first-child > h6 {
 ${ROOT} .tag-count,
 ${ROOT} span.post-count,
 ${ROOT} span.tag-count {
-  margin-left: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-left: 0;
   color: ${v.muted};
   font-size: 12px;
+  line-height: 1.35;
 }
 
 /*
@@ -370,11 +391,11 @@ ${ROOT} div.tag-search button[type="submit"]:hover {
   filter: brightness(1.05);
 }
 
-${ROOT} input[type="text"]:focus,
-${ROOT} input[type="password"]:focus,
-${ROOT} input[type="search"]:focus,
-${ROOT} textarea:focus,
-${ROOT} select:focus {
+${ROOT} input[type="text"]${NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="password"]${NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="search"]${NOT_OUR_CONTROL}:focus,
+${ROOT} textarea${NOT_OUR_CONTROL}:focus,
+${ROOT} select${NOT_OUR_CONTROL}:focus {
   background: ${v.surface};
   outline: 2px solid ${v.accent};
   outline-offset: 1px;
@@ -382,7 +403,14 @@ ${ROOT} select:focus {
 }
 
 /* —— awesomplete —— */
-${ROOT} .awesomplete > ul {
+/* Site hides closed lists with opacity/scale + display:block; do not undo that. */
+${ROOT} .awesomplete > ul[hidden],
+${ROOT} .awesomplete > ul:empty {
+  display: none !important;
+  pointer-events: none;
+}
+
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty) {
   background: ${v.surface};
   background-image: none;
   border: 1px solid ${v.border};
@@ -444,7 +472,14 @@ ${ROOT} img.preview {
   border-radius: ${v.radiusL};
 }
 
-/* Favorites: Remove stays subtle; preview radius matches grid (no thumb size change) */
+/* Favorites: Remove stays subtle; hover must not paint the thumb cell */
+${ROOT} span.thumb,
+${ROOT} span.thumb:hover,
+${ROOT} span.thumb > a,
+${ROOT} span.thumb > a:hover {
+  background-color: transparent;
+}
+
 ${ROOT} span.thumb > a[onclick] {
   color: ${v.muted};
   font-size: 12px;
@@ -457,7 +492,7 @@ ${ROOT} span.thumb > a[onclick] {
 
 ${ROOT} span.thumb > a[onclick]:hover {
   color: ${v.danger};
-  background: ${v.dangerSoft};
+  background: transparent;
 }
 
 ${ROOT} span.thumb > a[onclick] b {
@@ -562,30 +597,30 @@ ${ROOT} .manual-page-chooser > input[type="submit"] {
   cursor: pointer;
 }
 
-/* —— forms / tables (site chrome outside our panel) —— */
-${ROOT} input,
-${ROOT} select,
-${ROOT} textarea,
-${ROOT} button {
+/* —— forms / tables (site chrome; skip search-tools + any .rdw-* control) —— */
+${ROOT} input${NOT_OUR_CONTROL},
+${ROOT} select${NOT_OUR_CONTROL},
+${ROOT} textarea${NOT_OUR_CONTROL},
+${ROOT} button${NOT_OUR_CONTROL} {
   color: ${v.text};
   font-family: ${v.font};
 }
 
-${ROOT} input[type="text"],
-${ROOT} input[type="password"],
-${ROOT} input[type="search"],
-${ROOT} input[type="number"],
-${ROOT} select,
-${ROOT} textarea {
+${ROOT} input[type="text"]${NOT_OUR_CONTROL},
+${ROOT} input[type="password"]${NOT_OUR_CONTROL},
+${ROOT} input[type="search"]${NOT_OUR_CONTROL},
+${ROOT} input[type="number"]${NOT_OUR_CONTROL},
+${ROOT} select${NOT_OUR_CONTROL},
+${ROOT} textarea${NOT_OUR_CONTROL} {
   background: ${v.surface};
   border: 1px solid ${v.border};
   border-radius: ${v.radiusS};
   color: ${v.text};
 }
 
-${ROOT} button,
-${ROOT} input[type="submit"],
-${ROOT} input[type="button"],
+${ROOT} button${NOT_OUR_CONTROL},
+${ROOT} input[type="submit"]${NOT_OUR_CONTROL},
+${ROOT} input[type="button"]${NOT_OUR_CONTROL},
 ${ROOT} .gdprbutton button {
   background: ${v.surface};
   border: 1px solid ${v.border};
@@ -595,9 +630,9 @@ ${ROOT} .gdprbutton button {
   cursor: pointer;
 }
 
-${ROOT} button:hover,
-${ROOT} input[type="submit"]:hover,
-${ROOT} input[type="button"]:hover,
+${ROOT} button${NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="submit"]${NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="button"]${NOT_OUR_CONTROL}:hover,
 ${ROOT} .gdprbutton button:hover {
   background: ${v.accentSoft};
   border-color: ${v.accent};
@@ -1004,6 +1039,14 @@ ${ROOT_DARK} .manual-page-chooser > input[type="submit"] {
 ${ROOT_DARK} div.has-mail {
   background: ${v.surface2};
   border-color: ${v.tagCharacter};
+}
+
+/*
+ * Script page host sits on site bg for Site default / Site dark (no html.rdw-skin).
+ * Color uses document tokens; Shadow title inherits from the host once tokens sync.
+ */
+#${RDW_PAGE_ROOT_ID} {
+  color: ${v.text};
 }
 `.trim();
 

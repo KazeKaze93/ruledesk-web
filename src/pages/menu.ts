@@ -6,8 +6,9 @@ import {
   SEARCH_PARAM_SECTION,
   SEARCH_PATH,
 } from "../config/constants";
-import { extractUserIdFromDocument } from "../site/favorites-sync";
-import { getSyncState } from "../storage/favs";
+import { resolveFavoritesUserId } from "../site/favorites-sync";
+import { getSyncState, setSyncState } from "../storage/favs";
+import type { FavsSyncState } from "../storage/schema";
 import {
   CURRENT_PAGE_CLASS,
   FEED_MENU_ITEM_ID,
@@ -15,7 +16,6 @@ import {
   MENU_ITEM_ID,
   MENU_LABEL,
   MY_FAVORITES_CONTAINER_ID,
-  MY_FAVORITES_LINK_SELECTOR,
   NAVBAR_SELECTOR,
   POSTS_LINK_TEXT,
   RDW_HASH_COLLECTIONS,
@@ -28,6 +28,8 @@ import {
 } from "./constants";
 
 const CONTENT_ID = "content";
+/** Stub pids when persisting userId with no prior sync blob. */
+const FAVORITES_USER_ID_STUB_PID = 0;
 
 let savedSiteCurrent: HTMLLIElement | null = null;
 let siteCurrentCaptured = false;
@@ -71,13 +73,32 @@ function findHeader(): HTMLElement | null {
   return header instanceof HTMLElement ? header : null;
 }
 
-/** Saved favorites user id from sync state (Package E). */
-function readSavedFavoritesUserId(): number | null {
-  const userId = getSyncState()?.userId;
-  if (userId === undefined || !Number.isFinite(userId) || userId <= 0) {
-    return null;
+/**
+ * Persist favorites owner id on the favs sync blob (Package E shape).
+ * Creates a finished stub when no sync exists so the UI does not show Resume.
+ */
+export function persistFavoritesUserId(userId: number): void {
+  if (!Number.isFinite(userId) || userId <= 0) {
+    return;
   }
-  return userId;
+  const normalized = Math.trunc(userId);
+  const existing = getSyncState();
+  if (existing?.userId === normalized) {
+    return;
+  }
+  if (existing !== undefined) {
+    const next: FavsSyncState = { ...existing, userId: normalized };
+    setSyncState(next);
+    return;
+  }
+  const now = new Date().toISOString();
+  setSyncState({
+    nextPid: FAVORITES_USER_ID_STUB_PID,
+    lastPid: FAVORITES_USER_ID_STUB_PID,
+    startedAt: now,
+    finishedAt: now,
+    userId: normalized,
+  });
 }
 
 function buildFavoritesHrefFromUserId(userId: number): string {
@@ -88,24 +109,25 @@ function buildFavoritesHrefFromUserId(userId: number): string {
   return `${SEARCH_PATH}?${params.toString()}`;
 }
 
-/** Favorites → site page; null when user id is unknown. */
-export function resolveFavoritesHref(root: ParentNode = document): string | null {
-  const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
-  if (link instanceof HTMLAnchorElement) {
-    const href = link.getAttribute("href");
-    if (href !== null && href.length > 0) {
-      return link.href;
-    }
+/**
+ * Favorites → site page; null when user id is unknown.
+ * Sources (Package E): menu link → favorites URL id → saved sync userId.
+ * Always persists a resolved id.
+ */
+export function resolveFavoritesHref(
+  root: ParentNode = document,
+  search: string = window.location.search,
+): string | null {
+  const userId = resolveFavoritesUserId(
+    root,
+    search,
+    getSyncState()?.userId,
+  );
+  if (userId === null || userId <= 0) {
+    return null;
   }
-  const fromDoc = extractUserIdFromDocument(root);
-  if (fromDoc !== null) {
-    return buildFavoritesHrefFromUserId(fromDoc);
-  }
-  const saved = readSavedFavoritesUserId();
-  if (saved !== null) {
-    return buildFavoritesHrefFromUserId(saved);
-  }
-  return null;
+  persistFavoritesUserId(userId);
+  return buildFavoritesHrefFromUserId(userId);
 }
 
 function ensureMenuLink(

@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { RDW_SKIN_CLASS, RDW_THEME_ATTR } from "../../src/config/constants";
+import { RDW_PAGE_ROOT_ID } from "../../src/pages/constants";
 import { getSiteSkinCss, SITE_SKIN_CSS } from "../../src/skin/site-skin";
 import { LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 
 const HEX_IN_RULES = /#[0-9a-fA-F]{3,8}\b/;
 const COMMENT_BLOCK = /\/\*[\s\S]*?\*\//g;
+const SEARCH_TOOLS_ROOT_ID = "rdw-search-tools";
+/** Only unscoped selector allowed: script page host on Site default/dark. */
+const UNSCOPED_PAGE_ROOT = `#${RDW_PAGE_ROOT_ID}`;
 
 const KEY_SELECTORS = [
   `#site-title`,
@@ -69,13 +73,17 @@ describe("site-skin CSS export", () => {
     expect(getSiteSkinCss()).toBe(SITE_SKIN_CSS);
   });
 
-  it("scopes every rule under html.rdw-skin", () => {
+  it("scopes every rule under html.rdw-skin except #rdw-page-root", () => {
     const scope = `html.${RDW_SKIN_CLASS}`;
     const selectors = ruleSelectors(SITE_SKIN_CSS);
     expect(selectors.length).toBeGreaterThan(20);
     for (const selector of selectors) {
       for (const part of selector.split(",")) {
-        expect(part.trim().startsWith(scope)).toBe(true);
+        const trimmed = part.trim();
+        if (trimmed === UNSCOPED_PAGE_ROOT) {
+          continue;
+        }
+        expect(trimmed.startsWith(scope)).toBe(true);
       }
     }
   });
@@ -142,5 +150,82 @@ describe("site-skin CSS export", () => {
     expect(SITE_SKIN_CSS).toMatch(
       /div\.sidebar\s*>\s*h5\s*\{[^}]*display:\s*none/s,
     );
+  });
+
+  it("hides closed awesomplete lists instead of forcing transform:none on all ul", () => {
+    expect(SITE_SKIN_CSS).toContain(
+      ".awesomplete > ul:not([hidden]):not(:empty)",
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /\.awesomplete\s*>\s*ul\[hidden\][\s\S]*?display:\s*none\s*!important/,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /\.awesomplete\s*>\s*ul:empty[\s\S]*?pointer-events:\s*none/,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    expect(bare).not.toMatch(
+      /\.awesomplete\s*>\s*ul\s*\{[^}]*transform:\s*none/s,
+    );
+  });
+
+  it("excludes search-tools root and rdw-* controls from site button/input chrome", () => {
+    expect(SITE_SKIN_CSS).toContain(':not([class*="rdw-"])');
+    expect(SITE_SKIN_CSS).toContain(`:not(#${SEARCH_TOOLS_ROOT_ID} *)`);
+    expect(SITE_SKIN_CSS).toContain(
+      `button:not([class*="rdw-"]):not(#${SEARCH_TOOLS_ROOT_ID} *)`,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    expect(bare).not.toMatch(
+      /html\.rdw-skin\s+button\s*,\s*html\.rdw-skin\s+input\[type="submit"\]/s,
+    );
+  });
+
+  it("flows tag-sidebar rows as wrapping text with count on the first line", () => {
+    expect(SITE_SKIN_CSS).toMatch(
+      /ul#tag-sidebar\s*>\s*li\s*\{[^}]*display:\s*block/s,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /ul#tag-sidebar\s*>\s*li\s*>\s*a\s*\{[^}]*display:\s*inline/s,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /\.tag-count[\s\S]*?position:\s*absolute[\s\S]*?right:\s*0/s,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    expect(bare).not.toMatch(
+      /ul#tag-sidebar\s*>\s*li\s*\{[^}]*display:\s*flex/s,
+    );
+    expect(bare).not.toMatch(
+      /ul#tag-sidebar\s*>\s*li\s*\{[^}]*flex-wrap:\s*wrap/s,
+    );
+  });
+
+  it("does not paint favorites thumb background on hover", () => {
+    expect(SITE_SKIN_CSS).toMatch(
+      /span\.thumb\s*>\s*a\[onclick\]:hover\s*\{[^}]*background:\s*transparent/s,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /span\.thumb:hover[\s\S]*?background-color:\s*transparent/s,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    expect(bare).not.toMatch(
+      /span\.thumb\s*>\s*a\[onclick\]:hover\s*\{[^}]*background:\s*var\(--rdw-danger-soft\)/s,
+    );
+  });
+
+  it("colors #rdw-page-root for readable script page text on site themes", () => {
+    expect(SITE_SKIN_CSS).toContain(`#${RDW_PAGE_ROOT_ID}`);
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${RDW_PAGE_ROOT_ID}\\s*\\{[^}]*color:\\s*var\\(${TOKEN_VAR.text.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\\)`,
+        "s",
+      ),
+    );
+    const pageRootRule = ruleSelectors(SITE_SKIN_CSS).some((selector) =>
+      selector.split(",").some((part) => part.trim() === UNSCOPED_PAGE_ROOT),
+    );
+    expect(pageRootRule).toBe(true);
   });
 });

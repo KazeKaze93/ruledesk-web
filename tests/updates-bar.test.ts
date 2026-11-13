@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UPDATES_BAR_ID, UI_TEXT } from "../src/config/constants";
+import {
+  STORAGE_KEY,
+  UPDATES_BAR_ID,
+  UI_TEXT,
+} from "../src/config/constants";
 import { createDefaultStorage } from "../src/storage/schema";
 import { clearStorageCache, getSeenPostId, save } from "../src/storage/store";
 import { FEED_NEW_CLASS } from "../src/features/feed";
@@ -207,6 +211,21 @@ describe("mountUpdatesBar", () => {
       document,
       "?page=post&s=list&tags=(+a+~+b+)+id%3A%3E1",
     );
+    expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
+  });
+
+  it("skips the bar when GM artists grew after mount with a stale cache", () => {
+    seedArtists(10);
+    buildListPage(["42"], ["42"]);
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
+    expect(document.getElementById(UPDATES_BAR_ID)).not.toBeNull();
+
+    const data = createDefaultStorage();
+    data.artists = [{ tag: "a" }, { tag: "b" }, { tag: "c" }];
+    data.updates = { seenPostId: 10 };
+    memory.set(STORAGE_KEY, data);
+
+    mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
     expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
   });
 });

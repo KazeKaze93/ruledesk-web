@@ -39,20 +39,40 @@ describe("gridDensityFeature", () => {
     );
   });
 
-  it("css has masonry column layout under body.rdw-f-grid-density-masonry", () => {
+  it("css has masonry column layout values under body.rdw-f-grid-density-masonry", () => {
+    const css = gridDensityFeature.css;
+    const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
+    const masonryList = `body.${masonryClass} #post-list div.image-list`;
+    const masonryThumb = `body.${masonryClass} #post-list span.thumb`;
+    const masonryPreview = `body.${masonryClass} #post-list span.thumb img.preview`;
+
+    expect(css).toContain(masonryList);
+    expect(css).toContain("display: block !important");
+    expect(css).toContain("width: 100% !important");
+    expect(css).toContain("column-width: 240px !important");
+    expect(css).toContain("column-gap: 4px !important");
+    expect(css).toContain(masonryThumb);
+    expect(css).toContain("height: auto !important");
+    expect(css).toContain("break-inside: avoid !important");
+    expect(css).toContain("margin: 0px 0px 4px !important");
+    expect(css).toContain(`body.${masonryClass} #post-list span.thumb > a`);
+    expect(css).toContain(masonryPreview);
+    expect(css).toContain("border-radius: 4px !important");
+    expect(css).toContain("max-width: none !important");
+    expect(css).toContain("max-height: none !important");
+  });
+
+  it("masonry rules are scoped to #post-list so favorites does not get them", () => {
     const css = gridDensityFeature.css;
     const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
 
-    expect(css).toContain(`body.${masonryClass} div.image-list`);
-    expect(css).toContain("column-width: 200px !important");
-    expect(css).toContain("column-gap: 10px !important");
-    expect(css).toContain(`body.${masonryClass} span.thumb`);
-    expect(css).toContain("break-inside: avoid !important");
-    expect(css).toContain(`body.${masonryClass} span.thumb > a`);
-    expect(css).toContain(`body.${masonryClass} span.thumb img.preview`);
-    expect(css).toContain("width: 100% !important");
-    expect(css).toContain("max-width: none !important");
-    expect(css).toContain("max-height: none !important");
+    expect(css).toContain(`body.${masonryClass} #post-list`);
+    expect(css).not.toMatch(
+      new RegExp(
+        `body\\.${masonryClass.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+div\\.image-list`,
+      ),
+    );
+    expect(gridDensityFeature.pages).toContain("favorites");
   });
 
   it("mount is a noop", () => {

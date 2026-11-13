@@ -3,6 +3,8 @@ import { getSyncState } from "../storage/favs";
 import type { FavsSyncState } from "../storage/schema";
 import {
   createFavoritesSyncTabId,
+  FAVORITES_SYNC_MODE_FULL,
+  readFavoritesSyncMode,
   runFavoritesSync,
 } from "./favorites-sync";
 
@@ -92,10 +94,13 @@ export async function resumeFavoritesSyncIfStale(): Promise<boolean> {
     return false;
   }
 
+  // Preserve stored mode (both incremental and full). Legacy unfinished → full.
+  const mode = readFavoritesSyncMode(after) ?? FAVORITES_SYNC_MODE_FULL;
   await runFavoritesSync({
     tabId,
     signal: new AbortController().signal,
     onProgress: () => {},
+    mode,
   });
   return true;
 }

@@ -98,15 +98,41 @@ describe("appearance settings", () => {
       appearance: {
         theme: "custom",
         custom: {
-          accent: "#2f6fed",
-          bg: "#aae5a4",
-          surface: "#ffffff",
-          text: "#1c2228",
+          base: "dark",
           backgroundDim: 0.4,
         },
       },
     };
     save(data);
     expect(getAppearance()).toEqual(data.settings?.appearance);
+  });
+
+  it("migrates legacy custom colors to a base from bg luminance", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {},
+      settings: {
+        gridFavButtons: true,
+        appearance: {
+          theme: "custom",
+          custom: {
+            accent: "#2f6fed",
+            bg: "#16181c",
+            surface: "#1e2228",
+            text: "#e8edf2",
+            backgroundDim: 0.2,
+          },
+        },
+      },
+    });
+    expect(getAppearance()).toEqual({
+      theme: "custom",
+      custom: {
+        base: "dark",
+        backgroundDim: 0.2,
+      },
+    });
   });
 });

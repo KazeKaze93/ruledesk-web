@@ -113,7 +113,7 @@ describe("playlistMenuFeature", () => {
 
   it("exports Feature metadata for list and post", () => {
     expect(playlistMenuFeature.id).toBe("playlist-menu");
-    expect(playlistMenuFeature.label).toBe("Add to playlist button");
+    expect(playlistMenuFeature.label).toBe("Add to collection button");
     expect(playlistMenuFeature.pages).toEqual(["list", "post"]);
     expect(playlistMenuFeature.defaultEnabled).toBe(true);
   });
@@ -235,7 +235,7 @@ describe("playlistMenuFeature", () => {
     expect(addButton(thumb).classList.contains(CLASS_ADD_IN)).toBe(false);
   });
 
-  it("creates a playlist from New playlist and closes the menu", () => {
+  it("creates a collection from New collection… and closes the menu", () => {
     const thumb = buildThumb("20");
     document.body.append(thumb);
     playlistMenuFeature.mount(makeCtx("list", "?page=post&s=list"));

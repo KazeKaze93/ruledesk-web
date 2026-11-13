@@ -8,10 +8,18 @@ import {
   APPEARANCE_THEME_SITE_DARK,
   RDW_SKIN_CLASS,
 } from "../config/constants";
-import { forceLightSiteBase, setSiteTheme } from "../site/theme";
-import type { Appearance, AppearanceCustom } from "../storage/schema";
-import { LIGHT_PALETTE, TOKEN_VAR } from "../ui/tokens";
 import { getSiteSkinCss } from "./site-skin";
+import { forceLightSiteBase, setSiteTheme } from "../site/theme";
+import {
+  APPEARANCE_CUSTOM_BASE_LIGHT,
+  type Appearance,
+  type AppearanceCustom,
+} from "../storage/schema";
+import {
+  parseHexColor,
+  relativeLuminance,
+  TOKEN_VAR,
+} from "../ui/tokens";
 
 /** WCAG AA normal-text minimum contrast ratio. */
 export const CONTRAST_RATIO_MIN = 4.5;
@@ -20,17 +28,11 @@ export const BACKGROUND_DIM_MIN = 0;
 export const BACKGROUND_DIM_MAX = 0.8;
 export const DEFAULT_BACKGROUND_DIM = 0;
 
-const HEX_SHORT_PATTERN = /^#([0-9a-fA-F]{3})$/;
-const HEX_LONG_PATTERN = /^#([0-9a-fA-F]{6})$/;
-const SRGB_LINEAR_THRESHOLD = 0.03928;
-const SRGB_LINEAR_DIVISOR = 12.92;
-const SRGB_GAMMA = 2.4;
-const SRGB_A = 0.055;
-const SRGB_B = 1.055;
-const LUMA_R = 0.2126;
-const LUMA_G = 0.7152;
-const LUMA_B = 0.0722;
+/** JPEG quality when downscaling a custom background to screen size. */
+export const APPEARANCE_BACKGROUND_JPEG_QUALITY = 0.85;
+
 const CONTRAST_OFFSET = 0.05;
+const JPEG_MIME = "image/jpeg";
 
 const BODY_BG_IMAGE = "background-image";
 const BODY_BG_SIZE = "background-size";
@@ -53,10 +55,7 @@ export type ApplyAppearanceThemeResult = {
 
 export function createDefaultCustomTheme(): AppearanceCustom {
   return {
-    accent: LIGHT_PALETTE.accent,
-    bg: LIGHT_PALETTE.bg,
-    surface: LIGHT_PALETTE.surface,
-    text: LIGHT_PALETTE.text,
+    base: APPEARANCE_CUSTOM_BASE_LIGHT,
     backgroundDim: DEFAULT_BACKGROUND_DIM,
   };
 }
@@ -68,55 +67,7 @@ export function clampBackgroundDim(value: number): number {
   return Math.min(BACKGROUND_DIM_MAX, Math.max(BACKGROUND_DIM_MIN, value));
 }
 
-function channelToLinear(channel: number): number {
-  const c = channel / 255;
-  if (c <= SRGB_LINEAR_THRESHOLD) {
-    return c / SRGB_LINEAR_DIVISOR;
-  }
-  return ((c + SRGB_A) / SRGB_B) ** SRGB_GAMMA;
-}
-
-/** Parse #rgb / #rrggbb into 0–255 channels; null if unsupported. */
-export function parseHexColor(
-  value: string,
-): { r: number; g: number; b: number } | null {
-  const short = HEX_SHORT_PATTERN.exec(value.trim());
-  if (short !== null) {
-    const hex = short[1];
-    if (hex === undefined) {
-      return null;
-    }
-    return {
-      r: Number.parseInt(hex[0]! + hex[0]!, 16),
-      g: Number.parseInt(hex[1]! + hex[1]!, 16),
-      b: Number.parseInt(hex[2]! + hex[2]!, 16),
-    };
-  }
-  const long = HEX_LONG_PATTERN.exec(value.trim());
-  if (long !== null) {
-    const hex = long[1];
-    if (hex === undefined) {
-      return null;
-    }
-    return {
-      r: Number.parseInt(hex.slice(0, 2), 16),
-      g: Number.parseInt(hex.slice(2, 4), 16),
-      b: Number.parseInt(hex.slice(4, 6), 16),
-    };
-  }
-  return null;
-}
-
-export function relativeLuminance(hex: string): number | null {
-  const rgb = parseHexColor(hex);
-  if (rgb === null) {
-    return null;
-  }
-  const r = channelToLinear(rgb.r);
-  const g = channelToLinear(rgb.g);
-  const b = channelToLinear(rgb.b);
-  return LUMA_R * r + LUMA_G * g + LUMA_B * b;
-}
+export { parseHexColor, relativeLuminance };
 
 /** WCAG contrast ratio of two hex colors; null if either is unparseable. */
 export function contrastRatio(foreground: string, background: string): number | null {
@@ -199,6 +150,127 @@ function syncSiteCookieAndStylesheet(appearance: Appearance): void {
   forceLightSiteBase();
 }
 
+/** CSS pixel screen size × devicePixelRatio (for background hints/resize). */
+export function getScreenPixelSize(): { width: number; height: number } {
+  const dpr =
+    Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0
+      ? window.devicePixelRatio
+      : 1;
+  return {
+    width: Math.round(window.screen.width * dpr),
+    height: Math.round(window.screen.height * dpr),
+  };
+}
+
+/**
+ * Fit source inside max box without upscaling. Pure sizing helper (testable).
+ */
+export function computeDownscaleSize(
+  sourceWidth: number,
+  sourceHeight: number,
+  maxWidth: number,
+  maxHeight: number,
+): { width: number; height: number } {
+  if (
+    !Number.isFinite(sourceWidth) ||
+    !Number.isFinite(sourceHeight) ||
+    sourceWidth <= 0 ||
+    sourceHeight <= 0
+  ) {
+    return { width: 0, height: 0 };
+  }
+  if (sourceWidth <= maxWidth && sourceHeight <= maxHeight) {
+    return {
+      width: Math.round(sourceWidth),
+      height: Math.round(sourceHeight),
+    };
+  }
+  const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+  return {
+    width: Math.max(1, Math.round(sourceWidth * scale)),
+    height: Math.max(1, Math.round(sourceHeight * scale)),
+  };
+}
+
+export type PreparedBackgroundImage = {
+  readonly dataUrl: string;
+  readonly sourceWidth: number;
+  readonly sourceHeight: number;
+  readonly outputWidth: number;
+  readonly outputHeight: number;
+  readonly belowScreen: boolean;
+};
+
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      resolve(image);
+    };
+    image.onerror = () => {
+      reject(new Error("Could not decode image"));
+    };
+    image.src = src;
+  });
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Could not read image file"));
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Could not read image file"));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Decode file, downscale to screen pixels (never upscale), encode JPEG.
+ */
+export async function prepareBackgroundImageFile(
+  file: File,
+): Promise<PreparedBackgroundImage> {
+  const rawDataUrl = await readFileAsDataUrl(file);
+  const image = await loadImageElement(rawDataUrl);
+  const sourceWidth = image.naturalWidth;
+  const sourceHeight = image.naturalHeight;
+  const screen = getScreenPixelSize();
+  const sized = computeDownscaleSize(
+    sourceWidth,
+    sourceHeight,
+    screen.width,
+    screen.height,
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = sized.width;
+  canvas.height = sized.height;
+  const context = canvas.getContext("2d");
+  if (context === null) {
+    throw new Error("Could not prepare background image");
+  }
+  context.drawImage(image, 0, 0, sized.width, sized.height);
+  const dataUrl = canvas.toDataURL(
+    JPEG_MIME,
+    APPEARANCE_BACKGROUND_JPEG_QUALITY,
+  );
+  return {
+    dataUrl,
+    sourceWidth,
+    sourceHeight,
+    outputWidth: sized.width,
+    outputHeight: sized.height,
+    belowScreen:
+      sourceWidth < screen.width || sourceHeight < screen.height,
+  };
+}
+
 /**
  * Full theme apply for boot and settings UI:
  * site cookie/stylesheet + html.rdw-skin / tokens / site-skin / custom props + body image.
@@ -222,9 +294,6 @@ export function applyAppearanceTheme(
     document.documentElement.classList.remove(RDW_SKIN_CLASS);
   }
 
-  let contrastWarning = false;
-  let ratio: number | null = null;
-
   if (
     appearance.theme === APPEARANCE_THEME_CUSTOM &&
     appearance.custom !== undefined
@@ -236,10 +305,7 @@ export function applyAppearanceTheme(
       imageUrl,
       custom.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
     );
-    ratio = contrastRatio(custom.text, custom.bg);
-    contrastWarning = ratio !== null && ratio < CONTRAST_RATIO_MIN;
 
-    // Ensure dim CSS var is clamped when present.
     if (custom.backgroundDim !== undefined) {
       document.documentElement.style.setProperty(
         TOKEN_VAR.backgroundDim,
@@ -251,7 +317,7 @@ export function applyAppearanceTheme(
   }
 
   return {
-    contrastWarning,
-    contrastRatio: ratio,
+    contrastWarning: false,
+    contrastRatio: null,
   };
 }

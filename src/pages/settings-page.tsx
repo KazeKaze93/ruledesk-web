@@ -179,6 +179,7 @@ export function SettingsPage(): JSX.Element {
       </Card>
 
       <Card className={PANEL_UI_CLASS.pageCard}>
+        <SectionLabel>Favorites</SectionLabel>
         <div className={PANEL_UI_CLASS.settingsRow}>
           <Switch
             id={GRID_FAV_CHECKBOX_ID}
@@ -191,7 +192,7 @@ export function SettingsPage(): JSX.Element {
             }}
           />
         </div>
-        <FavoritesSyncSection includeHeading={true} />
+        <FavoritesSyncSection includeHeading={false} />
       </Card>
 
       <Card className={PANEL_UI_CLASS.pageCard}>

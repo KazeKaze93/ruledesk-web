@@ -22,6 +22,7 @@ import {
 import {
   getSeenPostId,
   listArtistTags,
+  reloadFromStorage,
   setSeenPostId,
 } from "../storage/store";
 import { ensureDocumentStyles } from "./cards";
@@ -275,10 +276,12 @@ export function mountUpdatesBar(
     return;
   }
 
+  reloadFromStorage();
   const artistTags = listArtistTags();
   const isFull = isFullUpdatesQuery(tagsParam, artistTags);
   const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
   if (!isFull && !isPartial) {
+    removeExistingBar(root);
     return;
   }
 
