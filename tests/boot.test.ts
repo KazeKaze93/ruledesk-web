@@ -16,6 +16,7 @@ import {
   STORAGE_KEY,
   TOKEN_STYLE_ID,
 } from "../src/config/constants";
+import { getSiteSkinCss } from "../src/skin/site-skin";
 import { clearStorageCache } from "../src/storage/store";
 import { LIGHT_PALETTE, TOKEN_VAR } from "../src/ui/tokens";
 
@@ -68,9 +69,9 @@ describe("boot early appearance", () => {
     expect(style).toBeInstanceOf(HTMLStyleElement);
     expect(style?.textContent).toContain(TOKEN_VAR.accent);
     expect(style?.textContent).toContain(LIGHT_PALETTE.accent);
-    expect(document.getElementById(SITE_SKIN_STYLE_ID)).toBeInstanceOf(
-      HTMLStyleElement,
-    );
+    const skin = document.getElementById(SITE_SKIN_STYLE_ID);
+    expect(skin).toBeInstanceOf(HTMLStyleElement);
+    expect(skin?.textContent).toBe(getSiteSkinCss());
     expect(bodySpy).not.toHaveBeenCalled();
   });
 
@@ -191,10 +192,11 @@ describe("token injection helpers", () => {
     expect(document.querySelectorAll(`#${TOKEN_STYLE_ID}`).length).toBe(1);
   });
 
-  it("keeps an empty site-skin hook for B1", () => {
-    const hook = injectSiteSkinHook();
+  it("fills the site-skin style element when CSS is passed", () => {
+    const css = getSiteSkinCss();
+    const hook = injectSiteSkinHook(css);
     expect(hook.id).toBe(SITE_SKIN_STYLE_ID);
-    expect(hook.textContent).toBe("");
+    expect(hook.textContent).toBe(css);
   });
 });
 

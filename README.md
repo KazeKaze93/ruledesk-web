@@ -40,9 +40,20 @@ No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on 
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
-## Dark theme (site)
+## Themes (Appearance)
 
-Panel setting **Dark theme (site)** toggles the site’s own `theme` cookie (`dark` vs absent) and swaps `css/desktop.css` ↔ `css/desktop-dark.css`. The script does not inject its own dark CSS.
+Settings → **Appearance** → **Site theme**:
+
+| Theme | What you get |
+|---|---|
+| **Site default** | Native rule34 look (`html.rdw-skin` off; site `theme` cookie cleared) |
+| **Site dark** | Native site dark CSS (`theme=dark` cookie + `desktop-dark.css`) |
+| **Light** / **Dark** | RuleDesk site skin (`html.rdw-skin`) with the matching token palette |
+| **Custom** | RuleDesk skin with your accent / bg / surface / text colors; optional background image + dim |
+
+**Restore the native site look:** open the panel → Settings → Appearance → Theme → **Site default**.
+
+Default for new installs is **Light** (RuleDesk skin on).
 
 ## Blacklist (site cookie)
 

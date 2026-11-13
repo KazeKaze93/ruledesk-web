@@ -1,4 +1,5 @@
 import * as z from "zod/mini";
+import { act } from "preact/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEBUG_KEY, STORAGE_KEY } from "../src/config/constants";
@@ -471,7 +472,15 @@ describe("panel settings apply", () => {
     vi.restoreAllMocks();
   });
 
-  function openSettingsPanel(): ShadowRoot {
+  function clickPanel(el: Element): void {
+    act(() => {
+      el.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, composed: true }),
+      );
+    });
+  }
+
+  function openPanelTab(tab: "settings" | "blacklist"): ShadowRoot {
     mountPanel();
     const host = document.getElementById(PANEL_ROOT_ID);
     expect(host).not.toBeNull();
@@ -485,8 +494,24 @@ describe("panel settings apply", () => {
     if (!(toggle instanceof HTMLButtonElement)) {
       throw new Error("expected toggle button");
     }
-    toggle.click();
+    clickPanel(toggle);
+    const tabButton = shadow.querySelector(`#rdw-tab-${tab}`);
+    expect(tabButton).toBeInstanceOf(HTMLButtonElement);
+    if (!(tabButton instanceof HTMLButtonElement)) {
+      throw new Error(`expected ${tab} tab`);
+    }
+    clickPanel(tabButton);
     return shadow;
+  }
+
+  function clickSwitch(shadow: ShadowRoot, id: string): void {
+    const control = shadow.querySelector(`#${id}`);
+    expect(control).toBeInstanceOf(HTMLButtonElement);
+    if (!(control instanceof HTMLButtonElement)) {
+      throw new Error(`expected switch #${id}`);
+    }
+    expect(control.getAttribute("role")).toBe("switch");
+    clickPanel(control);
   }
 
   it("reloads when a non-cssOnly feature is toggled", () => {
@@ -505,14 +530,8 @@ describe("panel settings apply", () => {
       }),
     );
 
-    const shadow = openSettingsPanel();
-    const checkbox = shadow.querySelector("#rdw-feature-needs-reload");
-    expect(checkbox).toBeInstanceOf(HTMLInputElement);
-    if (!(checkbox instanceof HTMLInputElement)) {
-      throw new Error("expected feature checkbox");
-    }
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event("change"));
+    const shadow = openPanelTab("settings");
+    clickSwitch(shadow, "rdw-feature-needs-reload");
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -534,14 +553,8 @@ describe("panel settings apply", () => {
     );
 
     runFeatures("list", "?page=post&s=list");
-    const shadow = openSettingsPanel();
-    const checkbox = shadow.querySelector("#rdw-feature-live-panel");
-    expect(checkbox).toBeInstanceOf(HTMLInputElement);
-    if (!(checkbox instanceof HTMLInputElement)) {
-      throw new Error("expected feature checkbox");
-    }
-    checkbox.checked = true;
-    checkbox.dispatchEvent(new Event("change"));
+    const shadow = openPanelTab("settings");
+    clickSwitch(shadow, "rdw-feature-live-panel");
     expect(reload).not.toHaveBeenCalled();
     expect(
       document.body.classList.contains(featureBodyClass("live-panel")),
@@ -556,28 +569,27 @@ describe("panel settings apply", () => {
       search: "?page=post&s=list",
     });
 
-    const shadow = openSettingsPanel();
-    const checkbox = shadow.querySelector("#rdw-tweaks-enabled");
-    expect(checkbox).toBeInstanceOf(HTMLInputElement);
-    if (!(checkbox instanceof HTMLInputElement)) {
-      throw new Error("expected tweaks checkbox");
-    }
-    checkbox.checked = false;
-    checkbox.dispatchEvent(new Event("change"));
+    const shadow = openPanelTab("settings");
+    clickSwitch(shadow, "rdw-tweaks-enabled");
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it("does not show a reload-to-apply hint for feature toggles", () => {
-    const shadow = openSettingsPanel();
-    const blacklist = shadow.querySelector(".rdw-blacklist");
+    const settings = openPanelTab("settings");
+    const settingsText =
+      settings.querySelector("#rdw-tabpanel-settings")?.textContent ?? "";
+    expect(settingsText).not.toContain("Reload the page to apply");
+
+    const blacklistTab = settings.querySelector("#rdw-tab-blacklist");
+    expect(blacklistTab).toBeInstanceOf(HTMLButtonElement);
+    if (!(blacklistTab instanceof HTMLButtonElement)) {
+      throw new Error("expected blacklist tab");
+    }
+    clickPanel(blacklistTab);
+    const blacklist = settings.querySelector(".rdw-blacklist");
     expect(blacklist).not.toBeNull();
     expect(blacklist?.textContent ?? "").toContain(
       "Saved. Reload the page to apply.",
     );
-    const withoutBlacklist = (shadow.textContent ?? "").replace(
-      blacklist?.textContent ?? "",
-      "",
-    );
-    expect(withoutBlacklist).not.toContain("Reload the page to apply");
   });
 });

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.8.1
+// @version      0.9.0
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -18,6 +18,7 @@
 	var FAVS_STORAGE_KEY = "ruledesk-web.favs";
 	var DEBUG_KEY = "ruledesk-web.debug";
 	var APPEARANCE_BACKGROUND_KEY = "ruledesk-web.appearance.background";
+	var APPEARANCE_BACKGROUND_TOO_LARGE = "Background image is too large (max 1.5 MB).";
 	var TOKEN_STYLE_ID = "ruledesk-web-tokens";
 	var SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
 	var RDW_SKIN_CLASS = "rdw-skin";
@@ -57,7 +58,7 @@
 	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
-	var USERSCRIPT_VERSION = "0.8.1";
+	var USERSCRIPT_VERSION = "0.9.0";
 	var SITE_THEME_COOKIE_NAME = "theme";
 	var SITE_THEME_COOKIE_VALUE_DARK = "dark";
 	var SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
@@ -2237,6 +2238,10 @@
 		if (data.settings?.appearance !== void 0) next.appearance = data.settings.appearance;
 		return next;
 	}
+	function byteLengthUtf8(value) {
+		if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(value).length;
+		return value.length;
+	}
 	function normalizePostId(postId) {
 		if (!Number.isFinite(postId)) return null;
 		const truncated = Math.trunc(postId);
@@ -2457,10 +2462,27 @@
 	function getAppearance() {
 		return resolveAppearance(load());
 	}
+	function setAppearance(appearance) {
+		const parsed = AppearanceSchema.parse(appearance);
+		const data = load();
+		data.settings = {
+			...currentSettings(data),
+			appearance: parsed
+		};
+		save(data);
+		return parsed;
+	}
 	function getAppearanceBackgroundDataUrl() {
 		const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, void 0);
 		if (typeof raw !== "string" || raw.length === 0) return;
 		return raw;
+	}
+	function setAppearanceBackgroundDataUrl(dataUrl) {
+		if (byteLengthUtf8(dataUrl) > 1572864) throw new Error(APPEARANCE_BACKGROUND_TOO_LARGE);
+		getGmSetValue()(APPEARANCE_BACKGROUND_KEY, dataUrl);
+	}
+	function clearAppearanceBackgroundDataUrl() {
+		getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
 	}
 	function getSeenPostId() {
 		return resolveSeenPostId(load());
@@ -2742,6 +2764,7 @@
 			return { status: "error" };
 		}
 	}
+	var KIT_ICON_BUTTON_CLASS = "rdw-icon-btn";
 	function favAriaLabel(postId, marked) {
 		return `${marked ? UI_TEXT.cardFavRemoveLabel : UI_TEXT.cardFavAddLabel} ${postId}`;
 	}
@@ -2819,1658 +2842,354 @@
 		applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
 		log.warn("Favorite failed", postId, result);
 	}
-	var COOKIE_PAIR_SEPARATOR$1 = ";";
-	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
-	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
-	var USER_ENTRY_PREFIX = "user:";
-	var RATING_ENTRY_PREFIX = "rating:";
-	var MS_PER_DAY$1 = 864e5;
-	var DAYS_PER_YEAR = 365;
-	var BLACKLIST_TAG_SEPARATOR = " ";
-	function readCookieValue$1(name) {
-		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR$1);
-		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
-		for (const pair of pairs) {
-			const trimmed = pair.trim();
-			if (!trimmed.startsWith(prefix)) continue;
-			return trimmed.slice(prefix.length);
-		}
-		return null;
-	}
-	function normalizeBlacklistTags(tags) {
-		const seen = new Set();
-		const result = [];
-		for (const raw of tags) {
-			const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
-			if (normalized.length === 0 || seen.has(normalized)) continue;
-			seen.add(normalized);
-			result.push(normalized);
-		}
-		return result;
-	}
-	function encodeBlacklistCookieValue(tags) {
-		if (tags.length === 0) return "";
-		return encodeURIComponent(encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)));
-	}
-	function writeBlacklistCookie(value, expires) {
-		document.cookie = [
-			`${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
-			`expires=${expires.toUTCString()}`,
-			`path=/`
-		].join("; ");
-	}
-	function readSiteBlacklist() {
-		const raw = readCookieValue$1(SITE_BLACKLIST_COOKIE_NAME);
-		if (raw === null || raw.length === 0) return [];
-		let decoded;
-		try {
-			decoded = decodeURIComponent(decodeURI(raw));
-		} catch {
-			return [];
-		}
-		const result = [];
-		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
-			const trimmed = part.trim().toLowerCase();
-			if (trimmed.length === 0) continue;
-			result.push(trimmed);
-		}
-		return result;
-	}
-	function writeSiteBlacklist(tags) {
-		const normalized = normalizeBlacklistTags(tags);
-		const expires = new Date(Date.now() + 5 * DAYS_PER_YEAR * MS_PER_DAY$1);
-		writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
-	}
-	function isBlacklisted(tags, score, rating, list) {
-		if (list.length === 0) return false;
-		const tagSet = new Set();
-		for (const tag of tags) {
-			const normalized = tag.trim().toLowerCase();
-			if (normalized.length > 0) tagSet.add(normalized);
-		}
-		const ratingNorm = rating.trim().toLowerCase();
-		for (const entry of list) {
-			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
-			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
-				const value = entry.slice(7);
-				if (value.length > 0 && value === ratingNorm) return true;
-				continue;
-			}
-			if (tagSet.has(entry)) return true;
-		}
-		return false;
-	}
-	var SECTION_CLASS$1 = "rdw-blacklist";
-	var CHIPS_CLASS$1 = "rdw-blacklist-chips";
-	var CHIP_CLASS$1 = "rdw-blacklist-chip";
-	var CHIP_LABEL_CLASS$1 = "rdw-blacklist-chip-label";
-	var CHIP_REMOVE_CLASS$1 = "rdw-blacklist-chip-remove";
-	var ADD_ROW_CLASS = "rdw-blacklist-add-row";
-	var SAVED_ROW_CLASS = "rdw-blacklist-saved-row";
-	var HINT_CLASS = "rdw-blacklist-hint";
-	var HEADING$1 = "Blacklist";
-	var ADD_LABEL = "Add tag";
-	var ADD_BUTTON = "Add";
-	var SAVED_TEXT = "Saved. Reload the page to apply.";
-	var RELOAD_BUTTON = "Reload";
-	var PERMANENT_HINT = "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
-	var REMOVE_ARIA = (tag) => `Remove ${tag} from blacklist`;
-	var ADD_INPUT_ID = "rdw-blacklist-add";
-	var TAG_SPLIT_PATTERN = /[, ]+/;
-	var KEY_ENTER$2 = "Enter";
-	var REMOVE_SYMBOL = "×";
-	var BLACKLIST_SECTION_CSS = `
-.${SECTION_CLASS$1} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.${SECTION_CLASS$1} .${CHIPS_CLASS$1} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.${SECTION_CLASS$1} .${CHIP_CLASS$1} {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  padding: 2px 4px 2px 8px;
-  border: 1px solid var(--rdw-border, #ccc);
-  border-radius: 999px;
-  background: var(--rdw-bg-item, #fff);
-}
-
-.${SECTION_CLASS$1} .${CHIP_LABEL_CLASS$1} {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.${SECTION_CLASS$1} .${CHIP_REMOVE_CLASS$1} {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--rdw-fg-muted, #555);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.${SECTION_CLASS$1} .${CHIP_REMOVE_CLASS$1}:focus-visible {
-  outline: 2px solid var(--rdw-focus, #4c8bf5);
-  outline-offset: 1px;
-}
-
-.${SECTION_CLASS$1} .${ADD_ROW_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-end;
-}
-
-.${SECTION_CLASS$1} .${ADD_ROW_CLASS} .${CSS_CLASS.field} {
-  flex: 1 1 12rem;
-  margin: 0;
-}
-
-.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} .${CSS_CLASS.hint} {
-  margin: 0;
-}
-
-.${SECTION_CLASS$1} .${HINT_CLASS} {
-  margin: 0;
-  color: var(--rdw-fg-muted, #555);
-  font-size: 12px;
-}
-`.trim();
-	function parseAddTokens(raw) {
-		const result = [];
-		for (const part of raw.split(TAG_SPLIT_PATTERN)) {
-			const trimmed = part.trim();
-			if (trimmed.length === 0) continue;
-			result.push(trimmed);
-		}
-		return result;
-	}
-	function persistTags(tags) {
-		writeSiteBlacklist([...tags]);
-		return readSiteBlacklist();
-	}
-	function renderChips$1(refs, tags) {
-		refs.chips.replaceChildren();
-		for (const tag of tags) {
-			const item = document.createElement("li");
-			item.className = CHIP_CLASS$1;
-			const label = document.createElement("span");
-			label.className = CHIP_LABEL_CLASS$1;
-			label.textContent = tag;
-			const removeBtn = document.createElement("button");
-			removeBtn.type = "button";
-			removeBtn.className = CHIP_REMOVE_CLASS$1;
-			removeBtn.textContent = REMOVE_SYMBOL;
-			removeBtn.setAttribute("aria-label", REMOVE_ARIA(tag));
-			removeBtn.addEventListener("click", () => {
-				renderChips$1(refs, persistTags(readSiteBlacklist().filter((entry) => entry !== tag)));
-			});
-			item.append(label, removeBtn);
-			refs.chips.append(item);
-		}
-	}
-	function addFromInput(refs) {
-		const tokens = parseAddTokens(refs.input.value);
-		if (tokens.length === 0) return;
-		renderChips$1(refs, persistTags([...readSiteBlacklist(), ...tokens]));
-		refs.input.value = "";
-	}
-	function createBlacklistSection() {
-		const section = document.createElement("section");
-		section.className = `${CSS_CLASS.section} ${SECTION_CLASS$1}`;
-		const title = document.createElement("h3");
-		title.className = CSS_CLASS.sectionTitle;
-		title.textContent = HEADING$1;
-		const chips = document.createElement("ul");
-		chips.className = CHIPS_CLASS$1;
-		const addRow = document.createElement("div");
-		addRow.className = ADD_ROW_CLASS;
-		const field = document.createElement("div");
-		field.className = CSS_CLASS.field;
-		const label = document.createElement("label");
-		label.className = CSS_CLASS.label;
-		label.htmlFor = ADD_INPUT_ID;
-		label.textContent = ADD_LABEL;
-		const input = document.createElement("input");
-		input.id = ADD_INPUT_ID;
-		input.className = CSS_CLASS.input;
-		input.type = "text";
-		input.autocomplete = "off";
-		input.spellcheck = false;
-		field.append(label, input);
-		const addBtn = document.createElement("button");
-		addBtn.type = "button";
-		addBtn.className = CSS_CLASS.primaryButton;
-		addBtn.textContent = ADD_BUTTON;
-		addRow.append(field, addBtn);
-		const savedRow = document.createElement("div");
-		savedRow.className = SAVED_ROW_CLASS;
-		const savedText = document.createElement("p");
-		savedText.className = CSS_CLASS.hint;
-		savedText.textContent = SAVED_TEXT;
-		const reloadBtn = document.createElement("button");
-		reloadBtn.type = "button";
-		reloadBtn.className = CSS_CLASS.secondaryButton;
-		reloadBtn.textContent = RELOAD_BUTTON;
-		reloadBtn.addEventListener("click", () => {
-			window.location.reload();
-		});
-		savedRow.append(savedText, reloadBtn);
-		const hint = document.createElement("p");
-		hint.className = HINT_CLASS;
-		hint.textContent = PERMANENT_HINT;
-		section.append(title, chips, addRow, savedRow, hint);
-		const refs = {
-			chips,
-			input
-		};
-		renderChips$1(refs, readSiteBlacklist());
-		addBtn.addEventListener("click", () => {
-			addFromInput(refs);
-		});
-		input.addEventListener("keydown", (event) => {
-			if (event.key !== KEY_ENTER$2) return;
-			event.preventDefault();
-			addFromInput(refs);
-		});
-		return section;
-	}
-	var TAB_CLASS = "rdw-collections-tab";
-	var SECTION_HEADING_CLASS = "rdw-collections-heading";
-	var PLAYLIST_META_CLASS = "rdw-playlist-meta";
-	var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
-	var PLAYLIST_PART_CLASS = "rdw-playlist-part";
-	var ROW_MAIN_CLASS = "rdw-collections-row-main";
-	var SAVED_SEARCHES_HEADING = "Saved searches";
-	var PLAYLISTS_HEADING = "Playlists";
-	var EMPTY_SAVED_SEARCHES = "No saved searches yet.";
-	var EMPTY_PLAYLISTS = "No playlists yet.";
-	var EMPTY_PLAYLISTS_HINT = "Use the + button on a post";
-	var NEW_PLAYLIST = "New playlist";
-	var OPEN_PLAYLIST = "Open playlist";
-	var SAVE_NAME_ID = "rdw-save-name";
-	var PLAYLIST_NAME_ID = "rdw-playlist-name";
-	var COLLECTIONS_TAB_CSS = `
-.${TAB_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.${TAB_CLASS} .${SECTION_HEADING_CLASS} {
-  margin: 0;
-}
-
-.${TAB_CLASS} .${ROW_MAIN_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.${TAB_CLASS} .${PLAYLIST_META_CLASS} {
-  margin: 0;
-  color: var(--rdw-fg-muted, #555);
-  font-size: 12px;
-}
-
-.${TAB_CLASS} .${PLAYLIST_PARTS_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS} {
-  color: var(--rdw-link, #0b57d0);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
-  outline: 2px solid var(--rdw-focus, #4c8bf5);
+	var KIT_FOCUS_CSS = `
+.rdw-kit-focusable:focus-visible {
+  outline: 2px solid var(--rdw-accent);
   outline-offset: 2px;
 }
-
-.${TAB_CLASS} .${CSS_CLASS.itemName}:disabled {
-  color: var(--rdw-fg-muted, #555);
-  cursor: not-allowed;
-}
-`.trim();
-	var mode = { kind: "list" };
-	var nameDraft = "";
-	function postsLabel(count) {
-		return `${String(count)} post${count === 1 ? "" : "s"}`;
+`;
+	var n;
+	var t$1;
+	var u$2;
+	var i$1;
+	var f$2;
+	var o$2;
+	var e$1;
+	var l$1;
+	var c$1;
+	var a$2;
+	var h$1 = Symbol.for("pv");
+	var p$1 = {};
+	var y$1 = [];
+	var v$2 = /^m(i|n|o|s|text|space)$/;
+	var w$1 = Array.isArray;
+	var d$1 = y$1.slice;
+	var _$1 = Object.assign;
+	function g$1(n) {
+		n && n.parentNode && n.remove();
 	}
-	function listSavedSearches() {
-		return load().collections.filter((entry) => !isPlaylist(entry));
-	}
-	function playlistPostCount(playlist) {
-		return playlist.postIds?.length ?? 0;
-	}
-	function openSearch(collection) {
-		window.location.assign(buildSearchUrl(collection.tags));
-	}
-	function openPlaylistPart(query) {
-		window.location.assign(buildUpdatesSearchUrl(query));
-	}
-	function buildNameForm(inputId, onSubmit, onCancel, render) {
-		const form = document.createElement("form");
-		form.className = CSS_CLASS.form;
-		const field = document.createElement("div");
-		field.className = CSS_CLASS.field;
-		const label = document.createElement("label");
-		label.className = CSS_CLASS.label;
-		label.htmlFor = inputId;
-		label.textContent = UI_TEXT.nameLabel;
-		const input = document.createElement("input");
-		input.id = inputId;
-		input.className = CSS_CLASS.input;
-		input.type = "text";
-		input.required = true;
-		input.value = nameDraft;
-		input.addEventListener("input", () => {
-			nameDraft = input.value;
-		});
-		field.append(label, input);
-		const actions = document.createElement("div");
-		actions.className = CSS_CLASS.formActions;
-		const saveBtn = document.createElement("button");
-		saveBtn.type = "submit";
-		saveBtn.className = CSS_CLASS.primaryButton;
-		saveBtn.textContent = UI_TEXT.save;
-		const cancelBtn = document.createElement("button");
-		cancelBtn.type = "button";
-		cancelBtn.className = CSS_CLASS.secondaryButton;
-		cancelBtn.textContent = UI_TEXT.cancel;
-		cancelBtn.addEventListener("click", () => {
-			onCancel();
-			render();
-		});
-		actions.append(saveBtn, cancelBtn);
-		form.append(field, actions);
-		form.addEventListener("submit", (event) => {
-			event.preventDefault();
-			onSubmit();
-		});
-		queueMicrotask(() => {
-			input.focus();
-			input.select();
-		});
-		return form;
-	}
-	function buildConfirmDelete(collection, render) {
-		const fragment = document.createDocumentFragment();
-		const prompt = document.createElement("p");
-		prompt.className = CSS_CLASS.hint;
-		prompt.textContent = `${UI_TEXT.confirmDelete} (${collection.name})`;
-		const actions = document.createElement("div");
-		actions.className = CSS_CLASS.confirmRow;
-		const confirmBtn = document.createElement("button");
-		confirmBtn.type = "button";
-		confirmBtn.className = CSS_CLASS.dangerButton;
-		confirmBtn.textContent = UI_TEXT.confirm;
-		confirmBtn.addEventListener("click", () => {
-			deleteCollection(collection.id);
-			mode = { kind: "list" };
-			nameDraft = "";
-			render();
-		});
-		const cancelBtn = document.createElement("button");
-		cancelBtn.type = "button";
-		cancelBtn.className = CSS_CLASS.secondaryButton;
-		cancelBtn.textContent = UI_TEXT.cancel;
-		cancelBtn.addEventListener("click", () => {
-			mode = { kind: "list" };
-			render();
-		});
-		actions.append(confirmBtn, cancelBtn);
-		fragment.append(prompt, actions);
-		return fragment;
-	}
-	function buildRenameDeleteActions(collection, render) {
-		const actions = document.createElement("div");
-		actions.className = CSS_CLASS.itemActions;
-		const renameBtn = document.createElement("button");
-		renameBtn.type = "button";
-		renameBtn.className = CSS_CLASS.iconButton;
-		renameBtn.textContent = UI_TEXT.rename;
-		renameBtn.setAttribute("aria-label", `${UI_TEXT.rename}: ${collection.name}`);
-		renameBtn.addEventListener("click", () => {
-			nameDraft = collection.name;
-			mode = {
-				kind: "rename",
-				id: collection.id
-			};
-			render();
-		});
-		const deleteBtn = document.createElement("button");
-		deleteBtn.type = "button";
-		deleteBtn.className = CSS_CLASS.iconButton;
-		deleteBtn.textContent = UI_TEXT.delete;
-		deleteBtn.setAttribute("aria-label", `${UI_TEXT.delete}: ${collection.name}`);
-		deleteBtn.addEventListener("click", () => {
-			mode = {
-				kind: "confirm-delete",
-				id: collection.id
-			};
-			render();
-		});
-		actions.append(renameBtn, deleteBtn);
-		return actions;
-	}
-	function buildSavedSearchRow(collection, render) {
-		const item = document.createElement("li");
-		item.className = CSS_CLASS.listItem;
-		if (mode.kind === "rename" && mode.id === collection.id) {
-			item.append(buildNameForm(`rdw-rename-${collection.id}`, () => {
-				const nextName = nameDraft.trim();
-				if (nextName.length === 0) return;
-				renameCollection(collection.id, nextName);
-				mode = { kind: "list" };
-				nameDraft = "";
-				render();
-			}, () => {
-				mode = { kind: "list" };
-			}, render));
-			return item;
-		}
-		if (mode.kind === "confirm-delete" && mode.id === collection.id) {
-			item.append(buildConfirmDelete(collection, render));
-			return item;
-		}
-		const main = document.createElement("div");
-		main.className = ROW_MAIN_CLASS;
-		const nameBtn = document.createElement("button");
-		nameBtn.type = "button";
-		nameBtn.className = CSS_CLASS.itemName;
-		nameBtn.textContent = collection.name;
-		nameBtn.setAttribute("aria-label", `${UI_TEXT.openCollection}: ${collection.name}`);
-		nameBtn.addEventListener("click", () => {
-			openSearch(collection);
-		});
-		main.append(nameBtn, buildRenameDeleteActions(collection, render));
-		item.append(main);
-		return item;
-	}
-	function buildSaveSearchControls(render) {
-		const wrap = document.createElement("div");
-		const searchTags = readTagsFromLocation(window.location.search);
-		const canSave = searchTags !== null && searchTags.length > 0;
-		if (mode.kind === "save-search") {
-			wrap.append(buildNameForm(SAVE_NAME_ID, () => {
-				const tags = readTagsFromLocation(window.location.search);
-				if (tags === null || tags.length === 0) {
-					mode = { kind: "list" };
-					render();
-					return;
-				}
-				const name = nameDraft.trim();
-				if (name.length === 0) return;
-				addCollection(name, tags);
-				mode = { kind: "list" };
-				nameDraft = "";
-				render();
-			}, () => {
-				mode = { kind: "list" };
-			}, render));
-			return wrap;
-		}
-		const saveBtn = document.createElement("button");
-		saveBtn.type = "button";
-		saveBtn.className = CSS_CLASS.primaryButton;
-		saveBtn.textContent = UI_TEXT.saveCurrent;
-		saveBtn.disabled = !canSave;
-		saveBtn.addEventListener("click", () => {
-			const tags = readTagsFromLocation(window.location.search);
-			if (tags === null || tags.length === 0) return;
-			nameDraft = serialize(tags);
-			mode = { kind: "save-search" };
-			render();
-		});
-		wrap.append(saveBtn);
-		if (!canSave) {
-			const hint = document.createElement("p");
-			hint.className = CSS_CLASS.hint;
-			hint.textContent = UI_TEXT.notOnSearchPage;
-			wrap.append(hint);
-		}
-		return wrap;
-	}
-	function buildSavedSearchesSection(render) {
-		const section = document.createElement("section");
-		section.className = CSS_CLASS.section;
-		const heading = document.createElement("h3");
-		heading.className = `${CSS_CLASS.sectionTitle} ${SECTION_HEADING_CLASS}`;
-		heading.textContent = SAVED_SEARCHES_HEADING;
-		section.append(heading, buildSaveSearchControls(render));
-		const saved = listSavedSearches();
-		if (saved.length === 0) {
-			const empty = document.createElement("p");
-			empty.className = CSS_CLASS.hint;
-			empty.textContent = EMPTY_SAVED_SEARCHES;
-			section.append(empty);
-			return section;
-		}
-		const list = document.createElement("ul");
-		list.className = CSS_CLASS.list;
-		for (const collection of saved) list.append(buildSavedSearchRow(collection, render));
-		section.append(list);
-		return section;
-	}
-	function buildPlaylistParts(queries) {
-		if (queries.length <= 1) return null;
-		const parts = document.createElement("ul");
-		parts.className = PLAYLIST_PARTS_CLASS;
-		parts.setAttribute("aria-label", "Playlist parts");
-		for (let index = 0; index < queries.length; index += 1) {
-			const query = queries[index];
-			if (query === void 0) continue;
-			const item = document.createElement("li");
-			const link = document.createElement("a");
-			link.className = PLAYLIST_PART_CLASS;
-			link.href = buildUpdatesSearchUrl(query);
-			link.textContent = String(index + 1);
-			item.append(link);
-			parts.append(item);
-		}
-		return parts;
-	}
-	function buildPlaylistRow(playlist, render) {
-		const item = document.createElement("li");
-		item.className = CSS_CLASS.listItem;
-		if (mode.kind === "rename" && mode.id === playlist.id) {
-			item.append(buildNameForm(`rdw-rename-${playlist.id}`, () => {
-				const nextName = nameDraft.trim();
-				if (nextName.length === 0) return;
-				renameCollection(playlist.id, nextName);
-				mode = { kind: "list" };
-				nameDraft = "";
-				render();
-			}, () => {
-				mode = { kind: "list" };
-			}, render));
-			return item;
-		}
-		if (mode.kind === "confirm-delete" && mode.id === playlist.id) {
-			item.append(buildConfirmDelete(playlist, render));
-			return item;
-		}
-		const count = playlistPostCount(playlist);
-		const queries = buildPlaylistQueries(playlist.postIds ?? [], getPlaylistChunkSize());
-		const main = document.createElement("div");
-		main.className = ROW_MAIN_CLASS;
-		const nameBtn = document.createElement("button");
-		nameBtn.type = "button";
-		nameBtn.className = CSS_CLASS.itemName;
-		nameBtn.textContent = playlist.name;
-		nameBtn.setAttribute("aria-label", `${OPEN_PLAYLIST}: ${playlist.name}`);
-		nameBtn.disabled = !(count > 0 && queries.length > 0);
-		nameBtn.addEventListener("click", () => {
-			const first = queries[0];
-			if (first === void 0) return;
-			openPlaylistPart(first);
-		});
-		main.append(nameBtn, buildRenameDeleteActions(playlist, render));
-		item.append(main);
-		const meta = document.createElement("p");
-		meta.className = PLAYLIST_META_CLASS;
-		meta.textContent = postsLabel(count);
-		item.append(meta);
-		const parts = buildPlaylistParts(queries);
-		if (parts !== null) item.append(parts);
-		return item;
-	}
-	function buildCreatePlaylistControls(render) {
-		const wrap = document.createElement("div");
-		if (mode.kind === "create-playlist") {
-			wrap.append(buildNameForm(PLAYLIST_NAME_ID, () => {
-				const name = nameDraft.trim();
-				if (name.length === 0) return;
-				createPlaylist(name);
-				mode = { kind: "list" };
-				nameDraft = "";
-				render();
-			}, () => {
-				mode = { kind: "list" };
-			}, render));
-			return wrap;
-		}
-		const createBtn = document.createElement("button");
-		createBtn.type = "button";
-		createBtn.className = CSS_CLASS.primaryButton;
-		createBtn.textContent = NEW_PLAYLIST;
-		createBtn.addEventListener("click", () => {
-			nameDraft = "";
-			mode = { kind: "create-playlist" };
-			render();
-		});
-		wrap.append(createBtn);
-		return wrap;
-	}
-	function buildPlaylistsSection(render) {
-		const section = document.createElement("section");
-		section.className = CSS_CLASS.section;
-		const heading = document.createElement("h3");
-		heading.className = `${CSS_CLASS.sectionTitle} ${SECTION_HEADING_CLASS}`;
-		heading.textContent = PLAYLISTS_HEADING;
-		section.append(heading, buildCreatePlaylistControls(render));
-		const playlists = listPlaylists();
-		if (playlists.length === 0) {
-			const empty = document.createElement("p");
-			empty.className = CSS_CLASS.hint;
-			empty.textContent = EMPTY_PLAYLISTS;
-			const hint = document.createElement("p");
-			hint.className = CSS_CLASS.hint;
-			hint.textContent = EMPTY_PLAYLISTS_HINT;
-			section.append(empty, hint);
-			return section;
-		}
-		const list = document.createElement("ul");
-		list.className = CSS_CLASS.list;
-		for (const playlist of playlists) list.append(buildPlaylistRow(playlist, render));
-		section.append(list);
-		return section;
-	}
-	function createCollectionsTab() {
-		const root = document.createElement("div");
-		root.className = `${PANEL_UI_CLASS.scrollRegion} ${TAB_CLASS}`;
-		const render = () => {
-			root.replaceChildren(buildSavedSearchesSection(render), buildPlaylistsSection(render));
+	function m$1(r, u, i, f, o) {
+		var e = {
+			type: r,
+			props: u,
+			key: i,
+			ref: f,
+			__k: null,
+			__: null,
+			__b: 0,
+			__e: null,
+			__c: null,
+			constructor: h$1,
+			__v: o || ++t$1,
+			__i: -1,
+			__u: 0
 		};
-		render();
-		return root;
+		return !o && n.vnode && n.vnode(e), e;
 	}
-	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
-	var MY_FAVORITES_LINK_SELECTOR$1 = "li#my-favorites-container a[href*=\"page=favorites\"]";
-	var THUMB_SELECTOR$1 = "span.thumb";
-	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
-	var PAGINATOR_SELECTOR = "#paginator";
-	var LASTPAGE_SELECTOR = "a[name=\"lastpage\"]";
-	var NEXT_SELECTOR = "a[name=\"next\"]";
-	var REMOVE_LINK_SELECTOR = "a[onclick]";
-	var POST_LINK_ID_PATTERN = /^p(\d+)$/;
-	var ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
-	var URL_PARSE_BASE = "https://rule34.xxx";
-	var FAVORITES_SYNC_ERROR_NOT_LOGGED_IN = "not logged in or menu not found";
-	var FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE = "unexpected page";
-	function createAbortResult(total, page, pages) {
-		return {
-			status: "aborted",
-			total,
-			page,
-			pages
-		};
+	function $(n) {
+		return n.children;
 	}
-	function isAbortError(error) {
-		return error instanceof DOMException && error.name === "AbortError" || error instanceof Error && error.name === "AbortError";
+	function x(n, t) {
+		this.props = n, this.context = t, this.__g = 0;
 	}
-	function throwIfAborted(signal) {
-		if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+	function S(n, t) {
+		if (null == t) return n.__ && S(n.__, n.__i + 1);
+		for (var r; t < n.__k.length; t++) if ((r = n.__k[t]) && r.__e) return r.__e;
+		return "function" != typeof n.type || n.props.__P ? null : S(n);
 	}
-	function delay(ms, signal) {
-		return new Promise((resolve, reject) => {
-			if (signal.aborted) {
-				reject(new DOMException("Aborted", "AbortError"));
+	function C$1(t) {
+		var r, u = t.__v, i = u.__e, f = [], o = [], e = t.__P;
+		e && ((r = _$1({ constructor: h$1 }, u)).__v = u.__v + 1, n.vnode && n.vnode(r), z$1(e, r, u, t.__n, e.namespaceURI, 32 & u.__u ? [i] : null, f, i || S(u), 32 & u.__u, o), r.__v = u.__v, r.__.__k[r.__i] = r, E$1(f, r, o), u.__ = u.__e = null, r.__e != i && j(r));
+	}
+	function j(n) {
+		if ((n = n.__) && n.__c && !n.props.__P) return n.__e = null, n.__k.some(function(t) {
+			return t && (n.__e = t.__e);
+		}), j(n);
+	}
+	function L(t) {
+		(8 & t.__g || (t.__g |= 8, u$2.push(t), f$2++)) && i$1 == n.debounceRendering || ((i$1 = n.debounceRendering) || queueMicrotask)(H);
+	}
+	function H() {
+		try {
+			for (var n, t = 1; u$2.length;) u$2.length > t && u$2.sort(o$2), n = u$2.shift(), t = u$2.length, 8 & n.__g && C$1(n);
+		} finally {
+			(f$2 = u$2.length) && (i$1 || queueMicrotask)(H);
+		}
+	}
+	function I(n, t, r, u, i, f, o, e, l, c, a) {
+		var s, h, v, w, d, _, g = u.__k || y$1, k = t.length;
+		for (l = q(r, t, g, l, k), s = 0; s < k; s++) null != (v = r.__k[s]) && (h = ~v.__i && g[v.__i] || p$1, v.__i = s, _ = z$1(n, v, h, i, f, o, e, l, c, a), w = v.__e, (h.ref != v.ref || 8 & h.__u) && (h.ref && G$1(h.ref, null, v, h), v.ref && a.push(v.ref, v.__c || w, v)), d = d || w, 4 & v.__u ? (l = A$1(v, l, n, !h.__v), h.__e && (h.__e = null)) : "function" == typeof v.type && void 0 !== _ ? l = _ : w && (l = w.nextSibling), v.__u &= -21);
+		return r.__e = d, l;
+	}
+	function q(n, t, r, u, i) {
+		var f, o, e, l, c, a, s, p, y, v = r.length, d = v, _ = 0, g = 0, k = n.__k = Array(i);
+		for (f = 0; f < i; f++) null != (o = t[f]) && "boolean" != typeof o && "function" != typeof o ? ("object" != typeof o || o.constructor === String ? o = k[f] = m$1(null, o) : w$1(o) ? o = k[f] = m$1($, { children: o }) : o.constructor === h$1 && o.__b ? o = k[f] = m$1(o.type, o.props, o.key, o.ref, o.__v) : k[f] = o, l = f + _, o.__ = n, o.__b = n.__b + 1, e = null, ~(c = o.__i = P$1(o, r, l, d)) && (d--, (e = r[c]) && (e.__u |= 2)), e && e.__v ? (o.__u |= 16, c == l - 1 ? _-- : c == l + 1 ? _++ : c != l && (c > l ? _-- : _++, g = 1)) : (~c || (i > v ? _-- : i < v && _++), "function" != typeof o.type && (o.__u |= 4))) : k[f] = null;
+		if (g) {
+			for (a = [], s = [], f = 0; f < i; f++) if ((o = k[f]) && 16 & o.__u) {
+				for (_ = 0, p = a.length; _ < p;) a[y = _ + p >> 1] < o.__i ? _ = y + 1 : p = y;
+				a[_] = o.__i, s[f] = _ + 1;
+			}
+			for (_ = a.length; f--;) s[f] && (s[f] == _ ? _-- : k[f].__u |= 4);
+		}
+		if (d) for (f = 0; f < v; f++) !(e = r[f]) || 2 & e.__u || (e.__e == u && (u = S(e)), J(e, e));
+		return u;
+	}
+	function A$1(n, t, r, u) {
+		var i, f, o, e;
+		if ("function" == typeof n.type) {
+			if (n.props.__P) return t;
+			if (i = n.__k) for (f = 0; f < i.length; f++) i[f] && (i[f].__ = n, t = A$1(i[f], t, r, !1));
+			return t;
+		}
+		for (t && !t.parentNode && (t = S(n)) && !t.parentNode && (t = null), o = n.__e, e = t; e && 8 == e.nodeType;) e = e.nextSibling;
+		for (o != e && (!u && r.moveBefore && o.parentNode ? r.moveBefore(o, t) : r.insertBefore(o, t || null)), t = o; (t = t && t.nextSibling) && 8 == t.nodeType && !t.data.startsWith("$s"););
+		return t;
+	}
+	function P$1(n, t, r, u) {
+		var i, f = n.key, o = n.type, e = t[r], l = e && !(2 & e.__u);
+		if (null === e && null == f || l && f == e.key && o == e.type) return r;
+		if (u > (l ? 1 : 0)) {
+			for (i = r - 1; i >= 0; i--) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
+			for (i = r + 1; i < t.length; i++) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
+		}
+		return -1;
+	}
+	function T$1(n, t, r) {
+		r ??= "", "-" == t[0] ? n.setProperty(t, r) : n[t] = r;
+	}
+	function N(n, t, r, u, i) {
+		var f, o;
+		if ("style" == t) if ("string" == typeof r) n.style.cssText = r;
+		else {
+			if ("string" == typeof u && (n.style.cssText = u = ""), u) for (t in u) r && t in r || T$1(n.style, t);
+			if (r) for (t in r) u && r[t] == u[t] || T$1(n.style, t, r[t]);
+		}
+		else if ("o" == t[0] && "n" == t[1]) "function" != typeof r && (r = null), "function" != typeof u && (u = null), (n.__e || (n.__e = {}))[t] = r, r && u || (o = a$2[t] || (a$2[t] = V(t)), (n.__a || (n.__a = {}))[t] = c$1, f = t != (t = t.replace(l$1, "$1")), (t = t.slice(2))[0] < "a" && (t = t.toLowerCase()), r ? n.addEventListener(t, o, f) : n.removeEventListener(t, o, f));
+		else {
+			if ("http://www.w3.org/2000/svg" == i) t = t.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
+			else if ("width" != t && "height" != t && "href" != t && "list" != t && "form" != t && "tabIndex" != t && "download" != t && "rowSpan" != t && "colSpan" != t && "role" != t && "popover" != t && t in n) try {
+				n[t] = null == r ? "" : r;
 				return;
+			} catch (n) {}
+			if ("function" == typeof r) return;
+			null == r || !1 === r && "-" != t[4] ? n.removeAttribute(t) : n.setAttribute(t, "popover" == t && 1 == r ? "" : r);
+		}
+	}
+	function V(t) {
+		return function(r) {
+			var u = this.__e;
+			if (u) {
+				if (u = u[t], null == r[e$1]) r[e$1] = c$1++;
+				else if (r[e$1] < this.__a[t]) return;
+				return u(n.event ? n.event(r) : r);
 			}
-			const timer = setTimeout(() => {
-				signal.removeEventListener("abort", onAbort);
-				if (signal.aborted) {
-					reject(new DOMException("Aborted", "AbortError"));
-					return;
-				}
-				resolve();
-			}, ms);
-			const onAbort = () => {
-				clearTimeout(timer);
-				reject(new DOMException("Aborted", "AbortError"));
-			};
-			signal.addEventListener("abort", onAbort, { once: true });
-		});
-	}
-	function parsePositiveInt(raw) {
-		if (raw === null) return null;
-		const trimmed = raw.trim();
-		if (trimmed.length === 0) return null;
-		const value = Number(trimmed);
-		if (!Number.isFinite(value) || value < 0) return null;
-		return Math.trunc(value);
-	}
-	function parsePidFromOnclick(onclick) {
-		const raw = ONCLICK_PID_PATTERN.exec(onclick)?.[1];
-		if (raw === void 0) return null;
-		return parsePositiveInt(raw);
-	}
-	function extractUserIdFromDocument(root) {
-		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR$1);
-		if (!(link instanceof HTMLAnchorElement)) return null;
-		const href = link.getAttribute("href");
-		if (href === null || href.length === 0) return null;
-		try {
-			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("id"));
-		} catch {
-			return null;
-		}
-	}
-	function buildFavoritesPageUrl(userId, pid) {
-		const params = new URLSearchParams();
-		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
-		params.set("s", FAVORITES_SECTION_VIEW);
-		params.set("id", String(userId));
-		params.set("pid", String(pid));
-		return `${SEARCH_PATH}?${params.toString()}`;
-	}
-	function pageIndexFromPid(pid) {
-		return Math.floor(pid / 50) + 1;
-	}
-	function pagesFromLastPid$1(lastPid) {
-		return Math.floor(lastPid / 50) + 1;
-	}
-	function collectFavoriteIdsFromDocument(doc) {
-		const ids = new Set();
-		const postLinks = doc.querySelectorAll(THUMB_POST_LINK_SELECTOR);
-		for (const link of postLinks) {
-			const raw = POST_LINK_ID_PATTERN.exec(link.id)?.[1];
-			if (raw === void 0) continue;
-			const parsed = Number(raw);
-			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
-		}
-		const removeLinks = doc.querySelectorAll(REMOVE_LINK_SELECTOR);
-		for (const link of removeLinks) {
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) continue;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null) continue;
-			const parsed = Number(postId);
-			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
-		}
-		return Array.from(ids);
-	}
-	function resolveLastPid(doc, currentPid) {
-		const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
-		if (lastpage instanceof HTMLAnchorElement) {
-			const onclick = lastpage.getAttribute("onclick");
-			if (onclick === null || onclick.length === 0) return null;
-			return parsePidFromOnclick(onclick);
-		}
-		if (doc.querySelector(NEXT_SELECTOR) !== null) return null;
-		return currentPid;
-	}
-	function isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount) {
-		if (cardCount === 0 && pid <= lastPid) return true;
-		if (pid === 0 && cardCount === 0 && doc.querySelector(PAGINATOR_SELECTOR) === null) return true;
-		return false;
-	}
-	function persistSyncProgress(state) {
-		setSyncState(state);
-	}
-	async function runFavoritesSync(options) {
-		const { onProgress, signal } = options;
-		const userId = extractUserIdFromDocument(document);
-		if (userId === null) {
-			log.warn("favorites sync: user id not found");
-			return {
-				status: "error",
-				message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN
-			};
-		}
-		const existing = getSyncState();
-		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
-		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
-		let pid = unfinished ? existing.nextPid : 0;
-		let lastPid = unfinished ? existing.lastPid : 0;
-		let total = loadFavSet().size;
-		let page = pageIndexFromPid(pid);
-		let pages = pagesFromLastPid$1(lastPid);
-		try {
-			throwIfAborted(signal);
-			while (true) {
-				throwIfAborted(signal);
-				const url = buildFavoritesPageUrl(userId, pid);
-				let response;
-				try {
-					response = await fetch(url, {
-						method: "GET",
-						credentials: FETCH_CREDENTIALS
-					});
-				} catch (error) {
-					if (isAbortError(error)) throw error;
-					log.warn("favorites sync: fetch failed", url, error);
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: error instanceof Error ? error.message : "request failed"
-					};
-				}
-				if (!response.ok) {
-					log.warn("favorites sync: HTTP error", response.status, url);
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: `HTTP ${String(response.status)}`
-					};
-				}
-				const html = await response.text();
-				const doc = new DOMParser().parseFromString(html, "text/html");
-				const cardCount = doc.querySelectorAll(THUMB_SELECTOR$1).length;
-				const resolvedLastPid = resolveLastPid(doc, pid);
-				if (resolvedLastPid === null) {
-					log.warn("favorites sync: unexpected page", {
-						pid,
-						cardCount
-					});
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
-					};
-				}
-				lastPid = resolvedLastPid;
-				page = pageIndexFromPid(pid);
-				pages = pagesFromLastPid$1(lastPid);
-				if (isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount)) {
-					log.warn("favorites sync: unexpected page", {
-						pid,
-						lastPid,
-						cardCount
-					});
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
-					};
-				}
-				addFavs(collectFavoriteIdsFromDocument(doc));
-				total = loadFavSet().size;
-				const nextPid = pid + 50;
-				persistSyncProgress({
-					nextPid,
-					lastPid,
-					startedAt
-				});
-				onProgress({
-					page,
-					pages,
-					total
-				});
-				if (pid >= lastPid) {
-					const finishedAt = new Date().toISOString();
-					persistSyncProgress({
-						nextPid,
-						lastPid,
-						startedAt,
-						finishedAt
-					});
-					log.info("favorites sync: completed", {
-						total,
-						pages
-					});
-					return {
-						status: "completed",
-						total,
-						pages
-					};
-				}
-				throwIfAborted(signal);
-				await delay(FAVORITES_SYNC_PAGE_PAUSE_MS, signal);
-				throwIfAborted(signal);
-				pid = nextPid;
-				page = pageIndexFromPid(pid);
-			}
-		} catch (error) {
-			if (isAbortError(error)) {
-				log.info("favorites sync: aborted", {
-					pid,
-					total
-				});
-				return createAbortResult(total, page, pages);
-			}
-			log.error("favorites sync: unexpected failure", error);
-			persistSyncProgress({
-				nextPid: pid,
-				lastPid,
-				startedAt
-			});
-			return {
-				status: "error",
-				message: error instanceof Error ? error.message : "unexpected error"
-			};
-		}
-	}
-	var SECTION_CLASS = "rdw-favs-sync";
-	var STATUS_CLASS = "rdw-favs-sync-status";
-	var PROGRESS_CLASS = "rdw-favs-sync-progress";
-	var ACTIONS_CLASS = "rdw-favs-sync-actions";
-	var WARNING_CLASS = "rdw-favs-sync-warning";
-	var NOTE_CLASS = "rdw-favs-sync-note";
-	var HEADING = "Favorites sync";
-	var TEXT_SYNC = "Sync favorites";
-	var TEXT_RESUME = "Resume";
-	var TEXT_STOP = "Stop";
-	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
-	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
-	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
-	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
-	var TEXT_PAUSED = (page, pages) => `Paused at page ${String(page)} of ${String(pages)}`;
-	var TEXT_PROGRESS = (p) => `Page ${String(p.page)} of ${String(p.pages)} · ${String(p.total)} ids`;
-	var TEXT_DONE = (total, pages) => `Synced ${String(total)} ids across ${String(pages)} pages`;
-	var TEXT_ABORTED = (page, pages, total) => `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
-	var PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1e3;
-	var FAVORITES_SYNC_SECTION_CSS = `
-.${SECTION_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.${SECTION_CLASS} .${STATUS_CLASS} {
-  margin: 0;
-  color: var(--rdw-fg-label, #333);
-  font-size: 12px;
-}
-
-.${SECTION_CLASS} .${PROGRESS_CLASS} {
-  width: 100%;
-  height: 8px;
-}
-
-.${SECTION_CLASS} .${ACTIONS_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.${SECTION_CLASS} .${WARNING_CLASS},
-.${SECTION_CLASS} .${NOTE_CLASS} {
-  margin: 0;
-  color: var(--rdw-fg-muted, #555);
-  font-size: 12px;
-}
-`.trim();
-	var activeSync = null;
-	function formatSyncDate(iso) {
-		const parsed = Date.parse(iso);
-		if (!Number.isFinite(parsed)) return iso;
-		return new Date(parsed).toLocaleString();
-	}
-	function pageFromPid(pid) {
-		return Math.floor(pid / 50) + 1;
-	}
-	function pagesFromLastPid(lastPid) {
-		return Math.floor(lastPid / 50) + 1;
-	}
-	function isUnfinished(sync) {
-		return sync !== void 0 && sync.finishedAt === void 0;
-	}
-	function buildStatusText() {
-		const count = loadFavSet().size;
-		const sync = getSyncState();
-		const parts = [TEXT_IDLE_COUNT(count)];
-		if (sync !== void 0 && sync.finishedAt === void 0) {
-			const page = pageFromPid(sync.nextPid);
-			const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
-			parts.push(TEXT_PAUSED(page, pages));
-		} else if (sync?.finishedAt !== void 0) parts.push(TEXT_LAST_SYNC(sync.finishedAt));
-		return parts.join(" · ");
-	}
-	function applyIdleUi(refs) {
-		const unfinished = isUnfinished(getSyncState());
-		refs.status.textContent = buildStatusText();
-		refs.progress.removeAttribute("value");
-		refs.progress.removeAttribute("max");
-		refs.error.hidden = true;
-		refs.error.textContent = "";
-		refs.syncBtn.disabled = activeSync !== null;
-		refs.resumeBtn.disabled = activeSync !== null || !unfinished;
-		refs.stopBtn.disabled = activeSync === null;
-		refs.syncBtn.hidden = unfinished;
-		refs.resumeBtn.hidden = !unfinished;
-	}
-	function applyProgressUi(refs, progress) {
-		refs.status.textContent = TEXT_PROGRESS(progress);
-		refs.progress.max = Math.max(progress.pages, 1);
-		refs.progress.value = progress.page;
-		refs.syncBtn.disabled = true;
-		refs.resumeBtn.disabled = true;
-		refs.stopBtn.disabled = false;
-		refs.syncBtn.hidden = true;
-		refs.resumeBtn.hidden = false;
-	}
-	function applyResultUi(refs, result) {
-		activeSync = null;
-		if (result.status === "error") {
-			refs.error.hidden = false;
-			refs.error.textContent = result.message;
-			applyIdleUi(refs);
-			return;
-		}
-		refs.error.hidden = true;
-		refs.error.textContent = "";
-		applyIdleUi(refs);
-		if (result.status === "completed") {
-			refs.status.textContent = TEXT_DONE(result.total, result.pages);
-			refs.progress.max = Math.max(result.pages, 1);
-			refs.progress.value = result.pages;
-			return;
-		}
-		refs.status.textContent = TEXT_ABORTED(result.page, result.pages, result.total);
-		refs.progress.max = Math.max(result.pages, 1);
-		refs.progress.value = result.page;
-	}
-	async function startSync(refs) {
-		if (activeSync !== null) return;
-		const controller = new AbortController();
-		const listeners = new Set();
-		activeSync = {
-			controller,
-			listeners
 		};
-		const onProgress = (progress) => {
-			for (const listener of listeners) listener(progress);
-		};
-		listeners.add((progress) => {
-			applyProgressUi(refs, progress);
+	}
+	function z$1(t, r, u, i, f, o, e, l, c, a) {
+		var s, p, v, d, k, b, m, M, C, j, L, H, q, A, O, P, T, N, V = r.type;
+		if (r.constructor !== h$1) return null;
+		128 & u.__u && (c = 32 & u.__u, s = u.__c.__z) && (r.__u |= c, p = o = [], 8 == s.nodeType ? l = B$1(s, o) : o.push(s), l = o[0] || l), (s = n.__b) && s(r);
+		n: if ("function" == typeof V) {
+			v = e.length;
+			try {
+				if (M = r.props, C = (s = V.prototype) && s.render, j = (s = V.contextType) && i[s.__c], L = s ? j ? j.props.value : s.__ : i, (d = u.__c) ? (r.__c = d, 2 & d.__g && (d.__g |= 1)) : (C ? r.__c = d = new V(M, L) : (r.__c = d = new x(M, L), d.constructor = V, d.render = K), j && j.sub(d), d.state || (d.state = {}), d.__n = i, d.__g |= 8, d.__h = [], d.__k = []), C && (d.__s || (d.__s = d.state), V.getDerivedStateFromProps && (d.__s == d.state && (d.__s = _$1({}, d.__s)), _$1(d.__s, V.getDerivedStateFromProps(M, d.__s)))), k = d.props, b = d.state, d.__v = r, u.__c) {
+					if (M !== k && C && !V.getDerivedStateFromProps && d.componentWillReceiveProps && d.componentWillReceiveProps(M, L), r.__v == u.__v && !(8 & d.__g) || !(4 & d.__g) && d.shouldComponentUpdate && !1 === d.shouldComponentUpdate(M, d.__s, L)) {
+						r.__v != u.__v && (d.props = M, d.state = d.__s, d.__g &= -9), r.__e = u.__e, r.__k = u.__k, r.__k.some(function(n) {
+							n && (n.__ = r);
+						}), y$1.push.apply(d.__h, d.__k), d.__k = [], d.__h.length && e.push(d), l = S(u);
+						break n;
+					}
+					d.componentWillUpdate && d.componentWillUpdate(M, d.__s, L), C && d.componentDidUpdate && d.__h.push(function() {
+						d.componentDidUpdate(k, b, m);
+					});
+				} else C && !V.getDerivedStateFromProps && d.componentWillMount && d.componentWillMount(), C && d.componentDidMount && d.__h.push(d.componentDidMount);
+				d.context = L, d.props = M, d.__P = t, d.__g &= -5, H = n.__r, q = C ? 25 : 0;
+				do
+					d.__g &= -9, H && H(r), s = d.render(d.props, d.state = d.__s, d.context);
+				while (8 & d.__g && ++q < 25);
+				C && (y$1.push.apply(d.__h, d.__k), d.__k = []), d.state = d.__s, d.getChildContext && (i = _$1({}, i, d.getChildContext())), C && u.__c && d.getSnapshotBeforeUpdate && (m = d.getSnapshotBeforeUpdate(k, b)), A = s && s.type === $ && null == s.key ? s.props.children : s, M.__P && (s = l, f = (t = M.__P).namespaceURI, c = o = null, u.props && u.props.__P != t && (u.__k.some(function(n) {
+					n && J(n, n);
+				}), u.__k = null), l = u.__k ? S(u, 0) : null), l = I(t, w$1(A) ? A : [A], r, u, i, f, o, e, l, c, a), M.__P && (r.__e = null, l = s), r.__u &= -161, p && p.some(g$1), d.__h.length && e.push(d), 1 & d.__g && (d.__g &= -4);
+			} catch (t) {
+				if (e.length = v, r.__v = null, c || o) if (t && t.then) {
+					if (r.__u |= 128 | c, o) {
+						for (~(T = o.indexOf(l || void 0)) || (T = o.length); (N = o[T - 1]) && 8 == N.nodeType;) T--;
+						for (; T < o.length; T++) if (N = o[T]) if (o[T] = null, O) {
+							if (N == P) break;
+						} else {
+							if (8 != N.nodeType) break;
+							N.data.startsWith("$s") && (P = B$1(O = N));
+						}
+					}
+					if (!O) {
+						for (; l && 8 == l.nodeType && l.nextSibling;) l = l.nextSibling;
+						O = l;
+					}
+					(s = B$1(O = r.__c.__z || (r.__c.__z = O))) ? (r.__e = O, l = s) : r.__e = l, l = l && l.nextSibling;
+				} else o && o.some(g$1);
+				else r.__e = u.__e;
+				r.__k || (r.__k = u.__k || []), t && t.then || D$1(r), n.__e(t, r, u);
+			}
+		} else l = r.__e = F(u.__e, r, u, i, f, o, e, c, a, t);
+		return (s = n.diffed) && s(r), l;
+	}
+	function B$1(n, t) {
+		if (n && 8 == n.nodeType && n.data.startsWith("$s")) for (var r = 1; n = n.nextSibling;) {
+			if (8 == n.nodeType) {
+				if (n.data.startsWith("$s")) r++;
+				else if (n.data.startsWith("/$s") && !--r) return n;
+			}
+			t && t.push(n);
+		}
+	}
+	function D$1(n) {
+		n && (n.__c && (n.__c.__g |= 4), n.__k && n.__k.some(D$1));
+	}
+	function E$1(t, r, u) {
+		for (var i = 0; i < u.length;) G$1(u[i++], u[i++], u[i++]);
+		n.__c && n.__c(r, t), t.some(function(r) {
+			try {
+				t = r.__h, r.__h = [], t.some(function(n) {
+					n.call(r);
+				});
+			} catch (t) {
+				n.__e(t, r.__v);
+			}
 		});
-		refs.error.hidden = true;
-		refs.error.textContent = "";
-		applyProgressUi(refs, {
-			page: 0,
-			pages: 1,
-			total: loadFavSet().size
-		});
-		try {
-			const result = await runFavoritesSync({
-				onProgress,
-				signal: controller.signal
-			});
-			if (activeSync?.controller === controller) applyResultUi(refs, result);
-		} catch (error) {
-			log.error("favorites sync section: unexpected failure", error);
-			if (activeSync?.controller === controller) {
-				activeSync = null;
-				refs.error.hidden = false;
-				refs.error.textContent = error instanceof Error ? error.message : "unexpected error";
-				applyIdleUi(refs);
+	}
+	function F(t, r, u, i, f, o, e, l, c, a) {
+		var s, h, y, _, k, b, m, M, $ = u.props || p$1, x = r.props, C = r.type;
+		if ("svg" == C ? f = "http://www.w3.org/2000/svg" : "math" == C ? f = "http://www.w3.org/1998/Math/MathML" : f || (f = "http://www.w3.org/1999/xhtml"), o) {
+			for (s = 0; s < o.length; s++) if ((k = o[s]) && (C ? k.localName == C : 3 == k.nodeType)) {
+				t = k, o[s] = null;
+				break;
 			}
 		}
-	}
-	function createFavoritesSyncSection(options = {}) {
-		const includeHeading = options.includeHeading !== false;
-		const section = document.createElement("section");
-		section.className = `${CSS_CLASS.section} ${SECTION_CLASS}`;
-		const status = document.createElement("p");
-		status.className = STATUS_CLASS;
-		const progress = document.createElement("progress");
-		progress.className = PROGRESS_CLASS;
-		const actions = document.createElement("div");
-		actions.className = ACTIONS_CLASS;
-		const syncBtn = document.createElement("button");
-		syncBtn.type = "button";
-		syncBtn.className = CSS_CLASS.primaryButton;
-		syncBtn.textContent = TEXT_SYNC;
-		const resumeBtn = document.createElement("button");
-		resumeBtn.type = "button";
-		resumeBtn.className = CSS_CLASS.secondaryButton;
-		resumeBtn.textContent = TEXT_RESUME;
-		const stopBtn = document.createElement("button");
-		stopBtn.type = "button";
-		stopBtn.className = CSS_CLASS.secondaryButton;
-		stopBtn.textContent = TEXT_STOP;
-		actions.append(syncBtn, resumeBtn, stopBtn);
-		const error = document.createElement("p");
-		error.className = CSS_CLASS.error;
-		error.hidden = true;
-		const warning = document.createElement("p");
-		warning.className = WARNING_CLASS;
-		warning.textContent = TEXT_WARNING;
-		const note = document.createElement("p");
-		note.className = NOTE_CLASS;
-		note.textContent = TEXT_NOTE;
-		const pauseHint = document.createElement("p");
-		pauseHint.className = CSS_CLASS.hint;
-		pauseHint.textContent = `Pause between pages: ${String(PAUSE_SECONDS)} s`;
-		if (includeHeading) {
-			const title = document.createElement("h3");
-			title.className = CSS_CLASS.sectionTitle;
-			title.textContent = HEADING;
-			section.append(title);
+		if (!t) {
+			if (M = a.ownerDocument || document, !C) return M.createTextNode(x);
+			t = M.createElementNS(f, C, x.is ? x : a), l && (n.__m && n.__m(r, o), l = !1), o = null;
 		}
-		section.append(status, progress, actions, error, warning, note, pauseHint);
-		const refs = {
-			status,
-			progress,
-			error,
-			syncBtn,
-			resumeBtn,
-			stopBtn
-		};
-		if (activeSync !== null) {
-			const listener = (p) => {
-				applyProgressUi(refs, p);
-			};
-			activeSync.listeners.add(listener);
-			applyProgressUi(refs, {
-				page: 0,
-				pages: 1,
-				total: loadFavSet().size
-			});
-			refs.stopBtn.disabled = false;
-		} else applyIdleUi(refs);
-		syncBtn.addEventListener("click", () => {
-			startSync(refs);
-		});
-		resumeBtn.addEventListener("click", () => {
-			startSync(refs);
-		});
-		stopBtn.addEventListener("click", () => {
-			activeSync?.controller.abort();
-		});
-		return section;
+		if (C) {
+			if (a = "template" == C && t.content || t, o = "textarea" == C && null != x.defaultValue ? null : o && d$1.call(a.childNodes), !l && o) for ($ = {}, s = 0; s < t.attributes.length; s++) $[(k = t.attributes[s]).name] = k.value;
+			for (s in $) k = $[s], "dangerouslySetInnerHTML" == s ? y = k : "children" == s || s in x || "value" == s && "defaultValue" in x || "checked" == s && "defaultChecked" in x || N(t, s, null, k, f);
+			for (s in x) k = x[s], "children" == s ? _ = k : "dangerouslySetInnerHTML" == s ? h = k : "value" == s ? b = k : "checked" == s ? m = k : l && "function" != typeof k || $[s] === k || N(t, s, k, $[s], f);
+			h ? (l || y && (h.__html == y.__html || h.__html == t.innerHTML) || (t.innerHTML = h.__html), r.__k = []) : (y && (t.textContent = ""), ("foreignObject" == C || "http://www.w3.org/1998/Math/MathML" == f && v$2.test(C)) && (f = "http://www.w3.org/1999/xhtml"), I(a, w$1(_) ? _ : [_], r, u, i, f, o, e, o ? o[0] : u.__k && S(u, 0), l, c), o && o.some(g$1)), l && "textarea" != C || (s = "value", "progress" == C && null == b ? t.removeAttribute(s) : null == b || b === t[s] && ("progress" != C || b) || N(t, s, b, $[s], f), s = "checked", null != m && m != t[s] && N(t, s, m, $[s], f));
+		} else $ === x || l && t.data == x || (t.data = x);
+		return t;
 	}
-	var PANEL_UI_CLASS = {
-		tabs: "rdw-tabs",
-		tab: "rdw-tab",
-		tabPanel: "rdw-tab-panel",
-		footer: "rdw-footer",
-		artistMeta: "rdw-artist-meta",
-		artistFilter: "rdw-artist-filter",
-		artistList: "rdw-artist-list",
-		artistRow: "rdw-artist-row",
-		artistLink: "rdw-artist-link",
-		artistUndo: "rdw-artist-undo",
-		scrollRegion: "rdw-scroll-region",
-		themeDark: "rdw-theme-dark"
-	};
-	var PANEL_CSS = `
-:host {
-  all: initial;
-  font-family: Segoe UI, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.4;
-  --rdw-fg: #1a1a1a;
-  --rdw-fg-muted: #555;
-  --rdw-fg-label: #333;
-  --rdw-fg-section: #444;
-  --rdw-bg: #f7f7f7;
-  --rdw-bg-header: #ececec;
-  --rdw-bg-item: #fff;
-  --rdw-bg-input: #fff;
-  --rdw-border: #ccc;
-  --rdw-border-strong: #333;
-  --rdw-border-control: #666;
-  --rdw-link: #0b57d0;
-  --rdw-focus: #4c8bf5;
-  --rdw-primary: #0b57d0;
-  --rdw-primary-fg: #fff;
-  --rdw-danger: #a12828;
-  --rdw-danger-fg: #fff;
-  --rdw-toggle-bg: #111;
-  --rdw-toggle-fg: #fff;
-  --rdw-shadow: rgba(0, 0, 0, 0.28);
-  color: var(--rdw-fg);
-}
-
-:host(.${PANEL_UI_CLASS.themeDark}) {
-  --rdw-fg: #e8e8e8;
-  --rdw-fg-muted: #a8a8a8;
-  --rdw-fg-label: #c8c8c8;
-  --rdw-fg-section: #b0b0b0;
-  --rdw-bg: #1e1e1e;
-  --rdw-bg-header: #2a2a2a;
-  --rdw-bg-item: #252525;
-  --rdw-bg-input: #2a2a2a;
-  --rdw-border: #444;
-  --rdw-border-strong: #666;
-  --rdw-border-control: #777;
-  --rdw-link: #7eb0ff;
-  --rdw-focus: #4c8bf5;
-  --rdw-primary: #3b7ddd;
-  --rdw-primary-fg: #fff;
-  --rdw-danger: #d9534f;
-  --rdw-danger-fg: #fff;
-  --rdw-toggle-bg: #2a2a2a;
-  --rdw-toggle-fg: #e8e8e8;
-  --rdw-shadow: rgba(0, 0, 0, 0.55);
-}
-
-.${CSS_CLASS.host} {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 2147483646;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.${CSS_CLASS.toggle} {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--rdw-border-strong);
-  border-radius: 999px;
-  background: var(--rdw-toggle-bg);
-  color: var(--rdw-toggle-fg);
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.${CSS_CLASS.toggle}:focus-visible {
-  outline: 2px solid var(--rdw-focus);
-  outline-offset: 2px;
-}
-
-.${CSS_CLASS.panel} {
-  display: none;
+	function G$1(t, r, u, i) {
+		try {
+			"function" == typeof t ? r ? r.__x = t(r) || 1 : i && (i = i.__c || i.__e) && (r = i.__x) && (i.__x = null, "function" == typeof r ? r() : t(null)) : t.current = r;
+		} catch (t) {
+			n.__e(t, u);
+		}
+	}
+	function J(t, r, u) {
+		var i, f, o, e;
+		if (n.unmount && n.unmount(t), !(i = t.ref) || i.current && i.current != t.__e || G$1(i, null, r, t), i = t.__c) {
+			if (i.componentWillUnmount) try {
+				i.componentWillUnmount();
+			} catch (t) {
+				n.__e(t, r);
+			}
+			i.__P = i.__n = null;
+		}
+		if (i = t.__k) for (e = 0; e < i.length; e++) i[e] && J(i[e], r, "function" != typeof t.type || u && !t.props.__P);
+		!u && (i = t.__c) && (i = i.__z) && (f = B$1(i, o = [])) && (i == t.__e && o.some(g$1), g$1(f), g$1(i)), u || g$1(t.__e), t.__e = t.__c = t.__ = null;
+	}
+	function K(n, t, r) {
+		return this.constructor(n, r);
+	}
+	function Q(t, r) {
+		var u, i, f, o;
+		n.__ && n.__(t, r), 9 == r.nodeType && (r = r.documentElement), i = (u = t && 32 & t.__u) ? null : r.__k, r.__k = m$1($, { children: [t] }), f = [], o = [], z$1(r, r.__k, i || p$1, p$1, r.namespaceURI, i ? null : r.firstChild ? d$1.call(r.childNodes) : null, f, i ? i.__e : r.firstChild, u, o), E$1(f, r.__k, o), r.__k.props.children = null;
+	}
+	n = { __e: function(n, t, r, u) {
+		for (var i, o, e; t = t.__;) if ((i = t.__c) && !(1 & i.__g)) {
+			i.__g |= 4;
+			try {
+				if ((e = (o = i.constructor) && o.getDerivedStateFromError) && i.setState(o.getDerivedStateFromError(n)), i.componentDidCatch && (i.componentDidCatch(n, u || {}), e = 1), e && 8 & i.__g) return void (i.__g |= 2);
+			} catch (t) {
+				n = t;
+			}
+		}
+		throw f$2 = 0, n;
+	} }, t$1 = 0, x.prototype.setState = function(n, t) {
+		var r = this.__s;
+		r && r != this.state || (r = this.__s = _$1({}, this.state)), "function" == typeof n && (n = n(_$1({}, r), this.props)), n && (_$1(r, n), this.__v && (t && this.__k.push(t), L(this)));
+	}, x.prototype.forceUpdate = function(n) {
+		this.__v && (this.__g |= 4, n && this.__h.push(n), L(this));
+	}, x.prototype.render = $, u$2 = [], f$2 = 0, o$2 = function(n, t) {
+		return n.__v.__b - t.__v.__b;
+	}, e$1 = Symbol(), l$1 = /(PointerCapture)$|Capture$/i, c$1 = 0, a$2 = {};
+	var f$1 = Symbol.for("pv");
+	var o$1 = 0;
+	Array.isArray;
+	function a$1(t, e, n$1, u, a, i) {
+		e || (e = {});
+		var c, l, p = e;
+		if ("ref" in p && "function" != typeof t) for (l in p = {}, e) "ref" == l ? c = e[l] : p[l] = e[l];
+		var s = {
+			type: t,
+			props: p,
+			key: n$1,
+			ref: c,
+			__k: null,
+			__: null,
+			__b: 0,
+			__e: null,
+			__c: null,
+			constructor: f$1,
+			__v: --o$1,
+			__i: -1,
+			__u: 0
+		};
+		return (a || i) && (s.__source = a, s.__self = i), n.vnode && n.vnode(s), s;
+	}
+	var ICON_BUTTON_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-icon-btn {
   box-sizing: border-box;
-  width: 360px;
-  height: 480px;
-  min-width: 320px;
-  min-height: 240px;
-  max-width: 90vw;
-  max-height: 90vh;
-  resize: both;
-  overflow: hidden;
-  background: var(--rdw-bg);
-  border: 1px solid var(--rdw-border-strong);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px var(--rdw-shadow);
-  color: var(--rdw-fg);
-}
-
-.${CSS_CLASS.panel}.${CSS_CLASS.panelOpen} {
-  display: flex;
-  flex-direction: column;
-}
-
-.${CSS_CLASS.header} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--rdw-border);
-  background: var(--rdw-bg-header);
-  flex-shrink: 0;
-}
-
-.${CSS_CLASS.title} {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--rdw-fg);
-}
-
-.${CSS_CLASS.close} {
-  border: 1px solid var(--rdw-border-control);
-  background: var(--rdw-bg-item);
-  border-radius: 4px;
-  cursor: pointer;
-  min-width: 32px;
-  min-height: 32px;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  color: var(--rdw-fg);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.${PANEL_UI_CLASS.tabs} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  border-bottom: 1px solid var(--rdw-border);
-  background: var(--rdw-bg-header);
-  flex-shrink: 0;
-  padding: 0 4px;
-}
-
-.${PANEL_UI_CLASS.tab} {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--rdw-fg-muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 8px 10px;
-  margin-bottom: -1px;
-}
-
-.${PANEL_UI_CLASS.tab}[aria-selected="true"] {
-  color: var(--rdw-fg);
-  border-bottom-color: var(--rdw-primary);
-}
-
-.${PANEL_UI_CLASS.tab}:focus-visible {
-  outline: 2px solid var(--rdw-focus);
-  outline-offset: -2px;
-}
-
-.${CSS_CLASS.body} {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.${PANEL_UI_CLASS.tabPanel} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.${PANEL_UI_CLASS.tabPanel}[hidden] {
-  display: none !important;
-}
-
-.${PANEL_UI_CLASS.scrollRegion} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
-
-.${CSS_CLASS.section} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.${CSS_CLASS.sectionTitle} {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--rdw-fg-section);
-}
-
-.${CSS_CLASS.list} {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.${CSS_CLASS.listItem} {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: 6px;
-  background: var(--rdw-bg-item);
-}
-
-.${PANEL_UI_CLASS.artistMeta} {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.${PANEL_UI_CLASS.artistFilter} {
-  flex-shrink: 0;
-}
-
-.${PANEL_UI_CLASS.artistList} {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: auto;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.${PANEL_UI_CLASS.artistRow} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 4px;
-}
-
-.${PANEL_UI_CLASS.artistRow}:hover {
-  background: var(--rdw-bg-header);
-}
-
-.${PANEL_UI_CLASS.artistLink} {
-  color: var(--rdw-link);
-  text-decoration: none;
-  font-weight: 600;
-  word-break: break-word;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.${PANEL_UI_CLASS.artistLink}:hover {
-  text-decoration: underline;
-}
-
-.${PANEL_UI_CLASS.artistLink}:focus-visible {
-  outline: 2px solid var(--rdw-focus);
-  outline-offset: 2px;
-}
-
-.${PANEL_UI_CLASS.artistUndo} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  font-size: 12px;
-  color: var(--rdw-fg-muted);
-}
-
-.${CSS_CLASS.itemName} {
-  border: 0;
-  background: transparent;
-  color: var(--rdw-link);
-  text-align: left;
-  cursor: pointer;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  word-break: break-word;
-}
-
-.${CSS_CLASS.itemName}:focus-visible,
-.${CSS_CLASS.iconButton}:focus-visible,
-.${CSS_CLASS.primaryButton}:focus-visible,
-.${CSS_CLASS.secondaryButton}:focus-visible,
-.${CSS_CLASS.dangerButton}:focus-visible,
-.${CSS_CLASS.close}:focus-visible,
-.${CSS_CLASS.input}:focus-visible,
-.${CSS_CLASS.checkbox}:focus-visible {
-  outline: 2px solid var(--rdw-focus);
-  outline-offset: 2px;
-}
-
-.${CSS_CLASS.itemActions},
-.${CSS_CLASS.formActions},
-.${CSS_CLASS.toolbar},
-.${CSS_CLASS.confirmRow} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.${CSS_CLASS.checkboxRow} {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.${CSS_CLASS.checkbox} {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-}
-
-.${CSS_CLASS.iconButton},
-.${CSS_CLASS.secondaryButton} {
-  border: 1px solid var(--rdw-border-control);
-  background: var(--rdw-bg-item);
-  color: var(--rdw-fg);
-  border-radius: 4px;
-  cursor: pointer;
-  min-height: 32px;
-  padding: 4px 8px;
-  font: inherit;
-}
-
-.${CSS_CLASS.iconButton} {
+  display: inline-grid;
+  place-items: center;
   min-width: 28px;
   min-height: 28px;
-  padding: 2px 6px;
-  line-height: 1;
-}
-
-.${CSS_CLASS.primaryButton} {
-  border: 1px solid var(--rdw-primary);
-  background: var(--rdw-primary);
-  color: var(--rdw-primary-fg);
-  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--rdw-radius-m);
+  border: 1px solid var(--rdw-border);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
   cursor: pointer;
-  min-height: 32px;
-  padding: 4px 10px;
-  font: inherit;
 }
-
-.${CSS_CLASS.primaryButton}:disabled {
-  opacity: 0.45;
+.rdw-icon-btn[aria-pressed="true"] {
+  background: var(--rdw-accent-soft);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-accent);
+}
+.rdw-icon-btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
-
-.${CSS_CLASS.dangerButton} {
-  border: 1px solid var(--rdw-danger);
-  background: var(--rdw-danger);
-  color: var(--rdw-danger-fg);
-  border-radius: 4px;
-  cursor: pointer;
-  min-height: 32px;
-  padding: 4px 10px;
-  font: inherit;
-}
-
-.${CSS_CLASS.form},
-.${CSS_CLASS.field} {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.${CSS_CLASS.label} {
-  font-size: 12px;
-  color: var(--rdw-fg-label);
-}
-
-.${CSS_CLASS.input} {
-  border: 1px solid var(--rdw-border-control);
-  border-radius: 4px;
-  min-height: 32px;
-  padding: 4px 8px;
-  font: inherit;
-  background: var(--rdw-bg-input);
-  color: var(--rdw-fg);
-}
-
-.${CSS_CLASS.hint} {
-  margin: 0;
-  color: var(--rdw-fg-muted);
-  font-size: 12px;
-}
-
-.${CSS_CLASS.error} {
-  margin: 0;
-  color: var(--rdw-danger);
-  font-size: 12px;
-}
-
-.${PANEL_UI_CLASS.footer} {
-  flex-shrink: 0;
-  padding: 6px 12px;
-  border-top: 1px solid var(--rdw-border);
-  font-size: 11px;
-  color: var(--rdw-fg-muted);
-}
-
-.${CSS_CLASS.hidden} {
-  display: none !important;
-}
-
-${FAVORITES_SYNC_SECTION_CSS}
-
-${BLACKLIST_SECTION_CSS}
-
-${COLLECTIONS_TAB_CSS}
 `;
-	var CARD_CSS = `
+	function IconButton(props) {
+		const className = [
+			"rdw-icon-btn",
+			"rdw-kit-focusable",
+			props.className
+		].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: ICON_BUTTON_CSS }), a$1("button", {
+			type: "button",
+			className,
+			"aria-label": props.label,
+			"aria-pressed": props.pressed,
+			disabled: props.disabled,
+			onClick: props.onClick,
+			children: props.children
+		})] });
+	}
+	var CARD_CSS$1 = `
 .${CSS_CLASS.cardFav} {
   position: absolute;
   top: 4px;
@@ -4616,6 +3335,103 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 }
 `;
 	var unsubscribeThumbsAdded$3;
+	var DOCUMENT_OVERLAY_CSS = `
+${ICON_BUTTON_CSS}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
+  opacity: 0;
+}
+
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.cardFav}:focus-visible {
+  opacity: 0.65;
+}
+
+.${CSS_CLASS.thumb} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked}:focus-visible,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError}:focus-visible,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending}:focus-visible {
+  opacity: 1;
+}
+
+.${CSS_CLASS.cardFav}.rdw-icon-btn {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.93);
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #1c2228;
+  font-size: 13px;
+}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked}.rdw-icon-btn {
+  background: #ffd75e;
+  border-color: #c79a00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.updatesBar} {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.${CSS_CLASS.updatesBarActions} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.hint} {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12px;
+  color: #1c2228;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton} {
+  margin-left: auto;
+  background: #2f6fed;
+  border: 1px solid #2f6fed;
+  border-radius: 8px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 12px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.secondaryButton} {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #cfd6dd;
+  background: #fff;
+  color: #1c2228;
+  border-radius: 8px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.secondaryButton}:focus-visible,
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+`;
 	function ensureThumbsAddedSubscription() {
 		if (unsubscribeThumbsAdded$3 !== void 0) return;
 		unsubscribeThumbsAdded$3 = onThumbsAdded((root) => {
@@ -4626,7 +3442,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		if (document.getElementById("ruledesk-web-document-style") !== null) return;
 		const style = document.createElement("style");
 		style.id = DOCUMENT_STYLE_ID;
-		style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}`;
+		style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS$1}\n${DOCUMENT_OVERLAY_CSS}`;
 		document.head.append(style);
 	}
 	function findThumbLink$1(thumb, postId) {
@@ -4641,6 +3457,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		if (link === null) return;
 		ensureThumbAnchor(thumb);
 		const button = createFavButton(postId, marked);
+		button.classList.add(KIT_ICON_BUTTON_CLASS);
 		link.after(button);
 	}
 	function applyGridFavVisibilityClass(visible) {
@@ -4667,7 +3484,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	}
 	var FEED_NEW_CLASS$1 = "new";
 	var ID_FILTER_PATTERN = /^id:>(\d+)$/;
-	var TEXT_NEW_ON_PAGE_SUFFIX = " new on this page";
+	var TEXT_NEW_SUFFIX = " new";
 	var TEXT_MARKED_SEEN_PREFIX = "Marked as seen up to #";
 	var TEXT_ONLY_NEW = "Only new";
 	var TEXT_SHOW_ALL = "Show all";
@@ -4728,7 +3545,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	function createToggleLink(tagsParam, seenPostId) {
 		if (tagsHaveIdFilter(tagsParam)) {
 			const link = document.createElement("a");
-			link.className = CSS_CLASS.itemName;
+			link.className = CSS_CLASS.secondaryButton;
 			link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
 			link.textContent = TEXT_SHOW_ALL;
 			return link;
@@ -4736,7 +3553,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		if (seenPostId === 0) return null;
 		const onlyNewQuery = `${stripUpdatesIdFilter(tagsParam)} ${UPDATES_ID_PREFIX}${String(seenPostId)}`;
 		const link = document.createElement("a");
-		link.className = CSS_CLASS.itemName;
+		link.className = CSS_CLASS.secondaryButton;
 		link.href = buildUpdatesSearchUrl(onlyNewQuery);
 		link.textContent = TEXT_ONLY_NEW;
 		return link;
@@ -4757,7 +3574,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		text.className = CSS_CLASS.hint;
 		text.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
 		const showAll = document.createElement("a");
-		showAll.className = CSS_CLASS.itemName;
+		showAll.className = CSS_CLASS.secondaryButton;
 		showAll.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
 		showAll.textContent = TEXT_SHOW_ALL;
 		const wrap = document.createElement("div");
@@ -4800,7 +3617,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 		}
 		const summary = document.createElement("p");
 		summary.className = CSS_CLASS.hint;
-		summary.textContent = `${String(newCount)}${TEXT_NEW_ON_PAGE_SUFFIX}`;
+		summary.textContent = `${String(newCount)}${TEXT_NEW_SUFFIX}`;
 		const markButton = document.createElement("button");
 		markButton.type = "button";
 		markButton.className = CSS_CLASS.primaryButton;
@@ -4860,13 +3677,41 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
 	var CURRENT_PAGE_CLASS = "current-page";
 	var NO_ARTISTS_TITLE = "Follow artists to build your feed";
 	var MISSING_POSTS_WARN = "feed: Posts menu item not found";
+	var NEW_PLAQUE_LEFT_PX = 6;
+	var NEW_PLAQUE_TOP_PX = 6;
+	var NEW_PLAQUE_ACCENT = "#2f6fed";
+	var EVENT_PAGESHOW$1 = "pageshow";
+	var EVENT_CLICK$1 = "click";
+	var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$8);
 	var FEATURE_CSS$7 = `
-body.${featureBodyClass(FEATURE_ID$8)} span.thumb.new img.preview {
-  outline: 2px solid #4c8bf5;
-  outline-offset: 2px;
+body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS} {
+  position: relative;
+}
+body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
+  content: "NEW";
+  position: absolute;
+  z-index: 4;
+  left: ${String(NEW_PLAQUE_LEFT_PX)}px;
+  top: ${String(NEW_PLAQUE_TOP_PX)}px;
+  background: ${NEW_PLAQUE_ACCENT};
+  color: #fff;
+  font: 700 9.5px system-ui, Segoe UI, sans-serif;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 9px;
+  pointer-events: none;
+}
+@supports (anchor-name: --a) {
+  body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
+    position-anchor: ${THUMB_ANCHOR_NAME};
+    left: calc(anchor(left) + ${String(NEW_PLAQUE_LEFT_PX)}px);
+    top: calc(anchor(top) + ${String(NEW_PLAQUE_TOP_PX)}px);
+  }
 }
 `;
 	var unsubscribeThumbsAdded$2;
+	var pageshowBound$1 = false;
+	var boundFeedLink = null;
 	function findPostsMenuItem() {
 		const content = document.getElementById(CONTENT_ID$1);
 		const anchors = document.querySelectorAll("a");
@@ -4888,16 +3733,57 @@ body.${featureBodyClass(FEATURE_ID$8)} span.thumb.new img.preview {
 		}
 		return buildFeedUrl(artistTags, getUpdatesGroupSize());
 	}
+	function findPostsAnchor() {
+		const postsItem = findPostsMenuItem();
+		if (postsItem === null) return null;
+		const postsAnchor = postsItem.querySelector("a");
+		return postsAnchor instanceof HTMLAnchorElement ? postsAnchor : null;
+	}
+	function findFeedLink() {
+		const feedItem = document.getElementById(FEED_MENU_ITEM_ID);
+		if (!(feedItem instanceof HTMLLIElement)) return null;
+		const feedLink = feedItem.querySelector("a");
+		return feedLink instanceof HTMLAnchorElement ? feedLink : null;
+	}
+	function refreshFeedHref() {
+		const feedLink = findFeedLink();
+		if (feedLink === null) return;
+		feedLink.href = resolveFeedHref(findPostsAnchor());
+		if (listArtistTags().length === 0) feedLink.title = NO_ARTISTS_TITLE;
+		else feedLink.removeAttribute("title");
+	}
+	function onPageShow$1() {
+		refreshFeedHref();
+	}
+	function onFeedClick() {
+		refreshFeedHref();
+	}
+	function ensureFeedHrefListeners(feedLink) {
+		if (!pageshowBound$1) {
+			pageshowBound$1 = true;
+			window.addEventListener(EVENT_PAGESHOW$1, onPageShow$1);
+		}
+		if (boundFeedLink === feedLink) return;
+		if (boundFeedLink !== null) boundFeedLink.removeEventListener(EVENT_CLICK$1, onFeedClick);
+		feedLink.addEventListener(EVENT_CLICK$1, onFeedClick);
+		boundFeedLink = feedLink;
+	}
 	function ensureFeedMenuItem() {
 		const existing = document.getElementById(FEED_MENU_ITEM_ID);
-		if (existing instanceof HTMLLIElement) return existing;
+		if (existing instanceof HTMLLIElement) {
+			const existingLink = existing.querySelector("a");
+			if (existingLink instanceof HTMLAnchorElement) {
+				refreshFeedHref();
+				ensureFeedHrefListeners(existingLink);
+			}
+			return existing;
+		}
 		const postsItem = findPostsMenuItem();
 		if (postsItem === null) {
 			log.warn(MISSING_POSTS_WARN);
 			return null;
 		}
-		const postsAnchor = postsItem.querySelector("a");
-		const postsLink = postsAnchor instanceof HTMLAnchorElement ? postsAnchor : null;
+		const postsLink = findPostsAnchor();
 		const feedItem = document.createElement("li");
 		feedItem.id = FEED_MENU_ITEM_ID;
 		const feedLink = document.createElement("a");
@@ -4906,6 +3792,7 @@ body.${featureBodyClass(FEATURE_ID$8)} span.thumb.new img.preview {
 		if (listArtistTags().length === 0) feedLink.title = NO_ARTISTS_TITLE;
 		feedItem.append(feedLink);
 		postsItem.after(feedItem);
+		ensureFeedHrefListeners(feedLink);
 		return feedItem;
 	}
 	function isFeedPage(search, artistTags) {
@@ -4924,12 +3811,15 @@ body.${featureBodyClass(FEATURE_ID$8)} span.thumb.new img.preview {
 	}
 	function markNewThumbs(root, seenPostId) {
 		if (seenPostId === 0) return;
+		ensureDocumentStyles();
 		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
 		for (const thumb of thumbs) {
+			if (!(thumb instanceof HTMLElement)) continue;
 			const postId = extractPostIdFromThumb(thumb);
 			if (postId === null) continue;
 			const numeric = Number(postId);
 			if (!Number.isFinite(numeric) || numeric <= seenPostId) continue;
+			ensureThumbAnchor(thumb);
 			thumb.classList.add("new");
 		}
 	}
@@ -5106,8 +3996,89 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 `,
 		mount: mountSeenDim
 	};
+	var COOKIE_PAIR_SEPARATOR = ";";
+	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
+	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
+	var USER_ENTRY_PREFIX = "user:";
+	var RATING_ENTRY_PREFIX = "rating:";
+	var MS_PER_DAY$1 = 864e5;
+	var DAYS_PER_YEAR = 365;
+	var BLACKLIST_TAG_SEPARATOR = " ";
+	function readCookieValue(name) {
+		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
+		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
+		for (const pair of pairs) {
+			const trimmed = pair.trim();
+			if (!trimmed.startsWith(prefix)) continue;
+			return trimmed.slice(prefix.length);
+		}
+		return null;
+	}
+	function normalizeBlacklistTags(tags) {
+		const seen = new Set();
+		const result = [];
+		for (const raw of tags) {
+			const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
+			if (normalized.length === 0 || seen.has(normalized)) continue;
+			seen.add(normalized);
+			result.push(normalized);
+		}
+		return result;
+	}
+	function encodeBlacklistCookieValue(tags) {
+		if (tags.length === 0) return "";
+		return encodeURIComponent(encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)));
+	}
+	function writeBlacklistCookie(value, expires) {
+		document.cookie = [
+			`${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
+			`expires=${expires.toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function readSiteBlacklist() {
+		const raw = readCookieValue(SITE_BLACKLIST_COOKIE_NAME);
+		if (raw === null || raw.length === 0) return [];
+		let decoded;
+		try {
+			decoded = decodeURIComponent(decodeURI(raw));
+		} catch {
+			return [];
+		}
+		const result = [];
+		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
+			const trimmed = part.trim().toLowerCase();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function writeSiteBlacklist(tags) {
+		const normalized = normalizeBlacklistTags(tags);
+		const expires = new Date(Date.now() + 5 * DAYS_PER_YEAR * MS_PER_DAY$1);
+		writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
+	}
+	function isBlacklisted(tags, score, rating, list) {
+		if (list.length === 0) return false;
+		const tagSet = new Set();
+		for (const tag of tags) {
+			const normalized = tag.trim().toLowerCase();
+			if (normalized.length > 0) tagSet.add(normalized);
+		}
+		const ratingNorm = rating.trim().toLowerCase();
+		for (const entry of list) {
+			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
+			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
+				const value = entry.slice(7);
+				if (value.length > 0 && value === ratingNorm) return true;
+				continue;
+			}
+			if (tagSet.has(entry)) return true;
+		}
+		return false;
+	}
 	var IMAGE_LIST_SELECTOR = SITE_SELECTORS.imageList;
-	var THUMB_SELECTOR = SITE_SELECTORS.thumb;
+	var THUMB_SELECTOR$1 = SITE_SELECTORS.thumb;
 	var PAGINATION_SELECTOR = "div.pagination";
 	var NEXT_LINK_SELECTOR = "a[alt=\"next\"]";
 	function resolveSameOriginUrl(url) {
@@ -5131,7 +4102,7 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 	function collectThumbs(doc) {
 		const imageList = doc.querySelector(IMAGE_LIST_SELECTOR);
 		if (imageList === null) return [];
-		return Array.from(imageList.querySelectorAll(THUMB_SELECTOR));
+		return Array.from(imageList.querySelectorAll(THUMB_SELECTOR$1));
 	}
 	async function fetchNextPage(url) {
 		const requestUrl = resolveSameOriginUrl(url);
@@ -5739,11 +4710,11 @@ body.${BODY_CLASS$1} .${CAPTION_CLASS} {
 	var MENU_MAX_HEIGHT_PX = 280;
 	var MENU_GAP_PX = 4;
 	var BUTTON_SIZE_PX = 28;
-	var BUTTON_OFFSET_PX = 4;
-	var BUTTON_BELOW_FAV_TOP_PX = 36;
+	var BUTTON_OFFSET_PX = 6;
+	var BUTTON_BELOW_FAV_TOP_PX = 38;
 	var FOCUS_OUTLINE$1 = "2px solid #4c8bf5";
 	var FOCUS_OUTLINE_OFFSET$1 = "2px";
-	var EVENT_KEYDOWN$1 = "keydown";
+	var EVENT_KEYDOWN = "keydown";
 	var EVENT_POINTERDOWN = "pointerdown";
 	var KEY_ESCAPE = "Escape";
 	var KEY_ENTER$1 = "Enter";
@@ -5758,28 +4729,30 @@ ${BODY_SELECTOR$1} .${CLASS_ADD} {
   right: calc(anchor(right) + ${String(BUTTON_OFFSET_PX)}px);
   z-index: 5;
   box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
   min-width: ${String(BUTTON_SIZE_PX)}px;
   min-height: ${String(BUTTON_SIZE_PX)}px;
   width: ${String(BUTTON_SIZE_PX)}px;
   height: ${String(BUTTON_SIZE_PX)}px;
   padding: 0;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #333;
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.93);
+  color: #1c2228;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   opacity: 0;
 }
 ${BODY_SELECTOR$1} .${THUMB_CLASS}:hover .${CLASS_ADD},
-${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible,
-${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
   opacity: 0.65;
 }
 ${BODY_SELECTOR$1} .${THUMB_CLASS} .${CLASS_ADD}:hover,
-${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
   opacity: 1;
 }
 ${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
@@ -5787,9 +4760,9 @@ ${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
   outline-offset: ${FOCUS_OUTLINE_OFFSET$1};
 }
 ${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
-  background: #dceeff;
-  border-color: #3a6ea5;
-  color: #1a3a5c;
+  background: #ffd75e;
+  border-color: #c79a00;
+  color: #5c4500;
 }
 ${BODY_SELECTOR$1} .${CLASS_MENU} {
   box-sizing: border-box;
@@ -5938,7 +4911,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
 	function bindGlobalCloseListeners() {
 		if (!escapeBound) {
 			escapeBound = true;
-			document.addEventListener(EVENT_KEYDOWN$1, onDocumentKeydown);
+			document.addEventListener(EVENT_KEYDOWN, onDocumentKeydown);
 		}
 		if (!pointerBound) {
 			pointerBound = true;
@@ -5947,7 +4920,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
 	}
 	function unbindGlobalCloseListeners() {
 		if (escapeBound) {
-			document.removeEventListener(EVENT_KEYDOWN$1, onDocumentKeydown);
+			document.removeEventListener(EVENT_KEYDOWN, onDocumentKeydown);
 			escapeBound = false;
 		}
 		if (pointerBound) {
@@ -6104,7 +5077,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
 		ensureThumbAnchor(thumb);
 		const button = document.createElement("button");
 		button.type = "button";
-		button.className = CLASS_ADD;
+		button.className = `${KIT_ICON_BUTTON_CLASS} ${CLASS_ADD}`;
 		button.textContent = TEXT_ADD_GLYPH;
 		button.setAttribute(ATTR_POST_ID, String(numericId));
 		button.setAttribute("aria-haspopup", "menu");
@@ -6498,41 +5471,1043 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		css: FEATURE_CSS$2,
 		mount: mountPostActions
 	};
+	var t;
+	var r;
+	var u;
+	var i;
+	var o = Object.is;
+	var f = 0;
+	var c = [];
+	var e = [];
+	var a = n;
+	var v$1 = a.__b;
+	var l = a.__r;
+	var m = a.diffed;
+	var h = a.__c;
+	var s = a.unmount;
+	var p = a.__;
+	function y(n, t) {
+		a.__h && a.__h(r, n, f || t), f = 0;
+		var u = r.__H || (r.__H = {
+			__: [],
+			__h: []
+		});
+		return n >= u.__.length && u.__.push({}), u.__[n];
+	}
+	function d(n) {
+		return f = 1, _(G, n);
+	}
+	function _(n, u, i) {
+		var f = y(t++, 2);
+		if (f.t = n, !f.__c && (f.__ = [i ? i(u) : G(void 0, u), function(n) {
+			var t = (f.__N || f.__)[0], r = f.t(t, n);
+			o(t, r) || (f.__N = [r, f.__[1]], f.__c.setState({}));
+		}], f.__c = r, !r.__f)) {
+			r.__f = !0;
+			var c = r.shouldComponentUpdate;
+			r.shouldComponentUpdate = function(n, t, r) {
+				var u = this.__H;
+				if (!u) return !0;
+				var i = !1, f = this.props != n;
+				if (u.__.some(function(n) {
+					n.__N && (i = !0, o(n.__[0], n.__N[0]) || (f = !0));
+				}), c) {
+					var e = c.call(this, n, t, r);
+					return i ? e || f : e;
+				}
+				return !i || f;
+			};
+		}
+		return f.__;
+	}
+	function A(n, u) {
+		var i = y(t++, 3);
+		!a.__s && E(i.__H, u) && (i.__P = !0, i.__ = n, i.u = u, r.__H.__h.push(i));
+	}
+	function T(n) {
+		return f = 5, w(function() {
+			return { current: n };
+		}, []);
+	}
+	function w(n, r) {
+		var u = y(t++, 7);
+		return E(u.__H, r) && (u.__ = n(), u.__H = r), u.__;
+	}
+	function b(n, t) {
+		return f = 8, w(function() {
+			return n;
+		}, t);
+	}
+	function P() {
+		var n = y(t++, 11);
+		if (!n.__) {
+			for (var u = r.__v; !u.__m && u.__;) u = u.__;
+			var i = u.__m || (u.__m = [0, 0]);
+			n.__ = "P" + i[0] + "-" + i[1]++;
+		}
+		return n.__;
+	}
+	function g() {
+		var n;
+		do {
+			for (; n = e.shift();) try {
+				C(n);
+			} catch (t) {
+				a.__e(t, { __: (n = n.__P) && n.__v });
+			}
+			for (; n = c.shift();) {
+				var t = n.__H;
+				if (n.__P && t) try {
+					t.__h.some(C), t.__h.some(D), t.__h = [];
+				} catch (r) {
+					t.__h = [], a.__e(r, n.__v);
+				}
+			}
+		} while (e.length);
+	}
+	a.__b = function(n) {
+		r = null, v$1 && v$1(n);
+	}, a.__ = function(n, t) {
+		n && t.__k && t.__k.__m && (n.__m = t.__k.__m), p && p(n, t);
+	}, a.__r = function(n) {
+		l && l(n), t = 0;
+		var i = (r = n.__c).__H;
+		i && (u == r ? r.__h = [] : (i.__h.some(C), i.__h.some(D), t = 0), i.__h = [], i.__.some(function(n) {
+			n.__N && (n.__ = n.__N), n.u = n.__N = void 0;
+		})), u = r;
+	}, a.diffed = function(n) {
+		m && m(n);
+		var t = n.__c;
+		t && t.__H && (t.__H.__h.length && B(c.push(t)), t.__H.__.some(function(n) {
+			n.u && (n.__H = n.u);
+		})), u = r = null;
+	}, a.__c = function(n, t) {
+		t.some(function(n) {
+			try {
+				n.__h.some(C), n.__h = n.__h.filter(function(n) {
+					return !n.__ || D(n);
+				});
+			} catch (t) {
+				n.__h = [function() {
+					throw t;
+				}];
+			}
+		}), h && h(n, t);
+	}, a.unmount = function(n) {
+		s && s(n);
+		var t, r, u = n.__c;
+		u && u.__H && (u.__H.__.some(function(u) {
+			try {
+				if (u.__P && u.__c) {
+					if (void 0 === r) {
+						for (r = n.__; r && (!r.__c || !r.__c.__P);) r = r.__;
+						r = r && r.__c;
+					}
+					u.__P = r, B(e.push(u));
+				} else C(u);
+			} catch (n) {
+				t = n;
+			}
+		}), u.__H = void 0, t && a.__e(t, u.__v));
+	};
+	var k = "function" == typeof requestAnimationFrame;
+	function z(n) {
+		var t, r = function() {
+			clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
+		}, u = setTimeout(r, 35);
+		k && (t = requestAnimationFrame(r));
+	}
+	function B(n) {
+		1 != n && i == a.requestAnimationFrame || ((i = a.requestAnimationFrame) || z)(g);
+	}
+	function C(n) {
+		var t = r, u = n.__c;
+		"function" == typeof u && (n.__c = void 0, u()), r = t;
+	}
+	function D(n) {
+		var t = r;
+		n.__c = n.__(), r = t;
+	}
+	function E(n, t) {
+		return !n || n.length != t.length || t.some(function(t, r) {
+			return !o(t, n[r]);
+		});
+	}
+	function G(n, t) {
+		return "function" == typeof t ? t(n) : t;
+	}
+	var BUTTON_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 28px;
+  border-radius: var(--rdw-radius-m);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  color: var(--rdw-text);
+  background: var(--rdw-surface);
+}
+.rdw-btn--s {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.rdw-btn--m {
+  min-height: 28px;
+  padding: 0 12px;
+}
+.rdw-btn--primary {
+  background: var(--rdw-accent);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-surface);
+}
+.rdw-btn--secondary {
+  background: var(--rdw-surface);
+  border-color: var(--rdw-border);
+  color: var(--rdw-text);
+}
+.rdw-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rdw-accent);
+}
+.rdw-btn--danger {
+  background: var(--rdw-danger);
+  border-color: var(--rdw-danger);
+  color: var(--rdw-surface);
+}
+.rdw-btn:disabled,
+.rdw-btn[aria-busy="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-btn__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rdw-btn-spin 0.7s linear infinite;
+}
+@keyframes rdw-btn-spin {
+  to { transform: rotate(360deg); }
+}
+`;
+	function Button(props) {
+		const variant = props.variant ?? "secondary";
+		const size = props.size ?? "m";
+		const loading = props.loading === true;
+		const disabled = props.disabled === true || loading;
+		const className = [
+			"rdw-btn",
+			"rdw-kit-focusable",
+			`rdw-btn--${variant}`,
+			`rdw-btn--${size}`,
+			props.className
+		].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: BUTTON_CSS }), a$1("button", {
+			type: props.type ?? "button",
+			className,
+			disabled,
+			"aria-busy": loading ? true : void 0,
+			"aria-label": props["aria-label"],
+			onClick: props.onClick,
+			children: [loading ? a$1("span", {
+				className: "rdw-btn__spinner",
+				"aria-hidden": "true"
+			}) : null, props.children]
+		})] });
+	}
+	var CARD_CSS = `
+.rdw-card {
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-1);
+}
+`;
+	function Card(props) {
+		const Tag = props.as ?? "div";
+		const className = ["rdw-card", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: CARD_CSS }), a$1(Tag, {
+			className,
+			children: props.children
+		})] });
+	}
+	var DEFAULT_SIZE = 16;
+	function baseProps(size, className, title) {
+		const props = {
+			width: size,
+			height: size,
+			viewBox: "0 0 24 24",
+			fill: "none",
+			stroke: "currentColor",
+			"stroke-width": 2,
+			"stroke-linecap": "round",
+			"stroke-linejoin": "round",
+			"aria-hidden": title === void 0 ? true : void 0,
+			role: title === void 0 ? void 0 : "img"
+		};
+		if (className !== void 0) props.className = className;
+		if (title !== void 0) props["aria-label"] = title;
+		return props;
+	}
+	function IconX(props) {
+		return a$1("svg", {
+			...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+			children: [
+				props.title !== void 0 ? a$1("title", { children: props.title }) : null,
+				a$1("line", {
+					x1: "18",
+					y1: "6",
+					x2: "6",
+					y2: "18"
+				}),
+				a$1("line", {
+					x1: "6",
+					y1: "6",
+					x2: "18",
+					y2: "18"
+				})
+			]
+		});
+	}
+	function IconChevronDown(props) {
+		return a$1("svg", {
+			...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+			children: [props.title !== void 0 ? a$1("title", { children: props.title }) : null, a$1("polyline", { points: "6 9 12 15 18 9" })]
+		});
+	}
+	function IconTrash(props) {
+		return a$1("svg", {
+			...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+			children: [
+				props.title !== void 0 ? a$1("title", { children: props.title }) : null,
+				a$1("polyline", { points: "3 6 5 6 21 6" }),
+				a$1("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
+			]
+		});
+	}
+	var CHIP_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 4px 0 8px;
+  border-radius: 12px;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  font-size: 12px;
+  color: var(--rdw-text);
+  max-width: 100%;
+  white-space: nowrap;
+}
+.rdw-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rdw-muted);
+  flex: none;
+}
+.rdw-chip--artist .rdw-chip__dot { background: var(--rdw-tag-artist); }
+.rdw-chip--character .rdw-chip__dot { background: var(--rdw-tag-character); }
+.rdw-chip--copyright .rdw-chip__dot { background: var(--rdw-tag-copyright); }
+.rdw-chip--metadata .rdw-chip__dot { background: var(--rdw-tag-metadata); }
+.rdw-chip--exclude {
+  background: var(--rdw-danger-soft);
+  border-color: var(--rdw-danger);
+  color: var(--rdw-danger);
+  text-decoration: line-through;
+}
+.rdw-chip--group {
+  background: var(--rdw-accent-soft);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-accent);
+  font-weight: 600;
+}
+.rdw-chip__remove {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  margin: -2px -2px -2px 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--rdw-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.rdw-chip__remove:hover {
+  background: var(--rdw-surface);
+}
+`;
+	function Chip(props) {
+		const variant = props.variant ?? "dot";
+		const kind = props.kind ?? "default";
+		const className = [
+			"rdw-chip",
+			`rdw-chip--${variant}`,
+			kind !== "default" ? `rdw-chip--${kind}` : void 0,
+			props.className
+		].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: CHIP_CSS }), a$1("span", {
+			className,
+			children: [
+				variant === "dot" ? a$1("i", {
+					className: "rdw-chip__dot",
+					"aria-hidden": "true"
+				}) : null,
+				a$1("span", { children: props.label }),
+				props.onRemove !== void 0 ? a$1("button", {
+					type: "button",
+					className: "rdw-chip__remove rdw-kit-focusable",
+					"aria-label": `Remove ${props.label}`,
+					onClick: props.onRemove,
+					children: a$1(IconX, { size: 12 })
+				}) : null
+			]
+		})] });
+	}
+	var EMPTY_STATE_CSS = `
+.rdw-empty {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 16px 8px;
+  color: var(--rdw-muted);
+  font: 12.5px/1.4 var(--rdw-font);
+}
+.rdw-empty__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rdw-text);
+}
+.rdw-empty__desc {
+  margin: 0;
+}
+`;
+	function EmptyState(props) {
+		const className = ["rdw-empty", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: EMPTY_STATE_CSS }), a$1("div", {
+			className,
+			role: "status",
+			children: [
+				a$1("p", {
+					className: "rdw-empty__title",
+					children: props.title
+				}),
+				props.description !== void 0 ? a$1("p", {
+					className: "rdw-empty__desc",
+					children: props.description
+				}) : null,
+				props.action
+			]
+		})] });
+	}
+	var NUMBER_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-num {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-num__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-num__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-num__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+	function NumberField(props) {
+		const autoId = P();
+		const inputId = props.id ?? autoId;
+		const className = ["rdw-num", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: NUMBER_FIELD_CSS }), a$1("div", {
+			className,
+			children: [props.label !== void 0 ? a$1("label", {
+				className: "rdw-num__label",
+				htmlFor: inputId,
+				children: props.label
+			}) : null, a$1("input", {
+				id: inputId,
+				className: "rdw-num__input rdw-kit-focusable",
+				type: "number",
+				value: props.value ?? "",
+				min: props.min,
+				max: props.max,
+				step: props.step,
+				placeholder: props.placeholder,
+				disabled: props.disabled,
+				"aria-label": props.label,
+				onInput: (event) => {
+					const raw = event.currentTarget.value;
+					if (raw.trim() === "") {
+						props.onChange(null);
+						return;
+					}
+					const next = Number(raw);
+					props.onChange(Number.isFinite(next) ? next : null);
+				}
+			})]
+		})] });
+	}
+	var PROGRESS_WIDTH_VAR = "--rdw-progress-width";
+	var PROGRESS_BAR_CSS = `
+.rdw-progress {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.rdw-progress__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-progress__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  overflow: hidden;
+}
+.rdw-progress__fill {
+  height: 100%;
+  width: var(${PROGRESS_WIDTH_VAR}, 0%);
+  background: var(--rdw-accent);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.rdw-progress__fill--indeterminate {
+  width: 40%;
+  animation: rdw-progress-indeterminate 1.1s ease-in-out infinite;
+}
+@keyframes rdw-progress-indeterminate {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(280%); }
+}
+`;
+	function clampUnit(value) {
+		if (!Number.isFinite(value)) return 0;
+		if (value < 0) return 0;
+		if (value > 1) return 1;
+		return value;
+	}
+	function ProgressBar(props) {
+		const fillRef = T(null);
+		const indeterminate = props.value === void 0 || props.value === null;
+		const ratio = indeterminate ? 0 : clampUnit(props.value);
+		const className = ["rdw-progress", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		A(() => {
+			const fill = fillRef.current;
+			if (fill === null) return;
+			if (indeterminate) {
+				fill.style.removeProperty(PROGRESS_WIDTH_VAR);
+				return;
+			}
+			fill.style.setProperty(PROGRESS_WIDTH_VAR, `${Math.round(ratio * 100)}%`);
+		}, [indeterminate, ratio]);
+		return a$1($, { children: [a$1("style", { children: PROGRESS_BAR_CSS }), a$1("div", {
+			className,
+			children: [props.label !== void 0 ? a$1("div", {
+				className: "rdw-progress__label",
+				children: props.label
+			}) : null, a$1("div", {
+				className: "rdw-progress__track",
+				role: "progressbar",
+				"aria-label": props.label,
+				"aria-valuemin": 0,
+				"aria-valuemax": 100,
+				"aria-valuenow": indeterminate ? void 0 : Math.round(ratio * 100),
+				children: a$1("div", {
+					ref: fillRef,
+					className: indeterminate ? "rdw-progress__fill rdw-progress__fill--indeterminate" : "rdw-progress__fill"
+				})
+			})]
+		})] });
+	}
+	var SECTION_LABEL_CSS = `
+.rdw-section-label {
+  display: block;
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+  margin: 0 0 4px;
+}
+`;
+	function SectionLabel(props) {
+		const className = ["rdw-section-label", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		if (props.htmlFor !== void 0) return a$1($, { children: [a$1("style", { children: SECTION_LABEL_CSS }), a$1("label", {
+			className,
+			htmlFor: props.htmlFor,
+			children: props.children
+		})] });
+		return a$1($, { children: [a$1("style", { children: SECTION_LABEL_CSS }), a$1("div", {
+			className,
+			children: props.children
+		})] });
+	}
+	var SEGMENTED_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  padding: 2px;
+  gap: 2px;
+}
+.rdw-seg__btn {
+  min-height: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--rdw-radius-s);
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+.rdw-seg__btn[aria-checked="true"] {
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font-weight: 600;
+  box-shadow: var(--rdw-shadow-1);
+}
+`;
+	function Segmented(props) {
+		const className = ["rdw-seg", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: SEGMENTED_CSS }), a$1("div", {
+			className,
+			role: "radiogroup",
+			"aria-label": props.label,
+			children: props.options.map((option) => {
+				const selected = option.value === props.value;
+				return a$1("button", {
+					type: "button",
+					role: "radio",
+					className: "rdw-seg__btn rdw-kit-focusable",
+					"aria-checked": selected,
+					tabIndex: selected ? 0 : -1,
+					onClick: () => {
+						props.onChange(option.value);
+					},
+					onKeyDown: (event) => {
+						if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+						event.preventDefault();
+						const index = props.options.findIndex((item) => item.value === props.value);
+						if (index < 0) return;
+						const delta = event.key === "ArrowRight" ? 1 : -1;
+						const next = props.options[(index + delta + props.options.length) % props.options.length];
+						if (next !== void 0) props.onChange(next.value);
+					},
+					children: option.label
+				}, option.value);
+			})
+		})] });
+	}
+	var SELECT_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-select {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-select__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-select__trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.rdw-select__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-select__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  box-shadow: var(--rdw-shadow-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.rdw-select__option {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--rdw-radius-s);
+  font-size: 12px;
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-select__option[aria-selected="true"],
+.rdw-select__option:hover {
+  background: var(--rdw-surface-2);
+}
+`;
+	function Select(props) {
+		const listId = P();
+		const rootRef = T(null);
+		const [open, setOpen] = d(false);
+		const selected = props.options.find((option) => option.value === props.value) ?? props.options[0];
+		const className = ["rdw-select", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		A(() => {
+			if (!open) return;
+			const onKeyDown = (event) => {
+				if (event.key === "Escape") setOpen(false);
+			};
+			const onPointerDown = (event) => {
+				const root = rootRef.current;
+				if (root === null) return;
+				if (event.target instanceof Node && !root.contains(event.target)) setOpen(false);
+			};
+			document.addEventListener("keydown", onKeyDown);
+			document.addEventListener("mousedown", onPointerDown);
+			return () => {
+				document.removeEventListener("keydown", onKeyDown);
+				document.removeEventListener("mousedown", onPointerDown);
+			};
+		}, [open]);
+		return a$1($, { children: [a$1("style", { children: SELECT_CSS }), a$1("div", {
+			className,
+			ref: rootRef,
+			children: [
+				props.label !== void 0 ? a$1("span", {
+					className: "rdw-select__label",
+					id: `${listId}-label`,
+					children: props.label
+				}) : null,
+				a$1("button", {
+					type: "button",
+					className: "rdw-select__trigger rdw-kit-focusable",
+					"aria-haspopup": "listbox",
+					"aria-expanded": open,
+					"aria-controls": listId,
+					"aria-labelledby": props.label !== void 0 ? `${listId}-label` : void 0,
+					disabled: props.disabled,
+					onClick: () => {
+						setOpen((prev) => !prev);
+					},
+					children: [a$1("span", { children: selected?.label ?? props.value }), a$1(IconChevronDown, { size: 14 })]
+				}),
+				open ? a$1("ul", {
+					className: "rdw-select__list",
+					role: "listbox",
+					id: listId,
+					tabIndex: -1,
+					children: props.options.map((option) => a$1("li", {
+						role: "option",
+						className: "rdw-select__option rdw-kit-focusable",
+						"aria-selected": option.value === props.value,
+						tabIndex: 0,
+						onClick: () => {
+							props.onChange(option.value);
+							setOpen(false);
+						},
+						onKeyDown: (event) => {
+							if (event.key === "Enter" || event.key === " ") {
+								event.preventDefault();
+								props.onChange(option.value);
+								setOpen(false);
+							}
+						},
+						children: option.label
+					}, option.value))
+				}) : null
+			]
+		})] });
+	}
+	var SWITCH_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.rdw-switch {
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 28px;
+  min-width: 36px;
+  min-height: 28px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.rdw-switch__track {
+  display: block;
+  width: 30px;
+  height: 17px;
+  margin: 0 auto;
+  border-radius: 9px;
+  background: var(--rdw-border);
+  position: relative;
+  transition: background 0.15s ease;
+}
+.rdw-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--rdw-surface);
+  transition: left 0.15s ease;
+}
+.rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: var(--rdw-accent);
+}
+.rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  left: 15px;
+}
+.rdw-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-switch__label {
+  font-size: 12.5px;
+  color: var(--rdw-text);
+}
+`;
+	function Switch(props) {
+		const className = ["rdw-switch-row", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: SWITCH_CSS }), a$1("div", {
+			className,
+			children: [a$1("button", {
+				type: "button",
+				id: props.id,
+				className: "rdw-switch rdw-kit-focusable",
+				role: "switch",
+				"aria-checked": props.checked,
+				"aria-label": props.label,
+				disabled: props.disabled,
+				onClick: () => {
+					props.onChange(!props.checked);
+				},
+				children: a$1("span", {
+					className: "rdw-switch__track",
+					children: a$1("span", { className: "rdw-switch__thumb" })
+				})
+			}), props.label !== void 0 ? a$1("span", {
+				className: "rdw-switch__label",
+				children: props.label
+			}) : null]
+		})] });
+	}
+	var TABS_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rdw-border);
+  padding: 0 8px;
+}
+.rdw-tabs__tab {
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.rdw-tabs__tab[aria-selected="true"] {
+  color: var(--rdw-text);
+  font-weight: 600;
+  border-bottom-color: var(--rdw-accent);
+}
+`;
+	function Tabs(props) {
+		const className = ["rdw-tabs", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: TABS_CSS }), a$1("div", {
+			className,
+			role: "tablist",
+			"aria-label": props["aria-label"],
+			children: props.items.map((item) => {
+				const selected = item.id === props.value;
+				return a$1("button", {
+					type: "button",
+					role: "tab",
+					id: `rdw-tab-${item.id}`,
+					className: "rdw-tabs__tab rdw-kit-focusable",
+					"aria-selected": selected,
+					tabIndex: selected ? 0 : -1,
+					onClick: () => {
+						props.onChange(item.id);
+					},
+					onKeyDown: (event) => {
+						if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+						event.preventDefault();
+						const index = props.items.findIndex((entry) => entry.id === props.value);
+						if (index < 0) return;
+						const delta = event.key === "ArrowRight" ? 1 : -1;
+						const next = props.items[(index + delta + props.items.length) % props.items.length];
+						if (next !== void 0) props.onChange(next.id);
+					},
+					children: item.label
+				}, item.id);
+			})
+		})] });
+	}
+	var TEXT_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-field__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-field__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-field__input::placeholder {
+  color: var(--rdw-muted);
+}
+.rdw-field__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+	function TextField(props) {
+		const autoId = P();
+		const inputId = props.id ?? autoId;
+		const className = ["rdw-field", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: TEXT_FIELD_CSS }), a$1("div", {
+			className,
+			children: [props.label !== void 0 ? a$1("label", {
+				className: "rdw-field__label",
+				htmlFor: inputId,
+				children: props.label
+			}) : null, a$1("input", {
+				id: inputId,
+				className: "rdw-field__input rdw-kit-focusable",
+				type: "text",
+				value: props.value,
+				placeholder: props.placeholder,
+				disabled: props.disabled,
+				"aria-label": props["aria-label"] ?? props.label,
+				onInput: (event) => {
+					props.onChange(event.currentTarget.value);
+				}
+			})]
+		})] });
+	}
 	var FEATURE_ID$1 = "search-tools";
 	var FEATURE_LABEL$1 = "Search tools";
 	var FEATURE_PAGES$1 = ["list", "post"];
 	var TAGS_INPUT_SELECTOR = "input[name=\"tags\"]";
 	var TAG_SIDEBAR_SELECTOR$1 = "ul#tag-sidebar";
-	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
+	var MY_FAVORITES_LINK_SELECTOR$1 = "li#my-favorites-container a[href*=\"page=favorites\"]";
 	var ROOT_ID = "rdw-search-tools";
 	var ROOT_CLASS = "rdw-search-tools";
-	var CHIPS_CLASS = "rdw-search-tools-chips";
-	var CHIPS_HIDDEN_CLASS = "rdw-search-tools-chips--hidden";
+	var CARD_CLASS = "rdw-search-tools-card";
+	var CHIPS_CLASS$1 = "rdw-search-tools-chips";
 	var CHIP_CLASS = "rdw-search-tools-chip";
-	var CHIP_EXCLUDE_CLASS = "rdw-search-tools-chip--exclude";
-	var CHIP_LABEL_CLASS = "rdw-search-tools-chip-label";
-	var CHIP_TOGGLE_CLASS = "rdw-search-tools-chip-toggle";
-	var CHIP_REMOVE_CLASS = "rdw-search-tools-chip-remove";
-	var ROW_CLASS = "rdw-search-tools-row";
-	var MEDIA_CLASS = "rdw-search-tools-media";
-	var MEDIA_BTN_CLASS = "rdw-search-tools-media-btn";
-	var MEDIA_PRESSED_CLASS = "rdw-search-tools-media-btn--pressed";
-	var SORT_CLASS = "rdw-search-tools-sort";
-	var SCORE_CLASS = "rdw-search-tools-score";
-	var SCORE_INPUT_CLASS = "rdw-search-tools-score-input";
-	var SOURCE_CLASS = "rdw-search-tools-source";
-	var COLLECTIONS_CLASS = "rdw-search-tools-collections";
-	var SAVE_CLASS = "rdw-search-tools-save";
-	var SAVE_BTN_CLASS = "rdw-search-tools-save-btn";
-	var SAVE_FORM_CLASS = "rdw-search-tools-save-form";
-	var SAVE_NAME_CLASS = "rdw-search-tools-save-name";
-	var SAVE_CONFIRM_CLASS = "rdw-search-tools-save-confirm";
-	var SAVE_CANCEL_CLASS = "rdw-search-tools-save-cancel";
-	var SELECT_CLASS = "rdw-search-tools-select";
-	var LABEL_CLASS = "rdw-search-tools-label";
+	var CHIP_ATTR_START = "data-chip-start";
+	var CHIP_ATTR_END = "data-chip-end";
+	var CHIP_ATTR_TOGGLE = "data-chip-toggle";
+	var CHIP_ATTR_REMOVE = "data-chip-remove";
+	var FIELD_CLASS = "rdw-search-tools-field";
+	var ROW_SORT_CLASS = "rdw-search-tools-row-sort";
+	var FOOT_CLASS = "rdw-search-tools-foot";
+	var HINT_CLASS$1 = "rdw-search-tools-hint";
+	var RESET_CLASS = "rdw-search-tools-reset";
 	var TOKEN_SPLIT_RE = /\s+/;
 	var MULTI_SPACE_RE = /\s+/g;
 	var POLL_INTERVAL_MS = 700;
+	var NAV_DEBOUNCE_MS = 400;
 	var META_SEP = ":";
 	var SCORE_TOKEN_PREFIX = "score:>=";
 	var SCORE_TOKEN_RE = /^score:>=(\d+)$/;
@@ -6540,13 +6515,14 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	var MEDIA_VIDEO = "video";
 	var MEDIA_IMAGES = `-${MEDIA_VIDEO}`;
 	var TAG_TYPE_CLASS_PREFIX = "tag-type-";
+	var SORT_HINT = "Sorts within the current search";
+	var FOOT_HINT = "Applies instantly";
+	var RESET_LABEL$1 = "Reset search";
+	var KEY_ENTER = "Enter";
 	var EVENT_INPUT = "input";
 	var EVENT_CHANGE = "change";
 	var EVENT_CLICK = "click";
-	var EVENT_BLUR = "blur";
-	var EVENT_KEYDOWN = "keydown";
 	var EVENT_AWESOMPLETE_SELECT = "awesomplete-selectcomplete";
-	var KEY_ENTER = "Enter";
 	var WARN_NO_FORM = "search-tools: search form not found; not mounted";
 	var BODY_CLASS = featureBodyClass(FEATURE_ID$1);
 	var TAG_TYPES = [
@@ -6560,11 +6536,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		for (const entry of TAG_TYPES) if (entry === value) return true;
 		return false;
 	}
-	var PAREN_TOKENS = new Set([
-		"(",
-		")",
-		"~"
-	]);
 	var MEDIA_OPTIONS = [
 		{
 			value: "all",
@@ -6606,186 +6577,70 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			token: "sort:random"
 		}
 	];
+	var SOURCE_OPTIONS = [
+		{
+			value: "all",
+			label: "All"
+		},
+		{
+			value: "feed",
+			label: "Feed"
+		},
+		{
+			value: "favorites",
+			label: "Favorites"
+		}
+	];
 	var SORT_TOKEN_TO_MODE = new Map();
 	for (const option of SORT_OPTIONS) if (option.token !== null) SORT_TOKEN_TO_MODE.set(option.token, option.value);
 	var FEATURE_CSS$1 = [
 		`body.${BODY_CLASS} .${ROOT_CLASS} {`,
-		"  display: flex;",
-		"  flex-direction: column;",
-		"  gap: 0.35rem;",
+		"  margin-top: 8px;",
 		"  max-width: 100%;",
-		"  margin: 0.35rem 0;",
 		"  box-sizing: border-box;",
 		"}",
-		`body.${BODY_CLASS} .${CHIPS_CLASS} {`,
+		`body.${BODY_CLASS} .${CARD_CLASS} {`,
+		"  padding: 10px;",
+		"  display: grid;",
+		"  gap: 10px;",
+		"}",
+		`body.${BODY_CLASS} .${CHIPS_CLASS$1} {`,
 		"  display: flex;",
 		"  flex-wrap: wrap;",
-		"  gap: 0.25rem;",
-		"  max-width: 100%;",
-		"}",
-		`body.${BODY_CLASS} .${CHIPS_CLASS}.${CHIPS_HIDDEN_CLASS} {`,
-		"  display: none;",
+		"  gap: 5px;",
 		"}",
 		`body.${BODY_CLASS} .${CHIP_CLASS} {`,
-		"  display: inline-flex;",
-		"  align-items: center;",
-		"  max-width: 100%;",
-		"  gap: 0.15rem;",
-		"  padding: 0.1rem 0.2rem 0.1rem 0.35rem;",
-		"  border: 1px solid #666;",
-		"  border-radius: 2px;",
-		"  background: #f0f0f0;",
-		"  color: inherit;",
-		"  box-sizing: border-box;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS} {`,
-		"  background: #f5e0e0;",
-		"  border-color: #a66;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}--artist {`,
-		"  background: #fde8e8;",
-		"  border-color: #a00;",
-		"  color: #a00;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}--character {`,
-		"  background: #e8fde8;",
-		"  border-color: #0a0;",
-		"  color: #0a0;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}--copyright {`,
-		"  background: #f8e8fd;",
-		"  border-color: #a0a;",
-		"  color: #a0a;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}--general {`,
-		"  background: #e8f0fd;",
-		"  border-color: #07f;",
-		"  color: #07f;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}--metadata {`,
-		"  background: #eee;",
-		"  border-color: #666;",
-		"  color: #444;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS}.${CHIP_CLASS}--artist,`,
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS}.${CHIP_CLASS}--character,`,
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS}.${CHIP_CLASS}--copyright,`,
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS}.${CHIP_CLASS}--general,`,
-		`body.${BODY_CLASS} .${CHIP_CLASS}.${CHIP_EXCLUDE_CLASS}.${CHIP_CLASS}--metadata {`,
-		"  background: #f5e0e0;",
-		"  border-color: #a66;",
-		"  color: inherit;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_LABEL_CLASS},`,
-		`body.${BODY_CLASS} button.${CHIP_TOGGLE_CLASS} {`,
-		"  max-width: 100%;",
-		"  overflow-wrap: anywhere;",
-		"  word-break: break-word;",
-		"  font: inherit;",
-		"  line-height: 1.2;",
-		"  padding: 0;",
-		"  border: none;",
-		"  background: transparent;",
-		"  color: inherit;",
-		"  cursor: pointer;",
-		"  text-align: left;",
-		"}",
-		`body.${BODY_CLASS} .${CHIP_LABEL_CLASS} {`,
 		"  cursor: default;",
 		"}",
-		`body.${BODY_CLASS} button.${CHIP_REMOVE_CLASS} {`,
-		"  flex: 0 0 auto;",
-		"  font: inherit;",
-		"  line-height: 1;",
-		"  padding: 0 0.2rem;",
-		"  border: none;",
-		"  border-radius: 2px;",
-		"  background: transparent;",
-		"  color: inherit;",
+		`body.${BODY_CLASS} .${CHIP_CLASS}[${CHIP_ATTR_TOGGLE}="1"] {`,
 		"  cursor: pointer;",
 		"}",
-		`body.${BODY_CLASS} button.${CHIP_TOGGLE_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} button.${CHIP_REMOVE_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} button.${MEDIA_BTN_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} button.${SAVE_BTN_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} button.${SAVE_CONFIRM_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} button.${SAVE_CANCEL_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} .${SELECT_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} .${SCORE_INPUT_CLASS}:focus-visible,`,
-		`body.${BODY_CLASS} .${SAVE_NAME_CLASS}:focus-visible {`,
-		"  outline: 2px solid #4c8bf5;",
-		"  outline-offset: 2px;",
-		"}",
-		`body.${BODY_CLASS} .${ROW_CLASS} {`,
-		"  display: flex;",
-		"  flex-wrap: wrap;",
-		"  align-items: center;",
-		"  gap: 0.35rem;",
-		"  max-width: 100%;",
-		"}",
-		`body.${BODY_CLASS} .${LABEL_CLASS} {`,
-		"  flex: 0 0 auto;",
-		"  font: inherit;",
-		"}",
-		`body.${BODY_CLASS} .${MEDIA_CLASS} {`,
-		"  display: flex;",
-		"  flex-wrap: wrap;",
-		"  gap: 0.25rem;",
-		"  max-width: 100%;",
-		"}",
-		`body.${BODY_CLASS} button.${MEDIA_BTN_CLASS} {`,
-		"  font: inherit;",
-		"  line-height: 1.2;",
-		"  padding: 0.15rem 0.4rem;",
-		"  border: 1px solid #666;",
-		"  border-radius: 2px;",
-		"  background: #f7f7f7;",
-		"  color: inherit;",
-		"  cursor: pointer;",
-		"}",
-		`body.${BODY_CLASS} button.${MEDIA_BTN_CLASS}.${MEDIA_PRESSED_CLASS} {`,
-		"  background: #dbe7fb;",
-		"  border-color: #4c8bf5;",
-		"}",
-		`body.${BODY_CLASS} .${SELECT_CLASS},`,
-		`body.${BODY_CLASS} .${SCORE_INPUT_CLASS},`,
-		`body.${BODY_CLASS} .${SAVE_NAME_CLASS} {`,
-		"  max-width: 100%;",
+		`body.${BODY_CLASS} .${FIELD_CLASS} {`,
+		"  display: grid;",
+		"  gap: 0;",
 		"  min-width: 0;",
-		"  flex: 1 1 8rem;",
-		"  font: inherit;",
-		"  box-sizing: border-box;",
 		"}",
-		`body.${BODY_CLASS} .${SCORE_INPUT_CLASS} {`,
-		"  flex: 0 1 5rem;",
-		"  width: 5rem;",
+		`body.${BODY_CLASS} .${ROW_SORT_CLASS} {`,
+		"  display: grid;",
+		"  grid-template-columns: 1fr 72px;",
+		"  gap: 8px;",
+		"  align-items: start;",
 		"}",
-		`body.${BODY_CLASS} button.${SAVE_BTN_CLASS},`,
-		`body.${BODY_CLASS} button.${SAVE_CONFIRM_CLASS},`,
-		`body.${BODY_CLASS} button.${SAVE_CANCEL_CLASS} {`,
-		"  font: inherit;",
-		"  line-height: 1.2;",
-		"  padding: 0.15rem 0.4rem;",
-		"  border: 1px solid #666;",
-		"  border-radius: 2px;",
-		"  background: #f7f7f7;",
-		"  color: inherit;",
-		"  cursor: pointer;",
-		"  flex: 0 0 auto;",
-		"}",
-		`body.${BODY_CLASS} button.${SAVE_BTN_CLASS}:disabled {`,
-		"  opacity: 0.5;",
-		"  cursor: default;",
-		"}",
-		`body.${BODY_CLASS} .${SAVE_FORM_CLASS} {`,
+		`body.${BODY_CLASS} .${FOOT_CLASS} {`,
 		"  display: flex;",
-		"  flex-wrap: wrap;",
-		"  gap: 0.25rem;",
-		"  max-width: 100%;",
-		"  flex: 1 1 100%;",
+		"  justify-content: space-between;",
+		"  align-items: center;",
+		"  border-top: 1px solid var(--rdw-border);",
+		"  padding-top: 8px;",
 		"}",
-		`body.${BODY_CLASS} [class^="rdw-search-tools"][hidden] {`,
-		"  display: none !important;",
+		`body.${BODY_CLASS} .${HINT_CLASS$1} {`,
+		"  font-size: 12px;",
+		"  color: var(--rdw-muted);",
+		"}",
+		`body.${BODY_CLASS} .${RESET_CLASS} {`,
+		"  padding: 0;",
+		"  min-height: auto;",
+		"  height: auto;",
 		"}"
 	].join("\n");
 	function findTagsInput() {
@@ -6814,17 +6669,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	function normalizeTagKey(raw) {
 		return raw.trim().toLowerCase().replaceAll(" ", "_");
 	}
-	function isMetaToken(token) {
-		return bareTag(token).includes(META_SEP);
-	}
-	function isParenToken(token) {
-		return PAREN_TOKENS.has(token);
-	}
-	function isToggleableToken(token) {
-		if (isParenToken(token)) return false;
-		if (isMetaToken(token)) return false;
-		return true;
-	}
 	function isMediaToken(token) {
 		return token === MEDIA_VIDEO || token === MEDIA_IMAGES;
 	}
@@ -6837,6 +6681,9 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	function isControlledToken(token) {
 		return isMediaToken(token) || isSortToken(token) || isScoreToken(token);
 	}
+	function isMetaToken(token) {
+		return bareTag(token).includes(META_SEP);
+	}
 	function readMediaMode(tokens) {
 		let hasVideo = false;
 		let hasImages = false;
@@ -6848,8 +6695,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 	}
 	function readSortMode(tokens) {
 		for (const token of tokens) {
-			const bare = bareTag(token);
-			const mode = SORT_TOKEN_TO_MODE.get(bare);
+			const mode = SORT_TOKEN_TO_MODE.get(bareTag(token));
 			if (mode !== void 0) return mode;
 		}
 		return "newest";
@@ -6887,16 +6733,19 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		if (token.startsWith("-") && token.length > 1) return token.slice(1);
 		return `-${token}`;
 	}
-	function removeTokenAt(tokens, index) {
-		if (index < 0 || index >= tokens.length) return [...tokens];
-		return tokens.filter((_, tokenIndex) => tokenIndex !== index);
+	function removeTokenRange(tokens, start, end) {
+		if (start < 0 || end < start || start >= tokens.length) return [...tokens];
+		return tokens.filter((_, index) => index < start || index > end);
 	}
 	function replaceTokenAt(tokens, index, nextToken) {
 		return tokens.map((token, tokenIndex) => tokenIndex === index ? nextToken : token);
 	}
-	function chipTypeClass(tagType) {
-		if (tagType === null) return null;
-		return `${CHIP_CLASS}--${tagType}`;
+	function chipKindFromTagType(tagType) {
+		if (tagType === "artist") return "artist";
+		if (tagType === "character") return "character";
+		if (tagType === "copyright") return "copyright";
+		if (tagType === "metadata") return "metadata";
+		return "default";
 	}
 	function readTagTypeFromClassList(classList) {
 		for (const className of classList) {
@@ -6943,7 +6792,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		return map;
 	}
 	function findFavoritesHref() {
-		const anchor = document.querySelector(MY_FAVORITES_LINK_SELECTOR);
+		const anchor = document.querySelector(MY_FAVORITES_LINK_SELECTOR$1);
 		if (!(anchor instanceof HTMLAnchorElement)) return null;
 		const href = anchor.getAttribute("href");
 		if (href === null || href.trim().length === 0) return null;
@@ -6954,8 +6803,130 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		if (params.get("page") === "favorites") return "favorites";
 		const tagsRaw = params.get("tags") ?? "";
 		const artists = listArtistTags();
-		if (isFullUpdatesQuery(tagsRaw, artists) || isPartialUpdatesQuery(tagsRaw, artists)) return "followed";
+		if (isFullUpdatesQuery(tagsRaw, artists) || isPartialUpdatesQuery(tagsRaw, artists)) return "feed";
 		return "all";
+	}
+	function tryParseParenGroup(tokens, start) {
+		if (tokens[start] !== "(") return null;
+		for (let index = start + 1; index < tokens.length; index += 1) {
+			if (tokens[index] === "(") return null;
+			if (tokens[index] === ")") {
+				const inner = tokens.slice(start + 1, index);
+				if (inner.length === 0) return null;
+				return {
+					end: index,
+					inner
+				};
+			}
+		}
+		return null;
+	}
+	function isOrJoinedMembers(inner) {
+		if (inner.length === 0 || inner.length % 2 === 0) return null;
+		const members = [];
+		for (let index = 0; index < inner.length; index += 1) {
+			const token = inner[index];
+			if (token === void 0) return null;
+			if (index % 2 === 1) {
+				if (token !== "~") return null;
+				continue;
+			}
+			if (token === "(" || token === ")" || token === "~") return null;
+			members.push(token);
+		}
+		return members.length > 0 ? members : null;
+	}
+	function orGroupLabel(members) {
+		const title = members.join(" ");
+		const query = joinTokens([
+			"(",
+			...members.flatMap((member, index) => index === 0 ? [member] : ["~", member]),
+			")"
+		]);
+		const artists = listArtistTags();
+		const count = members.length;
+		if (isFullUpdatesQuery(query, artists)) return {
+			label: `Feed · ${String(count)} artists`,
+			title
+		};
+		return {
+			label: `Any of ${String(count)} tags`,
+			title
+		};
+	}
+	function chipsSignature(chips) {
+		return chips.map((chip) => {
+			if (chip.kind === "tag") return `t:${String(chip.start)}:${chip.token}:${chip.chipKind}`;
+			return `g:${chip.kind}:${String(chip.start)}:${String(chip.end)}:${chip.label}:${chip.title}`;
+		}).join("|");
+	}
+	function buildChipModels(tokens) {
+		const tagTypes = buildSidebarTagTypes();
+		const chips = [];
+		let index = 0;
+		while (index < tokens.length) {
+			const token = tokens[index];
+			if (token === void 0) break;
+			if (isControlledToken(token)) {
+				index += 1;
+				continue;
+			}
+			const group = tryParseParenGroup(tokens, index);
+			if (group !== null) {
+				const groupTokens = tokens.slice(index, group.end + 1);
+				const playlistIds = parsePlaylistQuery(joinTokens(groupTokens));
+				if (playlistIds !== null && playlistIds.length > 0) {
+					chips.push({
+						kind: "id-group",
+						start: index,
+						end: group.end,
+						label: `${String(playlistIds.length)} posts`,
+						title: groupTokens.join(" ")
+					});
+					index = group.end + 1;
+					continue;
+				}
+				const members = isOrJoinedMembers(group.inner);
+				if (members !== null) {
+					const { label, title } = orGroupLabel(members);
+					chips.push({
+						kind: "or-group",
+						start: index,
+						end: group.end,
+						label,
+						title
+					});
+					index = group.end + 1;
+					continue;
+				}
+			}
+			const excluded = token.startsWith("-") && token.length > 1;
+			const tagType = tagTypes.get(normalizeTagKey(bareTag(token))) ?? null;
+			chips.push({
+				kind: "tag",
+				start: index,
+				end: index,
+				token,
+				label: token,
+				excluded,
+				chipKind: chipKindFromTagType(tagType),
+				title: isMetaToken(token) ? token : null
+			});
+			index += 1;
+		}
+		return chips;
+	}
+	function readPanelView(inputValue, search) {
+		const tokens = parseTokens(inputValue);
+		const chips = buildChipModels(tokens);
+		return {
+			chips,
+			chipsSig: chipsSignature(chips),
+			media: readMediaMode(tokens),
+			sort: readSortMode(tokens),
+			minScore: readMinScore(tokens),
+			source: detectSourceMode(search)
+		};
 	}
 	function ensureRoot(form) {
 		const existing = document.getElementById(ROOT_ID);
@@ -6969,319 +6940,327 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		form.after(root);
 		return root;
 	}
-	function setInputTokens(input, tokens) {
+	function setInputValueOnly(input, tokens) {
 		input.value = normalizeSpaces(joinTokens(tokens));
-		input.dispatchEvent(new Event(EVENT_INPUT, { bubbles: true }));
 	}
-	function renderChips(refs) {
-		const tokens = parseTokens(refs.input.value);
-		const tagTypes = buildSidebarTagTypes();
-		refs.chips.replaceChildren();
-		let visibleCount = 0;
-		for (let index = 0; index < tokens.length; index += 1) {
-			const token = tokens[index];
-			if (token === void 0) continue;
-			if (isControlledToken(token)) continue;
-			visibleCount += 1;
-			const chip = document.createElement("span");
-			chip.className = CHIP_CLASS;
-			if (token.startsWith("-") && token.length > 1) chip.classList.add(CHIP_EXCLUDE_CLASS);
-			const typeClass = chipTypeClass(tagTypes.get(normalizeTagKey(bareTag(token))) ?? null);
-			if (typeClass !== null) chip.classList.add(typeClass);
-			const tokenIndex = index;
-			if (isToggleableToken(token)) {
-				const toggle = document.createElement("button");
-				toggle.type = "button";
-				toggle.className = CHIP_TOGGLE_CLASS;
-				toggle.textContent = token;
-				toggle.addEventListener(EVENT_CLICK, () => {
-					const current = parseTokens(refs.input.value);
-					const currentToken = current[tokenIndex];
-					if (currentToken === void 0) return;
-					setInputTokens(refs.input, replaceTokenAt(current, tokenIndex, toggleExclude(currentToken)));
-					syncFromInput(refs);
-				});
-				chip.append(toggle);
-			} else {
-				const label = document.createElement("span");
-				label.className = CHIP_LABEL_CLASS;
-				label.textContent = token;
-				chip.append(label);
+	function SearchToolsPanel(props) {
+		const { input } = props;
+		const [view, setView] = d(() => readPanelView(input.value, window.location.search));
+		const [scoreDraft, setScoreDraft] = d(view.minScore);
+		const scoreFocusedRef = T(false);
+		const navTimerRef = T(null);
+		const lastPolledValueRef = T(input.value);
+		const clearNavTimer = () => {
+			if (navTimerRef.current !== null) {
+				window.clearTimeout(navTimerRef.current);
+				navTimerRef.current = null;
 			}
-			const remove = document.createElement("button");
-			remove.type = "button";
-			remove.className = CHIP_REMOVE_CLASS;
-			remove.textContent = "×";
-			remove.setAttribute("aria-label", `Remove ${token}`);
-			remove.addEventListener(EVENT_CLICK, () => {
-				const current = parseTokens(refs.input.value);
-				setInputTokens(refs.input, removeTokenAt(current, tokenIndex));
-				syncFromInput(refs);
+		};
+		const scheduleNavigate = (tokens) => {
+			clearNavTimer();
+			navTimerRef.current = window.setTimeout(() => {
+				navTimerRef.current = null;
+				navigateTokens(tokens);
+			}, NAV_DEBOUNCE_MS);
+		};
+		const applyViewFromInput = (options) => {
+			const next = readPanelView(input.value, window.location.search);
+			lastPolledValueRef.current = input.value;
+			setView((prev) => {
+				const chipsUnchanged = next.chipsSig === prev.chipsSig;
+				if (chipsUnchanged && next.media === prev.media && next.sort === prev.sort && next.minScore === prev.minScore && next.source === prev.source) return prev;
+				return {
+					...next,
+					chips: chipsUnchanged ? prev.chips : next.chips
+				};
 			});
-			chip.append(remove);
-			refs.chips.append(chip);
-		}
-		refs.chips.classList.toggle(CHIPS_HIDDEN_CLASS, visibleCount === 0);
-	}
-	function syncControls(refs) {
-		const tokens = parseTokens(refs.input.value);
-		const media = readMediaMode(tokens);
-		for (const [value, button] of refs.mediaButtons) {
-			const pressed = value === media;
-			button.setAttribute("aria-pressed", pressed ? "true" : "false");
-			button.classList.toggle(MEDIA_PRESSED_CLASS, pressed);
-		}
-		refs.sortSelect.value = readSortMode(tokens);
-		const minScore = readMinScore(tokens);
-		refs.scoreInput.value = minScore === null ? "" : String(minScore);
-		const artists = listArtistTags();
-		const followedOption = refs.sourceSelect.querySelector("option[value=\"followed\"]");
-		if (followedOption instanceof HTMLOptionElement) followedOption.disabled = artists.length === 0;
-		refs.sourceSelect.value = detectSourceMode(window.location.search);
-		const queryEmpty = normalizeSpaces(refs.input.value).length === 0;
-		refs.saveBtn.disabled = queryEmpty;
-	}
-	function syncFromInput(refs) {
-		renderChips(refs);
-		syncControls(refs);
-	}
-	function applyControlNavigation(refs, media, sort, minScore) {
-		const next = buildTokenSet(parseTokens(refs.input.value), media, sort, minScore);
-		setInputTokens(refs.input, next);
-		syncFromInput(refs);
-		navigateTokens(next);
-	}
-	function appendCollectionOptions(host, collections) {
-		for (const collection of collections) {
-			const option = document.createElement("option");
-			option.value = collection.id;
-			option.textContent = collection.name;
-			host.append(option);
-		}
-	}
-	function rebuildCollectionsSelect(select) {
-		const previous = select.value;
-		select.replaceChildren();
-		const placeholder = document.createElement("option");
-		placeholder.value = "";
-		placeholder.textContent = "Collections";
-		placeholder.disabled = true;
-		placeholder.selected = true;
-		select.append(placeholder);
-		const collections = load().collections;
-		const searches = collections.filter((entry) => !isPlaylist(entry));
-		const playlists = collections.filter((entry) => isPlaylist(entry));
-		if (searches.length > 0) {
-			const group = document.createElement("optgroup");
-			group.label = "Saved searches";
-			appendCollectionOptions(group, searches);
-			select.append(group);
-		}
-		if (playlists.length > 0) {
-			const group = document.createElement("optgroup");
-			group.label = "Playlists";
-			appendCollectionOptions(group, playlists);
-			select.append(group);
-		}
-		if (previous.length > 0 && collections.some((collection) => collection.id === previous)) select.value = previous;
-	}
-	function buildMediaRow(refs) {
-		const row = document.createElement("div");
-		row.className = `${ROW_CLASS} ${MEDIA_CLASS}`;
-		const label = document.createElement("span");
-		label.className = LABEL_CLASS;
-		label.textContent = "Media";
-		row.append(label);
-		for (const option of MEDIA_OPTIONS) {
-			const button = document.createElement("button");
-			button.type = "button";
-			button.className = MEDIA_BTN_CLASS;
-			button.textContent = option.label;
-			button.setAttribute("aria-pressed", "false");
-			button.addEventListener(EVENT_CLICK, () => {
-				const tokens = parseTokens(refs.input.value);
-				applyControlNavigation(refs, option.value, readSortMode(tokens), readMinScore(tokens));
+			if (!scoreFocusedRef.current) setScoreDraft(next.minScore);
+			if (options.navigate) scheduleNavigate(parseTokens(input.value));
+		};
+		const writeTokens = (tokens, options) => {
+			setInputValueOnly(input, tokens);
+			lastPolledValueRef.current = input.value;
+			const next = readPanelView(input.value, window.location.search);
+			setView((prev) => {
+				const chipsUnchanged = next.chipsSig === prev.chipsSig;
+				return {
+					...next,
+					chips: chipsUnchanged ? prev.chips : next.chips
+				};
 			});
-			refs.mediaButtons.set(option.value, button);
-			row.append(button);
-		}
-		return row;
-	}
-	function buildSortScoreRow(refs) {
-		const row = document.createElement("div");
-		row.className = ROW_CLASS;
-		const sortLabel = document.createElement("label");
-		sortLabel.className = LABEL_CLASS;
-		sortLabel.textContent = "Sort";
-		sortLabel.htmlFor = `${ROOT_ID}-sort`;
-		refs.sortSelect.id = `${ROOT_ID}-sort`;
-		refs.sortSelect.className = `${SELECT_CLASS} ${SORT_CLASS}`;
-		for (const option of SORT_OPTIONS) {
-			const el = document.createElement("option");
-			el.value = option.value;
-			el.textContent = option.label;
-			refs.sortSelect.append(el);
-		}
-		refs.sortSelect.addEventListener(EVENT_CHANGE, () => {
-			const tokens = parseTokens(refs.input.value);
-			const sort = refs.sortSelect.value;
-			const mode = SORT_OPTIONS.find((entry) => entry.value === sort)?.value;
-			if (mode === void 0) return;
-			applyControlNavigation(refs, readMediaMode(tokens), mode, readMinScore(tokens));
-		});
-		const scoreLabel = document.createElement("label");
-		scoreLabel.className = LABEL_CLASS;
-		scoreLabel.textContent = "Min score";
-		scoreLabel.htmlFor = `${ROOT_ID}-score`;
-		refs.scoreInput.id = `${ROOT_ID}-score`;
-		refs.scoreInput.className = `${SCORE_INPUT_CLASS} ${SCORE_CLASS}`;
-		refs.scoreInput.type = "number";
-		refs.scoreInput.min = "1";
-		refs.scoreInput.step = "1";
-		refs.scoreInput.inputMode = "numeric";
-		refs.scoreInput.placeholder = "Min";
-		const applyScore = () => {
-			const tokens = parseTokens(refs.input.value);
-			const raw = refs.scoreInput.value.trim();
-			let minScore = null;
-			if (raw.length > 0) {
-				const value = Number(raw);
-				if (Number.isFinite(value) && value > 0) minScore = Math.floor(value);
-			}
-			if (readMinScore(tokens) === minScore) {
-				syncControls(refs);
+			if (!scoreFocusedRef.current) setScoreDraft(next.minScore);
+			if (options.navigate) scheduleNavigate(tokens);
+		};
+		const applyViewRef = T(applyViewFromInput);
+		applyViewRef.current = applyViewFromInput;
+		A(() => {
+			const onSiteInput = () => {
+				applyViewRef.current({ navigate: true });
+			};
+			input.addEventListener(EVENT_INPUT, onSiteInput);
+			input.addEventListener(EVENT_CHANGE, onSiteInput);
+			input.addEventListener(EVENT_AWESOMPLETE_SELECT, onSiteInput);
+			const sidebar = document.querySelector(TAG_SIDEBAR_SELECTOR$1);
+			const onSidebarClick = () => {
+				window.setTimeout(() => {
+					applyViewRef.current({ navigate: false });
+				}, 0);
+			};
+			if (sidebar !== null) sidebar.addEventListener(EVENT_CLICK, onSidebarClick);
+			const pollId = window.setInterval(() => {
+				if (document.hidden) return;
+				if (input.value === lastPolledValueRef.current) return;
+				applyViewRef.current({ navigate: false });
+			}, POLL_INTERVAL_MS);
+			return () => {
+				clearNavTimer();
+				input.removeEventListener(EVENT_INPUT, onSiteInput);
+				input.removeEventListener(EVENT_CHANGE, onSiteInput);
+				input.removeEventListener(EVENT_AWESOMPLETE_SELECT, onSiteInput);
+				if (sidebar !== null) sidebar.removeEventListener(EVENT_CLICK, onSidebarClick);
+				window.clearInterval(pollId);
+			};
+		}, [input]);
+		const onChipsClick = (event) => {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const chipEl = target.closest(`[${CHIP_ATTR_START}]`);
+			if (!(chipEl instanceof HTMLElement)) return;
+			const startRaw = chipEl.getAttribute(CHIP_ATTR_START);
+			const endRaw = chipEl.getAttribute(CHIP_ATTR_END);
+			if (startRaw === null || endRaw === null) return;
+			const start = Number(startRaw);
+			const end = Number(endRaw);
+			if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+			if (target.closest(`[${CHIP_ATTR_REMOVE}]`) !== null) {
+				event.preventDefault();
+				const current = parseTokens(input.value);
+				writeTokens(removeTokenRange(current, start, end), { navigate: true });
 				return;
 			}
-			applyControlNavigation(refs, readMediaMode(tokens), readSortMode(tokens), minScore);
-		};
-		refs.scoreInput.addEventListener(EVENT_BLUR, applyScore);
-		refs.scoreInput.addEventListener(EVENT_KEYDOWN, (event) => {
-			if (event.key !== KEY_ENTER) return;
+			if (chipEl.getAttribute(CHIP_ATTR_TOGGLE) !== "1") return;
 			event.preventDefault();
-			refs.scoreInput.blur();
-		});
-		row.append(sortLabel, refs.sortSelect, scoreLabel, refs.scoreInput);
-		return row;
-	}
-	function buildSourceRow(refs) {
-		const row = document.createElement("div");
-		row.className = ROW_CLASS;
-		const label = document.createElement("label");
-		label.className = LABEL_CLASS;
-		label.textContent = "Source";
-		label.htmlFor = `${ROOT_ID}-source`;
-		refs.sourceSelect.id = `${ROOT_ID}-source`;
-		refs.sourceSelect.className = `${SELECT_CLASS} ${SOURCE_CLASS}`;
-		const allOption = document.createElement("option");
-		allOption.value = "all";
-		allOption.textContent = "All posts";
-		refs.sourceSelect.append(allOption);
-		const followedOption = document.createElement("option");
-		followedOption.value = "followed";
-		followedOption.textContent = "Followed artists";
-		refs.sourceSelect.append(followedOption);
-		if (findFavoritesHref() !== null) {
-			const favoritesOption = document.createElement("option");
-			favoritesOption.value = "favorites";
-			favoritesOption.textContent = "My favorites";
-			refs.sourceSelect.append(favoritesOption);
-		}
-		refs.sourceSelect.addEventListener(EVENT_CHANGE, () => {
-			const value = refs.sourceSelect.value;
-			if (value === "followed") {
+			const current = parseTokens(input.value);
+			const currentToken = current[start];
+			if (currentToken === void 0 || isMetaToken(currentToken)) return;
+			writeTokens(replaceTokenAt(current, start, toggleExclude(currentToken)), { navigate: true });
+		};
+		const onMediaChange = (value) => {
+			const media = MEDIA_OPTIONS.find((entry) => entry.value === value)?.value;
+			if (media === void 0) return;
+			const tokens = parseTokens(input.value);
+			writeTokens(buildTokenSet(tokens, media, readSortMode(tokens), readMinScore(tokens)), { navigate: true });
+		};
+		const onSortChange = (value) => {
+			const sort = SORT_OPTIONS.find((entry) => entry.value === value)?.value;
+			if (sort === void 0) return;
+			const tokens = parseTokens(input.value);
+			writeTokens(buildTokenSet(tokens, readMediaMode(tokens), sort, readMinScore(tokens)), { navigate: true });
+		};
+		const commitScore = () => {
+			const tokens = parseTokens(input.value);
+			let minScore = null;
+			if (scoreDraft !== null && Number.isFinite(scoreDraft) && scoreDraft > 0) minScore = Math.floor(scoreDraft);
+			const current = readMinScore(tokens);
+			if (current === minScore) {
+				setScoreDraft(current);
+				return;
+			}
+			writeTokens(buildTokenSet(tokens, readMediaMode(tokens), readSortMode(tokens), minScore), { navigate: true });
+		};
+		const onSourceChange = (value) => {
+			const source = SOURCE_OPTIONS.find((entry) => entry.value === value)?.value;
+			if (source === void 0) return;
+			if (source === "feed") {
 				const artists = listArtistTags();
 				if (artists.length === 0) {
-					refs.sourceSelect.value = detectSourceMode(window.location.search);
+					setView((prev) => ({
+						...prev,
+						source: detectSourceMode(window.location.search)
+					}));
 					return;
 				}
-				window.location.assign(buildFeedUrl(artists, getUpdatesGroupSize()));
+				clearNavTimer();
+				navTimerRef.current = window.setTimeout(() => {
+					navTimerRef.current = null;
+					window.location.assign(buildFeedUrl(artists, getUpdatesGroupSize()));
+				}, NAV_DEBOUNCE_MS);
+				setView((prev) => ({
+					...prev,
+					source
+				}));
 				return;
 			}
-			if (value === "favorites") {
+			if (source === "favorites") {
 				const href = findFavoritesHref();
 				if (href === null) {
-					refs.sourceSelect.value = detectSourceMode(window.location.search);
+					setView((prev) => ({
+						...prev,
+						source: detectSourceMode(window.location.search)
+					}));
 					return;
 				}
-				window.location.assign(href);
+				clearNavTimer();
+				navTimerRef.current = window.setTimeout(() => {
+					navTimerRef.current = null;
+					window.location.assign(href);
+				}, NAV_DEBOUNCE_MS);
+				setView((prev) => ({
+					...prev,
+					source
+				}));
 				return;
 			}
-			navigateTokens(parseTokens(refs.input.value));
-		});
-		row.append(label, refs.sourceSelect);
-		return row;
-	}
-	function buildCollectionsRow(refs) {
-		const row = document.createElement("div");
-		row.className = `${ROW_CLASS} ${COLLECTIONS_CLASS}`;
-		const label = document.createElement("label");
-		label.className = LABEL_CLASS;
-		label.textContent = "Collections";
-		label.htmlFor = `${ROOT_ID}-collections`;
-		refs.collectionsSelect.id = `${ROOT_ID}-collections`;
-		refs.collectionsSelect.className = SELECT_CLASS;
-		rebuildCollectionsSelect(refs.collectionsSelect);
-		refs.collectionsSelect.addEventListener(EVENT_CHANGE, () => {
-			const id = refs.collectionsSelect.value;
-			if (id.length === 0) return;
-			const collection = load().collections.find((entry) => entry.id === id);
-			refs.collectionsSelect.value = "";
-			if (collection === void 0) return;
-			if (isPlaylist(collection)) {
-				const first = buildPlaylistQueries(collection.postIds ?? [], getPlaylistChunkSize())[0];
-				if (first === void 0) return;
-				window.location.assign(buildUpdatesSearchUrl(first));
-				return;
-			}
-			window.location.assign(buildSearchUrl(collection.tags));
-		});
-		refs.saveBtn.type = "button";
-		refs.saveBtn.className = `${SAVE_BTN_CLASS} ${SAVE_CLASS}`;
-		refs.saveBtn.textContent = "Save search";
-		refs.saveForm.className = SAVE_FORM_CLASS;
-		refs.saveForm.hidden = true;
-		refs.saveName.type = "text";
-		refs.saveName.className = SAVE_NAME_CLASS;
-		refs.saveName.placeholder = "Name";
-		refs.saveName.autocomplete = "off";
-		const confirm = document.createElement("button");
-		confirm.type = "button";
-		confirm.className = SAVE_CONFIRM_CLASS;
-		confirm.textContent = "Save";
-		const cancel = document.createElement("button");
-		cancel.type = "button";
-		cancel.className = SAVE_CANCEL_CLASS;
-		cancel.textContent = "Cancel";
-		const closeSaveForm = () => {
-			refs.saveForm.hidden = true;
-			refs.saveName.value = "";
-			refs.saveBtn.hidden = false;
+			setView((prev) => ({
+				...prev,
+				source: "all"
+			}));
+			scheduleNavigate(parseTokens(input.value));
 		};
-		refs.saveBtn.addEventListener(EVENT_CLICK, () => {
-			if (refs.saveBtn.disabled) return;
-			refs.saveBtn.hidden = true;
-			refs.saveForm.hidden = false;
-			refs.saveName.value = normalizeSpaces(refs.input.value);
-			queueMicrotask(() => {
-				refs.saveName.focus();
-				refs.saveName.select();
-			});
-		});
-		confirm.addEventListener(EVENT_CLICK, () => {
-			const name = refs.saveName.value.trim();
-			const tags = parseTags(refs.input.value);
-			if (name.length === 0 || tags.length === 0) return;
-			addCollection(name, tags);
-			rebuildCollectionsSelect(refs.collectionsSelect);
-			closeSaveForm();
-			syncControls(refs);
-		});
-		cancel.addEventListener(EVENT_CLICK, () => {
-			closeSaveForm();
-		});
-		refs.saveForm.append(refs.saveName, confirm, cancel);
-		row.append(label, refs.collectionsSelect, refs.saveBtn, refs.saveForm);
-		return row;
+		const onReset = () => {
+			clearNavTimer();
+			setInputValueOnly(input, []);
+			lastPolledValueRef.current = input.value;
+			setView(readPanelView("", window.location.search));
+			setScoreDraft(null);
+			window.location.assign(buildSearchUrl([]));
+		};
+		return a$1($, { children: [a$1("style", { children: CHIP_CSS }), a$1(Card, {
+			className: CARD_CLASS,
+			children: [
+				a$1("div", {
+					className: FIELD_CLASS,
+					children: [a$1(SectionLabel, { children: "Tags" }), a$1("div", {
+						className: CHIPS_CLASS$1,
+						onClick: onChipsClick,
+						role: "list",
+						"aria-label": "Search tags",
+						children: view.chips.map((chip) => {
+							if (chip.kind === "tag") {
+								const excluded = chip.excluded;
+								const variantClass = excluded ? "rdw-chip--exclude" : "rdw-chip--dot";
+								const kindClass = !excluded && chip.chipKind !== "default" ? `rdw-chip--${chip.chipKind}` : "";
+								const toggleable = !isMetaToken(chip.token);
+								return a$1("span", {
+									className: [
+										"rdw-chip",
+										variantClass,
+										kindClass,
+										CHIP_CLASS
+									].filter((part) => part.length > 0).join(" "),
+									role: "listitem",
+									title: chip.title ?? void 0,
+									"data-chip-start": String(chip.start),
+									"data-chip-end": String(chip.end),
+									"data-chip-toggle": toggleable ? "1" : "0",
+									children: [
+										!excluded ? a$1("i", {
+											className: "rdw-chip__dot",
+											"aria-hidden": "true"
+										}) : null,
+										a$1("span", { children: chip.label }),
+										a$1("button", {
+											type: "button",
+											className: "rdw-chip__remove rdw-kit-focusable",
+											"aria-label": `Remove ${chip.label}`,
+											"data-chip-remove": "1",
+											children: a$1(IconX, { size: 12 })
+										})
+									]
+								}, `t-${String(chip.start)}-${chip.token}`);
+							}
+							return a$1("span", {
+								className: `rdw-chip rdw-chip--group ${CHIP_CLASS}`,
+								role: "listitem",
+								title: chip.title,
+								"data-chip-start": String(chip.start),
+								"data-chip-end": String(chip.end),
+								"data-chip-toggle": "0",
+								children: [a$1("span", { children: chip.label }), a$1("button", {
+									type: "button",
+									className: "rdw-chip__remove rdw-kit-focusable",
+									"aria-label": `Remove ${chip.label}`,
+									"data-chip-remove": "1",
+									children: a$1(IconX, { size: 12 })
+								})]
+							}, `g-${String(chip.start)}-${String(chip.end)}-${chip.label}`);
+						})
+					})]
+				}),
+				a$1("div", {
+					className: FIELD_CLASS,
+					children: [a$1(SectionLabel, { children: "Media" }), a$1(Segmented, {
+						label: "Media",
+						options: MEDIA_OPTIONS.map((entry) => ({
+							value: entry.value,
+							label: entry.label
+						})),
+						value: view.media,
+						onChange: onMediaChange
+					})]
+				}),
+				a$1("div", {
+					className: ROW_SORT_CLASS,
+					title: SORT_HINT,
+					children: [a$1(Select, {
+						label: "Sort",
+						options: SORT_OPTIONS.map((entry) => ({
+							value: entry.value,
+							label: entry.label
+						})),
+						value: view.sort,
+						onChange: onSortChange
+					}), a$1("div", {
+						onFocusIn: () => {
+							scoreFocusedRef.current = true;
+						},
+						onFocusOut: (event) => {
+							const next = event.relatedTarget;
+							if (next instanceof Node && event.currentTarget.contains(next)) return;
+							scoreFocusedRef.current = false;
+							commitScore();
+						},
+						onKeyDown: (event) => {
+							if (event.key !== KEY_ENTER) return;
+							event.preventDefault();
+							commitScore();
+						},
+						children: a$1(NumberField, {
+							label: "Min score",
+							value: scoreDraft,
+							min: 1,
+							step: 1,
+							onChange: setScoreDraft
+						})
+					})]
+				}),
+				a$1("div", {
+					className: FIELD_CLASS,
+					children: [a$1(SectionLabel, { children: "Source" }), a$1(Segmented, {
+						label: "Source",
+						options: SOURCE_OPTIONS.map((entry) => ({
+							value: entry.value,
+							label: entry.label
+						})),
+						value: view.source,
+						onChange: onSourceChange
+					})]
+				}),
+				a$1("div", {
+					className: FOOT_CLASS,
+					children: [a$1("span", {
+						className: HINT_CLASS$1,
+						children: FOOT_HINT
+					}), a$1(Button, {
+						variant: "ghost",
+						size: "s",
+						className: RESET_CLASS,
+						onClick: onReset,
+						children: RESET_LABEL$1
+					})]
+				})
+			]
+		})] });
 	}
 	function mountSearchTools(_ctx) {
 		const input = findTagsInput();
@@ -7295,42 +7274,7 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			return;
 		}
 		const root = ensureRoot(form);
-		root.replaceChildren();
-		const chips = document.createElement("div");
-		chips.className = CHIPS_CLASS;
-		const refs = {
-			input,
-			chips,
-			mediaButtons: new Map(),
-			sortSelect: document.createElement("select"),
-			scoreInput: document.createElement("input"),
-			sourceSelect: document.createElement("select"),
-			collectionsSelect: document.createElement("select"),
-			saveBtn: document.createElement("button"),
-			saveForm: document.createElement("div"),
-			saveName: document.createElement("input")
-		};
-		root.append(chips, buildMediaRow(refs), buildSortScoreRow(refs), buildSourceRow(refs), buildCollectionsRow(refs));
-		let lastValue = input.value;
-		syncFromInput(refs);
-		const refresh = () => {
-			lastValue = input.value;
-			syncFromInput(refs);
-		};
-		input.addEventListener(EVENT_INPUT, refresh);
-		input.addEventListener(EVENT_CHANGE, refresh);
-		input.addEventListener(EVENT_AWESOMPLETE_SELECT, refresh);
-		const sidebar = document.querySelector(TAG_SIDEBAR_SELECTOR$1);
-		if (sidebar !== null) sidebar.addEventListener(EVENT_CLICK, () => {
-			window.setTimeout(() => {
-				refresh();
-			}, 0);
-		});
-		window.setInterval(() => {
-			if (document.hidden) return;
-			if (input.value === lastValue) return;
-			refresh();
-		}, POLL_INTERVAL_MS);
+		Q(a$1(SearchToolsPanel, { input }), root);
 	}
 	var searchToolsFeature = {
 		id: FEATURE_ID$1,
@@ -7591,871 +7535,6 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			}
 		}
 	}
-	var removeClickBound = false;
-	function collectFavoritePostIds(root) {
-		const ids = [];
-		const seen = new Set();
-		const links = root.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
-		for (const link of links) {
-			if (!(link instanceof HTMLAnchorElement)) continue;
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) continue;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null || seen.has(postId)) continue;
-			seen.add(postId);
-			ids.push(postId);
-		}
-		return ids;
-	}
-	function bindRemoveClickCapture() {
-		if (removeClickBound) return;
-		removeClickBound = true;
-		document.addEventListener("click", (event) => {
-			const target = event.target;
-			if (!(target instanceof Element)) return;
-			const link = target.closest("a");
-			if (!(link instanceof HTMLAnchorElement)) return;
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) return;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null) return;
-			removeFav(postId);
-		}, true);
-	}
-	function syncFavoritesPage(root = document, search = window.location.search) {
-		if (detectPageKind(search) !== "favorites") return;
-		const ids = collectFavoritePostIds(root);
-		const numericIds = [];
-		for (const postId of ids) {
-			const parsed = Number(postId);
-			if (Number.isFinite(parsed)) numericIds.push(Math.trunc(parsed));
-		}
-		addFavs(numericIds);
-		bindRemoveClickCapture();
-	}
-	function extractArtistTagFromLi(li) {
-		const links = li.querySelectorAll("a[href]");
-		for (const node of links) {
-			if (!(node instanceof HTMLAnchorElement)) continue;
-			if (node.hasAttribute("onclick")) continue;
-			const href = node.getAttribute("href");
-			if (href === null || href.length === 0) continue;
-			let url;
-			try {
-				url = new URL(href, SITE_ORIGIN);
-			} catch {
-				continue;
-			}
-			if (url.searchParams.get("page") !== "post") continue;
-			if (url.searchParams.get("s") !== "list") continue;
-			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
-			if (tags === null) continue;
-			return normalizeArtistTag(tags);
-		}
-		return null;
-	}
-	function applyFollowState(button, following) {
-		button.setAttribute("aria-pressed", following ? "true" : "false");
-		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
-		const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
-		const tag = button.dataset.rdwArtistTag ?? "";
-		button.setAttribute("aria-label", `${label}: ${tag}`);
-		button.textContent = label;
-	}
-	function attachFollowButton(li, tag) {
-		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = CSS_CLASS.artistFollow;
-		button.dataset.rdwArtistTag = tag;
-		applyFollowState(button, isFollowingArtist(tag));
-		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			const following = button.getAttribute("aria-pressed") === "true";
-			try {
-				if (following) {
-					removeArtist(tag);
-					applyFollowState(button, false);
-				} else {
-					addArtist(tag);
-					applyFollowState(button, true);
-				}
-			} catch {
-				applyFollowState(button, isFollowingArtist(tag));
-			}
-		});
-		li.append(button);
-	}
-	function mountArtistSidebar(root = document, search = window.location.search) {
-		const kind = detectPageKind(search);
-		if (kind !== "list" && kind !== "post") return;
-		ensureDocumentStyles();
-		const sidebar = root.querySelector(SITE_SELECTORS.tagSidebar);
-		if (sidebar === null) return;
-		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
-		for (const row of rows) {
-			if (!(row instanceof HTMLElement)) continue;
-			const tag = extractArtistTagFromLi(row);
-			if (tag === null) continue;
-			attachFollowButton(row, tag);
-		}
-	}
-	var MS_PER_DAY = 864e5;
-	var COOKIE_PAIR_SEPARATOR = ";";
-	var COOKIE_NAME_VALUE_SEPARATOR = "=";
-	var STYLESHEET_REL = "stylesheet";
-	var LIGHT_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_LIGHT}`;
-	var DARK_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_DARK}`;
-	function readCookieValue(name) {
-		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
-		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR}`;
-		for (const pair of pairs) {
-			const trimmed = pair.trim();
-			if (!trimmed.startsWith(prefix)) continue;
-			return trimmed.slice(prefix.length);
-		}
-		return null;
-	}
-	function writeThemeCookie(value, expires) {
-		document.cookie = [
-			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}${value}`,
-			`expires=${expires.toUTCString()}`,
-			`path=/`
-		].join("; ");
-	}
-	function deleteThemeCookie() {
-		document.cookie = [
-			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}`,
-			`expires=${new Date(0).toUTCString()}`,
-			`path=/`
-		].join("; ");
-	}
-	function isSiteDesktopStylesheetPath(pathname) {
-		return pathname.endsWith(LIGHT_STYLESHEET_PATH) || pathname.endsWith(DARK_STYLESHEET_PATH);
-	}
-	function stylesheetFilenameForTheme(theme) {
-		return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
-	}
-	function replaceStylesheetFilename(href, filename) {
-		const url = new URL(href, window.location.href);
-		const segments = url.pathname.split("/");
-		segments[segments.length - 1] = filename;
-		url.pathname = segments.join("/");
-		return url.href;
-	}
-	function findSiteDesktopStylesheetLink() {
-		const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
-		for (const link of links) {
-			const href = link.getAttribute("href");
-			if (href === null || href.length === 0) continue;
-			let pathname;
-			try {
-				pathname = new URL(href, window.location.href).pathname;
-			} catch {
-				continue;
-			}
-			if (isSiteDesktopStylesheetPath(pathname)) return link;
-		}
-		return null;
-	}
-	function applySiteStylesheet(theme) {
-		const link = findSiteDesktopStylesheetLink();
-		if (link === null) {
-			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-			return;
-		}
-		const href = link.getAttribute("href");
-		if (href === null || href.length === 0) {
-			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-			return;
-		}
-		link.setAttribute("href", replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)));
-	}
-	function getSiteTheme() {
-		if (readCookieValue("theme") === "dark") return "dark";
-		return "light";
-	}
-	function setSiteTheme(theme) {
-		if (theme === "dark") writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, new Date(Date.now() + 365 * MS_PER_DAY));
-		else deleteThemeCookie();
-		applySiteStylesheet(theme);
-	}
-	var TWEAKS_CHECKBOX_ID = "rdw-tweaks-enabled";
-	var SITE_DARK_THEME_CHECKBOX_ID = "rdw-site-dark-theme";
-	var GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
-	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
-	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
-	var UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
-	var PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
-	var ARTIST_FILTER_ID = "rdw-artist-filter";
-	var PANEL_FEATURE_STATE_ID = "panel";
-	var PANEL_TABS = [
-		"collections",
-		"artists",
-		"favorites",
-		"settings"
-	];
-	var PANEL_TAB_LABELS = {
-		collections: "Collections",
-		artists: "Artists",
-		favorites: "Favorites",
-		settings: "Settings"
-	};
-	var ARTISTS_FILTER_THRESHOLD = 12;
-	var UNFOLLOW_UNDO_MS = 5e3;
-	var SIZE_PERSIST_MS = 300;
-	var PANEL_MIN_WIDTH_PX = 320;
-	var PANEL_MIN_HEIGHT_PX = 240;
-	var PANEL_DEFAULT_WIDTH_PX = 360;
-	var PANEL_DEFAULT_HEIGHT_PX = 480;
-	var ARTISTS_EMPTY_HINT = "Follow artists with the Follow button next to their name in the tag list.";
-	var ARTIST_FILTER_LABEL = "Filter artists";
-	var UNFOLLOW_UNDO_LABEL = "Undo";
-	var UNFOLLOWED_PREFIX = "Unfollowed ";
-	function isPanelTab(value) {
-		return typeof value === "string" && PANEL_TABS.some((tab) => tab === value);
-	}
-	function isUnknownRecord(value) {
-		return value !== null && typeof value === "object";
-	}
-	function clampSize(value, min) {
-		if (!Number.isFinite(value)) return min;
-		return Math.max(min, Math.floor(value));
-	}
-	function readPersistedPanelState() {
-		const raw = getFeatureState(PANEL_FEATURE_STATE_ID);
-		let tab = "collections";
-		let width = PANEL_DEFAULT_WIDTH_PX;
-		let height = PANEL_DEFAULT_HEIGHT_PX;
-		if (isUnknownRecord(raw)) {
-			if (isPanelTab(raw["tab"])) tab = raw["tab"];
-			const rawWidth = raw["width"];
-			const rawHeight = raw["height"];
-			if (typeof rawWidth === "number") width = clampSize(rawWidth, PANEL_MIN_WIDTH_PX);
-			if (typeof rawHeight === "number") height = clampSize(rawHeight, PANEL_MIN_HEIGHT_PX);
-		}
-		return {
-			tab,
-			width,
-			height
-		};
-	}
-	function writePersistedPanelState(next) {
-		setFeatureState(PANEL_FEATURE_STATE_ID, {
-			tab: next.tab,
-			width: next.width,
-			height: next.height
-		});
-	}
-	function buildSizeCssRule(width, height) {
-		return `.${CSS_CLASS.panel}{width:${String(width)}px;height:${String(height)}px;}`;
-	}
-	function displayArtistName(tag) {
-		return tag.replaceAll("_", " ");
-	}
-	function compareArtistTags(a, b) {
-		return a.localeCompare(b, void 0, { sensitivity: "base" });
-	}
-	function buildHeader(controller) {
-		const header = document.createElement("div");
-		header.className = CSS_CLASS.header;
-		const title = document.createElement("h2");
-		title.className = CSS_CLASS.title;
-		title.textContent = UI_TEXT.panelTitle;
-		const close = document.createElement("button");
-		close.type = "button";
-		close.className = CSS_CLASS.close;
-		close.textContent = "×";
-		close.setAttribute("aria-label", UI_TEXT.toggleClose);
-		close.addEventListener("click", () => {
-			controller.close();
-		});
-		header.append(title, close);
-		return header;
-	}
-	function buildTabList(controller) {
-		const tablist = document.createElement("div");
-		tablist.className = PANEL_UI_CLASS.tabs;
-		tablist.setAttribute("role", "tablist");
-		tablist.setAttribute("aria-label", UI_TEXT.panelTitle);
-		const active = controller.getActiveTab();
-		for (const tab of PANEL_TABS) {
-			const button = document.createElement("button");
-			button.type = "button";
-			button.className = PANEL_UI_CLASS.tab;
-			button.id = `rdw-tab-${tab}`;
-			button.setAttribute("role", "tab");
-			button.setAttribute("aria-controls", `rdw-tabpanel-${tab}`);
-			button.setAttribute("aria-selected", tab === active ? "true" : "false");
-			button.tabIndex = tab === active ? 0 : -1;
-			button.textContent = PANEL_TAB_LABELS[tab];
-			button.addEventListener("click", () => {
-				if (controller.getActiveTab() === tab) return;
-				controller.setActiveTab(tab);
-				controller.render();
-				controller.focusTab(tab);
-			});
-			tablist.append(button);
-		}
-		tablist.addEventListener("keydown", (event) => {
-			if (!(event instanceof KeyboardEvent)) return;
-			if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-			event.preventDefault();
-			const currentIndex = PANEL_TABS.indexOf(controller.getActiveTab());
-			if (currentIndex < 0) return;
-			const nextTab = PANEL_TABS[(currentIndex + (event.key === "ArrowRight" ? 1 : -1) + PANEL_TABS.length) % PANEL_TABS.length];
-			if (nextTab === void 0) return;
-			controller.setActiveTab(nextTab);
-			controller.render();
-			controller.focusTab(nextTab);
-		});
-		return tablist;
-	}
-	function buildFeatureSettingsRows() {
-		const rows = [];
-		for (const feature of FEATURES) {
-			if (feature.choice !== void 0) {
-				const choiceField = document.createElement("div");
-				choiceField.className = CSS_CLASS.field;
-				const choiceLabel = document.createElement("label");
-				choiceLabel.className = CSS_CLASS.label;
-				choiceLabel.htmlFor = `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`;
-				choiceLabel.textContent = feature.label;
-				const select = document.createElement("select");
-				select.id = `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`;
-				select.className = CSS_CLASS.input;
-				const selected = getFeatureChoice(feature.id);
-				for (const option of feature.choice.options) {
-					const optionEl = document.createElement("option");
-					optionEl.value = option.value;
-					optionEl.textContent = option.label;
-					if (option.value === selected) optionEl.selected = true;
-					select.append(optionEl);
-				}
-				select.addEventListener("change", () => {
-					setFeatureChoiceValue(feature.id, select.value);
-					if (feature.cssOnly === true) {
-						applyCssOnlyFeatureChoice(feature.id, select.value);
-						return;
-					}
-					window.location.reload();
-				});
-				choiceField.append(choiceLabel, select);
-				rows.push(choiceField);
-				continue;
-			}
-			const row = document.createElement("div");
-			row.className = CSS_CLASS.checkboxRow;
-			const checkbox = document.createElement("input");
-			checkbox.type = "checkbox";
-			checkbox.id = `${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`;
-			checkbox.className = CSS_CLASS.checkbox;
-			checkbox.checked = isFeatureEnabled(feature.id);
-			checkbox.addEventListener("change", () => {
-				setFeatureEnabled(feature.id, checkbox.checked);
-				if (feature.cssOnly === true) {
-					applyCssOnlyFeatureEnabled(feature.id, checkbox.checked);
-					return;
-				}
-				window.location.reload();
-			});
-			const label = document.createElement("label");
-			label.className = CSS_CLASS.label;
-			label.htmlFor = checkbox.id;
-			label.textContent = feature.label;
-			row.append(checkbox, label);
-			rows.push(row);
-		}
-		return rows;
-	}
-	function buildSettingsTab(controller, onThemeChange) {
-		const scroll = document.createElement("div");
-		scroll.className = PANEL_UI_CLASS.scrollRegion;
-		const section = document.createElement("section");
-		section.className = CSS_CLASS.section;
-		const tweaksRow = document.createElement("div");
-		tweaksRow.className = CSS_CLASS.checkboxRow;
-		const tweaksCheckbox = document.createElement("input");
-		tweaksCheckbox.type = "checkbox";
-		tweaksCheckbox.id = TWEAKS_CHECKBOX_ID;
-		tweaksCheckbox.className = CSS_CLASS.checkbox;
-		tweaksCheckbox.checked = getTweaksEnabled();
-		tweaksCheckbox.addEventListener("change", () => {
-			setTweaksEnabled(tweaksCheckbox.checked);
-			window.location.reload();
-		});
-		const tweaksLabel = document.createElement("label");
-		tweaksLabel.className = CSS_CLASS.label;
-		tweaksLabel.htmlFor = tweaksCheckbox.id;
-		tweaksLabel.textContent = UI_TEXT.enablePageTweaksLabel;
-		tweaksRow.append(tweaksCheckbox, tweaksLabel);
-		section.append(tweaksRow);
-		const themeRow = document.createElement("div");
-		themeRow.className = CSS_CLASS.checkboxRow;
-		const themeCheckbox = document.createElement("input");
-		themeCheckbox.type = "checkbox";
-		themeCheckbox.id = SITE_DARK_THEME_CHECKBOX_ID;
-		themeCheckbox.className = CSS_CLASS.checkbox;
-		themeCheckbox.checked = getSiteTheme() === "dark";
-		themeCheckbox.addEventListener("change", () => {
-			setSiteTheme(themeCheckbox.checked ? "dark" : "light");
-			onThemeChange();
-		});
-		const themeLabel = document.createElement("label");
-		themeLabel.className = CSS_CLASS.label;
-		themeLabel.htmlFor = themeCheckbox.id;
-		themeLabel.textContent = UI_TEXT.siteDarkThemeLabel;
-		themeRow.append(themeCheckbox, themeLabel);
-		section.append(themeRow);
-		const themeHint = document.createElement("p");
-		themeHint.className = CSS_CLASS.hint;
-		themeHint.textContent = UI_TEXT.siteDarkThemeHint;
-		section.append(themeHint);
-		for (const row of buildFeatureSettingsRows()) section.append(row);
-		const groupField = document.createElement("div");
-		groupField.className = CSS_CLASS.field;
-		const groupLabel = document.createElement("label");
-		groupLabel.className = CSS_CLASS.label;
-		groupLabel.htmlFor = UPDATES_GROUP_SIZE_ID;
-		groupLabel.textContent = UI_TEXT.updatesGroupSizeLabel;
-		const groupInput = document.createElement("input");
-		groupInput.id = UPDATES_GROUP_SIZE_ID;
-		groupInput.className = CSS_CLASS.input;
-		groupInput.type = "number";
-		groupInput.min = "0";
-		groupInput.step = "1";
-		groupInput.value = String(getUpdatesGroupSize());
-		groupInput.addEventListener("change", () => {
-			const value = Number(groupInput.value);
-			setUpdatesGroupSize(Number.isFinite(value) ? value : 0);
-			controller.render();
-		});
-		groupField.append(groupLabel, groupInput);
-		section.append(groupField);
-		const playlistField = document.createElement("div");
-		playlistField.className = CSS_CLASS.field;
-		const playlistLabel = document.createElement("label");
-		playlistLabel.className = CSS_CLASS.label;
-		playlistLabel.htmlFor = PLAYLIST_CHUNK_SIZE_ID;
-		playlistLabel.textContent = UI_TEXT.playlistChunkSizeLabel;
-		const playlistInput = document.createElement("input");
-		playlistInput.id = PLAYLIST_CHUNK_SIZE_ID;
-		playlistInput.className = CSS_CLASS.input;
-		playlistInput.type = "number";
-		playlistInput.min = "1";
-		playlistInput.step = "1";
-		playlistInput.value = String(getPlaylistChunkSize());
-		playlistInput.addEventListener("change", () => {
-			const value = Number(playlistInput.value);
-			setPlaylistChunkSize(Number.isFinite(value) ? value : 0);
-			controller.render();
-		});
-		playlistField.append(playlistLabel, playlistInput);
-		section.append(playlistField);
-		section.append(createBlacklistSection());
-		const toolbar = document.createElement("div");
-		toolbar.className = CSS_CLASS.toolbar;
-		const exportBtn = document.createElement("button");
-		exportBtn.type = "button";
-		exportBtn.className = CSS_CLASS.secondaryButton;
-		exportBtn.textContent = UI_TEXT.export;
-		exportBtn.addEventListener("click", () => {
-			controller.downloadExport();
-		});
-		const importBtn = document.createElement("button");
-		importBtn.type = "button";
-		importBtn.className = CSS_CLASS.secondaryButton;
-		importBtn.textContent = UI_TEXT.import;
-		importBtn.addEventListener("click", () => {
-			controller.clearImportError();
-			controller.requestImport();
-		});
-		toolbar.append(exportBtn, importBtn);
-		section.append(toolbar);
-		if (controller.getImportError().length > 0) {
-			const error = document.createElement("p");
-			error.className = CSS_CLASS.error;
-			error.textContent = `${UI_TEXT.importErrorPrefix} ${controller.getImportError()}`;
-			section.append(error);
-		}
-		scroll.append(section);
-		return scroll;
-	}
-	function buildArtistUndoRow(tag, controller) {
-		const item = document.createElement("li");
-		item.className = PANEL_UI_CLASS.artistRow;
-		item.dataset.tag = tag;
-		const row = document.createElement("div");
-		row.className = PANEL_UI_CLASS.artistUndo;
-		const message = document.createElement("span");
-		message.textContent = `${UNFOLLOWED_PREFIX}${displayArtistName(tag)}`;
-		const undoBtn = document.createElement("button");
-		undoBtn.type = "button";
-		undoBtn.className = CSS_CLASS.secondaryButton;
-		undoBtn.textContent = UNFOLLOW_UNDO_LABEL;
-		undoBtn.addEventListener("click", () => {
-			controller.undoUnfollow(tag);
-		});
-		row.append(message, undoBtn);
-		item.append(row);
-		return item;
-	}
-	function buildArtistRow(artist, controller) {
-		const item = document.createElement("li");
-		item.className = PANEL_UI_CLASS.artistRow;
-		item.dataset.tag = artist.tag;
-		const link = document.createElement("a");
-		link.className = PANEL_UI_CLASS.artistLink;
-		link.href = buildSearchUrl([{
-			tag: artist.tag,
-			type: TAG_TYPE_INCLUDE
-		}]);
-		link.textContent = displayArtistName(artist.tag);
-		link.title = artist.tag;
-		const removeBtn = document.createElement("button");
-		removeBtn.type = "button";
-		removeBtn.className = CSS_CLASS.iconButton;
-		removeBtn.textContent = "×";
-		removeBtn.setAttribute("aria-label", `Unfollow ${artist.tag}`);
-		removeBtn.addEventListener("click", () => {
-			controller.beginUnfollow(artist.tag);
-		});
-		item.append(link, removeBtn);
-		return item;
-	}
-	function buildArtistsTab(artists, controller) {
-		const root = document.createElement("div");
-		root.className = PANEL_UI_CLASS.scrollRegion;
-		const meta = document.createElement("div");
-		meta.className = PANEL_UI_CLASS.artistMeta;
-		const countLine = document.createElement("p");
-		countLine.className = CSS_CLASS.hint;
-		const count = artists.length;
-		countLine.textContent = `${String(count)} artist${count === 1 ? "" : "s"}`;
-		const seen = getSeenPostId();
-		const seenHint = document.createElement("p");
-		seenHint.className = CSS_CLASS.hint;
-		seenHint.textContent = seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing;
-		meta.append(countLine, seenHint);
-		root.append(meta);
-		const pending = controller.getPendingUnfollows();
-		const pendingTags = new Set(pending.map((entry) => entry.tag));
-		const sorted = [...artists].sort((a, b) => compareArtistTags(a.tag, b.tag));
-		if (sorted.length === 0 && pending.length === 0) {
-			const empty = document.createElement("p");
-			empty.className = CSS_CLASS.hint;
-			empty.textContent = ARTISTS_EMPTY_HINT;
-			root.append(empty);
-			return root;
-		}
-		const showFilter = sorted.length + pending.length > ARTISTS_FILTER_THRESHOLD;
-		let filterValue = controller.getArtistFilter().trim().toLowerCase();
-		if (showFilter) {
-			const filterField = document.createElement("div");
-			filterField.className = `${CSS_CLASS.field} ${PANEL_UI_CLASS.artistFilter}`;
-			const filterLabel = document.createElement("label");
-			filterLabel.className = CSS_CLASS.label;
-			filterLabel.htmlFor = ARTIST_FILTER_ID;
-			filterLabel.textContent = ARTIST_FILTER_LABEL;
-			const filterInput = document.createElement("input");
-			filterInput.id = ARTIST_FILTER_ID;
-			filterInput.className = CSS_CLASS.input;
-			filterInput.type = "search";
-			filterInput.value = controller.getArtistFilter();
-			filterInput.addEventListener("input", () => {
-				controller.setArtistFilter(filterInput.value);
-				controller.render();
-			});
-			filterField.append(filterLabel, filterInput);
-			root.append(filterField);
-		} else if (controller.getArtistFilter().length > 0) {
-			controller.setArtistFilter("");
-			filterValue = "";
-		}
-		const list = document.createElement("ul");
-		list.className = PANEL_UI_CLASS.artistList;
-		const matchesFilter = (tag) => {
-			if (filterValue.length === 0) return true;
-			return tag.toLowerCase().includes(filterValue) || displayArtistName(tag).toLowerCase().includes(filterValue);
-		};
-		const pendingSorted = [...pending].sort((a, b) => compareArtistTags(a.tag, b.tag));
-		for (const entry of pendingSorted) {
-			if (!matchesFilter(entry.tag)) continue;
-			list.append(buildArtistUndoRow(entry.tag, controller));
-		}
-		for (const artist of sorted) {
-			if (pendingTags.has(artist.tag)) continue;
-			if (!matchesFilter(artist.tag)) continue;
-			list.append(buildArtistRow(artist, controller));
-		}
-		root.append(list);
-		return root;
-	}
-	function buildFavoritesTab() {
-		const scroll = document.createElement("div");
-		scroll.className = PANEL_UI_CLASS.scrollRegion;
-		const favRow = document.createElement("div");
-		favRow.className = CSS_CLASS.checkboxRow;
-		const favCheckbox = document.createElement("input");
-		favCheckbox.type = "checkbox";
-		favCheckbox.id = GRID_FAV_CHECKBOX_ID;
-		favCheckbox.className = CSS_CLASS.checkbox;
-		favCheckbox.checked = getGridFavButtonsEnabled();
-		favCheckbox.addEventListener("change", () => {
-			const enabled = favCheckbox.checked;
-			setGridFavButtonsEnabled(enabled);
-			setGridFavButtonsVisible(enabled);
-		});
-		const favLabel = document.createElement("label");
-		favLabel.className = CSS_CLASS.label;
-		favLabel.htmlFor = favCheckbox.id;
-		favLabel.textContent = UI_TEXT.gridFavButtonsLabel;
-		favRow.append(favCheckbox, favLabel);
-		const favoritesSyncSection = createFavoritesSyncSection({ includeHeading: true });
-		scroll.append(favRow, favoritesSyncSection);
-		return scroll;
-	}
-	function buildFooter() {
-		const footer = document.createElement("div");
-		footer.className = PANEL_UI_CLASS.footer;
-		footer.textContent = `v${USERSCRIPT_VERSION}`;
-		return footer;
-	}
-	function mountPanel(target = document.body) {
-		if (document.getElementById("ruledesk-web-root") !== null) return;
-		const host = document.createElement("div");
-		host.id = PANEL_ROOT_ID;
-		const shadow = host.attachShadow({ mode: "open" });
-		const style = document.createElement("style");
-		style.textContent = PANEL_CSS;
-		shadow.append(style);
-		const sizeStyle = document.createElement("style");
-		shadow.append(sizeStyle);
-		const root = document.createElement("div");
-		root.className = CSS_CLASS.host;
-		shadow.append(root);
-		const toggle = document.createElement("button");
-		toggle.type = "button";
-		toggle.id = TOGGLE_BUTTON_ID;
-		toggle.className = CSS_CLASS.toggle;
-		toggle.textContent = "RD";
-		toggle.setAttribute("aria-label", UI_TEXT.toggleOpen);
-		toggle.setAttribute("aria-expanded", "false");
-		toggle.setAttribute("aria-controls", "ruledesk-web-panel");
-		const panel = document.createElement("section");
-		panel.id = "ruledesk-web-panel";
-		panel.className = CSS_CLASS.panel;
-		panel.setAttribute("role", "dialog");
-		panel.setAttribute("aria-modal", "false");
-		panel.setAttribute("aria-label", UI_TEXT.panelTitle);
-		panel.hidden = true;
-		root.append(panel, toggle);
-		target.append(host);
-		let open = false;
-		let importError = "";
-		let artistFilter = "";
-		let persisted = readPersistedPanelState();
-		let activeTab = persisted.tab;
-		const pendingUnfollows = [];
-		sizeStyle.textContent = buildSizeCssRule(persisted.width, persisted.height);
-		function applyThemeClass() {
-			host.classList.toggle(PANEL_UI_CLASS.themeDark, getSiteTheme() === "dark");
-		}
-		applyThemeClass();
-		let sizePersistTimer = null;
-		let lastWrittenWidth = persisted.width;
-		let lastWrittenHeight = persisted.height;
-		function scheduleSizePersist(width, height) {
-			const nextWidth = clampSize(width, PANEL_MIN_WIDTH_PX);
-			const nextHeight = clampSize(height, PANEL_MIN_HEIGHT_PX);
-			if (nextWidth === lastWrittenWidth && nextHeight === lastWrittenHeight) return;
-			if (sizePersistTimer !== null) clearTimeout(sizePersistTimer);
-			sizePersistTimer = setTimeout(() => {
-				sizePersistTimer = null;
-				lastWrittenWidth = nextWidth;
-				lastWrittenHeight = nextHeight;
-				persisted = {
-					tab: activeTab,
-					width: nextWidth,
-					height: nextHeight
-				};
-				writePersistedPanelState(persisted);
-				sizeStyle.textContent = buildSizeCssRule(nextWidth, nextHeight);
-			}, SIZE_PERSIST_MS);
-		}
-		(typeof ResizeObserver !== "undefined" ? new ResizeObserver((entries) => {
-			if (!open) return;
-			const entry = entries[0];
-			if (entry === void 0) return;
-			const { width, height } = entry.contentRect;
-			scheduleSizePersist(width, height);
-		}) : null)?.observe(panel);
-		const fileInput = document.createElement("input");
-		fileInput.type = "file";
-		fileInput.accept = ".json,application/json";
-		fileInput.className = CSS_CLASS.hidden;
-		fileInput.setAttribute("aria-hidden", "true");
-		fileInput.tabIndex = -1;
-		root.append(fileInput);
-		function clearPendingUnfollow(tag) {
-			const index = pendingUnfollows.findIndex((entry) => entry.tag === tag);
-			if (index < 0) return;
-			const [removed] = pendingUnfollows.splice(index, 1);
-			if (removed !== void 0) clearTimeout(removed.timer);
-		}
-		const controller = {
-			getArtistFilter: () => artistFilter,
-			setArtistFilter: (value) => {
-				artistFilter = value;
-			},
-			getImportError: () => importError,
-			clearImportError: () => {
-				importError = "";
-			},
-			requestImport: () => {
-				fileInput.value = "";
-				fileInput.click();
-			},
-			downloadExport: () => {
-				const payload = exportJson();
-				const blob = new Blob([payload], { type: EXPORT_MIME });
-				const url = URL.createObjectURL(blob);
-				const anchor = document.createElement("a");
-				anchor.href = url;
-				anchor.download = EXPORT_FILENAME;
-				anchor.rel = "noopener";
-				root.append(anchor);
-				anchor.click();
-				anchor.remove();
-				URL.revokeObjectURL(url);
-			},
-			close: () => {
-				setOpen(false);
-			},
-			render: () => {
-				render();
-			},
-			getActiveTab: () => activeTab,
-			setActiveTab: (tab) => {
-				activeTab = tab;
-				persisted = {
-					tab: activeTab,
-					width: lastWrittenWidth,
-					height: lastWrittenHeight
-				};
-				writePersistedPanelState(persisted);
-			},
-			beginUnfollow: (tag) => {
-				clearPendingUnfollow(tag);
-				removeArtist(tag);
-				const timer = setTimeout(() => {
-					clearPendingUnfollow(tag);
-					render();
-				}, UNFOLLOW_UNDO_MS);
-				pendingUnfollows.push({
-					tag,
-					timer
-				});
-				render();
-			},
-			undoUnfollow: (tag) => {
-				clearPendingUnfollow(tag);
-				try {
-					addArtist(tag);
-				} catch (error) {
-					log.warn("Undo unfollow failed", error);
-				}
-				render();
-			},
-			getPendingUnfollows: () => pendingUnfollows,
-			focusTab: (tab) => {
-				const el = panel.querySelector(`#rdw-tab-${tab}`);
-				if (el instanceof HTMLElement) el.focus();
-			}
-		};
-		function setOpen(next) {
-			open = next;
-			panel.classList.toggle(CSS_CLASS.panelOpen, open);
-			panel.hidden = !open;
-			toggle.setAttribute("aria-expanded", open ? "true" : "false");
-			toggle.setAttribute("aria-label", open ? UI_TEXT.toggleClose : UI_TEXT.toggleOpen);
-			if (open) {
-				render();
-				const focusTarget = panel.querySelector(`[role="tab"][aria-selected="true"]`);
-				if (focusTarget instanceof HTMLElement) focusTarget.focus();
-			} else {
-				importError = "";
-				toggle.focus();
-			}
-		}
-		function render() {
-			const data = load();
-			panel.replaceChildren();
-			const body = document.createElement("div");
-			body.className = CSS_CLASS.body;
-			for (const tab of PANEL_TABS) {
-				const panelEl = document.createElement("div");
-				panelEl.className = PANEL_UI_CLASS.tabPanel;
-				panelEl.id = `rdw-tabpanel-${tab}`;
-				panelEl.setAttribute("role", "tabpanel");
-				panelEl.setAttribute("aria-labelledby", `rdw-tab-${tab}`);
-				panelEl.hidden = !(tab === activeTab);
-				if (tab === "collections") panelEl.append(createCollectionsTab());
-				else if (tab === "artists") panelEl.append(buildArtistsTab(data.artists, controller));
-				else if (tab === "favorites") panelEl.append(buildFavoritesTab());
-				else panelEl.append(buildSettingsTab(controller, applyThemeClass));
-				body.append(panelEl);
-			}
-			panel.append(buildHeader(controller), buildTabList(controller), body, buildFooter());
-		}
-		toggle.addEventListener("click", () => {
-			setOpen(!open);
-		});
-		shadow.addEventListener("keydown", (event) => {
-			if (!(event instanceof KeyboardEvent)) return;
-			if (event.key === "Escape" && open) {
-				event.stopPropagation();
-				setOpen(false);
-			}
-		});
-		document.addEventListener("click", (event) => {
-			if (!open) return;
-			if (event.composedPath().includes(host)) return;
-			setOpen(false);
-		}, true);
-		fileInput.addEventListener("change", () => {
-			const file = fileInput.files?.item(0);
-			if (file === null || file === void 0) return;
-			const reader = new FileReader();
-			reader.addEventListener("load", () => {
-				try {
-					importJson(typeof reader.result === "string" ? reader.result : "");
-					importError = "";
-					render();
-				} catch (error) {
-					importError = error instanceof Error ? error.message : "Unknown import error";
-					log.warn("Import failed", importError);
-					render();
-				}
-			});
-			reader.addEventListener("error", () => {
-				importError = "Could not read file";
-				render();
-			});
-			reader.readAsText(file);
-		});
-	}
-	function startApp() {
-		mountPanel();
-		const pageKind = detectPageKind(window.location.search);
-		if (pageKind === "list") {
-			mountCards();
-			mountArtistSidebar();
-		} else if (pageKind === "post") mountArtistSidebar();
-		else if (pageKind === "favorites") syncFavoritesPage();
-		runFeatures(pageKind, window.location.search);
-	}
 	var TOKEN_VAR = {
 		bg: "--rdw-bg",
 		surface: "--rdw-surface",
@@ -8573,6 +7652,833 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 		target.style.removeProperty(TOKEN_VAR.backgroundImage);
 		target.style.removeProperty(TOKEN_VAR.backgroundDim);
 	}
+	var ROOT = `html.${RDW_SKIN_CLASS}`;
+	var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
+	var v = {
+		bg: `var(${TOKEN_VAR.bg})`,
+		surface: `var(${TOKEN_VAR.surface})`,
+		surface2: `var(${TOKEN_VAR.surface2})`,
+		border: `var(${TOKEN_VAR.border})`,
+		text: `var(${TOKEN_VAR.text})`,
+		muted: `var(${TOKEN_VAR.muted})`,
+		accent: `var(${TOKEN_VAR.accent})`,
+		accentSoft: `var(${TOKEN_VAR.accentSoft})`,
+		danger: `var(${TOKEN_VAR.danger})`,
+		dangerSoft: `var(${TOKEN_VAR.dangerSoft})`,
+		tagArtist: `var(${TOKEN_VAR.tagArtist})`,
+		tagCharacter: `var(${TOKEN_VAR.tagCharacter})`,
+		tagCopyright: `var(${TOKEN_VAR.tagCopyright})`,
+		tagMetadata: `var(${TOKEN_VAR.tagMetadata})`,
+		radiusS: `var(${TOKEN_VAR.radiusS})`,
+		radiusM: `var(${TOKEN_VAR.radiusM})`,
+		radiusL: `var(${TOKEN_VAR.radiusL})`,
+		shadow1: `var(${TOKEN_VAR.shadow1})`,
+		shadow2: `var(${TOKEN_VAR.shadow2})`,
+		font: `var(${TOKEN_VAR.font})`
+	};
+	var SITE_SKIN_CSS = `
+/* —— base —— */
+${ROOT} body {
+  font-family: ${v.font};
+  font-size: 13px;
+  line-height: 1.4;
+  background: ${v.bg};
+  color: ${v.text};
+}
+
+${ROOT} body,
+${ROOT} body div,
+${ROOT} body h1,
+${ROOT} body h2,
+${ROOT} body h3,
+${ROOT} body h4,
+${ROOT} body h5,
+${ROOT} body h6,
+${ROOT} body p,
+${ROOT} body ul,
+${ROOT} body li,
+${ROOT} body dd,
+${ROOT} body dt,
+${ROOT} body input,
+${ROOT} body select,
+${ROOT} body button,
+${ROOT} body textarea {
+  font-family: ${v.font};
+}
+
+${ROOT} a:link {
+  color: ${v.accent};
+  text-decoration: none;
+}
+
+${ROOT} a:visited {
+  color: ${v.muted};
+  text-decoration: none;
+}
+
+${ROOT} a:hover,
+${ROOT} a:active {
+  color: ${v.text};
+  text-decoration: none;
+}
+
+${ROOT} a.last-page {
+  color: ${v.muted};
+}
+
+${ROOT} a.spoiler,
+${ROOT} span.spoiler {
+  color: ${v.text};
+  background: ${v.text};
+}
+
+${ROOT} a.spoiler:hover,
+${ROOT} span.spoiler:hover {
+  color: ${v.bg};
+  background: ${v.text};
+}
+
+${ROOT} hr {
+  border-color: ${v.border};
+}
+
+${ROOT} code {
+  font-family: ui-monospace, monospace;
+}
+
+/* —— header —— */
+${ROOT} div#header {
+  background: ${v.surface};
+  border-bottom: 1px solid ${v.border};
+  margin-bottom: 0.75em;
+}
+
+${ROOT} div#header #site-title {
+  background-image: none;
+  background-color: transparent;
+  padding: 12px 18px 4px 18px;
+  font: 800 17px ${v.font};
+  letter-spacing: -0.02em;
+  color: ${v.text};
+}
+
+${ROOT} div#header #site-title a {
+  color: ${v.text};
+  font-weight: 800;
+  background: none;
+  text-shadow: none;
+}
+
+${ROOT} div#header ul#navbar {
+  background: transparent;
+  padding: 4px 18px 8px 10px;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+${ROOT} div#header ul#navbar li {
+  font-size: 13px;
+  font-weight: normal;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  background-image: none;
+  list-style: none;
+  display: inline;
+}
+
+${ROOT} div#header ul#navbar li a {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: ${v.radiusM};
+  color: ${v.muted};
+  font-weight: normal;
+}
+
+${ROOT} div#header ul#navbar li.current-page {
+  background: transparent;
+  background-image: none;
+}
+
+${ROOT} div#header ul#navbar li.current-page a,
+${ROOT} #navbar li.current-page a {
+  background: ${v.accentSoft};
+  color: ${v.accent};
+  font-weight: 600;
+}
+
+${ROOT} div#header ul#subnavbar {
+  background: ${v.surface};
+  border-top: 1px solid ${v.border};
+  border-bottom: none;
+  padding: 6px 18px;
+  margin: 0;
+}
+
+${ROOT} div#header ul#subnavbar li {
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+
+${ROOT} div#header ul#subnavbar li a {
+  color: ${v.muted};
+}
+
+${ROOT} div#header ul#subnavbar li a:hover {
+  color: ${v.accent};
+}
+
+${ROOT} div.tips {
+  background: ${v.accentSoft};
+  background-image: none;
+  border-bottom: 1px solid ${v.border};
+  color: ${v.text};
+}
+
+/* —— sidebar —— */
+${ROOT} div.sidebar {
+  width: 228px;
+  min-width: 228px;
+  max-width: 228px;
+  margin-right: 1em;
+}
+
+${ROOT} div.sidebar h5,
+${ROOT} div.sidebar h6,
+${ROOT} ul#tag-sidebar h5,
+${ROOT} ul#tag-sidebar h6 {
+  font: 600 10.5px ${v.font};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${v.muted};
+  margin: 0 0 6px;
+}
+
+${ROOT} div.tag-search,
+${ROOT} ul#tag-sidebar {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  padding: 12px;
+  box-shadow: ${v.shadow1};
+  box-sizing: border-box;
+}
+
+${ROOT} div.tag-search {
+  margin-bottom: 12px;
+}
+
+${ROOT} ul#tag-sidebar {
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+}
+
+${ROOT} ul#tag-sidebar > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  word-wrap: break-word;
+}
+
+${ROOT} ul#tag-sidebar > li > h5,
+${ROOT} ul#tag-sidebar > li > h6 {
+  flex: 1 0 100%;
+  margin-top: 8px;
+}
+
+${ROOT} ul#tag-sidebar > li:first-child > h5,
+${ROOT} ul#tag-sidebar > li:first-child > h6 {
+  margin-top: 0;
+}
+
+${ROOT} .tag-count,
+${ROOT} span.post-count,
+${ROOT} span.tag-count {
+  margin-left: auto;
+  color: ${v.muted};
+  font-size: 12px;
+}
+
+/* ? + − operators (first three anchors); tag name keeps type color */
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:nth-of-type(-n+3) {
+  color: ${v.muted};
+  font-size: 11px;
+  font-weight: normal;
+}
+
+${ROOT} .tag-type-artist > a,
+${ROOT} .tag-type-artist {
+  color: ${v.tagArtist};
+}
+
+${ROOT} .tag-type-character > a,
+${ROOT} .tag-type-character {
+  color: ${v.tagCharacter};
+}
+
+${ROOT} .tag-type-copyright > a,
+${ROOT} .tag-type-copyright {
+  color: ${v.tagCopyright};
+}
+
+${ROOT} .tag-type-metadata > a,
+${ROOT} .tag-type-metadata {
+  color: ${v.tagMetadata};
+}
+
+${ROOT} .tag-type-artist > a:hover,
+${ROOT} .tag-type-artist:hover,
+${ROOT} .tag-type-character > a:hover,
+${ROOT} .tag-type-character:hover,
+${ROOT} .tag-type-copyright > a:hover,
+${ROOT} .tag-type-copyright:hover,
+${ROOT} .tag-type-metadata > a:hover,
+${ROOT} .tag-type-metadata:hover {
+  color: ${v.accent};
+}
+
+/* —— search field —— */
+${ROOT} div.tag-search input[type="text"],
+${ROOT} div.tag-search input[type="search"] {
+  width: 100%;
+  height: 34px;
+  box-sizing: border-box;
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusM};
+  padding: 0 10px;
+  background: ${v.surface};
+  color: ${v.text};
+  font-size: 13px;
+}
+
+${ROOT} div.tag-search input[type="submit"],
+${ROOT} div.tag-search button[type="submit"] {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: ${v.radiusS};
+  background: ${v.accent};
+  color: ${v.surface};
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+${ROOT} div.tag-search input[type="submit"]:hover,
+${ROOT} div.tag-search button[type="submit"]:hover {
+  filter: brightness(1.05);
+}
+
+${ROOT} input[type="text"]:focus,
+${ROOT} input[type="password"]:focus,
+${ROOT} input[type="search"]:focus,
+${ROOT} textarea:focus,
+${ROOT} select:focus {
+  background: ${v.surface};
+  outline: 2px solid ${v.accent};
+  outline-offset: 1px;
+  border-color: ${v.accent};
+}
+
+/* —— awesomplete —— */
+${ROOT} .awesomplete > ul {
+  background: ${v.surface};
+  background-image: none;
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  box-shadow: ${v.shadow2};
+  margin: 0.35em 0 0;
+  padding: 4px 0;
+  text-shadow: none;
+  transform: none;
+}
+
+${ROOT} .awesomplete > ul:before {
+  display: none;
+  content: none;
+}
+
+${ROOT} .awesomplete > ul > li {
+  padding: 6px 10px;
+  color: ${v.text};
+  cursor: pointer;
+}
+
+${ROOT} .awesomplete > ul > li:hover,
+${ROOT} .awesomplete > ul > li[aria-selected="true"] {
+  background: ${v.accentSoft};
+  color: ${v.accent};
+}
+
+${ROOT} .awesomplete mark {
+  background: ${v.accentSoft};
+  color: ${v.text};
+}
+
+${ROOT} div.auto_complete {
+  background: ${v.surface};
+}
+
+${ROOT} div.auto_complete ul {
+  border-color: ${v.border};
+  background: ${v.surface};
+}
+
+${ROOT} div.auto_complete ul li.selected {
+  background-color: ${v.accentSoft};
+}
+
+${ROOT} div.auto_complete ul strong.highlight {
+  color: ${v.accent};
+}
+
+/* —— grid / thumbs (cell size unchanged) —— */
+${ROOT} div.image-list {
+  gap: 12px;
+}
+
+${ROOT} img.preview {
+  border-radius: ${v.radiusL};
+}
+
+${ROOT} .webm-thumb {
+  border: 1px solid ${v.accent};
+  box-sizing: border-box;
+}
+
+${ROOT} img.flagged,
+${ROOT} img.has-children,
+${ROOT} img.has-parent,
+${ROOT} img.pending,
+${ROOT} img.video {
+  border-width: 1px;
+  border-style: solid;
+  box-sizing: border-box;
+}
+
+${ROOT} img.flagged {
+  border-color: ${v.danger};
+}
+
+${ROOT} img.has-children {
+  border-color: ${v.tagCharacter};
+}
+
+${ROOT} img.has-parent {
+  border-color: ${v.tagMetadata};
+}
+
+${ROOT} img.pending,
+${ROOT} img.video {
+  border-color: ${v.accent};
+}
+
+/* —— pagination —— */
+${ROOT} div#paginator,
+${ROOT} .pagination {
+  display: block;
+  padding: 1.5em 0 1em;
+  text-align: center;
+  clear: both;
+}
+
+${ROOT} div#paginator a,
+${ROOT} .pagination a {
+  display: inline-block;
+  margin: 0 3px;
+  padding: 4px 10px;
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusM};
+  background: ${v.surface};
+  color: ${v.text};
+  text-decoration: none;
+}
+
+${ROOT} div#paginator a:hover,
+${ROOT} .pagination a:hover {
+  background: ${v.accentSoft};
+  color: ${v.accent};
+  border-color: ${v.accent};
+}
+
+${ROOT} div#paginator a.current,
+${ROOT} div#paginator span.current,
+${ROOT} .pagination a.current,
+${ROOT} .pagination span.current {
+  background: ${v.accent};
+  border-color: ${v.accent};
+  color: ${v.surface};
+  font-weight: 600;
+}
+
+${ROOT} div#paginator span {
+  margin: 0 3px;
+  padding: 4px 8px;
+}
+
+${ROOT} .manual-page-chooser > input[type="text"] {
+  width: 4em;
+  height: 28px;
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusS};
+  background: ${v.surface};
+  color: ${v.text};
+  padding: 0 6px;
+}
+
+${ROOT} .manual-page-chooser > input[type="submit"] {
+  height: 28px;
+  margin-left: 4px;
+  padding: 0 10px;
+  border: none;
+  border-radius: ${v.radiusS};
+  background: ${v.accent};
+  color: ${v.surface};
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* —— forms / tables —— */
+${ROOT} input,
+${ROOT} select,
+${ROOT} textarea,
+${ROOT} button {
+  color: ${v.text};
+}
+
+${ROOT} input[type="text"],
+${ROOT} input[type="password"],
+${ROOT} input[type="search"],
+${ROOT} input[type="number"],
+${ROOT} select,
+${ROOT} textarea {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusS};
+  color: ${v.text};
+}
+
+${ROOT} table {
+  color: ${v.text};
+}
+
+${ROOT} tr.tableheader,
+${ROOT} thead tr {
+  background: ${v.surface2} !important;
+  background-image: none !important;
+  color: ${v.text};
+}
+
+${ROOT} table.highlightable th {
+  color: ${v.text};
+  background: ${v.surface2};
+}
+
+${ROOT} table.highlightable td {
+  border-color: ${v.border};
+}
+
+${ROOT} table.highlightable > tbody > tr:hover {
+  background: ${v.accentSoft};
+}
+
+${ROOT} table tr.good {
+  background: ${v.accentSoft};
+}
+
+${ROOT} table tr.selected {
+  background: ${v.accentSoft} !important;
+}
+
+${ROOT} table tr.highlight {
+  background: ${v.surface2};
+}
+
+${ROOT} table tr.pending-tag {
+  background: ${v.surface2};
+}
+
+${ROOT} table tr:nth-child(odd) {
+  background: ${v.surface2};
+}
+
+${ROOT} table.form th {
+  color: ${v.muted};
+}
+
+${ROOT} .added-tags {
+  color: ${v.tagCharacter};
+}
+
+${ROOT} .removed-tags {
+  color: ${v.danger};
+}
+
+${ROOT} .obsolete-tag-change {
+  color: ${v.text};
+}
+
+/* —— notices / cards —— */
+${ROOT} div.status-notice,
+${ROOT} div.notice,
+${ROOT} div.has-mail,
+${ROOT} div.blocked,
+${ROOT} div.quote,
+${ROOT} div.help div.code,
+${ROOT} div#post-comments div#comment-list > div,
+${ROOT} div#comments div#comment-list > div.post > div.col2,
+${ROOT} div.response-list > div.post > div.content {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  box-shadow: ${v.shadow1};
+}
+
+${ROOT} div.status-notice {
+  border-color: ${v.border};
+  padding: 1em;
+  margin: 1em;
+  color: ${v.text};
+}
+
+${ROOT} div.notice {
+  color: ${v.danger};
+  padding: 0.75em 1em;
+  margin-bottom: 1em;
+}
+
+${ROOT} div.has-mail {
+  border-color: ${v.tagCharacter};
+  background: ${v.accentSoft};
+  padding: 1em;
+  margin: 1em;
+  color: ${v.text};
+}
+
+${ROOT} div.blocked {
+  border-color: ${v.danger};
+  background: ${v.dangerSoft};
+  color: ${v.danger};
+  padding: 1em;
+  margin: 1em;
+}
+
+${ROOT} div.quote {
+  border-color: ${v.border};
+  background: ${v.surface2};
+  background-image: none;
+  color: ${v.text};
+  padding: 12px;
+  margin-top: 10px;
+}
+
+${ROOT} div.help div.code {
+  border: 1px dashed ${v.border};
+  background: ${v.surface2};
+  color: ${v.text};
+}
+
+${ROOT} div.help h4 {
+  color: ${v.tagCharacter};
+}
+
+${ROOT} div#post-comments div#comment-list > div,
+${ROOT} div#comments div#comment-list > div.post > div.col2 {
+  padding: 12px;
+  margin-bottom: 1em;
+}
+
+${ROOT} div.response-list > div.post > div.content {
+  padding: 10px 12px;
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer {
+  color: ${v.muted};
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer a {
+  color: ${v.muted};
+}
+
+${ROOT} span.author,
+${ROOT} span.date {
+  color: ${v.muted};
+}
+
+${ROOT} span.locked-topic {
+  color: ${v.muted};
+}
+
+${ROOT} strong.divider {
+  color: ${v.muted};
+}
+
+${ROOT} div#footer {
+  color: ${v.muted};
+}
+
+${ROOT} div#footer > .footer-disabled,
+${ROOT} div#footer > #label {
+  color: ${v.muted};
+}
+
+${ROOT} div#user-record > table > tbody > tr.positive-record {
+  background: ${v.accentSoft};
+}
+
+${ROOT} div#user-record > table > tbody > tr.negative-record {
+  background: ${v.dangerSoft};
+}
+
+${ROOT} div.mailbody {
+  background-color: ${v.surface};
+  border-color: ${v.border};
+}
+
+${ROOT} div.mail .received {
+  color: ${v.tagCharacter};
+}
+
+${ROOT} div.mail .sent {
+  color: ${v.danger};
+}
+
+${ROOT} .gdprinner {
+  background-color: ${v.surface};
+  border-color: ${v.border};
+  color: ${v.text};
+}
+
+/* —— post page —— */
+${ROOT} img#image {
+  border-radius: ${v.radiusL};
+}
+
+${ROOT} div#post-view > div#right-col > div#edit,
+${ROOT} div#edit-box {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  color: ${v.text};
+}
+
+${ROOT} div#note-container > div.note-body {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  border-radius: ${v.radiusS};
+}
+
+${ROOT} div#note-container > div.note-body > p.tn,
+${ROOT} tn {
+  color: ${v.muted};
+}
+
+${ROOT} div#note-container > div.note-box {
+  border-color: ${v.accent};
+  background: ${v.accentSoft};
+}
+
+${ROOT} div#note-container > div.note-box > div.note-corner {
+  background: ${v.accent};
+}
+
+${ROOT} div#note-container > div.unsaved {
+  background: ${v.surface};
+  border-color: ${v.danger};
+}
+
+${ROOT} div#note-container > div.unsaved > div.note-corner {
+  background: ${v.danger};
+}
+
+${ROOT} a.original-file-changed#highres {
+  color: ${v.accent};
+}
+
+${ROOT} div#post-add p#scale {
+  color: ${v.muted};
+}
+
+${ROOT} h2.wiki-title {
+  color: ${v.accent};
+}
+
+${ROOT} div.wiki > h2.title {
+  color: ${v.accent};
+}
+
+${ROOT} div#wiki-show > div#body > div#byline {
+  color: ${v.muted};
+}
+
+${ROOT} div#wiki-diff del {
+  background-color: ${v.dangerSoft};
+  color: ${v.danger};
+}
+
+${ROOT} div#wiki-diff ins {
+  background-color: ${v.accentSoft};
+  color: ${v.text};
+}
+
+${ROOT} dt.bad {
+  color: ${v.danger};
+}
+
+${ROOT} .blacklisted-tags-disabled {
+  color: ${v.muted} !important;
+}
+
+/* —— dark theme contrast (tokens already dark; keep chrome readable) —— */
+${ROOT_DARK} a:visited {
+  color: ${v.muted};
+}
+
+${ROOT_DARK} a:hover,
+${ROOT_DARK} a:active {
+  color: ${v.text};
+}
+
+${ROOT_DARK} a.spoiler,
+${ROOT_DARK} span.spoiler {
+  color: ${v.bg};
+  background: ${v.text};
+}
+
+${ROOT_DARK} a.spoiler:hover,
+${ROOT_DARK} span.spoiler:hover {
+  color: ${v.text};
+  background: ${v.muted};
+}
+
+${ROOT_DARK} div#paginator a.current,
+${ROOT_DARK} div#paginator span.current,
+${ROOT_DARK} .pagination a.current,
+${ROOT_DARK} .pagination span.current,
+${ROOT_DARK} div.tag-search input[type="submit"],
+${ROOT_DARK} div.tag-search button[type="submit"],
+${ROOT_DARK} .manual-page-chooser > input[type="submit"] {
+  color: ${v.text};
+}
+
+${ROOT_DARK} div.has-mail {
+  background: ${v.surface2};
+  border-color: ${v.tagCharacter};
+}
+`.trim();
+	function getSiteSkinCss() {
+		return SITE_SKIN_CSS;
+	}
 	function themeEnablesSkin(theme) {
 		return theme === "light" || theme === "dark" || theme === "custom";
 	}
@@ -8642,11 +8548,2802 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			});
 		} else if (options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
 	}
+	var MS_PER_DAY = 864e5;
+	var COOKIE_NAME_VALUE_SEPARATOR = "=";
+	var STYLESHEET_REL = "stylesheet";
+	var LIGHT_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_LIGHT}`;
+	var DARK_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_DARK}`;
+	function writeThemeCookie(value, expires) {
+		document.cookie = [
+			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}${value}`,
+			`expires=${expires.toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function clearSiteThemeCookie() {
+		document.cookie = [
+			`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}`,
+			`expires=${new Date(0).toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function isSiteDesktopStylesheetPath(pathname) {
+		return pathname.endsWith(LIGHT_STYLESHEET_PATH) || pathname.endsWith(DARK_STYLESHEET_PATH);
+	}
+	function stylesheetFilenameForTheme(theme) {
+		return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
+	}
+	function replaceStylesheetFilename(href, filename) {
+		const url = new URL(href, window.location.href);
+		const segments = url.pathname.split("/");
+		segments[segments.length - 1] = filename;
+		url.pathname = segments.join("/");
+		return url.href;
+	}
+	function findSiteDesktopStylesheetLink() {
+		const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
+		for (const link of links) {
+			const href = link.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let pathname;
+			try {
+				pathname = new URL(href, window.location.href).pathname;
+			} catch {
+				continue;
+			}
+			if (isSiteDesktopStylesheetPath(pathname)) return link;
+		}
+		return null;
+	}
+	function applySiteDesktopStylesheet(theme) {
+		const link = findSiteDesktopStylesheetLink();
+		if (link === null) {
+			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
+			return;
+		}
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) {
+			log.warn("Site desktop stylesheet link not found; theme cookie updated only");
+			return;
+		}
+		link.setAttribute("href", replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)));
+	}
+	function forceLightSiteBase() {
+		clearSiteThemeCookie();
+		applySiteDesktopStylesheet("light");
+	}
+	function setSiteTheme(theme) {
+		if (theme === "dark") writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, new Date(Date.now() + 365 * MS_PER_DAY));
+		else clearSiteThemeCookie();
+		applySiteDesktopStylesheet(theme);
+	}
+	var CONTRAST_RATIO_MIN = 4.5;
+	var BACKGROUND_DIM_MAX = .8;
+	var HEX_SHORT_PATTERN = /^#([0-9a-fA-F]{3})$/;
+	var HEX_LONG_PATTERN = /^#([0-9a-fA-F]{6})$/;
+	var SRGB_LINEAR_THRESHOLD = .03928;
+	var SRGB_LINEAR_DIVISOR = 12.92;
+	var SRGB_GAMMA = 2.4;
+	var SRGB_A = .055;
+	var SRGB_B = 1.055;
+	var LUMA_R = .2126;
+	var LUMA_G = .7152;
+	var LUMA_B = .0722;
+	var CONTRAST_OFFSET = .05;
+	var BODY_BG_IMAGE = "background-image";
+	var BODY_BG_SIZE = "background-size";
+	var BODY_BG_POSITION = "background-position";
+	var BODY_BG_REPEAT = "background-repeat";
+	var BODY_BG_ATTACHMENT = "background-attachment";
+	function createDefaultCustomTheme() {
+		return {
+			accent: LIGHT_PALETTE.accent,
+			bg: LIGHT_PALETTE.bg,
+			surface: LIGHT_PALETTE.surface,
+			text: LIGHT_PALETTE.text,
+			backgroundDim: 0
+		};
+	}
+	function clampBackgroundDim(value) {
+		if (!Number.isFinite(value)) return 0;
+		return Math.min(BACKGROUND_DIM_MAX, Math.max(0, value));
+	}
+	function channelToLinear(channel) {
+		const c = channel / 255;
+		if (c <= SRGB_LINEAR_THRESHOLD) return c / SRGB_LINEAR_DIVISOR;
+		return ((c + SRGB_A) / SRGB_B) ** SRGB_GAMMA;
+	}
+	function parseHexColor(value) {
+		const short = HEX_SHORT_PATTERN.exec(value.trim());
+		if (short !== null) {
+			const hex = short[1];
+			if (hex === void 0) return null;
+			return {
+				r: Number.parseInt(hex[0] + hex[0], 16),
+				g: Number.parseInt(hex[1] + hex[1], 16),
+				b: Number.parseInt(hex[2] + hex[2], 16)
+			};
+		}
+		const long = HEX_LONG_PATTERN.exec(value.trim());
+		if (long !== null) {
+			const hex = long[1];
+			if (hex === void 0) return null;
+			return {
+				r: Number.parseInt(hex.slice(0, 2), 16),
+				g: Number.parseInt(hex.slice(2, 4), 16),
+				b: Number.parseInt(hex.slice(4, 6), 16)
+			};
+		}
+		return null;
+	}
+	function relativeLuminance(hex) {
+		const rgb = parseHexColor(hex);
+		if (rgb === null) return null;
+		const r = channelToLinear(rgb.r);
+		const g = channelToLinear(rgb.g);
+		const b = channelToLinear(rgb.b);
+		return LUMA_R * r + LUMA_G * g + LUMA_B * b;
+	}
+	function contrastRatio(foreground, background) {
+		const l1 = relativeLuminance(foreground);
+		const l2 = relativeLuminance(background);
+		if (l1 === null || l2 === null) return null;
+		const lighter = Math.max(l1, l2);
+		const darker = Math.min(l1, l2);
+		return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET);
+	}
+	function hasInsufficientTextContrast(text, bg) {
+		const ratio = contrastRatio(text, bg);
+		if (ratio === null) return false;
+		return ratio < CONTRAST_RATIO_MIN;
+	}
+	function escapeUrlForCss(url) {
+		return url.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+	}
+	function clearBodyBackground() {
+		const body = document.body;
+		if (body === null) return;
+		body.style.removeProperty(BODY_BG_IMAGE);
+		body.style.removeProperty(BODY_BG_SIZE);
+		body.style.removeProperty(BODY_BG_POSITION);
+		body.style.removeProperty(BODY_BG_REPEAT);
+		body.style.removeProperty(BODY_BG_ATTACHMENT);
+	}
+	function applyBodyBackgroundImage(imageUrl, dim) {
+		const body = document.body;
+		if (body === null) return;
+		if (imageUrl === void 0 || imageUrl.length === 0) {
+			clearBodyBackground();
+			return;
+		}
+		const clamped = clampBackgroundDim(dim);
+		const escaped = escapeUrlForCss(imageUrl);
+		body.style.setProperty(BODY_BG_IMAGE, `linear-gradient(rgba(0, 0, 0, ${String(clamped)}), rgba(0, 0, 0, ${String(clamped)})), url("${escaped}")`);
+		body.style.setProperty(BODY_BG_SIZE, "cover");
+		body.style.setProperty(BODY_BG_POSITION, "center");
+		body.style.setProperty(BODY_BG_REPEAT, "no-repeat");
+		body.style.setProperty(BODY_BG_ATTACHMENT, "fixed");
+	}
+	function syncSiteCookieAndStylesheet(appearance) {
+		if (appearance.theme === "site-dark") {
+			setSiteTheme("dark");
+			return;
+		}
+		if (appearance.theme === "site") {
+			setSiteTheme("light");
+			return;
+		}
+		forceLightSiteBase();
+	}
+	function applyAppearanceTheme(options) {
+		const { appearance } = options;
+		syncSiteCookieAndStylesheet(appearance);
+		applyAppearanceToDocument({
+			appearance,
+			siteSkinCss: options.siteSkinCss ?? getSiteSkinCss(),
+			...options.backgroundDataUrl !== void 0 ? { backgroundDataUrl: options.backgroundDataUrl } : {}
+		});
+		if (!themeEnablesSkin(appearance.theme)) document.documentElement.classList.remove(RDW_SKIN_CLASS);
+		let contrastWarning = false;
+		let ratio = null;
+		if (appearance.theme === "custom" && appearance.custom !== void 0) {
+			const custom = appearance.custom;
+			applyBodyBackgroundImage(options.backgroundDataUrl ?? custom.backgroundImage, custom.backgroundDim ?? 0);
+			ratio = contrastRatio(custom.text, custom.bg);
+			contrastWarning = ratio !== null && ratio < 4.5;
+			if (custom.backgroundDim !== void 0) document.documentElement.style.setProperty(TOKEN_VAR.backgroundDim, String(clampBackgroundDim(custom.backgroundDim)));
+		} else clearBodyBackground();
+		return {
+			contrastWarning,
+			contrastRatio: ratio
+		};
+	}
+	var removeClickBound = false;
+	function collectFavoritePostIds(root) {
+		const ids = [];
+		const seen = new Set();
+		const links = root.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
+		for (const link of links) {
+			if (!(link instanceof HTMLAnchorElement)) continue;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null || seen.has(postId)) continue;
+			seen.add(postId);
+			ids.push(postId);
+		}
+		return ids;
+	}
+	function bindRemoveClickCapture() {
+		if (removeClickBound) return;
+		removeClickBound = true;
+		document.addEventListener("click", (event) => {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const link = target.closest("a");
+			if (!(link instanceof HTMLAnchorElement)) return;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) return;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) return;
+			removeFav(postId);
+		}, true);
+	}
+	function syncFavoritesPage(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "favorites") return;
+		const ids = collectFavoritePostIds(root);
+		const numericIds = [];
+		for (const postId of ids) {
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) numericIds.push(Math.trunc(parsed));
+		}
+		addFavs(numericIds);
+		bindRemoveClickCapture();
+	}
+	function extractArtistTagFromLi(li) {
+		const links = li.querySelectorAll("a[href]");
+		for (const node of links) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if (node.hasAttribute("onclick")) continue;
+			const href = node.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let url;
+			try {
+				url = new URL(href, SITE_ORIGIN);
+			} catch {
+				continue;
+			}
+			if (url.searchParams.get("page") !== "post") continue;
+			if (url.searchParams.get("s") !== "list") continue;
+			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
+			if (tags === null) continue;
+			return normalizeArtistTag(tags);
+		}
+		return null;
+	}
+	function applyFollowState(button, following) {
+		button.setAttribute("aria-pressed", following ? "true" : "false");
+		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
+		const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
+		const tag = button.dataset.rdwArtistTag ?? "";
+		button.setAttribute("aria-label", `${label}: ${tag}`);
+		button.textContent = label;
+	}
+	function attachFollowButton(li, tag) {
+		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CSS_CLASS.artistFollow;
+		button.dataset.rdwArtistTag = tag;
+		applyFollowState(button, isFollowingArtist(tag));
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const following = button.getAttribute("aria-pressed") === "true";
+			try {
+				if (following) {
+					removeArtist(tag);
+					applyFollowState(button, false);
+				} else {
+					addArtist(tag);
+					applyFollowState(button, true);
+				}
+			} catch {
+				applyFollowState(button, isFollowingArtist(tag));
+			}
+		});
+		li.append(button);
+	}
+	function mountArtistSidebar(root = document, search = window.location.search) {
+		const kind = detectPageKind(search);
+		if (kind !== "list" && kind !== "post") return;
+		ensureDocumentStyles();
+		const sidebar = root.querySelector(SITE_SELECTORS.tagSidebar);
+		if (sidebar === null) return;
+		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
+		for (const row of rows) {
+			if (!(row instanceof HTMLElement)) continue;
+			const tag = extractArtistTagFromLi(row);
+			if (tag === null) continue;
+			attachFollowButton(row, tag);
+		}
+	}
+	var PANEL_FEATURE_STATE_ID = "panel";
+	var PANEL_TABS = [
+		"collections",
+		"artists",
+		"favorites",
+		"settings",
+		"blacklist"
+	];
+	var PANEL_TAB_LABELS = {
+		collections: "Collections",
+		artists: "Artists",
+		favorites: "Favorites",
+		settings: "Settings",
+		blacklist: "Blacklist"
+	};
+	var PANEL_UI_CLASS = {
+		tabs: "rdw-tabs",
+		tab: "rdw-tab",
+		tabPanel: "rdw-tab-panel",
+		footer: "rdw-footer",
+		artistMeta: "rdw-artist-meta",
+		artistFilter: "rdw-artist-filter",
+		artistList: "rdw-artist-list",
+		artistRow: "rdw-artist-row",
+		artistLink: "rdw-artist-link",
+		artistUndo: "rdw-artist-undo",
+		scrollRegion: "rdw-scroll-region",
+		themeDark: "rdw-theme-dark",
+		settingsGroup: "rdw-settings-group",
+		settingsRow: "rdw-settings-row",
+		resizeHint: "rdw-resize-hint"
+	};
+	var UNFOLLOW_UNDO_MS = 5e3;
+	var ARTISTS_EMPTY_HINT = "Follow artists with the Follow button next to their name in the tag list.";
+	var ARTIST_FILTER_LABEL = "Filter artists";
+	var UNFOLLOW_UNDO_LABEL = "Undo";
+	var UNFOLLOWED_PREFIX = "Unfollowed ";
+	var RESIZE_HINT = "Drag the corner to resize";
+	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
+	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
+	var UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
+	var PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
+	var ARTIST_FILTER_ID = "rdw-artist-filter";
+	var GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
+	var TWEAKS_SWITCH_ID = "rdw-tweaks-enabled";
+	var TAG_GROUPS_PANEL_LABEL = "Collapse tags";
+	function isPanelTab(value) {
+		return typeof value === "string" && PANEL_TABS.some((tab) => tab === value);
+	}
+	function featurePanelLabel(featureId, fallback) {
+		if (featureId === "tag-groups") return TAG_GROUPS_PANEL_LABEL;
+		return fallback;
+	}
+	function displayArtistName(tag) {
+		return tag.replaceAll("_", " ");
+	}
+	function compareArtistTags(a, b) {
+		return a.localeCompare(b, void 0, { sensitivity: "base" });
+	}
+	function ArtistsTab(props) {
+		const pendingTags = new Set(props.pending.map((entry) => entry.tag));
+		const sorted = [...props.artists].sort((a, b) => compareArtistTags(a.tag, b.tag));
+		const showFilter = sorted.length + props.pending.length > 12;
+		const filterValue = showFilter ? props.filter.trim().toLowerCase() : "";
+		A(() => {
+			if (!showFilter && props.filter.length > 0) props.onFilterChange("");
+		}, [
+			showFilter,
+			props.filter,
+			props.onFilterChange
+		]);
+		const matchesFilter = (tag) => {
+			if (filterValue.length === 0) return true;
+			return tag.toLowerCase().includes(filterValue) || displayArtistName(tag).toLowerCase().includes(filterValue);
+		};
+		const pendingSorted = [...props.pending].sort((a, b) => compareArtistTags(a.tag, b.tag));
+		const seen = getSeenPostId();
+		const count = props.artists.length;
+		const empty = sorted.length === 0 && props.pending.length === 0;
+		return a$1("div", {
+			className: PANEL_UI_CLASS.scrollRegion,
+			children: [a$1("div", {
+				className: PANEL_UI_CLASS.artistMeta,
+				children: [a$1("p", {
+					className: "rdw-hint",
+					children: `${String(count)} artist${count === 1 ? "" : "s"}`
+				}), a$1("p", {
+					className: "rdw-hint",
+					children: seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing
+				})]
+			}), empty ? a$1(EmptyState, { title: ARTISTS_EMPTY_HINT }) : a$1($, { children: [showFilter ? a$1("div", {
+				className: PANEL_UI_CLASS.artistFilter,
+				children: a$1(TextField, {
+					id: ARTIST_FILTER_ID,
+					label: ARTIST_FILTER_LABEL,
+					value: props.filter,
+					onChange: props.onFilterChange
+				})
+			}) : null, a$1("ul", {
+				className: PANEL_UI_CLASS.artistList,
+				children: [pendingSorted.map((entry) => {
+					if (!matchesFilter(entry.tag)) return null;
+					return a$1("li", {
+						className: PANEL_UI_CLASS.artistRow,
+						"data-tag": entry.tag,
+						children: a$1("div", {
+							className: PANEL_UI_CLASS.artistUndo,
+							children: [a$1("span", { children: `${UNFOLLOWED_PREFIX}${displayArtistName(entry.tag)}` }), a$1(Button, {
+								variant: "secondary",
+								size: "s",
+								onClick: () => {
+									props.onUndo(entry.tag);
+								},
+								children: UNFOLLOW_UNDO_LABEL
+							})]
+						})
+					}, `undo-${entry.tag}`);
+				}), sorted.map((artist) => {
+					if (pendingTags.has(artist.tag) || !matchesFilter(artist.tag)) return null;
+					return a$1("li", {
+						className: PANEL_UI_CLASS.artistRow,
+						"data-tag": artist.tag,
+						children: [a$1("a", {
+							className: PANEL_UI_CLASS.artistLink,
+							href: buildSearchUrl([{
+								tag: artist.tag,
+								type: TAG_TYPE_INCLUDE
+							}]),
+							title: artist.tag,
+							children: displayArtistName(artist.tag)
+						}), a$1(IconButton, {
+							label: `Unfollow ${artist.tag}`,
+							onClick: () => {
+								props.onUnfollow(artist.tag);
+							},
+							children: a$1(IconX, { size: 14 })
+						})]
+					}, artist.tag);
+				})]
+			})] })]
+		});
+	}
+	var SECTION_CLASS$1 = "rdw-blacklist";
+	var CHIPS_CLASS = "rdw-blacklist-chips";
+	var ADD_ROW_CLASS = "rdw-blacklist-add-row";
+	var SAVED_ROW_CLASS = "rdw-blacklist-saved-row";
+	var HINT_CLASS = "rdw-blacklist-hint";
+	var ADD_LABEL = "Add tag";
+	var ADD_BUTTON = "Add";
+	var SAVED_TEXT = "Saved. Reload the page to apply.";
+	var RELOAD_BUTTON = "Reload";
+	var PERMANENT_HINT = "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
+	var ADD_INPUT_ID = "rdw-blacklist-add";
+	var TAG_SPLIT_PATTERN = /[, ]+/;
+	var BLACKLIST_SECTION_CSS = `
+.${SECTION_CLASS$1} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${SECTION_CLASS$1} .${CHIPS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.${SECTION_CLASS$1} .${ADD_ROW_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.${SECTION_CLASS$1} .${ADD_ROW_CLASS} .rdw-field {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.${SECTION_CLASS$1} .${HINT_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+`.trim();
+	function parseAddTokens(raw) {
+		const result = [];
+		for (const part of raw.split(TAG_SPLIT_PATTERN)) {
+			const trimmed = part.trim();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function persistTags(tags) {
+		writeSiteBlacklist([...tags]);
+		return readSiteBlacklist();
+	}
+	function BlacklistSection(props = {}) {
+		const includeHeading = props.includeHeading !== false;
+		const [tags, setTags] = d(() => readSiteBlacklist());
+		const [draft, setDraft] = d("");
+		const addTokens = b(() => {
+			const tokens = parseAddTokens(draft);
+			if (tokens.length === 0) return;
+			setTags(persistTags([...readSiteBlacklist(), ...tokens]));
+			setDraft("");
+		}, [draft]);
+		return a$1($, { children: [a$1("style", { children: BLACKLIST_SECTION_CSS }), a$1("section", {
+			className: `rdw-section ${SECTION_CLASS$1}`,
+			children: [
+				includeHeading ? a$1(SectionLabel, { children: "Blacklist" }) : null,
+				a$1("ul", {
+					className: CHIPS_CLASS,
+					children: tags.map((tag) => a$1("li", { children: a$1(Chip, {
+						label: tag,
+						onRemove: () => {
+							const next = readSiteBlacklist().filter((entry) => entry !== tag);
+							setTags(persistTags(next));
+						}
+					}) }, tag))
+				}),
+				a$1("form", {
+					className: ADD_ROW_CLASS,
+					onSubmit: (event) => {
+						event.preventDefault();
+						addTokens();
+					},
+					children: [a$1(TextField, {
+						id: ADD_INPUT_ID,
+						label: ADD_LABEL,
+						value: draft,
+						onChange: setDraft
+					}), a$1(Button, {
+						type: "submit",
+						variant: "primary",
+						children: ADD_BUTTON
+					})]
+				}),
+				a$1("div", {
+					className: SAVED_ROW_CLASS,
+					children: [a$1("p", {
+						className: "rdw-hint",
+						children: SAVED_TEXT
+					}), a$1(Button, {
+						variant: "secondary",
+						onClick: () => {
+							window.location.reload();
+						},
+						children: RELOAD_BUTTON
+					})]
+				}),
+				a$1("p", {
+					className: HINT_CLASS,
+					children: PERMANENT_HINT
+				})
+			]
+		})] });
+	}
+	var TAB_CLASS = "rdw-collections-tab";
+	var PLAYLIST_META_CLASS = "rdw-playlist-meta";
+	var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
+	var PLAYLIST_PART_CLASS = "rdw-playlist-part";
+	var ROW_MAIN_CLASS = "rdw-collections-row-main";
+	var SAVED_SEARCHES_HEADING = "Saved searches";
+	var PLAYLISTS_HEADING = "Playlists";
+	var EMPTY_SAVED_SEARCHES = "No saved searches yet.";
+	var EMPTY_PLAYLISTS = "No playlists yet.";
+	var EMPTY_PLAYLISTS_HINT = "Use the + button on a post";
+	var NEW_PLAYLIST = "New playlist";
+	var OPEN_PLAYLIST = "Open playlist";
+	var SAVE_NAME_ID = "rdw-save-name";
+	var PLAYLIST_NAME_ID = "rdw-playlist-name";
+	var COLLECTIONS_TAB_CSS = `
+.${TAB_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.${TAB_CLASS} .${ROW_MAIN_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.${TAB_CLASS} .${PLAYLIST_META_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+.${TAB_CLASS} .${PLAYLIST_PARTS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.${TAB_CLASS} .${PLAYLIST_PART_CLASS} {
+  color: var(--rdw-accent);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.${TAB_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+`.trim();
+	var sharedMode = { kind: "list" };
+	var sharedNameDraft = "";
+	function postsLabel(count) {
+		return `${String(count)} post${count === 1 ? "" : "s"}`;
+	}
+	function listSavedSearches() {
+		return load().collections.filter((entry) => !isPlaylist(entry));
+	}
+	function playlistPostCount(playlist) {
+		return playlist.postIds?.length ?? 0;
+	}
+	function NameForm(props) {
+		A(() => {
+			const input = document.getElementById(props.inputId);
+			if (input instanceof HTMLInputElement) {
+				input.focus();
+				input.select();
+			}
+		}, [props.inputId]);
+		return a$1("form", {
+			className: "rdw-form",
+			onSubmit: (event) => {
+				event.preventDefault();
+				props.onSubmit();
+			},
+			children: [a$1(TextField, {
+				id: props.inputId,
+				label: UI_TEXT.nameLabel,
+				value: props.value,
+				onChange: props.onChange
+			}), a$1("div", {
+				className: "rdw-form-actions",
+				children: [a$1(Button, {
+					type: "submit",
+					variant: "primary",
+					children: UI_TEXT.save
+				}), a$1(Button, {
+					type: "button",
+					variant: "secondary",
+					onClick: props.onCancel,
+					children: UI_TEXT.cancel
+				})]
+			})]
+		});
+	}
+	function RenameDeleteActions(props) {
+		return a$1("div", {
+			className: "rdw-item-actions",
+			children: [a$1(Button, {
+				variant: "secondary",
+				size: "s",
+				"aria-label": `${UI_TEXT.rename}: ${props.collection.name}`,
+				onClick: props.onRename,
+				children: UI_TEXT.rename
+			}), a$1(IconButton, {
+				label: `${UI_TEXT.delete}: ${props.collection.name}`,
+				onClick: props.onDelete,
+				children: a$1(IconTrash, { size: 14 })
+			})]
+		});
+	}
+	function CollectionsTab() {
+		const [mode, setMode] = d(sharedMode);
+		const [nameDraft, setNameDraft] = d(sharedNameDraft);
+		const [, setTick] = d(0);
+		const refresh = () => {
+			setTick((value) => value + 1);
+		};
+		const setModeBoth = (next) => {
+			sharedMode = next;
+			setMode(next);
+		};
+		const setDraftBoth = (next) => {
+			sharedNameDraft = next;
+			setNameDraft(next);
+		};
+		const saved = listSavedSearches();
+		const playlists = listPlaylists();
+		const searchTags = readTagsFromLocation(window.location.search);
+		const canSave = searchTags !== null && searchTags.length > 0;
+		return a$1($, { children: [a$1("style", { children: COLLECTIONS_TAB_CSS }), a$1("div", {
+			className: `${PANEL_UI_CLASS.scrollRegion} ${TAB_CLASS}`,
+			children: [a$1("section", {
+				className: "rdw-section",
+				children: [
+					a$1(SectionLabel, { children: SAVED_SEARCHES_HEADING }),
+					mode.kind === "save-search" ? a$1(NameForm, {
+						inputId: SAVE_NAME_ID,
+						value: nameDraft,
+						onChange: setDraftBoth,
+						onSubmit: () => {
+							const tags = readTagsFromLocation(window.location.search);
+							if (tags === null || tags.length === 0) {
+								setModeBoth({ kind: "list" });
+								refresh();
+								return;
+							}
+							const name = nameDraft.trim();
+							if (name.length === 0) return;
+							addCollection(name, tags);
+							setModeBoth({ kind: "list" });
+							setDraftBoth("");
+							refresh();
+						},
+						onCancel: () => {
+							setModeBoth({ kind: "list" });
+						}
+					}) : a$1($, { children: [a$1(Button, {
+						variant: "primary",
+						disabled: !canSave,
+						onClick: () => {
+							const tags = readTagsFromLocation(window.location.search);
+							if (tags === null || tags.length === 0) return;
+							setDraftBoth(serialize(tags));
+							setModeBoth({ kind: "save-search" });
+						},
+						children: UI_TEXT.saveCurrent
+					}), !canSave ? a$1("p", {
+						className: "rdw-hint",
+						children: UI_TEXT.notOnSearchPage
+					}) : null] }),
+					saved.length === 0 ? a$1("p", {
+						className: "rdw-hint",
+						children: EMPTY_SAVED_SEARCHES
+					}) : a$1("ul", {
+						className: "rdw-list",
+						children: saved.map((collection) => a$1("li", {
+							className: "rdw-list-item",
+							children: mode.kind === "rename" && mode.id === collection.id ? a$1(NameForm, {
+								inputId: `rdw-rename-${collection.id}`,
+								value: nameDraft,
+								onChange: setDraftBoth,
+								onSubmit: () => {
+									const nextName = nameDraft.trim();
+									if (nextName.length === 0) return;
+									renameCollection(collection.id, nextName);
+									setModeBoth({ kind: "list" });
+									setDraftBoth("");
+									refresh();
+								},
+								onCancel: () => {
+									setModeBoth({ kind: "list" });
+								}
+							}) : mode.kind === "confirm-delete" && mode.id === collection.id ? a$1($, { children: [a$1("p", {
+								className: "rdw-hint",
+								children: `${UI_TEXT.confirmDelete} (${collection.name})`
+							}), a$1("div", {
+								className: "rdw-confirm-row",
+								children: [a$1(Button, {
+									variant: "danger",
+									onClick: () => {
+										deleteCollection(collection.id);
+										setModeBoth({ kind: "list" });
+										setDraftBoth("");
+										refresh();
+									},
+									children: UI_TEXT.confirm
+								}), a$1(Button, {
+									variant: "secondary",
+									onClick: () => {
+										setModeBoth({ kind: "list" });
+									},
+									children: UI_TEXT.cancel
+								})]
+							})] }) : a$1("div", {
+								className: ROW_MAIN_CLASS,
+								children: [a$1("button", {
+									type: "button",
+									className: "rdw-item-name",
+									"aria-label": `${UI_TEXT.openCollection}: ${collection.name}`,
+									onClick: () => {
+										window.location.assign(buildSearchUrl(collection.tags));
+									},
+									children: collection.name
+								}), a$1(RenameDeleteActions, {
+									collection,
+									onRename: () => {
+										setDraftBoth(collection.name);
+										setModeBoth({
+											kind: "rename",
+											id: collection.id
+										});
+									},
+									onDelete: () => {
+										setModeBoth({
+											kind: "confirm-delete",
+											id: collection.id
+										});
+									}
+								})]
+							})
+						}, collection.id))
+					})
+				]
+			}), a$1("section", {
+				className: "rdw-section",
+				children: [
+					a$1(SectionLabel, { children: PLAYLISTS_HEADING }),
+					mode.kind === "create-playlist" ? a$1(NameForm, {
+						inputId: PLAYLIST_NAME_ID,
+						value: nameDraft,
+						onChange: setDraftBoth,
+						onSubmit: () => {
+							const name = nameDraft.trim();
+							if (name.length === 0) return;
+							createPlaylist(name);
+							setModeBoth({ kind: "list" });
+							setDraftBoth("");
+							refresh();
+						},
+						onCancel: () => {
+							setModeBoth({ kind: "list" });
+						}
+					}) : a$1(Button, {
+						variant: "primary",
+						onClick: () => {
+							setDraftBoth("");
+							setModeBoth({ kind: "create-playlist" });
+						},
+						children: NEW_PLAYLIST
+					}),
+					playlists.length === 0 ? a$1(EmptyState, {
+						title: EMPTY_PLAYLISTS,
+						description: EMPTY_PLAYLISTS_HINT
+					}) : a$1("ul", {
+						className: "rdw-list",
+						children: playlists.map((playlist) => {
+							const count = playlistPostCount(playlist);
+							const queries = buildPlaylistQueries(playlist.postIds ?? [], getPlaylistChunkSize());
+							const canOpen = count > 0 && queries.length > 0;
+							return a$1("li", {
+								className: "rdw-list-item",
+								children: mode.kind === "rename" && mode.id === playlist.id ? a$1(NameForm, {
+									inputId: `rdw-rename-${playlist.id}`,
+									value: nameDraft,
+									onChange: setDraftBoth,
+									onSubmit: () => {
+										const nextName = nameDraft.trim();
+										if (nextName.length === 0) return;
+										renameCollection(playlist.id, nextName);
+										setModeBoth({ kind: "list" });
+										setDraftBoth("");
+										refresh();
+									},
+									onCancel: () => {
+										setModeBoth({ kind: "list" });
+									}
+								}) : mode.kind === "confirm-delete" && mode.id === playlist.id ? a$1($, { children: [a$1("p", {
+									className: "rdw-hint",
+									children: `${UI_TEXT.confirmDelete} (${playlist.name})`
+								}), a$1("div", {
+									className: "rdw-confirm-row",
+									children: [a$1(Button, {
+										variant: "danger",
+										onClick: () => {
+											deleteCollection(playlist.id);
+											setModeBoth({ kind: "list" });
+											setDraftBoth("");
+											refresh();
+										},
+										children: UI_TEXT.confirm
+									}), a$1(Button, {
+										variant: "secondary",
+										onClick: () => {
+											setModeBoth({ kind: "list" });
+										},
+										children: UI_TEXT.cancel
+									})]
+								})] }) : a$1($, { children: [
+									a$1("div", {
+										className: ROW_MAIN_CLASS,
+										children: [a$1("button", {
+											type: "button",
+											className: "rdw-item-name",
+											"aria-label": `${OPEN_PLAYLIST}: ${playlist.name}`,
+											disabled: !canOpen,
+											onClick: () => {
+												const first = queries[0];
+												if (first === void 0) return;
+												window.location.assign(buildUpdatesSearchUrl(first));
+											},
+											children: playlist.name
+										}), a$1(RenameDeleteActions, {
+											collection: playlist,
+											onRename: () => {
+												setDraftBoth(playlist.name);
+												setModeBoth({
+													kind: "rename",
+													id: playlist.id
+												});
+											},
+											onDelete: () => {
+												setModeBoth({
+													kind: "confirm-delete",
+													id: playlist.id
+												});
+											}
+										})]
+									}),
+									a$1("p", {
+										className: PLAYLIST_META_CLASS,
+										children: postsLabel(count)
+									}),
+									queries.length > 1 ? a$1("ul", {
+										className: PLAYLIST_PARTS_CLASS,
+										"aria-label": "Playlist parts",
+										children: queries.map((query, index) => a$1("li", { children: a$1("a", {
+											className: PLAYLIST_PART_CLASS,
+											href: buildUpdatesSearchUrl(query),
+											children: String(index + 1)
+										}) }, `${playlist.id}-${String(index)}`))
+									}) : null
+								] })
+							}, playlist.id);
+						})
+					})
+				]
+			})]
+		})] });
+	}
+	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
+	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
+	var THUMB_SELECTOR = "span.thumb";
+	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
+	var PAGINATOR_SELECTOR = "#paginator";
+	var LASTPAGE_SELECTOR = "a[name=\"lastpage\"]";
+	var NEXT_SELECTOR = "a[name=\"next\"]";
+	var REMOVE_LINK_SELECTOR = "a[onclick]";
+	var POST_LINK_ID_PATTERN = /^p(\d+)$/;
+	var ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
+	var URL_PARSE_BASE = "https://rule34.xxx";
+	var FAVORITES_SYNC_ERROR_NOT_LOGGED_IN = "not logged in or menu not found";
+	var FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE = "unexpected page";
+	function createAbortResult(total, page, pages) {
+		return {
+			status: "aborted",
+			total,
+			page,
+			pages
+		};
+	}
+	function isAbortError(error) {
+		return error instanceof DOMException && error.name === "AbortError" || error instanceof Error && error.name === "AbortError";
+	}
+	function throwIfAborted(signal) {
+		if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+	}
+	function delay(ms, signal) {
+		return new Promise((resolve, reject) => {
+			if (signal.aborted) {
+				reject(new DOMException("Aborted", "AbortError"));
+				return;
+			}
+			const timer = setTimeout(() => {
+				signal.removeEventListener("abort", onAbort);
+				if (signal.aborted) {
+					reject(new DOMException("Aborted", "AbortError"));
+					return;
+				}
+				resolve();
+			}, ms);
+			const onAbort = () => {
+				clearTimeout(timer);
+				reject(new DOMException("Aborted", "AbortError"));
+			};
+			signal.addEventListener("abort", onAbort, { once: true });
+		});
+	}
+	function parsePositiveInt(raw) {
+		if (raw === null) return null;
+		const trimmed = raw.trim();
+		if (trimmed.length === 0) return null;
+		const value = Number(trimmed);
+		if (!Number.isFinite(value) || value < 0) return null;
+		return Math.trunc(value);
+	}
+	function parsePidFromOnclick(onclick) {
+		const raw = ONCLICK_PID_PATTERN.exec(onclick)?.[1];
+		if (raw === void 0) return null;
+		return parsePositiveInt(raw);
+	}
+	function extractUserIdFromDocument(root) {
+		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
+		if (!(link instanceof HTMLAnchorElement)) return null;
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) return null;
+		try {
+			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("id"));
+		} catch {
+			return null;
+		}
+	}
+	function buildFavoritesPageUrl(userId, pid) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_VIEW);
+		params.set("id", String(userId));
+		params.set("pid", String(pid));
+		return `${SEARCH_PATH}?${params.toString()}`;
+	}
+	function pageIndexFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid$1(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function collectFavoriteIdsFromDocument(doc) {
+		const ids = new Set();
+		const postLinks = doc.querySelectorAll(THUMB_POST_LINK_SELECTOR);
+		for (const link of postLinks) {
+			const raw = POST_LINK_ID_PATTERN.exec(link.id)?.[1];
+			if (raw === void 0) continue;
+			const parsed = Number(raw);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		const removeLinks = doc.querySelectorAll(REMOVE_LINK_SELECTOR);
+		for (const link of removeLinks) {
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) continue;
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		return Array.from(ids);
+	}
+	function resolveLastPid(doc, currentPid) {
+		const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
+		if (lastpage instanceof HTMLAnchorElement) {
+			const onclick = lastpage.getAttribute("onclick");
+			if (onclick === null || onclick.length === 0) return null;
+			return parsePidFromOnclick(onclick);
+		}
+		if (doc.querySelector(NEXT_SELECTOR) !== null) return null;
+		return currentPid;
+	}
+	function isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount) {
+		if (cardCount === 0 && pid <= lastPid) return true;
+		if (pid === 0 && cardCount === 0 && doc.querySelector(PAGINATOR_SELECTOR) === null) return true;
+		return false;
+	}
+	function persistSyncProgress(state) {
+		setSyncState(state);
+	}
+	async function runFavoritesSync(options) {
+		const { onProgress, signal } = options;
+		const userId = extractUserIdFromDocument(document);
+		if (userId === null) {
+			log.warn("favorites sync: user id not found");
+			return {
+				status: "error",
+				message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN
+			};
+		}
+		const existing = getSyncState();
+		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
+		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
+		let pid = unfinished ? existing.nextPid : 0;
+		let lastPid = unfinished ? existing.lastPid : 0;
+		let total = loadFavSet().size;
+		let page = pageIndexFromPid(pid);
+		let pages = pagesFromLastPid$1(lastPid);
+		try {
+			throwIfAborted(signal);
+			while (true) {
+				throwIfAborted(signal);
+				const url = buildFavoritesPageUrl(userId, pid);
+				let response;
+				try {
+					response = await fetch(url, {
+						method: "GET",
+						credentials: FETCH_CREDENTIALS
+					});
+				} catch (error) {
+					if (isAbortError(error)) throw error;
+					log.warn("favorites sync: fetch failed", url, error);
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: error instanceof Error ? error.message : "request failed"
+					};
+				}
+				if (!response.ok) {
+					log.warn("favorites sync: HTTP error", response.status, url);
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: `HTTP ${String(response.status)}`
+					};
+				}
+				const html = await response.text();
+				const doc = new DOMParser().parseFromString(html, "text/html");
+				const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
+				const resolvedLastPid = resolveLastPid(doc, pid);
+				if (resolvedLastPid === null) {
+					log.warn("favorites sync: unexpected page", {
+						pid,
+						cardCount
+					});
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
+					};
+				}
+				lastPid = resolvedLastPid;
+				page = pageIndexFromPid(pid);
+				pages = pagesFromLastPid$1(lastPid);
+				if (isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount)) {
+					log.warn("favorites sync: unexpected page", {
+						pid,
+						lastPid,
+						cardCount
+					});
+					persistSyncProgress({
+						nextPid: pid,
+						lastPid,
+						startedAt
+					});
+					return {
+						status: "error",
+						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
+					};
+				}
+				addFavs(collectFavoriteIdsFromDocument(doc));
+				total = loadFavSet().size;
+				const nextPid = pid + 50;
+				persistSyncProgress({
+					nextPid,
+					lastPid,
+					startedAt
+				});
+				onProgress({
+					page,
+					pages,
+					total
+				});
+				if (pid >= lastPid) {
+					const finishedAt = new Date().toISOString();
+					persistSyncProgress({
+						nextPid,
+						lastPid,
+						startedAt,
+						finishedAt
+					});
+					log.info("favorites sync: completed", {
+						total,
+						pages
+					});
+					return {
+						status: "completed",
+						total,
+						pages
+					};
+				}
+				throwIfAborted(signal);
+				await delay(FAVORITES_SYNC_PAGE_PAUSE_MS, signal);
+				throwIfAborted(signal);
+				pid = nextPid;
+				page = pageIndexFromPid(pid);
+			}
+		} catch (error) {
+			if (isAbortError(error)) {
+				log.info("favorites sync: aborted", {
+					pid,
+					total
+				});
+				return createAbortResult(total, page, pages);
+			}
+			log.error("favorites sync: unexpected failure", error);
+			persistSyncProgress({
+				nextPid: pid,
+				lastPid,
+				startedAt
+			});
+			return {
+				status: "error",
+				message: error instanceof Error ? error.message : "unexpected error"
+			};
+		}
+	}
+	var SECTION_CLASS = "rdw-favs-sync";
+	var STATUS_CLASS = "rdw-favs-sync-status";
+	var ACTIONS_CLASS = "rdw-favs-sync-actions";
+	var WARNING_CLASS = "rdw-favs-sync-warning";
+	var NOTE_CLASS = "rdw-favs-sync-note";
+	var HEADING = "Favorites sync";
+	var TEXT_SYNC = "Sync favorites";
+	var TEXT_RESUME = "Resume";
+	var TEXT_STOP = "Stop";
+	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
+	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
+	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
+	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
+	var TEXT_PAUSED = (page, pages) => `Paused at page ${String(page)} of ${String(pages)}`;
+	var TEXT_PROGRESS = (p) => `Page ${String(p.page)} of ${String(p.pages)} · ${String(p.total)} ids`;
+	var TEXT_DONE = (total, pages) => `Synced ${String(total)} ids across ${String(pages)} pages`;
+	var TEXT_ABORTED = (page, pages, total) => `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
+	var PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1e3;
+	var FAVORITES_SYNC_SECTION_CSS = `
+.${SECTION_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${SECTION_CLASS} .${STATUS_CLASS} {
+  margin: 0;
+  color: var(--rdw-text);
+  font-size: 12px;
+}
+.${SECTION_CLASS} .${ACTIONS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.${SECTION_CLASS} .${WARNING_CLASS},
+.${SECTION_CLASS} .${NOTE_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+`.trim();
+	var activeSync = null;
+	function formatSyncDate(iso) {
+		const parsed = Date.parse(iso);
+		if (!Number.isFinite(parsed)) return iso;
+		return new Date(parsed).toLocaleString();
+	}
+	function pageFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function isUnfinished(sync) {
+		return sync !== void 0 && sync.finishedAt === void 0;
+	}
+	function buildStatusText() {
+		const count = loadFavSet().size;
+		const sync = getSyncState();
+		const parts = [TEXT_IDLE_COUNT(count)];
+		if (sync !== void 0 && sync.finishedAt === void 0) {
+			const page = pageFromPid(sync.nextPid);
+			const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
+			parts.push(TEXT_PAUSED(page, pages));
+		} else if (sync?.finishedAt !== void 0) parts.push(TEXT_LAST_SYNC(sync.finishedAt));
+		return parts.join(" · ");
+	}
+	function idleUi() {
+		return {
+			status: buildStatusText(),
+			progress: null,
+			error: "",
+			unfinished: isUnfinished(getSyncState()),
+			busy: activeSync !== null
+		};
+	}
+	function applyResult(result) {
+		activeSync = null;
+		if (result.status === "error") return {
+			...idleUi(),
+			error: result.message
+		};
+		if (result.status === "completed") return {
+			status: TEXT_DONE(result.total, result.pages),
+			progress: 1,
+			error: "",
+			unfinished: false,
+			busy: false
+		};
+		return {
+			status: TEXT_ABORTED(result.page, result.pages, result.total),
+			progress: result.pages > 0 ? result.page / Math.max(result.pages, 1) : 0,
+			error: "",
+			unfinished: isUnfinished(getSyncState()),
+			busy: false
+		};
+	}
+	async function startSync(setUi) {
+		if (activeSync !== null) return;
+		const controller = new AbortController();
+		const listeners = new Set();
+		activeSync = {
+			controller,
+			listeners
+		};
+		listeners.add((progress) => {
+			setUi({
+				status: TEXT_PROGRESS(progress),
+				progress: progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
+				error: "",
+				unfinished: true,
+				busy: true
+			});
+		});
+		setUi({
+			status: TEXT_PROGRESS({
+				page: 0,
+				pages: 1,
+				total: loadFavSet().size
+			}),
+			progress: 0,
+			error: "",
+			unfinished: true,
+			busy: true
+		});
+		try {
+			const result = await runFavoritesSync({
+				onProgress: (progress) => {
+					for (const listener of listeners) listener(progress);
+				},
+				signal: controller.signal
+			});
+			if (activeSync?.controller === controller) setUi(applyResult(result));
+		} catch (error) {
+			log.error("favorites sync section: unexpected failure", error);
+			if (activeSync?.controller === controller) {
+				activeSync = null;
+				setUi({
+					...idleUi(),
+					error: error instanceof Error ? error.message : "unexpected error"
+				});
+			}
+		}
+	}
+	function FavoritesSyncSection(props = {}) {
+		const includeHeading = props.includeHeading !== false;
+		const [ui, setUi] = d(() => idleUi());
+		A(() => {
+			if (activeSync === null) return;
+			const listener = (progress) => {
+				setUi({
+					status: TEXT_PROGRESS(progress),
+					progress: progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
+					error: "",
+					unfinished: true,
+					busy: true
+				});
+			};
+			activeSync.listeners.add(listener);
+			setUi({
+				status: TEXT_PROGRESS({
+					page: 0,
+					pages: 1,
+					total: loadFavSet().size
+				}),
+				progress: 0,
+				error: "",
+				unfinished: true,
+				busy: true
+			});
+			return () => {
+				activeSync?.listeners.delete(listener);
+			};
+		}, []);
+		return a$1($, { children: [a$1("style", { children: FAVORITES_SYNC_SECTION_CSS }), a$1("section", {
+			className: `rdw-section ${SECTION_CLASS}`,
+			children: [
+				includeHeading ? a$1(SectionLabel, { children: HEADING }) : null,
+				a$1("p", {
+					className: STATUS_CLASS,
+					children: ui.status
+				}),
+				a$1(ProgressBar, {
+					value: ui.progress,
+					label: "Favorites sync progress"
+				}),
+				a$1("div", {
+					className: ACTIONS_CLASS,
+					children: [!ui.unfinished ? a$1(Button, {
+						variant: "primary",
+						disabled: ui.busy,
+						onClick: () => {
+							startSync(setUi);
+						},
+						children: TEXT_SYNC
+					}) : a$1(Button, {
+						variant: "secondary",
+						disabled: ui.busy,
+						onClick: () => {
+							startSync(setUi);
+						},
+						children: TEXT_RESUME
+					}), a$1(Button, {
+						variant: "secondary",
+						disabled: !ui.busy,
+						onClick: () => {
+							activeSync?.controller.abort();
+						},
+						children: TEXT_STOP
+					})]
+				}),
+				ui.error.length > 0 ? a$1("p", {
+					className: "rdw-error",
+					children: ui.error
+				}) : null,
+				a$1("p", {
+					className: WARNING_CLASS,
+					children: TEXT_WARNING
+				}),
+				a$1("p", {
+					className: NOTE_CLASS,
+					children: TEXT_NOTE
+				}),
+				a$1("p", {
+					className: "rdw-hint",
+					children: `Pause between pages: ${String(PAUSE_SECONDS)} s`
+				})
+			]
+		})] });
+	}
+	function FavoritesTab(props) {
+		return a$1("div", {
+			className: PANEL_UI_CLASS.scrollRegion,
+			children: [
+				a$1(SectionLabel, { children: "Favorites" }),
+				a$1("div", {
+					className: PANEL_UI_CLASS.settingsRow,
+					children: [a$1("span", { children: UI_TEXT.gridFavButtonsLabel }), a$1(Switch, {
+						id: GRID_FAV_CHECKBOX_ID,
+						label: UI_TEXT.gridFavButtonsLabel,
+						checked: props.gridFavEnabled,
+						onChange: (checked) => {
+							setGridFavButtonsEnabled(checked);
+							setGridFavButtonsVisible(checked);
+							props.onGridFavChange(checked);
+						}
+					})]
+				}),
+				a$1(FavoritesSyncSection, { includeHeading: true })
+			]
+		});
+	}
+	function readInitialGridFavEnabled() {
+		return getGridFavButtonsEnabled();
+	}
+	var PANEL_MAX_WIDTH_CSS = "90vw";
+	var PANEL_MAX_HEIGHT_CSS = "90vh";
+	function clampSize(value, min) {
+		if (!Number.isFinite(value)) return min;
+		return Math.max(min, Math.floor(value));
+	}
+	function measureBorderBoxSize(entry, element) {
+		const boxList = entry.borderBoxSize;
+		const box = boxList !== void 0 && boxList.length > 0 ? boxList[0] : void 0;
+		let width;
+		let height;
+		if (box !== void 0) {
+			width = Math.round(box.inlineSize);
+			height = Math.round(box.blockSize);
+		} else {
+			width = Math.round(element.offsetWidth);
+			height = Math.round(element.offsetHeight);
+		}
+		if (width <= 0 || height <= 0) return null;
+		return {
+			width: clampSize(width, 340),
+			height: clampSize(height, 260)
+		};
+	}
+	function sizesEqual(a, b) {
+		return a.width === b.width && a.height === b.height;
+	}
+	function buildSizeCssRule(width, height) {
+		return `.rdw-panel{width:${String(width)}px;height:${String(height)}px;}`;
+	}
+	function isUnknownRecord(value) {
+		return value !== null && typeof value === "object";
+	}
+	function readPersistedPanelState() {
+		const raw = getFeatureState(PANEL_FEATURE_STATE_ID);
+		let tab = "collections";
+		let width = 360;
+		let height = 480;
+		if (isUnknownRecord(raw)) {
+			if (isPanelTab(raw["tab"])) tab = raw["tab"];
+			const rawWidth = raw["width"];
+			const rawHeight = raw["height"];
+			if (typeof rawWidth === "number") width = clampSize(rawWidth, 340);
+			if (typeof rawHeight === "number") height = clampSize(rawHeight, 260);
+		}
+		return {
+			tab,
+			width,
+			height
+		};
+	}
+	function writePersistedPanelState(next) {
+		setFeatureState(PANEL_FEATURE_STATE_ID, {
+			tab: next.tab,
+			width: next.width,
+			height: next.height
+		});
+	}
+	var GRID_FEATURE_ID = gridDensityFeature.id;
+	var THEME_OPTIONS = [
+		{
+			value: APPEARANCE_THEME_SITE,
+			label: "Site default"
+		},
+		{
+			value: APPEARANCE_THEME_SITE_DARK,
+			label: "Site dark"
+		},
+		{
+			value: APPEARANCE_THEME_LIGHT,
+			label: "Light"
+		},
+		{
+			value: APPEARANCE_THEME_DARK,
+			label: "Dark"
+		},
+		{
+			value: APPEARANCE_THEME_CUSTOM,
+			label: "Custom"
+		}
+	];
+	var GRID_OPTIONS = [
+		{
+			value: "default",
+			label: "Default"
+		},
+		{
+			value: "compact",
+			label: "Compact"
+		},
+		{
+			value: "large",
+			label: "Large"
+		},
+		{
+			value: "masonry",
+			label: "Masonry"
+		}
+	];
+	var SECTION_TITLE = "Appearance";
+	var THEME_ROW_LABEL = "Site theme";
+	var THEME_ROW_HINT = "Light, dark or your own";
+	var COLORS_ROW_LABEL = "Accent and background";
+	var BG_IMAGE_LABEL = "Background image";
+	var BG_IMAGE_HINT = "From a link or a file";
+	var BG_URL_PLACEHOLDER = "https://… or data URL";
+	var BG_DIM_LABEL = "Dim";
+	var CHOOSE_LABEL = "Choose…";
+	var REMOVE_LABEL = "Remove";
+	var RESET_LABEL = "Reset to defaults";
+	var GRID_ROW_LABEL = "Grid";
+	var CONTRAST_WARN_TEXT = `Low contrast: text on background is below ${String(CONTRAST_RATIO_MIN)}:1`;
+	var COLOR_FIELDS = [
+		{
+			key: "accent",
+			label: "Accent"
+		},
+		{
+			key: "bg",
+			label: "Background"
+		},
+		{
+			key: "surface",
+			label: "Surface"
+		},
+		{
+			key: "text",
+			label: "Text"
+		}
+	];
+	var ACCEPT_IMAGE = "image/*";
+	var APPEARANCE_SECTION_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-appearance {
+  display: grid;
+  gap: 2px;
+}
+.rdw-appearance__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--rdw-radius-m);
+  font-size: 12.5px;
+  color: var(--rdw-text);
+}
+.rdw-appearance__row--top {
+  align-items: flex-start;
+}
+.rdw-appearance__row:nth-child(even) {
+  background: var(--rdw-surface-2);
+}
+.rdw-appearance__row-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.rdw-appearance__row-text small {
+  color: var(--rdw-muted);
+  font-size: 11px;
+}
+.rdw-appearance__select {
+  width: 110px;
+  flex: none;
+}
+.rdw-appearance__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.rdw-appearance__color {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--rdw-muted);
+}
+.rdw-appearance__color input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--rdw-surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--rdw-border);
+  background: transparent;
+  cursor: pointer;
+}
+.rdw-appearance__bg {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.rdw-appearance__bg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.rdw-appearance__dim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rdw-muted);
+}
+.rdw-appearance__dim input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--rdw-accent);
+}
+.rdw-appearance__warn {
+  margin: 4px 8px 0;
+  padding: 6px 8px;
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-danger-soft);
+  color: var(--rdw-danger);
+  font-size: 12px;
+}
+.rdw-appearance__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.rdw-appearance__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px 0;
+}
+`;
+	function resolveGridChoice() {
+		const stored = getFeatureChoiceValue(GRID_FEATURE_ID);
+		const options = gridDensityFeature.choice?.options ?? [];
+		if (stored !== void 0 && options.some((option) => option.value === stored)) return stored;
+		return gridDensityFeature.choice?.defaultValue ?? "default";
+	}
+	function ensureCustom(appearance) {
+		return appearance.custom ?? createDefaultCustomTheme();
+	}
+	function persistAndApply(appearance) {
+		const parsed = setAppearance(appearance);
+		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
+		return { contrastWarning: applyAppearanceTheme({
+			appearance: parsed,
+			siteSkinCss: getSiteSkinCss(),
+			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
+		}).contrastWarning };
+	}
+	function readFileAsDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => {
+				if (typeof reader.result === "string") {
+					resolve(reader.result);
+					return;
+				}
+				reject(new Error("Could not read image file"));
+			};
+			reader.onerror = () => {
+				reject(reader.error ?? new Error("Could not read image file"));
+			};
+			reader.readAsDataURL(file);
+		});
+	}
+	function AppearanceSection(props) {
+		const fileInputId = P();
+		const fileRef = T(null);
+		const [appearance, setAppearanceState] = d(() => getAppearance());
+		const [gridValue, setGridValue] = d(() => resolveGridChoice());
+		const [bgUrlDraft, setBgUrlDraft] = d(() => {
+			return getAppearance().custom?.backgroundImage ?? "";
+		});
+		const [fileError, setFileError] = d("");
+		const [contrastWarning, setContrastWarning] = d(() => {
+			const current = getAppearance();
+			if (current.theme !== "custom" || current.custom === void 0) return false;
+			return hasInsufficientTextContrast(current.custom.text, current.custom.bg);
+		});
+		const custom = ensureCustom(appearance);
+		const isCustom = appearance.theme === APPEARANCE_THEME_CUSTOM;
+		const hasBackground = (getAppearanceBackgroundDataUrl()?.length ?? 0) > 0 || (custom.backgroundImage?.length ?? 0) > 0 || bgUrlDraft.length > 0;
+		function commitAppearance(next) {
+			setAppearanceState(next);
+			const { contrastWarning: warn } = persistAndApply(next);
+			setContrastWarning(warn);
+			setFileError("");
+		}
+		function onThemeChange(value) {
+			const theme = value;
+			if (theme === "custom") {
+				commitAppearance({
+					theme,
+					custom: ensureCustom(appearance)
+				});
+				return;
+			}
+			commitAppearance({ theme });
+		}
+		function onColorChange(key, value) {
+			commitAppearance({
+				theme: APPEARANCE_THEME_CUSTOM,
+				custom: {
+					...ensureCustom(getAppearance()),
+					[key]: value
+				}
+			});
+		}
+		function onBgUrlCommit(url) {
+			const trimmed = url.trim();
+			setBgUrlDraft(trimmed);
+			const base = ensureCustom(getAppearance());
+			const nextCustom = {
+				accent: base.accent,
+				bg: base.bg,
+				surface: base.surface,
+				text: base.text,
+				backgroundDim: clampBackgroundDim(base.backgroundDim ?? 0),
+				...trimmed.length > 0 ? { backgroundImage: trimmed } : {}
+			};
+			if (trimmed.length > 0) clearAppearanceBackgroundDataUrl();
+			commitAppearance({
+				theme: APPEARANCE_THEME_CUSTOM,
+				custom: nextCustom
+			});
+		}
+		function onDimChange(raw) {
+			const dim = clampBackgroundDim(raw);
+			const base = ensureCustom(getAppearance());
+			commitAppearance({
+				theme: APPEARANCE_THEME_CUSTOM,
+				custom: {
+					accent: base.accent,
+					bg: base.bg,
+					surface: base.surface,
+					text: base.text,
+					backgroundDim: dim,
+					...base.backgroundImage !== void 0 ? { backgroundImage: base.backgroundImage } : {}
+				}
+			});
+		}
+		async function onFileSelected(file) {
+			if (file === void 0) return;
+			try {
+				setAppearanceBackgroundDataUrl(await readFileAsDataUrl(file));
+				setBgUrlDraft("");
+				const base = ensureCustom(getAppearance());
+				commitAppearance({
+					theme: APPEARANCE_THEME_CUSTOM,
+					custom: {
+						accent: base.accent,
+						bg: base.bg,
+						surface: base.surface,
+						text: base.text,
+						backgroundDim: clampBackgroundDim(base.backgroundDim ?? 0)
+					}
+				});
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Could not read image file";
+				setFileError(message);
+			}
+		}
+		function onRemoveBackground() {
+			clearAppearanceBackgroundDataUrl();
+			setBgUrlDraft("");
+			const base = ensureCustom(getAppearance());
+			commitAppearance({
+				theme: APPEARANCE_THEME_CUSTOM,
+				custom: {
+					accent: base.accent,
+					bg: base.bg,
+					surface: base.surface,
+					text: base.text,
+					backgroundDim: 0
+				}
+			});
+		}
+		function onResetDefaults() {
+			clearAppearanceBackgroundDataUrl();
+			setBgUrlDraft("");
+			commitAppearance({
+				theme: APPEARANCE_THEME_CUSTOM,
+				custom: createDefaultCustomTheme()
+			});
+		}
+		function onGridChange(value) {
+			setGridValue(value);
+			setFeatureChoiceValue(GRID_FEATURE_ID, value);
+			applyCssOnlyFeatureChoice(GRID_FEATURE_ID, value);
+		}
+		const className = ["rdw-appearance", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+		return a$1($, { children: [a$1("style", { children: APPEARANCE_SECTION_CSS }), a$1("section", {
+			className,
+			"aria-label": SECTION_TITLE,
+			children: [
+				a$1(SectionLabel, { children: SECTION_TITLE }),
+				a$1("div", {
+					className: "rdw-appearance__row",
+					children: [a$1("div", {
+						className: "rdw-appearance__row-text",
+						children: [a$1("span", { children: THEME_ROW_LABEL }), a$1("small", { children: THEME_ROW_HINT })]
+					}), a$1(Select, {
+						className: "rdw-appearance__select",
+						options: THEME_OPTIONS,
+						value: appearance.theme,
+						onChange: onThemeChange
+					})]
+				}),
+				isCustom ? a$1($, { children: [
+					a$1("div", {
+						className: "rdw-appearance__row",
+						children: [a$1("div", {
+							className: "rdw-appearance__row-text",
+							children: a$1("span", { children: COLORS_ROW_LABEL })
+						}), a$1("div", {
+							className: "rdw-appearance__colors",
+							children: COLOR_FIELDS.map((field) => a$1("label", {
+								className: "rdw-appearance__color",
+								children: [a$1("input", {
+									type: "color",
+									className: "rdw-kit-focusable",
+									value: custom[field.key],
+									"aria-label": field.label,
+									onInput: (event) => {
+										onColorChange(field.key, event.currentTarget.value);
+									}
+								}), a$1("span", { children: field.label })]
+							}, field.key))
+						})]
+					}),
+					a$1("div", {
+						className: "rdw-appearance__row rdw-appearance__row--top",
+						children: [a$1("div", {
+							className: "rdw-appearance__row-text",
+							children: [a$1("span", { children: BG_IMAGE_LABEL }), a$1("small", { children: BG_IMAGE_HINT })]
+						}), a$1("div", {
+							className: "rdw-appearance__bg",
+							onFocusOut: (event) => {
+								const root = event.currentTarget;
+								const next = event.relatedTarget;
+								if (next instanceof Node && root.contains(next)) return;
+								onBgUrlCommit(bgUrlDraft);
+							},
+							children: [
+								a$1(TextField, {
+									value: bgUrlDraft,
+									placeholder: BG_URL_PLACEHOLDER,
+									"aria-label": BG_IMAGE_LABEL,
+									onChange: (value) => {
+										setBgUrlDraft(value);
+									}
+								}),
+								a$1("div", {
+									className: "rdw-appearance__bg-actions",
+									children: [
+										a$1(Button, {
+											variant: "secondary",
+											size: "s",
+											onClick: () => {
+												fileRef.current?.click();
+											},
+											children: CHOOSE_LABEL
+										}),
+										hasBackground ? a$1(Button, {
+											variant: "ghost",
+											size: "s",
+											onClick: onRemoveBackground,
+											children: REMOVE_LABEL
+										}) : null,
+										a$1("input", {
+											ref: fileRef,
+											id: fileInputId,
+											className: "rdw-appearance__file",
+											type: "file",
+											accept: ACCEPT_IMAGE,
+											"aria-hidden": "true",
+											tabIndex: -1,
+											onChange: (event) => {
+												const file = event.currentTarget.files?.[0];
+												onFileSelected(file);
+												event.currentTarget.value = "";
+											}
+										})
+									]
+								}),
+								hasBackground ? a$1("label", {
+									className: "rdw-appearance__dim",
+									children: [
+										a$1("span", { children: BG_DIM_LABEL }),
+										a$1("input", {
+											type: "range",
+											min: 0,
+											max: .8,
+											step: .05,
+											value: custom.backgroundDim ?? 0,
+											"aria-label": BG_DIM_LABEL,
+											onInput: (event) => {
+												onDimChange(Number(event.currentTarget.value));
+											}
+										}),
+										a$1("span", { children: String(clampBackgroundDim(custom.backgroundDim ?? 0)) })
+									]
+								}) : null,
+								fileError.length > 0 ? a$1("div", {
+									className: "rdw-appearance__warn",
+									role: "status",
+									children: fileError
+								}) : null
+							]
+						})]
+					}),
+					contrastWarning ? a$1("div", {
+						className: "rdw-appearance__warn",
+						role: "status",
+						children: CONTRAST_WARN_TEXT
+					}) : null,
+					a$1("div", {
+						className: "rdw-appearance__footer",
+						children: a$1(Button, {
+							variant: "ghost",
+							size: "s",
+							onClick: onResetDefaults,
+							children: RESET_LABEL
+						})
+					})
+				] }) : null,
+				a$1("div", {
+					className: "rdw-appearance__row",
+					children: [a$1("div", {
+						className: "rdw-appearance__row-text",
+						children: a$1("span", { children: GRID_ROW_LABEL })
+					}), a$1(Select, {
+						className: "rdw-appearance__select",
+						options: GRID_OPTIONS,
+						value: gridValue,
+						onChange: onGridChange
+					})]
+				})
+			]
+		})] });
+	}
+	var PAGE_FEATURE_SKIP = new Set(["grid-density"]);
+	function FeatureModules() {
+		const [, bump] = d(0);
+		const refresh = () => {
+			bump((value) => value + 1);
+		};
+		return a$1("div", {
+			className: PANEL_UI_CLASS.settingsGroup,
+			children: FEATURES.filter((feature) => !PAGE_FEATURE_SKIP.has(feature.id)).map((feature) => {
+				const label = featurePanelLabel(feature.id, feature.label);
+				if (feature.choice !== void 0) {
+					const selected = getFeatureChoice(feature.id);
+					return a$1("div", {
+						className: PANEL_UI_CLASS.settingsRow,
+						id: `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`,
+						children: a$1(Select, {
+							label,
+							options: feature.choice.options.map((option) => ({
+								value: option.value,
+								label: option.label
+							})),
+							value: selected,
+							onChange: (value) => {
+								setFeatureChoiceValue(feature.id, value);
+								if (feature.cssOnly === true) {
+									applyCssOnlyFeatureChoice(feature.id, value);
+									refresh();
+									return;
+								}
+								window.location.reload();
+							}
+						})
+					}, feature.id);
+				}
+				return a$1("div", {
+					className: PANEL_UI_CLASS.settingsRow,
+					children: a$1(Switch, {
+						id: `${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`,
+						label,
+						checked: isFeatureEnabled(feature.id),
+						onChange: (checked) => {
+							setFeatureEnabled(feature.id, checked);
+							if (feature.cssOnly === true) {
+								applyCssOnlyFeatureEnabled(feature.id, checked);
+								refresh();
+								return;
+							}
+							window.location.reload();
+						}
+					})
+				}, feature.id);
+			})
+		});
+	}
+	function SettingsTab(props) {
+		const [tweaks, setTweaks] = d(() => getTweaksEnabled());
+		const [updatesGroup, setUpdatesGroup] = d(() => getUpdatesGroupSize());
+		const [playlistChunk, setPlaylistChunk] = d(() => getPlaylistChunkSize());
+		return a$1("div", {
+			className: PANEL_UI_CLASS.scrollRegion,
+			children: [
+				a$1(AppearanceSection, {}),
+				a$1("div", { children: [a$1(SectionLabel, { children: "Page" }), a$1("div", {
+					className: PANEL_UI_CLASS.settingsGroup,
+					children: [
+						a$1("div", {
+							className: PANEL_UI_CLASS.settingsRow,
+							children: a$1(Switch, {
+								id: TWEAKS_SWITCH_ID,
+								label: UI_TEXT.enablePageTweaksLabel,
+								checked: tweaks,
+								onChange: (checked) => {
+									setTweaksEnabled(checked);
+									setTweaks(checked);
+									window.location.reload();
+								}
+							})
+						}),
+						a$1(FeatureModules, {}),
+						a$1("div", {
+							className: PANEL_UI_CLASS.settingsRow,
+							children: a$1(NumberField, {
+								id: UPDATES_GROUP_SIZE_ID,
+								label: UI_TEXT.updatesGroupSizeLabel,
+								value: updatesGroup,
+								min: 0,
+								step: 1,
+								onChange: (value) => {
+									setUpdatesGroupSize(value ?? 0);
+									setUpdatesGroup(getUpdatesGroupSize());
+								}
+							})
+						}),
+						a$1("div", {
+							className: PANEL_UI_CLASS.settingsRow,
+							children: a$1(NumberField, {
+								id: PLAYLIST_CHUNK_SIZE_ID,
+								label: UI_TEXT.playlistChunkSizeLabel,
+								value: playlistChunk,
+								min: 1,
+								step: 1,
+								onChange: (value) => {
+									setPlaylistChunkSize(value ?? 0);
+									setPlaylistChunk(getPlaylistChunkSize());
+								}
+							})
+						})
+					]
+				})] }),
+				a$1("div", { children: [
+					a$1(SectionLabel, { children: "Data" }),
+					a$1("div", {
+						className: "rdw-toolbar",
+						children: [a$1(Button, {
+							variant: "secondary",
+							onClick: props.onExport,
+							children: UI_TEXT.export
+						}), a$1(Button, {
+							variant: "secondary",
+							onClick: props.onImport,
+							children: UI_TEXT.import
+						})]
+					}),
+					props.importError.length > 0 ? a$1("p", {
+						className: "rdw-error",
+						children: `${UI_TEXT.importErrorPrefix} ${props.importError}`
+					}) : null
+				] })
+			]
+		});
+	}
+	function isDarkTheme() {
+		const theme = getAppearance().theme;
+		return theme === "dark" || theme === "site-dark";
+	}
+	var TAB_ITEMS = PANEL_TABS.map((id) => ({
+		id,
+		label: PANEL_TAB_LABELS[id]
+	}));
+	function PanelRoot(props) {
+		const initial = readPersistedPanelState();
+		const [open, setOpen] = d(false);
+		const [activeTab, setActiveTab] = d(initial.tab);
+		const [importError, setImportError] = d("");
+		const [artistFilter, setArtistFilter] = d("");
+		const [pendingUnfollows, setPendingUnfollows] = d([]);
+		const [gridFavEnabled, setGridFavEnabled] = d(readInitialGridFavEnabled);
+		const [artistsVersion, setArtistsVersion] = d(0);
+		const [themeDark, setThemeDark] = d(isDarkTheme);
+		const panelRef = T(null);
+		const fileInputRef = T(null);
+		const lastWrittenRef = T({
+			width: initial.width,
+			height: initial.height
+		});
+		const sizeTimerRef = T(null);
+		const pendingRef = T(pendingUnfollows);
+		pendingRef.current = pendingUnfollows;
+		A(() => {
+			props.host.classList.toggle(PANEL_UI_CLASS.themeDark, themeDark);
+		}, [props.host, themeDark]);
+		A(() => {
+			const syncTheme = () => {
+				setThemeDark(isDarkTheme());
+			};
+			syncTheme();
+			const observer = new MutationObserver(syncTheme);
+			observer.observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ["class", "data-rdw-theme"]
+			});
+			return () => {
+				observer.disconnect();
+			};
+		}, []);
+		A(() => {
+			props.sizeStyle.textContent = buildSizeCssRule(lastWrittenRef.current.width, lastWrittenRef.current.height);
+		}, [props.sizeStyle]);
+		A(() => {
+			const panel = panelRef.current;
+			if (panel === null || typeof ResizeObserver === "undefined") return;
+			const observer = new ResizeObserver((entries) => {
+				if (!open) return;
+				const entry = entries[0];
+				if (entry === void 0) return;
+				const measured = measureBorderBoxSize(entry, panel);
+				if (measured === null) return;
+				if (sizesEqual(measured, lastWrittenRef.current)) return;
+				if (sizeTimerRef.current !== null) clearTimeout(sizeTimerRef.current);
+				sizeTimerRef.current = setTimeout(() => {
+					sizeTimerRef.current = null;
+					const nextWidth = clampSize(measured.width, 340);
+					const nextHeight = clampSize(measured.height, 260);
+					const next = {
+						width: nextWidth,
+						height: nextHeight
+					};
+					if (sizesEqual(next, lastWrittenRef.current)) return;
+					if (nextWidth === 0 || nextHeight === 0) return;
+					lastWrittenRef.current = next;
+					writePersistedPanelState({
+						tab: activeTab,
+						width: nextWidth,
+						height: nextHeight
+					});
+					props.sizeStyle.textContent = buildSizeCssRule(nextWidth, nextHeight);
+				}, 300);
+			});
+			observer.observe(panel);
+			return () => {
+				observer.disconnect();
+				if (sizeTimerRef.current !== null) clearTimeout(sizeTimerRef.current);
+			};
+		}, [
+			open,
+			activeTab,
+			props.sizeStyle
+		]);
+		A(() => {
+			const onDocClick = (event) => {
+				if (!open) return;
+				if (event.composedPath().includes(props.host)) return;
+				const shadow = props.host.shadowRoot;
+				const target = event.target;
+				if (target instanceof Node && (props.host === target || props.host.contains(target) || shadow !== null && shadow.contains(target))) return;
+				setOpen(false);
+			};
+			document.addEventListener("click", onDocClick, true);
+			return () => {
+				document.removeEventListener("click", onDocClick, true);
+			};
+		}, [open, props.host]);
+		A(() => {
+			const shadow = props.host.shadowRoot;
+			if (shadow === null) return;
+			const onKeyDown = (event) => {
+				if (!(event instanceof KeyboardEvent)) return;
+				if (event.key === "Escape" && open) {
+					event.stopPropagation();
+					setOpen(false);
+				}
+			};
+			shadow.addEventListener("keydown", onKeyDown);
+			return () => {
+				shadow.removeEventListener("keydown", onKeyDown);
+			};
+		}, [open, props.host]);
+		const clearPendingUnfollow = (tag) => {
+			setPendingUnfollows((current) => {
+				const index = current.findIndex((entry) => entry.tag === tag);
+				if (index < 0) return current;
+				const removed = current[index];
+				if (removed !== void 0) clearTimeout(removed.timer);
+				return [...current.slice(0, index), ...current.slice(index + 1)];
+			});
+		};
+		const selectTab = (tab) => {
+			setActiveTab(tab);
+			writePersistedPanelState({
+				tab,
+				width: lastWrittenRef.current.width,
+				height: lastWrittenRef.current.height
+			});
+		};
+		const downloadExport = () => {
+			const payload = exportJson();
+			const blob = new Blob([payload], { type: EXPORT_MIME });
+			const url = URL.createObjectURL(blob);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = EXPORT_FILENAME;
+			anchor.rel = "noopener";
+			props.host.shadowRoot?.append(anchor);
+			anchor.click();
+			anchor.remove();
+			URL.revokeObjectURL(url);
+		};
+		const data = load();
+		return a$1("div", {
+			className: CSS_CLASS.host,
+			children: [
+				a$1("section", {
+					ref: panelRef,
+					id: "ruledesk-web-panel",
+					className: `${CSS_CLASS.panel}${open ? ` ${CSS_CLASS.panelOpen}` : ""}`,
+					role: "dialog",
+					"aria-modal": "false",
+					"aria-label": UI_TEXT.panelTitle,
+					hidden: !open,
+					children: [
+						a$1("div", {
+							className: CSS_CLASS.header,
+							children: [a$1("h2", {
+								className: CSS_CLASS.title,
+								children: UI_TEXT.panelTitle
+							}), a$1(IconButton, {
+								label: UI_TEXT.toggleClose,
+								onClick: () => {
+									setOpen(false);
+								},
+								children: a$1(IconX, { size: 14 })
+							})]
+						}),
+						a$1(Tabs, {
+							items: TAB_ITEMS,
+							value: activeTab,
+							"aria-label": UI_TEXT.panelTitle,
+							onChange: (id) => {
+								if (isPanelTab(id)) selectTab(id);
+							}
+						}),
+						a$1("div", {
+							className: CSS_CLASS.body,
+							children: PANEL_TABS.map((tab) => {
+								const isActive = tab === activeTab;
+								return a$1("div", {
+									className: PANEL_UI_CLASS.tabPanel,
+									id: `rdw-tabpanel-${tab}`,
+									role: "tabpanel",
+									"aria-labelledby": `rdw-tab-${tab}`,
+									hidden: !isActive,
+									children: [
+										tab === "collections" && isActive ? a$1(CollectionsTab, {}) : null,
+										tab === "artists" && isActive ? a$1(ArtistsTab, {
+											artists: data.artists,
+											pending: pendingUnfollows,
+											filter: artistFilter,
+											onFilterChange: setArtistFilter,
+											onUnfollow: (tag) => {
+												const existing = pendingRef.current.find((entry) => entry.tag === tag);
+												if (existing !== void 0) clearTimeout(existing.timer);
+												removeArtist(tag);
+												const timer = setTimeout(() => {
+													clearPendingUnfollow(tag);
+													setArtistsVersion((value) => value + 1);
+												}, UNFOLLOW_UNDO_MS);
+												setPendingUnfollows([...pendingRef.current.filter((entry) => entry.tag !== tag), {
+													tag,
+													timer
+												}]);
+												setArtistsVersion((value) => value + 1);
+											},
+											onUndo: (tag) => {
+												clearPendingUnfollow(tag);
+												try {
+													addArtist(tag);
+												} catch (error) {
+													log.warn("Undo unfollow failed", error);
+												}
+												setArtistsVersion((value) => value + 1);
+											}
+										}) : null,
+										tab === "favorites" && isActive ? a$1(FavoritesTab, {
+											gridFavEnabled,
+											onGridFavChange: setGridFavEnabled
+										}) : null,
+										tab === "settings" && isActive ? a$1(SettingsTab, {
+											importError,
+											onExport: downloadExport,
+											onImport: () => {
+												setImportError("");
+												const input = fileInputRef.current;
+												if (input !== null) {
+													input.value = "";
+													input.click();
+												}
+											}
+										}) : null,
+										tab === "blacklist" && isActive ? a$1("div", {
+											className: PANEL_UI_CLASS.scrollRegion,
+											children: a$1(BlacklistSection, {})
+										}) : null
+									]
+								}, tab);
+							})
+						}),
+						a$1("div", {
+							className: PANEL_UI_CLASS.footer,
+							children: [a$1("span", { children: `v${USERSCRIPT_VERSION}` }), a$1("span", {
+								className: PANEL_UI_CLASS.resizeHint,
+								children: RESIZE_HINT
+							})]
+						})
+					]
+				}),
+				a$1("button", {
+					type: "button",
+					id: TOGGLE_BUTTON_ID,
+					className: CSS_CLASS.toggle,
+					"aria-label": open ? UI_TEXT.toggleClose : UI_TEXT.toggleOpen,
+					"aria-expanded": open,
+					"aria-controls": "ruledesk-web-panel",
+					onClick: () => {
+						const next = !open;
+						setOpen(next);
+						if (next) setThemeDark(isDarkTheme());
+						else setImportError("");
+					},
+					children: "RD"
+				}),
+				a$1("input", {
+					ref: fileInputRef,
+					type: "file",
+					accept: ".json,application/json",
+					className: CSS_CLASS.hidden,
+					"aria-hidden": "true",
+					tabIndex: -1,
+					onChange: () => {
+						const file = fileInputRef.current?.files?.item(0);
+						if (file === null || file === void 0) return;
+						const reader = new FileReader();
+						reader.addEventListener("load", () => {
+							try {
+								importJson(typeof reader.result === "string" ? reader.result : "");
+								setImportError("");
+								setArtistsVersion((value) => value + 1);
+							} catch (error) {
+								const message = error instanceof Error ? error.message : "Unknown import error";
+								setImportError(message);
+								log.warn("Import failed", message);
+							}
+						});
+						reader.addEventListener("error", () => {
+							setImportError("Could not read file");
+						});
+						reader.readAsText(file);
+					}
+				})
+			]
+		});
+	}
+	var PANEL_CSS = `
+:host {
+  all: initial;
+  ${tokensToCssDeclarations(LIGHT_PALETTE)}
+  font-family: var(--rdw-font);
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--rdw-text);
+}
+
+:host(.${PANEL_UI_CLASS.themeDark}) {
+  ${tokensToCssDeclarations(DARK_PALETTE)}
+}
+
+.${CSS_CLASS.host} {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483646;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.${CSS_CLASS.toggle} {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rdw-border);
+  border-radius: 999px;
+  background: var(--rdw-text);
+  color: var(--rdw-surface);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.${CSS_CLASS.toggle}:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+
+.${CSS_CLASS.panel} {
+  display: none;
+  box-sizing: border-box;
+  width: ${String(360)}px;
+  height: ${String(480)}px;
+  min-width: ${String(340)}px;
+  min-height: ${String(260)}px;
+  max-width: ${PANEL_MAX_WIDTH_CSS};
+  max-height: ${PANEL_MAX_HEIGHT_CSS};
+  resize: both;
+  overflow: hidden;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-2);
+  color: var(--rdw-text);
+}
+
+.${CSS_CLASS.panel}.${CSS_CLASS.panelOpen} {
+  display: flex;
+  flex-direction: column;
+}
+
+.${CSS_CLASS.header} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px 6px;
+  flex-shrink: 0;
+}
+
+.${CSS_CLASS.title} {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rdw-text);
+}
+
+.${CSS_CLASS.body} {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.${PANEL_UI_CLASS.tabPanel} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.${PANEL_UI_CLASS.tabPanel}[hidden] {
+  display: none !important;
+}
+
+.${PANEL_UI_CLASS.scrollRegion} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.${CSS_CLASS.section} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.${PANEL_UI_CLASS.settingsGroup} {
+  display: grid;
+  gap: 2px;
+}
+
+.${PANEL_UI_CLASS.settingsRow} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--rdw-radius-m);
+  font-size: 12.5px;
+}
+
+.${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
+  background: var(--rdw-surface-2);
+}
+
+.${PANEL_UI_CLASS.settingsRow} .rdw-switch-row {
+  width: 100%;
+  justify-content: space-between;
+  flex-direction: row-reverse;
+}
+
+.${PANEL_UI_CLASS.settingsRow} .rdw-select,
+.${PANEL_UI_CLASS.settingsRow} .rdw-num {
+  width: 100%;
+}
+
+.${PANEL_UI_CLASS.artistMeta} {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.${PANEL_UI_CLASS.artistFilter} {
+  flex-shrink: 0;
+}
+
+.${PANEL_UI_CLASS.artistList} {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.${PANEL_UI_CLASS.artistRow} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--rdw-radius-s);
+}
+
+.${PANEL_UI_CLASS.artistRow}:hover {
+  background: var(--rdw-surface-2);
+}
+
+.${PANEL_UI_CLASS.artistLink} {
+  color: var(--rdw-accent);
+  text-decoration: none;
+  font-weight: 600;
+  word-break: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.${PANEL_UI_CLASS.artistLink}:hover {
+  text-decoration: underline;
+}
+
+.${PANEL_UI_CLASS.artistLink}:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+
+.${PANEL_UI_CLASS.artistUndo} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--rdw-muted);
+}
+
+.${CSS_CLASS.list} {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.${CSS_CLASS.listItem} {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+}
+
+.${CSS_CLASS.itemName} {
+  border: 0;
+  background: transparent;
+  color: var(--rdw-accent);
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.${CSS_CLASS.itemName}:disabled {
+  color: var(--rdw-muted);
+  cursor: not-allowed;
+}
+
+.${CSS_CLASS.itemActions},
+.${CSS_CLASS.formActions},
+.${CSS_CLASS.toolbar},
+.${CSS_CLASS.confirmRow} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.${CSS_CLASS.hint} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+
+.${CSS_CLASS.error} {
+  margin: 0;
+  color: var(--rdw-danger);
+  font-size: 12px;
+}
+
+.${PANEL_UI_CLASS.footer} {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rdw-border);
+  font-size: 11px;
+  color: var(--rdw-muted);
+}
+
+.${PANEL_UI_CLASS.resizeHint} {
+  color: var(--rdw-muted);
+}
+
+.${CSS_CLASS.hidden} {
+  display: none !important;
+}
+`;
+	function mountPanel(target = document.body) {
+		if (document.getElementById("ruledesk-web-root") !== null) return;
+		const host = document.createElement("div");
+		host.id = PANEL_ROOT_ID;
+		const shadow = host.attachShadow({ mode: "open" });
+		const style = document.createElement("style");
+		style.textContent = PANEL_CSS;
+		const sizeStyle = document.createElement("style");
+		const mountPoint = document.createElement("div");
+		shadow.append(style, sizeStyle, mountPoint);
+		const persisted = readPersistedPanelState();
+		sizeStyle.textContent = buildSizeCssRule(persisted.width, persisted.height);
+		target.append(host);
+		Q(a$1(PanelRoot, {
+			host,
+			sizeStyle
+		}), mountPoint);
+	}
+	function syncAppearanceAfterDomReady() {
+		const appearance = getAppearance();
+		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
+		applyAppearanceTheme({
+			appearance,
+			siteSkinCss: getSiteSkinCss(),
+			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
+		});
+	}
+	function startApp() {
+		syncAppearanceAfterDomReady();
+		mountPanel();
+		const pageKind = detectPageKind(window.location.search);
+		if (pageKind === "list") {
+			mountCards();
+			mountArtistSidebar();
+		} else if (pageKind === "post") mountArtistSidebar();
+		else if (pageKind === "favorites") syncFavoritesPage();
+		runFeatures(pageKind, window.location.search);
+	}
 	function bootEarly() {
 		const appearance = getAppearance();
 		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
-		applyAppearanceToDocument({
+		applyAppearanceTheme({
 			appearance,
+			siteSkinCss: getSiteSkinCss(),
 			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
 		});
 	}

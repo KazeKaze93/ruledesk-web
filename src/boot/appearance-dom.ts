@@ -88,8 +88,7 @@ export function injectTokenStyles(palette: TokenPalette): HTMLStyleElement {
 }
 
 /**
- * Placeholder hook for B1 site-skin CSS.
- * Keeps a stable style element id so B1 can fill textContent later.
+ * Inject or replace the site-skin stylesheet (rules scoped under html.rdw-skin).
  */
 export function injectSiteSkinHook(cssText = ""): HTMLStyleElement {
   const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
@@ -111,7 +110,7 @@ export type ApplyAppearanceOptions = {
   readonly appearance: Appearance;
   /** Data URL from the dedicated GM background key, if any. */
   readonly backgroundDataUrl?: string;
-  /** Optional site-skin CSS for B1; Phase A leaves empty. */
+  /** Site-skin CSS text for #SITE_SKIN_STYLE_ID. */
   readonly siteSkinCss?: string;
 };
 
