@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act } from "preact/test-utils";
 
-import { DEBUG_KEY, STORAGE_KEY } from "../../src/config/constants";
+import { DEBUG_KEY } from "../../src/config/constants";
 import { searchToolsFeature } from "../../src/features/search-tools";
 import {
   featureBodyClass,
@@ -11,12 +12,7 @@ import { createDefaultStorage } from "../../src/storage/schema";
 
 const ROOT_ID = "rdw-search-tools";
 const CHIP_CLASS = "rdw-search-tools-chip";
-const CHIP_EXCLUDE_CLASS = "rdw-search-tools-chip--exclude";
-const CHIP_TOGGLE_CLASS = "rdw-search-tools-chip-toggle";
-const CHIP_REMOVE_CLASS = "rdw-search-tools-chip-remove";
-const CHIP_LABEL_CLASS = "rdw-search-tools-chip-label";
-const MEDIA_BTN_CLASS = "rdw-search-tools-media-btn";
-const SORT_CLASS = "rdw-search-tools-sort";
+const CHIPS_CLASS = "rdw-search-tools-chips";
 
 const memory = new Map<string, unknown>();
 
@@ -74,18 +70,14 @@ function chipRoots(): HTMLElement[] {
 
 function chipLabels(): string[] {
   return chipRoots().map((chip) => {
-    const toggle = chip.querySelector(`button.${CHIP_TOGGLE_CLASS}`);
-    if (toggle instanceof HTMLButtonElement) {
-      return toggle.textContent ?? "";
-    }
-    const label = chip.querySelector(`.${CHIP_LABEL_CLASS}`);
-    return label?.textContent ?? "";
+    const label = chip.querySelector(":scope > span");
+    return label?.textContent ?? chip.textContent ?? "";
   });
 }
 
-function mediaButton(label: string): HTMLButtonElement {
+function mediaRadio(label: string): HTMLButtonElement {
   const buttons = Array.from(
-    document.querySelectorAll(`#${ROOT_ID} button.${MEDIA_BTN_CLASS}`),
+    document.querySelectorAll(`#${ROOT_ID} [role="radiogroup"][aria-label="Media"] button`),
   );
   for (const node of buttons) {
     if (!(node instanceof HTMLButtonElement)) {
@@ -98,12 +90,29 @@ function mediaButton(label: string): HTMLButtonElement {
   throw new Error(`media button not found: ${label}`);
 }
 
-function sortSelect(): HTMLSelectElement {
-  const select = document.querySelector(`#${ROOT_ID} select.${SORT_CLASS}`);
-  if (!(select instanceof HTMLSelectElement)) {
-    throw new Error("sort select not found");
+function resetButton(): HTMLButtonElement {
+  const buttons = Array.from(document.querySelectorAll(`#${ROOT_ID} button`));
+  for (const node of buttons) {
+    if (!(node instanceof HTMLButtonElement)) {
+      continue;
+    }
+    if (node.textContent === "Reset search") {
+      return node;
+    }
   }
-  return select;
+  throw new Error("Reset search button not found");
+}
+
+function mountFeature(): void {
+  act(() => {
+    searchToolsFeature.mount(makeCtx());
+  });
+}
+
+function click(el: Element): void {
+  act(() => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
 }
 
 describe("searchToolsFeature", () => {
@@ -141,17 +150,17 @@ describe("searchToolsFeature", () => {
 
   it("parses whitespace tokens into chips under the form", () => {
     const { form, input } = buildSearchForm("cat  dog  -bird");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
 
     const root = document.getElementById(ROOT_ID);
     expect(root).not.toBeNull();
     expect(root?.previousElementSibling).toBe(form);
     expect(chipLabels()).toEqual(["cat", "dog", "-bird"]);
-    expect(chipRoots()[2]?.classList.contains(CHIP_EXCLUDE_CLASS)).toBe(true);
-    expect(chipRoots()[0]?.classList.contains(CHIP_EXCLUDE_CLASS)).toBe(false);
+    expect(chipRoots()[2]?.classList.contains("rdw-chip--exclude")).toBe(true);
+    expect(chipRoots()[0]?.classList.contains("rdw-chip--exclude")).toBe(false);
     expect(
       chipRoots()[0]
-        ?.querySelector(`button.${CHIP_REMOVE_CLASS}`)
+        ?.querySelector("button.rdw-chip__remove")
         ?.getAttribute("aria-label"),
     ).toBe("Remove cat");
     expect(input.parentElement).toBe(form);
@@ -159,10 +168,37 @@ describe("searchToolsFeature", () => {
 
   it("hides controlled media/sort/score tokens from chips", () => {
     buildSearchForm("cat -video sort:score:desc score:>=10 dog");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
     expect(chipLabels()).toEqual(["cat", "dog"]);
-    expect(mediaButton("Images").getAttribute("aria-pressed")).toBe("true");
-    expect(sortSelect().value).toBe("score");
+    expect(mediaRadio("Images").getAttribute("aria-checked")).toBe("true");
+    const sortTrigger = document.querySelector(
+      `#${ROOT_ID} .rdw-select__trigger`,
+    );
+    expect(sortTrigger?.textContent).toContain("Top score");
+  });
+
+  it("renders OR-group and id-group as single chips", () => {
+    save({
+      ...createDefaultStorage(),
+      artists: [{ tag: "nyx_x" }, { tag: "other_artist" }],
+    });
+    buildSearchForm("( nyx_x ~ other_artist ) ( id:10 ~ id:20 ~ id:30 )");
+    mountFeature();
+    expect(chipLabels()).toEqual(["Feed · 2 artists", "3 posts"]);
+    expect(chipRoots()[0]?.classList.contains("rdw-chip--group")).toBe(true);
+    expect(chipRoots()[0]?.getAttribute("title")).toBe("nyx_x other_artist");
+    expect(chipRoots()[1]?.getAttribute("title")).toContain("id:10");
+  });
+
+  it("labels partial OR-groups as Any of N tags", () => {
+    save({
+      ...createDefaultStorage(),
+      artists: [{ tag: "a" }, { tag: "b" }, { tag: "c" }],
+    });
+    buildSearchForm("( a ~ b )");
+    mountFeature();
+    expect(chipLabels()).toEqual(["Any of 2 tags"]);
+    expect(chipRoots()[0]?.getAttribute("title")).toBe("a b");
   });
 
   it("does not move form, input, or awesomplete and keeps the same parent", () => {
@@ -170,7 +206,7 @@ describe("searchToolsFeature", () => {
     const awesomplete = form.querySelector("div.awesomplete");
     expect(awesomplete).not.toBeNull();
 
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
 
     expect(form.parentElement).toBe(parent);
     expect(input.parentElement).toBe(form);
@@ -179,43 +215,108 @@ describe("searchToolsFeature", () => {
     expect(document.getElementById(ROOT_ID)?.previousElementSibling).toBe(form);
   });
 
-  it("toggles include/exclude on chip click and removes via ×", () => {
+  it("toggles include/exclude via delegated chip click and removes via ×", () => {
     const { input } = buildSearchForm("alpha beta gamma");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
 
-    chipRoots()[1]
-      ?.querySelector(`button.${CHIP_TOGGLE_CLASS}`)
-      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const beta = chipRoots()[1];
+    expect(beta).toBeTruthy();
+    click(beta!);
     expect(input.value).toBe("alpha -beta gamma");
     expect(chipLabels()).toEqual(["alpha", "-beta", "gamma"]);
 
-    chipRoots()[1]
-      ?.querySelector(`button.${CHIP_REMOVE_CLASS}`)
-      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const remove = chipRoots()[1]?.querySelector("button.rdw-chip__remove");
+    expect(remove).toBeTruthy();
+    click(remove!);
     expect(input.value).toBe("alpha gamma");
     expect(chipLabels()).toEqual(["alpha", "gamma"]);
   });
 
-  it("renders meta and parenthesis tokens without toggle", () => {
-    buildSearchForm("( a ~ b ) id:>12");
-    searchToolsFeature.mount(makeCtx());
-    expect(chipLabels()).toEqual(["(", "a", "~", "b", ")", "id:>12"]);
-    const noToggle = new Set(["(", "~", ")", "id:>12"]);
-    for (const chip of chipRoots()) {
-      const toggle = chip.querySelector(`button.${CHIP_TOGGLE_CLASS}`);
-      const label = chip.querySelector(`.${CHIP_LABEL_CLASS}`);
-      const text =
-        toggle instanceof HTMLButtonElement
-          ? (toggle.textContent ?? "")
-          : (label?.textContent ?? "");
-      if (noToggle.has(text)) {
-        expect(toggle).toBeNull();
-        expect(label).not.toBeNull();
-        continue;
+  it("removes a whole OR-group with one × click", () => {
+    const { input } = buildSearchForm("keep ( a ~ b ) tail");
+    mountFeature();
+    expect(chipLabels()).toEqual(["keep", "Any of 2 tags", "tail"]);
+    const remove = chipRoots()[1]?.querySelector("button.rdw-chip__remove");
+    click(remove!);
+    expect(input.value).toBe("keep tail");
+    expect(chipLabels()).toEqual(["keep", "tail"]);
+  });
+
+  it("never focuses or dispatches input/keydown on the site tags field", () => {
+    const { input } = buildSearchForm("cat dog");
+    const focusSpy = vi.spyOn(input, "focus");
+    const dispatchSpy = vi.spyOn(input, "dispatchEvent");
+    mountFeature();
+
+    click(chipRoots()[0]!);
+    click(mediaRadio("Images"));
+
+    expect(focusSpy).not.toHaveBeenCalled();
+    const typedEvents = dispatchSpy.mock.calls.filter(([event]) => {
+      if (!(event instanceof Event)) {
+        return false;
       }
-      expect(toggle).not.toBeNull();
-      expect(label).toBeNull();
-    }
+      return event.type === "input" || event.type === "keydown";
+    });
+    expect(typedEvents).toHaveLength(0);
+  });
+
+  it("keeps chip node identity when the free-token string is unchanged", () => {
+    const { input } = buildSearchForm("cat -video");
+    mountFeature();
+    const before = chipRoots()[0];
+    expect(before?.textContent).toContain("cat");
+
+    act(() => {
+      click(mediaRadio("Videos"));
+    });
+    const after = chipRoots()[0];
+    expect(input.value).toBe("cat video");
+    expect(after).toBe(before);
+  });
+
+  it("uses container delegation so chips remain clickable after control updates", () => {
+    const { input } = buildSearchForm("alpha beta");
+    mountFeature();
+    click(mediaRadio("Images"));
+    expect(input.value).toBe("alpha beta -video");
+
+    click(chipRoots()[1]!);
+    expect(input.value).toBe("alpha -beta -video");
+  });
+
+  it("debounces navigation by 400ms and resets the timer on new changes", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=cat",
+    });
+    const { input } = buildSearchForm("cat dog");
+    mountFeature();
+
+    click(mediaRadio("Images"));
+    expect(input.value).toBe("cat dog -video");
+    expect(assign).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(399);
+    });
+    expect(assign).not.toHaveBeenCalled();
+
+    click(mediaRadio("Videos"));
+    act(() => {
+      vi.advanceTimersByTime(399);
+    });
+    expect(assign).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    const url = String(assign.mock.calls[0]?.[0] ?? "");
+    expect(url).toContain("video");
+    expect(url).not.toContain("-video");
   });
 
   it("colors chips from tag-sidebar type classes", () => {
@@ -231,81 +332,45 @@ describe("searchToolsFeature", () => {
     document.body.append(sidebar);
 
     buildSearchForm("nyx_x other");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
 
-    expect(chipRoots()[0]?.classList.contains(`${CHIP_CLASS}--artist`)).toBe(
-      true,
-    );
-    expect(chipRoots()[1]?.classList.contains(`${CHIP_CLASS}--artist`)).toBe(
-      false,
-    );
+    expect(chipRoots()[0]?.classList.contains("rdw-chip--artist")).toBe(true);
+    expect(chipRoots()[1]?.classList.contains("rdw-chip--artist")).toBe(false);
   });
 
-  it("updates media tokens and navigates via buildSearchUrl", () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", {
-      ...window.location,
-      assign,
-      search: "?page=post&s=list&tags=cat",
-    });
-    const { input } = buildSearchForm("cat dog");
-    searchToolsFeature.mount(makeCtx());
-
-    mediaButton("Images").click();
-    expect(input.value).toBe("cat dog -video");
-    expect(assign).toHaveBeenCalledTimes(1);
-    const url = String(assign.mock.calls[0]?.[0] ?? "");
-    expect(url).toContain("tags=");
-    expect(url).toContain("cat");
-    expect(url).toContain("dog");
-    expect(url).toContain("-video");
-
-    mediaButton("Videos").click();
-    expect(input.value).toBe("cat dog video");
-    expect(String(assign.mock.calls[1]?.[0] ?? "")).toContain("video");
-    expect(String(assign.mock.calls[1]?.[0] ?? "")).not.toContain("-video");
-  });
-
-  it("updates sort tokens and preserves free tokens", () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", {
-      ...window.location,
-      assign,
-      search: "?page=post&s=list&tags=cat",
-    });
-    const { input } = buildSearchForm("cat sort:random");
-    searchToolsFeature.mount(makeCtx());
-    expect(chipLabels()).toEqual(["cat"]);
-    expect(sortSelect().value).toBe("random");
-
-    sortSelect().value = "oldest";
-    sortSelect().dispatchEvent(new Event("change", { bubbles: true }));
-    expect(input.value).toBe("cat sort:id:asc");
-    expect(String(assign.mock.calls[0]?.[0] ?? "")).toContain("sort%3Aid%3Aasc");
-  });
-
-  it("updates from input events without stealing focus while typing", () => {
+  it("updates from site input events without stealing focus while typing", () => {
     const { input } = buildSearchForm("a");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
     input.focus();
     expect(document.activeElement).toBe(input);
 
-    input.value = "a b";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    act(() => {
+      input.value = "a b";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
 
     expect(chipLabels()).toEqual(["a", "b"]);
     expect(document.activeElement).toBe(input);
   });
 
-  it("polls programmatic value changes when the document is visible", () => {
+  it("polls programmatic value changes for chips only without navigating", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=start",
+    });
     const { input } = buildSearchForm("start");
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
     expect(chipLabels()).toEqual(["start"]);
 
     input.value = "start next";
-    vi.advanceTimersByTime(700);
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
 
     expect(chipLabels()).toEqual(["start", "next"]);
+    expect(assign).not.toHaveBeenCalled();
   });
 
   it("rereads after tag-sidebar click on the next macrotask", () => {
@@ -313,145 +378,66 @@ describe("searchToolsFeature", () => {
     const sidebar = document.createElement("ul");
     sidebar.id = "tag-sidebar";
     document.body.append(sidebar);
-    searchToolsFeature.mount(makeCtx());
+    mountFeature();
 
     input.value = "old new";
-    sidebar.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    act(() => {
+      sidebar.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
     expect(chipLabels()).toEqual(["old"]);
 
-    vi.advanceTimersByTime(0);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(chipLabels()).toEqual(["old", "new"]);
   });
 
   it("warns and returns when the search form is missing", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(() => {
-      searchToolsFeature.mount(makeCtx());
+      mountFeature();
     }).not.toThrow();
     expect(document.getElementById(ROOT_ID)).toBeNull();
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  it("keeps the save form hidden until Save search, then Cancel hides it", () => {
-    const bodyClass = featureBodyClass("search-tools");
-    const hiddenRule = `body.${bodyClass} [class^="rdw-search-tools"][hidden]`;
-    expect(searchToolsFeature.css).toContain(hiddenRule);
-    expect(searchToolsFeature.css).toMatch(
-      /\[class\^="rdw-search-tools"\]\[hidden\]\s*\{\s*display:\s*none\s*!important;/,
-    );
-
-    buildSearchForm("fox -dog");
-    searchToolsFeature.mount(makeCtx());
-
-    const saveForm = document.querySelector(
-      `#${ROOT_ID} .rdw-search-tools-save-form`,
-    );
-    const saveBtn = document.querySelector(
-      `#${ROOT_ID} button.rdw-search-tools-save-btn`,
-    );
-    expect(saveForm).toBeInstanceOf(HTMLElement);
-    expect(saveBtn).toBeInstanceOf(HTMLButtonElement);
-    if (
-      !(saveForm instanceof HTMLElement) ||
-      !(saveBtn instanceof HTMLButtonElement)
-    ) {
-      throw new Error("save controls missing");
-    }
-
-    expect(saveForm.hidden).toBe(true);
-    expect(saveForm.hasAttribute("hidden")).toBe(true);
-    expect(saveBtn.hidden).toBe(false);
-
-    saveBtn.click();
-    expect(saveForm.hidden).toBe(false);
-    expect(saveForm.hasAttribute("hidden")).toBe(false);
-    expect(saveBtn.hidden).toBe(true);
-
-    const cancel = document.querySelector(
-      `#${ROOT_ID} button.rdw-search-tools-save-cancel`,
-    );
-    expect(cancel).toBeInstanceOf(HTMLButtonElement);
-    if (!(cancel instanceof HTMLButtonElement)) {
-      throw new Error("cancel button missing");
-    }
-    cancel.click();
-    expect(saveForm.hidden).toBe(true);
-    expect(saveForm.hasAttribute("hidden")).toBe(true);
-    expect(saveBtn.hidden).toBe(false);
+  it("has no Save search or Collections controls", () => {
+    buildSearchForm("fox");
+    mountFeature();
+    const root = document.getElementById(ROOT_ID);
+    expect(root?.textContent).not.toContain("Save search");
+    expect(root?.textContent).not.toContain("Collections");
+    expect(root?.textContent).toContain("Applies instantly");
+    expect(root?.querySelector(`.${CHIPS_CLASS}`)).not.toBeNull();
   });
 
-  it("saves the current search into collections", () => {
-    const { input } = buildSearchForm("fox -dog");
-    searchToolsFeature.mount(makeCtx());
-
-    const saveBtn = document.querySelector(
-      `#${ROOT_ID} button.rdw-search-tools-save-btn`,
-    );
-    expect(saveBtn).toBeInstanceOf(HTMLButtonElement);
-    if (!(saveBtn instanceof HTMLButtonElement)) {
-      throw new Error("save button missing");
-    }
-    expect(saveBtn.disabled).toBe(false);
-    saveBtn.click();
-
-    const nameInput = document.querySelector(
-      `#${ROOT_ID} input.rdw-search-tools-save-name`,
-    );
-    const confirm = document.querySelector(
-      `#${ROOT_ID} button.rdw-search-tools-save-confirm`,
-    );
-    expect(nameInput).toBeInstanceOf(HTMLInputElement);
-    expect(confirm).toBeInstanceOf(HTMLButtonElement);
-    if (
-      !(nameInput instanceof HTMLInputElement) ||
-      !(confirm instanceof HTMLButtonElement)
-    ) {
-      throw new Error("save form missing");
-    }
-    nameInput.value = "Fox pack";
-    confirm.click();
-
-    const stored = memory.get(STORAGE_KEY);
-    expect(stored).toMatchObject({
-      collections: [
-        {
-          name: "Fox pack",
-          tags: [
-            { tag: "fox", type: "include" },
-            { tag: "dog", type: "exclude" },
-          ],
-        },
-      ],
+  it("Reset search navigates to an empty tag list", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=cat",
     });
-    expect(input.value).toBe("fox -dog");
+    const { input } = buildSearchForm("cat dog -video");
+    mountFeature();
+
+    click(resetButton());
+    expect(input.value).toBe("");
+    expect(assign).toHaveBeenCalledTimes(1);
+    const url = String(assign.mock.calls[0]?.[0] ?? "");
+    expect(url).toContain("tags=");
+    expect(url.endsWith("tags=") || url.includes("tags=&") || /tags=$/.test(url)).toBe(
+      true,
+    );
+    expect(url).not.toContain("cat");
   });
 
-  it("disables followed artists source when no artists are stored", () => {
-    save(createDefaultStorage());
+  it("exposes sort hint on the sort/score row", () => {
     buildSearchForm("cat");
-    const fav = document.createElement("li");
-    fav.id = "my-favorites-container";
-    const link = document.createElement("a");
-    link.href = "index.php?page=favorites&s=view&id=1";
-    link.textContent = "My Favorites";
-    fav.append(link);
-    document.body.append(fav);
-
-    searchToolsFeature.mount(makeCtx());
-    const source = document.querySelector(
-      `#${ROOT_ID} select.rdw-search-tools-source`,
+    mountFeature();
+    const hinted = document.querySelector(
+      `#${ROOT_ID} [title="Sorts within the current search"]`,
     );
-    expect(source).toBeInstanceOf(HTMLSelectElement);
-    if (!(source instanceof HTMLSelectElement)) {
-      throw new Error("source select missing");
-    }
-    const followed = source.querySelector('option[value="followed"]');
-    const favorites = source.querySelector('option[value="favorites"]');
-    expect(followed).toBeInstanceOf(HTMLOptionElement);
-    expect(favorites).toBeInstanceOf(HTMLOptionElement);
-    if (!(followed instanceof HTMLOptionElement)) {
-      throw new Error("followed option missing");
-    }
-    expect(followed.disabled).toBe(true);
+    expect(hinted).not.toBeNull();
   });
 });
