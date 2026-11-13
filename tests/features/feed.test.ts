@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UPDATES_BAR_ID } from "../../src/config/constants";import {
+import { UPDATES_BAR_ID } from "../../src/config/constants";
+import {
   FEED_NEW_CLASS,
   feedFeature,
+  refreshFeedHref,
   resetFeedRuntimeState,
 } from "../../src/features/feed";
 import {
@@ -141,12 +143,14 @@ describe("feedFeature", () => {
     ]);
   });
 
-  it("scopes css under body.rdw-f-feed and outlines new previews", () => {
+  it("scopes css under body.rdw-f-feed and uses a NEW plaque on new thumbs", () => {
     const bodyClass = featureBodyClass("feed");
     expect(bodyClass).toBe("rdw-f-feed");
     expect(feedFeature.css).toContain(`body.${bodyClass}`);
-    expect(feedFeature.css).toContain(`span.thumb.${FEED_NEW_CLASS} img.preview`);
-    expect(feedFeature.css).toContain("outline:");
+    expect(feedFeature.css).toContain(`span.thumb.${FEED_NEW_CLASS}`);
+    expect(feedFeature.css).toContain('content: "NEW"');
+    expect(feedFeature.css).toContain("position-anchor:");
+    expect(feedFeature.css).not.toContain("outline:");
   });
 
   it("inserts Feed immediately after Posts outside #content", () => {
@@ -293,5 +297,83 @@ describe("feedFeature", () => {
         .getElementById(FEED_MENU_ITEM_ID)
         ?.classList.contains(CURRENT_PAGE_CLASS),
     ).toBe(false);
+  });
+
+  it("refreshes Feed href on pageshow after artists are followed", () => {
+    buildHeaderMenu();
+    feedFeature.mount(makeContext());
+
+    const feedLink = document
+      .getElementById(FEED_MENU_ITEM_ID)
+      ?.querySelector("a");
+    expect(feedLink).toBeInstanceOf(HTMLAnchorElement);
+    const postsHref = feedLink?.href ?? "";
+    expect(feedLink?.title).toBe("Follow artists to build your feed");
+
+    seedArtists(["nyx_x", "other"]);
+    window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+
+    expect(feedLink?.href).not.toBe(postsHref);
+    expect(feedLink?.href).toContain("tags=%28+nyx_x+~+other+%29");
+    expect(feedLink?.hasAttribute("title")).toBe(false);
+  });
+
+  it("refreshes Feed href on pageshow when not persisted", () => {
+    buildHeaderMenu();
+    feedFeature.mount(makeContext());
+    const feedLink = document
+      .getElementById(FEED_MENU_ITEM_ID)
+      ?.querySelector("a");
+    seedArtists(["a", "b"]);
+    window.dispatchEvent(
+      new PageTransitionEvent("pageshow", { persisted: false }),
+    );
+    expect(feedLink?.href).toContain("tags=%28+a+~+b+%29");
+  });
+
+  it("refreshes Feed href in the click handler before navigation", () => {
+    buildHeaderMenu();
+    feedFeature.mount(makeContext());
+    const feedLink = document
+      .getElementById(FEED_MENU_ITEM_ID)
+      ?.querySelector("a");
+    expect(feedLink).toBeInstanceOf(HTMLAnchorElement);
+    if (!(feedLink instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    seedArtists(["solo", "duo"]);
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    feedLink.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+    feedLink.dispatchEvent(click);
+    expect(feedLink.href).toContain("tags=%28+solo+~+duo+%29");
+  });
+
+  it("exports refreshFeedHref for direct recalculation", () => {
+    buildHeaderMenu();
+    feedFeature.mount(makeContext());
+    seedArtists(["direct", "also"]);
+    refreshFeedHref();
+    const href = document
+      .getElementById(FEED_MENU_ITEM_ID)
+      ?.querySelector("a")
+      ?.href;
+    expect(href).toContain("tags=%28+direct+~+also+%29");
+  });
+
+  it("anchors NEW thumbs for the plaque overlay", () => {
+    seedArtists(["a", "b"], 10);
+    buildHeaderMenu();
+    buildListPage(["42"]);
+
+    feedFeature.mount(
+      makeContext("list", "?page=post&s=list&tags=(+a+~+b+)"),
+    );
+
+    const thumb = document.getElementById("s42");
+    expect(thumb?.classList.contains(FEED_NEW_CLASS)).toBe(true);
+    expect(thumb?.classList.contains("rdw-thumb")).toBe(true);
   });
 });

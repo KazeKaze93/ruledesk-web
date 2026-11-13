@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CSS_CLASS } from "../src/config/constants";
+import { CSS_CLASS, DOCUMENT_STYLE_ID } from "../src/config/constants";
 import {
   notifyThumbsAdded,
   resetFeatureRuntimeState,
@@ -14,7 +14,7 @@ import {
   mountCards,
   resetCardsRuntimeState,
 } from "../src/ui/cards";
-import { CARD_CSS } from "../src/ui/styles";
+import { CARD_CSS } from "../src/ui/document-chrome-css";
 import { addFavorite, removeFavorite } from "../src/site/favorites";
 
 const memory = new Map<string, unknown>();
@@ -123,6 +123,29 @@ describe("mountCards", () => {
     expect(CARD_CSS).toContain("position-anchor:");
     expect(CARD_CSS).toContain("@supports (anchor-name: --a)");
     expect(CARD_CSS).not.toContain("rdw-img-wrap");
+  });
+
+  it("keeps fav badges hidden by default and reveals them via thumb hover CSS", () => {
+    const root = document.createElement("div");
+    root.append(buildThumb("111"));
+    document.body.append(root);
+    addFav(111);
+    mountCards(root, "?page=post&s=list");
+
+    const button = root.querySelector(`button.${CSS_CLASS.cardFav}`);
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    expect(button?.classList.contains("rdw-icon-btn")).toBe(true);
+    expect(button?.classList.contains(CSS_CLASS.cardFavMarked)).toBe(true);
+
+    const style = document.getElementById(DOCUMENT_STYLE_ID);
+    expect(style?.textContent).toContain(
+      `.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked}`,
+    );
+    expect(style?.textContent).toContain("opacity: 0");
+    expect(style?.textContent).toContain(
+      `.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}`,
+    );
+    expect(style?.textContent).toContain(".rdw-icon-btn");
   });
 
   it("stops click from bubbling to the preview link", () => {

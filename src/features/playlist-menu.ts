@@ -10,6 +10,7 @@ import {
   extractPostIdFromThumb,
 } from "../site/selectors";
 import { ensureThumbAnchor } from "../site/thumb";
+import { KIT_ICON_BUTTON_CLASS } from "../ui/fav-button";
 import { THUMB_CLASS, featureBodyClass, type Feature, type FeatureContext } from "./types";
 import { onThumbsAdded } from "./runtime";
 
@@ -46,8 +47,8 @@ const MENU_MIN_WIDTH_PX = 180;
 const MENU_MAX_HEIGHT_PX = 280;
 const MENU_GAP_PX = 4;
 const BUTTON_SIZE_PX = 28;
-const BUTTON_OFFSET_PX = 4;
-const BUTTON_BELOW_FAV_TOP_PX = BUTTON_OFFSET_PX + BUTTON_SIZE_PX + BUTTON_OFFSET_PX;
+const BUTTON_OFFSET_PX = 6;
+const BUTTON_BELOW_FAV_TOP_PX = BUTTON_OFFSET_PX + BUTTON_SIZE_PX + 4;
 
 const FOCUS_OUTLINE = "2px solid #4c8bf5";
 const FOCUS_OUTLINE_OFFSET = "2px";
@@ -70,28 +71,30 @@ ${BODY_SELECTOR} .${CLASS_ADD} {
   right: calc(anchor(right) + ${String(BUTTON_OFFSET_PX)}px);
   z-index: 5;
   box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
   min-width: ${String(BUTTON_SIZE_PX)}px;
   min-height: ${String(BUTTON_SIZE_PX)}px;
   width: ${String(BUTTON_SIZE_PX)}px;
   height: ${String(BUTTON_SIZE_PX)}px;
   padding: 0;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #333;
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.93);
+  color: #1c2228;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   opacity: 0;
 }
 ${BODY_SELECTOR} .${THUMB_CLASS}:hover .${CLASS_ADD},
-${BODY_SELECTOR} .${CLASS_ADD}:focus-visible,
-${BODY_SELECTOR} .${CLASS_ADD}.${CLASS_ADD_IN} {
+${BODY_SELECTOR} .${CLASS_ADD}:focus-visible {
   opacity: 0.65;
 }
 ${BODY_SELECTOR} .${THUMB_CLASS} .${CLASS_ADD}:hover,
-${BODY_SELECTOR} .${CLASS_ADD}.${CLASS_ADD_IN} {
+${BODY_SELECTOR} .${CLASS_ADD}:focus-visible {
   opacity: 1;
 }
 ${BODY_SELECTOR} .${CLASS_ADD}:focus-visible {
@@ -99,9 +102,9 @@ ${BODY_SELECTOR} .${CLASS_ADD}:focus-visible {
   outline-offset: ${FOCUS_OUTLINE_OFFSET};
 }
 ${BODY_SELECTOR} .${CLASS_ADD}.${CLASS_ADD_IN} {
-  background: #dceeff;
-  border-color: #3a6ea5;
-  color: #1a3a5c;
+  background: #ffd75e;
+  border-color: #c79a00;
+  color: #5c4500;
 }
 ${BODY_SELECTOR} .${CLASS_MENU} {
   box-sizing: border-box;
@@ -517,7 +520,7 @@ function attachAddButton(thumb: HTMLElement, postId: string): void {
   ensureThumbAnchor(thumb);
   const button = document.createElement("button");
   button.type = "button";
-  button.className = CLASS_ADD;
+  button.className = `${KIT_ICON_BUTTON_CLASS} ${CLASS_ADD}`;
   button.textContent = TEXT_ADD_GLYPH;
   button.setAttribute(ATTR_POST_ID, String(numericId));
   button.setAttribute("aria-haspopup", "menu");

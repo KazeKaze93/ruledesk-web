@@ -61,17 +61,21 @@ describe("mountUpdatesBar", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows N new on this page and Mark all seen when page has newer ids", () => {
+  it("shows N new and Mark all seen when page has newer ids", () => {
     seedArtists(10);
     buildListPage(["10", "42", "7"], ["42"]);
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
     const bar = document.getElementById(UPDATES_BAR_ID);
     expect(bar).not.toBeNull();
-    expect(bar?.textContent).toContain("1 new on this page");
+    expect(bar?.textContent).toContain("1 new");
+    expect(bar?.textContent).not.toContain("on this page");
     const button = bar?.querySelector("button");
     expect(button?.textContent).toBe("Mark all seen");
-    expect(bar?.querySelector("a")?.textContent).toBe("Only new");
+    expect(button?.className).toContain("rdw-primary-button");
+    const toggle = bar?.querySelector("a");
+    expect(toggle?.textContent).toBe("Only new");
+    expect(toggle?.className).toContain("rdw-secondary-button");
     button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(getSeenPostId()).toBe(42);
     expect(bar?.textContent).toContain("Marked as seen up to #42");
@@ -96,7 +100,8 @@ describe("mountUpdatesBar", () => {
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
 
     const bar = document.getElementById(UPDATES_BAR_ID);
-    expect(bar?.textContent).toContain("2 new on this page");
+    expect(bar?.textContent).toContain("2 new");
+    expect(bar?.textContent).not.toContain("on this page");
     expect(
       Array.from(bar?.querySelectorAll("a") ?? []).map((a) => a.textContent),
     ).not.toContain("Only new");

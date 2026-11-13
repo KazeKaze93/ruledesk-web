@@ -140,9 +140,32 @@ describe("playlistMenuFeature", () => {
 
     const button = addButton(thumb);
     expect(button.textContent).toBe("+");
+    expect(button.classList.contains("rdw-icon-btn")).toBe(true);
     expect(button.getAttribute(ATTR_POST_ID)).toBe("111");
     expect(thumb.querySelector("a#p111")?.contains(button)).toBe(false);
     expect(button.previousElementSibling?.id).toBe("p111");
+  });
+
+  it("hides playlist badges by default even when the post is in a playlist", () => {
+    const playlist = createPlaylist("Later");
+    addPostToPlaylist(playlist.id, 111);
+    const thumb = buildThumb("111");
+    document.body.append(thumb);
+
+    playlistMenuFeature.mount(makeCtx("list", "?page=post&s=list"));
+
+    const css = playlistMenuFeature.css;
+    expect(addButton(thumb).classList.contains(CLASS_ADD_IN)).toBe(true);
+    expect(css).toContain(`:hover .${CLASS_ADD}`);
+    expect(css).toContain(`.${CLASS_ADD}:focus-visible`);
+    expect(css).not.toContain(
+      `.${CLASS_ADD}.${CLASS_ADD_IN} {\n  opacity:`,
+    );
+    expect(css).not.toMatch(
+      new RegExp(
+        `${CLASS_ADD}\\.${CLASS_ADD_IN}[^}]*opacity\\s*:`,
+      ),
+    );
   });
 
   it("does not render list UI on the post page", () => {

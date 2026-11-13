@@ -31,7 +31,7 @@ const FEED_NEW_CLASS = "new";
 
 const ID_FILTER_PATTERN = /^id:>(\d+)$/;
 
-const TEXT_NEW_ON_PAGE_SUFFIX = " new on this page";
+const TEXT_NEW_SUFFIX = " new";
 const TEXT_MARKED_SEEN_PREFIX = "Marked as seen up to #";
 const TEXT_ONLY_NEW = "Only new";
 const TEXT_SHOW_ALL = "Show all";
@@ -133,7 +133,7 @@ function createToggleLink(
 ): HTMLAnchorElement | null {
   if (tagsHaveIdFilter(tagsParam)) {
     const link = document.createElement("a");
-    link.className = CSS_CLASS.itemName;
+    link.className = CSS_CLASS.secondaryButton;
     link.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
     link.textContent = TEXT_SHOW_ALL;
     return link;
@@ -144,7 +144,7 @@ function createToggleLink(
   const base = stripUpdatesIdFilter(tagsParam);
   const onlyNewQuery = `${base}${TAG_SEPARATOR}${UPDATES_ID_PREFIX}${String(seenPostId)}`;
   const link = document.createElement("a");
-  link.className = CSS_CLASS.itemName;
+  link.className = CSS_CLASS.secondaryButton;
   link.href = buildUpdatesSearchUrl(onlyNewQuery);
   link.textContent = TEXT_ONLY_NEW;
   return link;
@@ -176,7 +176,7 @@ function mountEmptyPageBar(root: ParentNode, tagsParam: string): void {
   text.textContent = `${UI_TEXT.noNewPostsSince}${String(seen)}`;
 
   const showAll = document.createElement("a");
-  showAll.className = CSS_CLASS.itemName;
+  showAll.className = CSS_CLASS.secondaryButton;
   showAll.href = buildUpdatesSearchUrl(stripUpdatesIdFilter(tagsParam));
   showAll.textContent = TEXT_SHOW_ALL;
 
@@ -232,7 +232,7 @@ function mountFullBar(
 
   const summary = document.createElement("p");
   summary.className = CSS_CLASS.hint;
-  summary.textContent = `${String(newCount)}${TEXT_NEW_ON_PAGE_SUFFIX}`;
+  summary.textContent = `${String(newCount)}${TEXT_NEW_SUFFIX}`;
 
   const markButton = document.createElement("button");
   markButton.type = "button";

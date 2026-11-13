@@ -3,6 +3,9 @@ import { log } from "../log";
 import { addFavorite, removeFavorite } from "../site/favorites";
 import { addFav, removeFav } from "../storage/favs";
 
+/** Kit IconButton root class — prefer for preview badges. */
+export const KIT_ICON_BUTTON_CLASS = "rdw-icon-btn";
+
 export type FavButtonState =
   | "idle"
   | "pending"

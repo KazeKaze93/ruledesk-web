@@ -11,10 +11,113 @@ import {
 import { BASE_GRID_CSS, ensureThumbAnchor } from "../site/thumb";
 import { isFav } from "../storage/favs";
 import { getGridFavButtonsEnabled } from "../storage/store";
-import { createFavButton } from "./fav-button";
-import { CARD_CSS } from "./styles";
+import { createFavButton, KIT_ICON_BUTTON_CLASS } from "./fav-button";
+import { ICON_BUTTON_CSS } from "./kit/icon-button";
+import { CARD_CSS } from "./document-chrome-css";
 
 let unsubscribeThumbsAdded: (() => void) | undefined;
+
+/**
+ * Document overlays for preview badges + feed bar (mock layout 1).
+ * Appended after CARD_CSS so hover-only visibility wins over marked-always-visible.
+ */
+const DOCUMENT_OVERLAY_CSS = `
+${ICON_BUTTON_CSS}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending} {
+  opacity: 0;
+}
+
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav},
+.${CSS_CLASS.cardFav}:focus-visible {
+  opacity: 0.65;
+}
+
+.${CSS_CLASS.thumb} .${CSS_CLASS.cardFav}:hover,
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked},
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError},
+.${CSS_CLASS.thumb}:hover .${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending},
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked}:focus-visible,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavError}:focus-visible,
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavPending}:focus-visible {
+  opacity: 1;
+}
+
+.${CSS_CLASS.cardFav}.rdw-icon-btn {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.93);
+  border: 1px solid rgba(0, 0, 0, 0.13);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #1c2228;
+  font-size: 13px;
+}
+
+.${CSS_CLASS.cardFav}.${CSS_CLASS.cardFavMarked}.rdw-icon-btn {
+  background: #ffd75e;
+  border-color: #c79a00;
+  color: #5c4500;
+}
+
+.${CSS_CLASS.updatesBar} {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.${CSS_CLASS.updatesBarActions} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.hint} {
+  margin: 0;
+  font-weight: 700;
+  font-size: 12px;
+  color: #1c2228;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton} {
+  margin-left: auto;
+  background: #2f6fed;
+  border: 1px solid #2f6fed;
+  border-radius: 8px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 12px;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.secondaryButton} {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #cfd6dd;
+  background: #fff;
+  color: #1c2228;
+  border-radius: 8px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.secondaryButton}:focus-visible,
+.${CSS_CLASS.updatesBar} .${CSS_CLASS.primaryButton}:focus-visible {
+  outline: 2px solid #4c8bf5;
+  outline-offset: 2px;
+}
+`;
 
 function ensureThumbsAddedSubscription(): void {
   if (unsubscribeThumbsAdded !== undefined) {
@@ -39,7 +142,7 @@ export function ensureDocumentStyles(): void {
   }
   const style = document.createElement("style");
   style.id = DOCUMENT_STYLE_ID;
-  style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}`;
+  style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}\n${DOCUMENT_OVERLAY_CSS}`;
   document.head.append(style);
 }
 
@@ -64,6 +167,7 @@ function attachFavButton(thumb: HTMLElement, postId: string, marked: boolean): v
 
   ensureThumbAnchor(thumb);
   const button = createFavButton(postId, marked);
+  button.classList.add(KIT_ICON_BUTTON_CLASS);
   link.after(button);
 }
 
