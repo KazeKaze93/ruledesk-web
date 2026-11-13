@@ -61,6 +61,7 @@ export const PANEL_UI_CLASS = {
   scrollRegion: "rdw-scroll-region",
   settingsGroup: "rdw-settings-group",
   settingsRow: "rdw-settings-row",
+  settingsCaption: "rdw-settings-caption",
   pageCard: "rdw-page-card",
 } as const;
 

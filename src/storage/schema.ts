@@ -98,6 +98,48 @@ export const AppearanceStoredSchema = z.object({
   custom: z.optional(AppearanceCustomStoredSchema),
 });
 
+/**
+ * Package B: module toggle id for «Video player tweaks»
+ * (`settings.features[VIDEO_PLAYER_FEATURE_ID]`).
+ */
+export const VIDEO_PLAYER_FEATURE_ID = "video-player";
+export const DEFAULT_VIDEO_PLAYER_TWEAKS_ENABLED = true;
+
+/**
+ * Package C HANDOFF: «Video preview on hover» lives only in the features map
+ * (`settings.features[VIDEO_PREVIEW_FEATURE_ID]`), default OFF — no dedicated
+ * SettingsSchema boolean. UI caption: VIDEO_PREVIEW_SETTING_CAPTION in
+ * video-preview.ts.
+ */
+export const VIDEO_PREVIEW_FEATURE_ID = "video-preview";
+export const DEFAULT_VIDEO_PREVIEW_ON_HOVER = false;
+
+/** Package B: `settings.featureChoice[VIDEO_PLAYER_FEATURE_ID]` values. */
+export const VIDEO_SIZE_FIT_HEIGHT = "fit-height" as const;
+export const VIDEO_SIZE_FIT_WIDTH = "fit-width" as const;
+export const VIDEO_SIZE_ORIGINAL = "original" as const;
+export const DEFAULT_VIDEO_SIZE = VIDEO_SIZE_FIT_HEIGHT;
+
+export const VideoSizeSchema = z.enum([
+  VIDEO_SIZE_FIT_HEIGHT,
+  VIDEO_SIZE_FIT_WIDTH,
+  VIDEO_SIZE_ORIGINAL,
+]);
+
+export const DEFAULT_VIDEO_VOLUME = 1;
+export const DEFAULT_VIDEO_MUTED = false;
+export const DEFAULT_VIDEO_PLAYBACK_RATE = 1;
+
+/**
+ * Package B: persisted player prefs under
+ * `settings.featureState[VIDEO_PLAYER_FEATURE_ID]`.
+ */
+export const VideoPlayerStateSchema = z.object({
+  volume: z.optional(z.number()),
+  muted: z.optional(z.boolean()),
+  playbackRate: z.optional(z.number()),
+});
+
 export const SettingsSchema = z.object({
   gridFavButtons: z.boolean(),
   updatesGroupSize: z.optional(z.int().check(z.nonnegative())),
@@ -187,6 +229,49 @@ export type FavsSyncMode = z.infer<typeof FavsSyncModeSchema>;
 export type FavsSyncState = z.infer<typeof FavsSyncSchema>;
 export type FavsData = z.infer<typeof FavsSchema>;
 export type ExportBlob = z.infer<typeof ExportBlobSchema>;
+export type VideoSize = z.infer<typeof VideoSizeSchema>;
+export type VideoPlayerState = z.infer<typeof VideoPlayerStateSchema>;
+
+export function createDefaultVideoPlayerState(): VideoPlayerState {
+  return {
+    volume: DEFAULT_VIDEO_VOLUME,
+    muted: DEFAULT_VIDEO_MUTED,
+    playbackRate: DEFAULT_VIDEO_PLAYBACK_RATE,
+  };
+}
+
+export function parseVideoPlayerState(raw: unknown): VideoPlayerState {
+  const parsed = VideoPlayerStateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return createDefaultVideoPlayerState();
+  }
+  const defaults = createDefaultVideoPlayerState();
+  const volume = parsed.data.volume;
+  const muted = parsed.data.muted;
+  const playbackRate = parsed.data.playbackRate;
+  return {
+    volume:
+      volume !== undefined && Number.isFinite(volume)
+        ? Math.min(1, Math.max(0, volume))
+        : defaults.volume,
+    muted: muted ?? defaults.muted,
+    playbackRate:
+      playbackRate !== undefined &&
+      Number.isFinite(playbackRate) &&
+      playbackRate > 0
+        ? playbackRate
+        : defaults.playbackRate,
+  };
+}
+
+export function resolveVideoSize(raw: string | undefined): VideoSize {
+  const parsed = VideoSizeSchema.safeParse(raw);
+  if (!parsed.success) {
+    return DEFAULT_VIDEO_SIZE;
+  }
+  return parsed.data;
+}
+
 function isUnknownRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }

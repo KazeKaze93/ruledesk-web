@@ -12,6 +12,15 @@ const OTHER_COOKIE = "session=abc123";
 const OTHER_STYLESHEET_HREF = "https://rule34.xxx/css/other.css?v=9";
 const LIGHT_HREF_WITH_QUERY = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_LIGHT}?v=42`;
 const DARK_HREF_WITH_QUERY = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_DARK}?v=42`;
+/** Site root-relative form seen in production. */
+const LIGHT_HREF_ROOT_RELATIVE = `/css/${SITE_THEME_STYLESHEET_LIGHT}?46`;
+const DARK_HREF_ROOT_RELATIVE = `/css/${SITE_THEME_STYLESHEET_DARK}?46`;
+/**
+ * Protocol-relative `//css/...` — `new URL` treats `css` as host; finder must
+ * match the raw attribute instead.
+ */
+const LIGHT_HREF_DOUBLE_SLASH = `//css/${SITE_THEME_STYLESHEET_LIGHT}?46`;
+const DARK_HREF_DOUBLE_SLASH = `//css/${SITE_THEME_STYLESHEET_DARK}?46`;
 
 function setDocumentCookie(value: string): void {
   Object.defineProperty(document, "cookie", {
@@ -41,7 +50,8 @@ function setDocumentCookie(value: string): void {
 function appendStylesheet(href: string): HTMLLinkElement {
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = href;
+  // Preserve raw href (incl. //css/); property setter would absolutize.
+  link.setAttribute("href", href);
   document.head.append(link);
   return link;
 }
@@ -125,6 +135,32 @@ describe("setSiteTheme", () => {
     setSiteTheme("light");
     expect(siteLink.getAttribute("href")).toBe(LIGHT_HREF_WITH_QUERY);
     expect(otherLink.getAttribute("href")).toBe(OTHER_STYLESHEET_HREF);
+  });
+
+  it("finds and swaps root-relative /css/desktop.css?46 without warning", () => {
+    const siteLink = appendStylesheet(LIGHT_HREF_ROOT_RELATIVE);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    setSiteTheme("dark");
+    expect(siteLink.getAttribute("href")).toBe(DARK_HREF_ROOT_RELATIVE);
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    setSiteTheme("light");
+    expect(siteLink.getAttribute("href")).toBe(LIGHT_HREF_ROOT_RELATIVE);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("finds and swaps protocol-relative //css/desktop.css?46 without warning", () => {
+    const siteLink = appendStylesheet(LIGHT_HREF_DOUBLE_SLASH);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    setSiteTheme("dark");
+    expect(siteLink.getAttribute("href")).toBe(DARK_HREF_DOUBLE_SLASH);
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    setSiteTheme("light");
+    expect(siteLink.getAttribute("href")).toBe(LIGHT_HREF_DOUBLE_SLASH);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("does not throw when the site stylesheet link is missing", () => {

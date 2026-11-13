@@ -36,6 +36,14 @@ const WHERE_NOT_OUR_CONTROL = `:where(${NOT_RDW_CLASS}${NOT_SEARCH_TOOLS_DESCEND
 export const RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 /** Native "I came" counter row — hide with panel chrome (E HANDOFF). */
 const POST_PANEL_ICAME_ROW = 'li:has(a[onclick^="iCame("])';
+/** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
+const POST_ACTIONS_HOST_ID = "rdw-post-actions";
+
+/**
+ * Body class while search-tools «AI posts» row is rendered
+ * (`SEARCH_TOOLS_AI_ROW_BODY_CLASS` in search-tools.tsx — F HANDOFF).
+ */
+const SEARCH_TOOLS_AI_ROW_BODY_CLASS = "rdw-search-tools-ai-posts";
 
 /** F bulk-select chrome — keep in sync with src/features/favorites-bulk.tsx. */
 const FAV_BULK_SELECTED_CLASS = "rdw-fav-bulk-selected";
@@ -272,8 +280,8 @@ ${ROOT} ${SITE_SELECTORS.tagsHeadingAfterSearchTools} {
   display: none;
 }
 
-/* D: native AI filter row — search-tools mirrors #chkFilterAI */
-${ROOT} ${SITE_SELECTORS.filterAiRow} {
+/* F: native AI filter row — only while search-tools AI posts row is rendered */
+${ROOT} body.${SEARCH_TOOLS_AI_ROW_BODY_CLASS} ${SITE_SELECTORS.filterAiRow} {
   display: none;
 }
 
@@ -1072,6 +1080,14 @@ ${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div.link-list {
 
 ${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} ${POST_PANEL_ICAME_ROW} {
   display: none !important;
+}
+
+/*
+ * A: comments moved into the panel column — lift site max-width: 680px
+ * so #post-comments fills the narrow column.
+ */
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} #${POST_ACTIONS_HOST_ID} #post-comments {
+  max-width: none;
 }
 
 ${ROOT} img#image {

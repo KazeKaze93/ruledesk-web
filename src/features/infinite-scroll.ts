@@ -11,8 +11,8 @@ const FEATURE_PAGES = ["list"] as const;
 
 const BODY_FEATURE_CLASS = featureBodyClass(FEATURE_ID);
 
-const ROOT_MARGIN_PX = 800;
-const ROOT_MARGIN = `${String(ROOT_MARGIN_PX)}px`;
+/** Prefetch when remaining distance to list end ≤ this many viewport heights. */
+const PREFETCH_REMAINING_VIEWPORT_HEIGHTS = 2;
 const MIN_REQUEST_INTERVAL_MS = 1000;
 
 const CLASS_SENTINEL = "rdw-infinite-sentinel";
@@ -221,11 +221,20 @@ function clearStatus(status: HTMLElement): void {
   status.replaceChildren();
 }
 
-/** True when the sentinel is within rootMargin of the viewport (IO may not re-fire). */
+function prefetchRootMarginPx(): number {
+  return PREFETCH_REMAINING_VIEWPORT_HEIGHTS * window.innerHeight;
+}
+
+function prefetchRootMarginCss(): string {
+  return `${String(prefetchRootMarginPx())}px`;
+}
+
+/** True when the sentinel is within the prefetch margin of the viewport (IO may not re-fire). */
 function isSentinelNear(sentinel: Element): boolean {
   const rect = sentinel.getBoundingClientRect();
-  const viewBottom = window.innerHeight + ROOT_MARGIN_PX;
-  const viewTop = -ROOT_MARGIN_PX;
+  const marginPx = prefetchRootMarginPx();
+  const viewBottom = window.innerHeight + marginPx;
+  const viewTop = -marginPx;
   return rect.top < viewBottom && rect.bottom > viewTop;
 }
 
@@ -338,7 +347,7 @@ function mountInfiniteScroll(_ctx: FeatureContext): void {
         break;
       }
     },
-    { root: null, rootMargin: ROOT_MARGIN, threshold: 0 },
+    { root: null, rootMargin: prefetchRootMarginCss(), threshold: 0 },
   );
   observer.observe(sentinel);
 }

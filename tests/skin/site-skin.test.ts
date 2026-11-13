@@ -10,6 +10,8 @@ import {
   CLASS_THUMB_CHECK,
   CLASS_THUMB_SELECTED,
 } from "../../src/features/favorites-bulk";
+import { SEARCH_TOOLS_AI_ROW_BODY_CLASS } from "../../src/features/search-tools";
+import { POST_ACTIONS_ID } from "../../src/features/types";
 import {
   getSiteSkinCss,
   RDW_POST_PANEL_MOUNTED_CLASS,
@@ -184,12 +186,14 @@ describe("site-skin CSS export", () => {
     );
   });
 
-  it("hides the native Filter AI posts row (D HANDOFF)", () => {
+  it("hides the native Filter AI posts row only when AI posts row is rendered (F HANDOFF)", () => {
+    expect(SEARCH_TOOLS_AI_ROW_BODY_CLASS).toBe("rdw-search-tools-ai-posts");
     expect(SITE_SKIN_CSS).toContain(SITE_SELECTORS.filterAiRow);
     expect(SITE_SKIN_CSS).toContain("#chkFilterAI");
+    expect(SITE_SKIN_CSS).toContain(`body.${SEARCH_TOOLS_AI_ROW_BODY_CLASS}`);
     expect(SITE_SKIN_CSS).toMatch(
       new RegExp(
-        `${SITE_SELECTORS.filterAiRow.replace(
+        `body\\.${SEARCH_TOOLS_AI_ROW_BODY_CLASS}\\s+${SITE_SELECTORS.filterAiRow.replace(
           /[.*+?^${}()|[\]\\]/g,
           "\\$&",
         )}\\s*\\{[^}]*display:\\s*none`,
@@ -197,9 +201,33 @@ describe("site-skin CSS export", () => {
       ),
     );
     const bare = stripComments(SITE_SKIN_CSS);
-    // Old CSS had no Filter AI hide — keep the full :has row selector.
+    // Old CSS hid Filter AI unconditionally under html.rdw-skin — must be gated.
+    expect(bare).not.toMatch(
+      new RegExp(
+        `html\\.${RDW_SKIN_CLASS}\\s+${SITE_SELECTORS.filterAiRow.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\\s*\\{[^}]*display:\\s*none`,
+        "s",
+      ),
+    );
     expect(bare).not.toMatch(
       /#chkFilterAI\s*\{[^}]*display:\s*none/s,
+    );
+  });
+
+  it("lifts post-comments max-width inside the post panel column (A HANDOFF)", () => {
+    expect(POST_ACTIONS_ID).toBe("rdw-post-actions");
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `body\\.${RDW_POST_PANEL_MOUNTED_CLASS}\\s+#${POST_ACTIONS_ID}\\s+#post-comments\\s*\\{[^}]*max-width:\\s*none`,
+        "s",
+      ),
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    // Must be gated on panel mount + host — not a global #post-comments override.
+    expect(bare).not.toMatch(
+      /html\.rdw-skin\s+(?:div)?#post-comments\s*\{[^}]*max-width:\s*none/s,
     );
   });
 

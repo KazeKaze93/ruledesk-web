@@ -10,8 +10,14 @@ import {
   postActionsFeature,
 } from "../../src/features/post-actions";
 import { CLASS_COLLECTIONS_BTN } from "../../src/features/post-panel/collections-menu";
-import { CLASS_MORE_BTN } from "../../src/features/post-panel/more-menu";
 import {
+  CLASS_POST_ACTION_BTN,
+  LABEL_REPORT,
+} from "../../src/features/post-panel/post-actions-list";
+import {
+  CLASS_CARD,
+  CLASS_COMMENTS,
+  CLASS_COMMENTS_HOST,
   CLASS_FAV,
   CLASS_ICAME,
   CLASS_ICAME_COUNT,
@@ -20,6 +26,7 @@ import {
   CLASS_SOURCE,
   CLASS_STATS,
   CLASS_VOTE,
+  TEXT_COMMENTS,
   TEXT_FAVORITE,
   TEXT_ICAME,
   TEXT_IN_FAVORITES,
@@ -27,6 +34,7 @@ import {
   TEXT_SCORE_UNKNOWN,
   TEXT_VOTE_UP,
 } from "../../src/features/post-panel/post-panel";
+import { POST_COMMENTS_ID } from "../../src/features/post-panel/site-reads";
 import {
   POST_ACTIONS_ID,
   featureBodyClass,
@@ -39,12 +47,19 @@ const CLASS_PANEL = "rdw-post-actions";
 const CLASS_MODE_WIDE = "rdw-post-actions--wide";
 const CLASS_MODE_NARROW = "rdw-post-actions--narrow";
 const CLASS_FOLLOW = "rdw-post-actions-follow";
+const CLASS_MORE_BTN = "rdw-post-panel-more-btn";
 
 const POST_ID = "42";
 const POST_SEARCH = `?page=post&s=view&id=${POST_ID}`;
 const NARROW_MEDIA_QUERY = "(max-width: 1099px)";
 const ORIGINAL_HREF = "https://example.com/original.jpg";
 const SOURCE_HREF = "https://x.com/Nyx_x__/status/1";
+const PANEL_WIDTH_TOKEN = "360px";
+const PANEL_MIN_WIDTH_TOKEN = "320px";
+const PANEL_MAX_WIDTH_TOKEN = "420px";
+const PANEL_FONT_TOKEN = "13px";
+const PANEL_BUTTON_HEIGHT_TOKEN = "36px";
+const PANEL_GAP_TOKEN = "12px";
 
 const memory = new Map<string, unknown>();
 
@@ -225,11 +240,13 @@ function buildStats(options?: {
 
 function buildLinkList(options: {
   originalHref?: string | null | undefined;
+  omitLinkTexts?: readonly string[] | undefined;
   extraLinks?: Array<{ text: string; href: string }> | undefined;
 }): HTMLDivElement {
   const wrap = document.createElement("div");
   wrap.className = "link-list";
   const ul = document.createElement("ul");
+  const omit = new Set(options.omitLinkTexts ?? []);
 
   const defaults: Array<{ text: string; href: string }> = [
     { text: "Edit", href: "index.php?page=post&s=edit&id=42" },
@@ -256,6 +273,9 @@ function buildLinkList(options: {
     ) {
       continue;
     }
+    if (omit.has(entry.text)) {
+      continue;
+    }
     const li = document.createElement("li");
     const link = document.createElement("a");
     link.href = entry.href;
@@ -268,6 +288,42 @@ function buildLinkList(options: {
   return wrap;
 }
 
+function buildPostComments(): HTMLDivElement {
+  const comments = document.createElement("div");
+  comments.id = POST_COMMENTS_ID;
+  const list = document.createElement("div");
+  list.id = "comment-list";
+  const countText = document.createTextNode("1 comment");
+  const ci = document.createElement("a");
+  ci.id = "ci";
+  ci.href = "#";
+  const sort = document.createElement("div");
+  sort.append("Sorting ");
+  const change = document.createElement("a");
+  change.href = "#";
+  change.textContent = "Change";
+  sort.append(change);
+  const row = document.createElement("div");
+  row.id = "c99";
+  const col1 = document.createElement("div");
+  col1.className = "col1";
+  col1.append("author · date ");
+  const score = document.createElement("a");
+  score.id = "sc99";
+  score.href = "#";
+  score.setAttribute("onclick", "vote('99','up')");
+  score.textContent = "0";
+  const reply = document.createElement("a");
+  reply.id = "rcl99";
+  reply.href = "#";
+  reply.textContent = "Reply";
+  col1.append(score, reply);
+  row.append(col1);
+  list.append(countText, ci, sort, row);
+  comments.append(list);
+  return comments;
+}
+
 function buildPostDom(options?: {
   score?: string;
   originalHref?: string | null;
@@ -277,9 +333,12 @@ function buildPostDom(options?: {
   media?: "image" | "video";
   includeFlexi?: boolean;
   includeHeader?: boolean;
+  includeComments?: boolean;
+  omitLinkTexts?: readonly string[];
 }): {
   flexi: HTMLElement | null;
   mediaWrap: HTMLElement | null;
+  comments: HTMLElement | null;
 } {
   if (options?.includeHeader !== false) {
     const header = document.createElement("div");
@@ -304,6 +363,7 @@ function buildPostDom(options?: {
   sidebar.append(
     buildLinkList({
       originalHref: options?.originalHref,
+      omitLinkTexts: options?.omitLinkTexts,
     }),
   );
   postView.append(sidebar);
@@ -334,8 +394,14 @@ function buildPostDom(options?: {
     postView.append(rightCol);
   }
 
+  let comments: HTMLElement | null = null;
+  if (options?.includeComments === true) {
+    comments = buildPostComments();
+    postView.append(comments);
+  }
+
   document.body.append(postView);
-  return { flexi, mediaWrap };
+  return { flexi, mediaWrap, comments };
 }
 
 function actionsPanel(): HTMLElement | null {
@@ -379,7 +445,7 @@ describe("postActionsFeature", () => {
     }
   });
 
-  it("inserts 220px panel into div.flexi next to media wrapper", () => {
+  it("inserts 360px panel into div.flexi next to media wrapper", () => {
     const { flexi, mediaWrap } = buildPostDom();
     postActionsFeature.mount(makeCtx());
     const panel = actionsPanel();
@@ -391,7 +457,28 @@ describe("postActionsFeature", () => {
     expect(document.body.classList.contains(POST_PANEL_MOUNTED_CLASS)).toBe(
       true,
     );
-    expect(postActionsFeature.css).toContain("220px");
+    expect(postActionsFeature.css).toContain(PANEL_WIDTH_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_MIN_WIDTH_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_MAX_WIDTH_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_FONT_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_BUTTON_HEIGHT_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_GAP_TOKEN);
+    expect(postActionsFeature.css).not.toContain("220px");
+  });
+
+  it("uses sticky max-height and overflow only in wide mode", () => {
+    expect(postActionsFeature.css).toMatch(
+      /\.rdw-post-actions--wide\s*\{[^}]*max-height:\s*calc\(100vh/,
+    );
+    expect(postActionsFeature.css).toMatch(
+      /\.rdw-post-actions--wide\s*\{[^}]*overflow-y:\s*auto/,
+    );
+    expect(postActionsFeature.css).toMatch(
+      /\.rdw-post-actions--narrow\s*\{[^}]*overflow-y:\s*visible/,
+    );
+    expect(postActionsFeature.css).toMatch(
+      /\.rdw-post-actions--narrow\s*\{[^}]*max-height:\s*none/,
+    );
   });
 
   it("anchors video posts on the player wrapper inside flexi", () => {
@@ -657,33 +744,32 @@ describe("postActionsFeature", () => {
     ).not.toContain("Source");
   });
 
-  it("proxies More links via native click and skips Original/favorites", async () => {
+  it("renders separate cards and open post-action buttons without More popover", () => {
     buildPostDom();
     postActionsFeature.mount(makeCtx());
+    const panel = actionsPanel();
+    expect(panel?.querySelectorAll(`.${CLASS_CARD}`).length).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(document.querySelector(`.${CLASS_MORE_BTN}`)).toBeNull();
+    expect(
+      document.querySelector('[role="dialog"][aria-label="More post actions"]'),
+    ).toBeNull();
 
-    document.querySelector(`.${CLASS_MORE_BTN}`)?.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    await vi.waitFor(() => {
-      expect(
-        document.querySelector(
-          '[role="dialog"][aria-label="More post actions"]',
-        ),
-      ).not.toBeNull();
-    });
-
-    const dialog = document.querySelector(
-      '[role="dialog"][aria-label="More post actions"]',
-    );
-    const labels = [...(dialog?.querySelectorAll("button") ?? [])].map(
-      (node) => node.textContent,
-    );
+    const labels = [
+      ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
+    ].map((node) => node.textContent);
     expect(labels).toEqual([
       "Edit",
       "Resize image",
-      "Report to moderation",
+      LABEL_REPORT,
       "Add Note",
     ]);
+  });
+
+  it("proxies open post-action buttons via native click", () => {
+    buildPostDom();
+    postActionsFeature.mount(makeCtx());
 
     const editNative = [...document.querySelectorAll("div.link-list a")].find(
       (node) => node.textContent?.trim() === "Edit",
@@ -693,10 +779,36 @@ describe("postActionsFeature", () => {
       return;
     }
     const clickSpy = vi.spyOn(editNative, "click");
-    dialog
-      ?.querySelector("button")
-      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const editButton = [
+      ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
+    ].find((node) => node.textContent === "Edit");
+    editButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits Resize image button when the native link is absent", () => {
+    buildPostDom({
+      media: "video",
+      omitLinkTexts: ["Resize image"],
+    });
+    postActionsFeature.mount(makeCtx());
+    const labels = [
+      ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
+    ].map((node) => node.textContent);
+    expect(labels).toEqual(["Edit", LABEL_REPORT, "Add Note"]);
+    expect(labels).not.toContain("Resize image");
+  });
+
+  it("places I came under Score in the same card", () => {
+    buildPostDom({ includeICame: true, iCameCount: "7" });
+    postActionsFeature.mount(makeCtx());
+    const scoreValue = document.querySelector(`.${CLASS_SCORE_VALUE}`);
+    const icame = document.querySelector(`.${CLASS_ICAME}`);
+    expect(scoreValue).not.toBeNull();
+    expect(icame).not.toBeNull();
+    expect(scoreValue?.closest(`.${CLASS_CARD}`)).toBe(
+      icame?.closest(`.${CLASS_CARD}`),
+    );
   });
 
   it("renders I came button without count when counter markup is missing", async () => {
@@ -738,6 +850,48 @@ describe("postActionsFeature", () => {
       .querySelector(`.${CLASS_ICAME} button`)
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("moves native #post-comments into Comments card without cloning", () => {
+    const { comments } = buildPostDom({ includeComments: true });
+    expect(comments).not.toBeNull();
+    if (comments === null) {
+      return;
+    }
+    const list = comments.querySelector("#comment-list");
+    postActionsFeature.mount(makeCtx());
+
+    const host = document.querySelector(`.${CLASS_COMMENTS_HOST}`);
+    const card = document.querySelector(`.${CLASS_COMMENTS}`);
+    expect(card?.textContent).toContain(TEXT_COMMENTS);
+    expect(host?.contains(comments)).toBe(true);
+    expect(document.querySelectorAll(`#${POST_COMMENTS_ID}`)).toHaveLength(1);
+    expect(comments.querySelector("#comment-list")).toBe(list);
+    expect(document.getElementById("post-view")?.contains(comments)).toBe(
+      true,
+    );
+  });
+
+  it("restores #post-comments to the page on remount cleanup", () => {
+    const { comments } = buildPostDom({ includeComments: true });
+    expect(comments).not.toBeNull();
+    if (comments === null) {
+      return;
+    }
+    const postView = document.getElementById("post-view");
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document.querySelector(`.${CLASS_COMMENTS_HOST}`)?.contains(comments),
+    ).toBe(true);
+
+    postActionsFeature.mount(makeCtx());
+    expect(document.querySelectorAll(`#${POST_COMMENTS_ID}`)).toHaveLength(1);
+    expect(
+      document.querySelector(`.${CLASS_COMMENTS_HOST}`)?.contains(comments),
+    ).toBe(true);
+    expect(postView?.contains(document.getElementById(POST_ACTIONS_ID))).toBe(
+      true,
+    );
   });
 
   it("survives missing stats and links without throwing", () => {

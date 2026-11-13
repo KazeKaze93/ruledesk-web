@@ -24,9 +24,16 @@ export const POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 
 const NARROW_BREAKPOINT_PX = 1100;
 const NARROW_MEDIA_QUERY = `(max-width: ${String(NARROW_BREAKPOINT_PX - 1)}px)`;
-const PANEL_WIDTH_PX = 220;
+const PANEL_WIDTH_PX = 360;
+const PANEL_MIN_WIDTH_PX = 320;
+const PANEL_MAX_WIDTH_PX = 420;
+const PANEL_FONT_SIZE_PX = 13;
+const PANEL_BUTTON_HEIGHT_PX = 36;
+const PANEL_GAP_PX = 12;
+const PANEL_CARD_PADDING_PX = 12;
 const PANEL_STICKY_GAP_PX = 12;
 const PANEL_Z_INDEX = 100;
+const SCORE_VALUE_FONT_SIZE_PX = 18;
 const STICKY_TOP_VAR = "--rdw-post-panel-sticky-top";
 
 const CLASS_PANEL = "rdw-post-actions";
@@ -49,36 +56,59 @@ ${BODY_SELECTOR} div.flexi {
 ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
   box-sizing: border-box;
   width: ${String(PANEL_WIDTH_PX)}px;
-  max-width: 100%;
-  flex: 0 0 ${String(PANEL_WIDTH_PX)}px;
+  min-width: ${String(PANEL_MIN_WIDTH_PX)}px;
+  max-width: min(${String(PANEL_MAX_WIDTH_PX)}px, 100%);
+  flex: 0 1 ${String(PANEL_WIDTH_PX)}px;
   z-index: ${String(PANEL_Z_INDEX)};
-  font: 12px/1.35 var(--rdw-font);
+  font: ${String(PANEL_FONT_SIZE_PX)}px/1.35 var(--rdw-font);
   color: var(--rdw-text);
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
   position: sticky;
   top: var(${STICKY_TOP_VAR}, ${String(PANEL_STICKY_GAP_PX)}px);
   align-self: flex-start;
+  max-height: calc(100vh - var(${STICKY_TOP_VAR}, ${String(PANEL_STICKY_GAP_PX)}px) - ${String(PANEL_STICKY_GAP_PX)}px);
+  overflow-y: auto;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
   position: static;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   flex: 1 1 100%;
   margin: 0.75rem 0 0;
+  max-height: none;
+  overflow-y: visible;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel {
-  padding: 10px;
   display: grid;
-  gap: 10px;
+  gap: ${String(PANEL_GAP_PX)}px;
   position: relative;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-card {
+  padding: ${String(PANEL_CARD_PADDING_PX)}px;
+  display: grid;
+  gap: ${String(PANEL_GAP_PX)}px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-btn {
+  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: ${String(PANEL_GAP_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
   grid-column: 1 / -1;
+  width: 100%;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections {
+  min-width: 0;
+  position: relative;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections .rdw-btn {
+  width: 100%;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
   display: inline-flex;
@@ -86,7 +116,8 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
   justify-content: center;
   gap: 4px;
   box-sizing: border-box;
-  min-height: 28px;
+  width: 100%;
+  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
   padding: 0 10px;
   border: 1px solid var(--rdw-border);
   border-radius: var(--rdw-radius-m);
@@ -94,26 +125,27 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
   color: var(--rdw-text);
   text-decoration: none;
   font: inherit;
-  font-size: 12px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
+  font-weight: 600;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: ${String(PANEL_GAP_PX)}px;
   background: var(--rdw-surface-2);
   border-radius: var(--rdw-radius-m);
-  padding: 6px 8px;
+  padding: ${String(PANEL_GAP_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
-  font-size: 18px;
+  font-size: ${String(SCORE_VALUE_FONT_SIZE_PX)}px;
   font-variant-numeric: tabular-nums;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
-  display: grid;
   grid-template-columns: 62px 1fr;
-  gap: 3px 8px;
-  font-size: 12px;
+  column-gap: ${String(PANEL_GAP_PX)}px;
+  row-gap: ${String(PANEL_GAP_PX)}px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
   color: var(--rdw-muted);
@@ -128,11 +160,21 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-source {
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${String(PANEL_GAP_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-more {
-  position: relative;
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame .rdw-btn {
+  flex: 1 1 auto;
+  width: 100%;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-post-actions {
+  display: grid;
+  gap: ${String(PANEL_GAP_PX)}px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-post-action {
+  width: 100%;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-comments-host {
+  min-width: 0;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item {
   display: flex;
@@ -180,6 +222,8 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-new-form {
 @media ${NARROW_MEDIA_QUERY} {
   ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
     position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 `.trim();

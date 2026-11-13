@@ -1,5 +1,5 @@
 import type { JSX } from "preact";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { UI_TEXT } from "../../config/constants";
 import { log } from "../../log";
@@ -14,12 +14,13 @@ import {
   SectionLabel,
 } from "../../ui/kit";
 import { CollectionsMenu } from "./collections-menu";
-import { MoreMenu } from "./more-menu";
+import { PostActionsList } from "./post-actions-list";
 import {
   SOURCE_LINK_REL,
   collectMoreLinks,
   findICameTarget,
   findOriginalAnchor,
+  findPostComments,
   observeScoreSpan,
   readScoreText,
   readStatRows,
@@ -36,6 +37,7 @@ const TEXT_SCORE = "Score";
 const TEXT_VOTE_UP = "Vote up";
 const TEXT_SCORE_UNKNOWN = "—";
 const TEXT_ICAME = "I came";
+const TEXT_COMMENTS = "Comments";
 const LABEL_ORIGINAL = "Open original image";
 const LABEL_VOTE_UP = "Vote up";
 const LABEL_ICAME = "I came";
@@ -43,6 +45,7 @@ const WARN_ICAME_COUNT =
   "post-actions: I came counter — нужна разметка";
 
 const CLASS_ROOT = "rdw-post-panel";
+const CLASS_CARD = "rdw-post-panel-card";
 const CLASS_ACTIONS = "rdw-post-panel-actions";
 const CLASS_FAV = "rdw-post-panel-fav";
 const CLASS_ORIGINAL = "rdw-post-panel-original";
@@ -55,6 +58,8 @@ const CLASS_STAT_VALUE = "rdw-post-panel-stat-value";
 const CLASS_SOURCE = "rdw-post-panel-source";
 const CLASS_ICAME = "rdw-post-panel-icame";
 const CLASS_ICAME_COUNT = "rdw-post-panel-icame-count";
+const CLASS_COMMENTS = "rdw-post-panel-comments";
+const CLASS_COMMENTS_HOST = "rdw-post-panel-comments-host";
 
 export type PostPanelProps = {
   readonly postId: string | null;
@@ -92,6 +97,7 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
     return anchor?.href ?? null;
   });
   const [iCame] = useState<ICameTarget | null>(() => findICameTarget());
+  const [hasComments] = useState(() => findPostComments() !== null);
 
   useEffect(() => {
     if (props.postId === null) {
@@ -164,95 +170,142 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
     iCame?.anchor.click();
   }, [iCame]);
 
+  const showScoreCard = props.postId !== null || iCame !== null;
+
   return (
-    <Card className={CLASS_ROOT} as="section">
-      <div className={CLASS_ACTIONS}>
-        {props.postId !== null ? (
-          <Button
-            variant={favorited ? "primary" : "secondary"}
-            size="s"
-            className={CLASS_FAV}
-            loading={favPending}
-            aria-label={
-              favorited
-                ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}`
-                : `${UI_TEXT.cardFavAddLabel} ${props.postId}`
-            }
-            onClick={() => {
-              void onFavClick();
-            }}
-          >
-            {favorited ? (
-              <IconStarFilled size={14} />
-            ) : (
-              <IconStar size={14} />
-            )}
-            {favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE}
-          </Button>
-        ) : null}
+    <div className={CLASS_ROOT}>
+      <Card className={CLASS_CARD} as="section">
+        <div className={CLASS_ACTIONS}>
+          {props.postId !== null ? (
+            <Button
+              variant={favorited ? "primary" : "secondary"}
+              size="m"
+              className={CLASS_FAV}
+              loading={favPending}
+              aria-label={
+                favorited
+                  ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}`
+                  : `${UI_TEXT.cardFavAddLabel} ${props.postId}`
+              }
+              onClick={() => {
+                void onFavClick();
+              }}
+            >
+              {favorited ? (
+                <IconStarFilled size={14} />
+              ) : (
+                <IconStar size={14} />
+              )}
+              {favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE}
+            </Button>
+          ) : null}
 
-        {numericId !== null ? <CollectionsMenu postId={numericId} /> : null}
+          {numericId !== null ? <CollectionsMenu postId={numericId} /> : null}
 
-        {originalHref !== null ? (
-          <a
-            className={CLASS_ORIGINAL}
-            href={originalHref}
-            target="_blank"
-            rel="noopener"
-            aria-label={LABEL_ORIGINAL}
-          >
-            {TEXT_ORIGINAL}
-            <IconExternalLink size={12} />
-          </a>
-        ) : null}
-      </div>
-
-      {props.postId !== null ? (
-        <div className={CLASS_SCORE}>
-          <div>
-            <SectionLabel>{TEXT_SCORE}</SectionLabel>
-            <b className={CLASS_SCORE_VALUE}>{scoreText}</b>
-          </div>
-          <Button
-            variant="secondary"
-            size="s"
-            className={CLASS_VOTE}
-            loading={votePending}
-            aria-label={LABEL_VOTE_UP}
-            onClick={() => {
-              void onVoteClick();
-            }}
-          >
-            {TEXT_VOTE_UP}
-          </Button>
+          {originalHref !== null ? (
+            <a
+              className={CLASS_ORIGINAL}
+              href={originalHref}
+              target="_blank"
+              rel="noopener"
+              aria-label={LABEL_ORIGINAL}
+            >
+              {TEXT_ORIGINAL}
+              <IconExternalLink size={12} />
+            </a>
+          ) : null}
         </div>
+      </Card>
+
+      {showScoreCard ? (
+        <Card className={CLASS_CARD} as="section">
+          {props.postId !== null ? (
+            <div className={CLASS_SCORE}>
+              <div>
+                <SectionLabel>{TEXT_SCORE}</SectionLabel>
+                <b className={CLASS_SCORE_VALUE}>{scoreText}</b>
+              </div>
+              <Button
+                variant="secondary"
+                size="m"
+                className={CLASS_VOTE}
+                loading={votePending}
+                aria-label={LABEL_VOTE_UP}
+                onClick={() => {
+                  void onVoteClick();
+                }}
+              >
+                {TEXT_VOTE_UP}
+              </Button>
+            </div>
+          ) : null}
+
+          {iCame !== null ? (
+            <div className={CLASS_ICAME}>
+              <Button
+                variant="secondary"
+                size="m"
+                aria-label={LABEL_ICAME}
+                onClick={onICameClick}
+              >
+                {TEXT_ICAME}
+              </Button>
+              {iCame.count !== null ? (
+                <span className={CLASS_ICAME_COUNT}>{iCame.count}</span>
+              ) : null}
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
+
+      {moreLinks.length > 0 ? (
+        <Card className={CLASS_CARD} as="section">
+          <PostActionsList links={moreLinks} />
+        </Card>
       ) : null}
 
       {stats.length > 0 ? (
-        <div className={CLASS_STATS}>
+        <Card className={`${CLASS_CARD} ${CLASS_STATS}`} as="section">
           {stats.map((row) => (
             <StatRowView key={row.label} row={row} />
           ))}
-        </div>
+        </Card>
       ) : null}
 
-      {iCame !== null ? (
-        <div className={CLASS_ICAME}>
-          <Button
-            variant="secondary"
-            size="s"
-            aria-label={LABEL_ICAME}
-            onClick={onICameClick}
-          >
-            {TEXT_ICAME}
-          </Button>
-          {iCame.count !== null ? (
-            <span className={CLASS_ICAME_COUNT}>{iCame.count}</span>
-          ) : null}
-        </div>
-      ) : null}
+      {hasComments ? <CommentsCard /> : null}
+    </div>
+  );
+}
 
-      <MoreMenu links={moreLinks} />
+function CommentsCard(): JSX.Element {
+  const hostRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    const comments = findPostComments();
+    if (host === null || comments === null) {
+      return;
+    }
+    if (comments.parentElement === host) {
+      return;
+    }
+    const originParent = comments.parentNode;
+    const originNext = comments.nextSibling;
+    host.append(comments);
+    return (): void => {
+      if (originParent === null) {
+        return;
+      }
+      if (comments.parentElement === host || comments.parentNode === null) {
+        originParent.insertBefore(comments, originNext);
+      }
+    };
+  }, []);
+
+  return (
+    <Card className={`${CLASS_CARD} ${CLASS_COMMENTS}`} as="section">
+      <SectionLabel>{TEXT_COMMENTS}</SectionLabel>
+      <div className={CLASS_COMMENTS_HOST} ref={hostRef} />
     </Card>
   );
 }
@@ -284,6 +337,7 @@ function StatRowView(props: { readonly row: StatRow }): JSX.Element {
 
 export {
   CLASS_ROOT,
+  CLASS_CARD,
   CLASS_FAV,
   CLASS_ORIGINAL,
   CLASS_SCORE_VALUE,
@@ -292,10 +346,13 @@ export {
   CLASS_ICAME,
   CLASS_ICAME_COUNT,
   CLASS_SOURCE,
+  CLASS_COMMENTS,
+  CLASS_COMMENTS_HOST,
   TEXT_FAVORITE,
   TEXT_IN_FAVORITES,
   TEXT_ORIGINAL,
   TEXT_VOTE_UP,
   TEXT_ICAME,
+  TEXT_COMMENTS,
   TEXT_SCORE_UNKNOWN,
 };

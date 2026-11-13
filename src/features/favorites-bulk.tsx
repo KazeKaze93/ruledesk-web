@@ -7,13 +7,14 @@ import { log } from "../log";
 import { removeFavorite } from "../site/favorites";
 import {
   listFavoriteThumbEntries,
+  removeFavoriteCell,
   resolveFavoriteThumbPostId,
   type FavoriteThumbEntry,
 } from "../site/favorites-page";
 import { FAVORITES_SYNC_PAGE_PAUSE_MS } from "../site/favorites-sync";
 import { SITE_SELECTORS } from "../site/selectors";
 import { removeFav } from "../storage/favs";
-import { Button, Card, ProgressBar } from "../ui/kit";
+import { Button, Dialog, ProgressBar } from "../ui/kit";
 import { featureBodyClass, type Feature, type FeatureContext } from "./types";
 
 const FEATURE_ID = "favorites-bulk";
@@ -41,11 +42,13 @@ const TEXT_STOP = "Stop";
 const TEXT_DISMISS = "Dismiss";
 const TEXT_REMOVE_SELECTED_PREFIX = "Remove selected (";
 const TEXT_REMOVE_SELECTED_SUFFIX = ")";
+const TEXT_SELECTED_SUFFIX = " selected";
 const TEXT_CONFIRM_PREFIX = "Remove ";
 const TEXT_CONFIRM_MID = " favorite";
 const TEXT_CONFIRM_MID_PLURAL = " favorites";
 const TEXT_CONFIRM_SUFFIX =
   "? This cannot be undone on the site.";
+const TEXT_CONFIRM_ARIA = "Confirm bulk remove favorites";
 const TEXT_PROGRESS_OF = " of ";
 const TEXT_ERROR_DELETED_PREFIX = "Deleted ";
 const TEXT_ERROR_DELETED_MID = " of ";
@@ -72,15 +75,20 @@ const BODY_SELECTING_CLASS = `${BODY_CLASS}-selecting`;
 const FEATURE_CSS = `
 body.${BODY_CLASS} .${ROOT_CLASS} {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
   margin: 0.5rem 0;
-  box-sizing: border-box;
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
 }
 body.${BODY_CLASS} .${BAR_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 body.${BODY_CLASS} .${STATUS_CLASS} {
   flex: 1 1 12rem;
@@ -90,11 +98,8 @@ body.${BODY_CLASS} .${STATUS_CLASS} {
   line-height: 1.3;
 }
 body.${BODY_CLASS} .${CONFIRM_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
-  box-sizing: border-box;
+  display: grid;
+  gap: 0.75rem;
 }
 body.${BODY_CLASS} .${CONFIRM_ROW_CLASS} {
   display: flex;
@@ -146,6 +151,10 @@ type BulkPhase =
 
 function removeSelectedLabel(count: number): string {
   return `${TEXT_REMOVE_SELECTED_PREFIX}${String(count)}${TEXT_REMOVE_SELECTED_SUFFIX}`;
+}
+
+function selectedCountLabel(count: number): string {
+  return `${String(count)}${TEXT_SELECTED_SUFFIX}`;
 }
 
 function confirmMessage(count: number): string {
@@ -243,16 +252,44 @@ function applySelectionChrome(
   }
 }
 
+/**
+ * Place the bar as its own full-width row above the thumbs grid/list —
+ * not as a sibling grid/flex item beside the first thumb.
+ */
 function findBarHost(): { parent: ParentNode; before: ChildNode | null } {
-  const firstThumb = document.querySelector(SITE_SELECTORS.thumb);
-  if (firstThumb !== null && firstThumb.parentNode !== null) {
-    return { parent: firstThumb.parentNode, before: firstThumb };
+  const imageList = document.querySelector(SITE_SELECTORS.imageList);
+  if (imageList !== null && imageList.parentNode !== null) {
+    return { parent: imageList.parentNode, before: imageList };
   }
+
+  const firstThumb = document.querySelector(SITE_SELECTORS.thumb);
+  if (firstThumb !== null) {
+    const grid = firstThumb.parentElement;
+    if (grid !== null && grid.parentNode !== null) {
+      if (grid !== document.body && grid !== document.documentElement) {
+        return { parent: grid.parentNode, before: grid };
+      }
+      return { parent: grid, before: firstThumb };
+    }
+  }
+
   const paginator = document.querySelector("#paginator");
   if (paginator !== null && paginator.parentNode !== null) {
     return { parent: paginator.parentNode, before: paginator };
   }
   return { parent: document.body, before: document.body.firstChild };
+}
+
+function removeDomCellForPost(postId: string): void {
+  const entry = listFavoriteThumbEntries().find((item) => item.postId === postId);
+  if (entry !== undefined) {
+    removeFavoriteCell(entry.thumb);
+    return;
+  }
+  const fallback = document.getElementById(`s${postId}`);
+  if (fallback instanceof HTMLElement) {
+    removeFavoriteCell(fallback);
+  }
 }
 
 type FavoritesBulkBarProps = {
@@ -293,13 +330,16 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (phase.kind !== "selecting") {
+    if (phase.kind !== "selecting" && phase.kind !== "confirm") {
       return;
     }
 
     const onClickCapture = (event: MouseEvent): void => {
       const target = event.target;
       if (!(target instanceof Element)) {
+        return;
+      }
+      if (target.closest(".rdw-dialog-backdrop") !== null) {
         return;
       }
       const thumb = target.closest(SITE_SELECTORS.thumb);
@@ -317,6 +357,10 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
       // Block navigation / Remove while selecting; toggle is the only action.
       event.preventDefault();
       event.stopPropagation();
+
+      if (phase.kind === "confirm") {
+        return;
+      }
 
       setSelected((prev) => {
         const next = new Set(prev);
@@ -365,6 +409,10 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
     setPhase({ kind: "confirm", count });
   };
 
+  const closeConfirm = (): void => {
+    setPhase({ kind: "selecting" });
+  };
+
   const runRemoval = async (): Promise<void> => {
     const ids = [...selectedRef.current];
     if (ids.length === 0) {
@@ -405,17 +453,7 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
         }
 
         removeFav(postId);
-        const entry = listFavoriteThumbEntries().find(
-          (item) => item.postId === postId,
-        );
-        if (entry !== undefined) {
-          entry.thumb.remove();
-        } else {
-          const fallback = document.getElementById(`s${postId}`);
-          if (fallback !== null) {
-            fallback.remove();
-          }
-        }
+        removeDomCellForPost(postId);
 
         done += 1;
         setSelected((prev) => {
@@ -466,34 +504,6 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
     );
   }
 
-  if (phase.kind === "confirm") {
-    return (
-      <Card className={CONFIRM_CLASS}>
-        <p className={STATUS_CLASS}>{confirmMessage(phase.count)}</p>
-        <div className={CONFIRM_ROW_CLASS}>
-          <Button
-            variant="danger"
-            size="s"
-            onClick={() => {
-              void runRemoval();
-            }}
-          >
-            {TEXT_CONFIRM}
-          </Button>
-          <Button
-            variant="secondary"
-            size="s"
-            onClick={() => {
-              setPhase({ kind: "selecting" });
-            }}
-          >
-            {TEXT_CANCEL}
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
   if (phase.kind === "removing") {
     const ratio = phase.total === 0 ? 0 : phase.done / phase.total;
     return (
@@ -525,28 +535,54 @@ function FavoritesBulkBar(props: FavoritesBulkBarProps): JSX.Element {
     );
   }
 
-  // selecting
+  // selecting | confirm — same control row; confirm uses kit Dialog overlay.
   const count = selected.size;
+  const confirmOpen = phase.kind === "confirm";
   return (
-    <div className={BAR_CLASS}>
-      <Button variant="secondary" size="s" onClick={selectPage}>
-        {TEXT_SELECT_PAGE}
-      </Button>
-      <Button variant="secondary" size="s" onClick={clearSelection}>
-        {TEXT_CLEAR}
-      </Button>
-      <Button
-        variant="danger"
-        size="s"
-        disabled={count === 0}
-        onClick={beginConfirm}
+    <>
+      <div className={BAR_CLASS}>
+        <span className={STATUS_CLASS}>{selectedCountLabel(count)}</span>
+        <Button variant="secondary" size="s" onClick={selectPage}>
+          {TEXT_SELECT_PAGE}
+        </Button>
+        <Button variant="secondary" size="s" onClick={clearSelection}>
+          {TEXT_CLEAR}
+        </Button>
+        <Button
+          variant="danger"
+          size="s"
+          disabled={count === 0 || confirmOpen}
+          onClick={beginConfirm}
+        >
+          {removeSelectedLabel(count)}
+        </Button>
+        <Button variant="ghost" size="s" onClick={resetToIdle}>
+          {TEXT_CANCEL}
+        </Button>
+      </div>
+      <Dialog
+        open={confirmOpen}
+        onClose={closeConfirm}
+        aria-label={TEXT_CONFIRM_ARIA}
+        className={CONFIRM_CLASS}
       >
-        {removeSelectedLabel(count)}
-      </Button>
-      <Button variant="ghost" size="s" onClick={resetToIdle}>
-        {TEXT_CANCEL}
-      </Button>
-    </div>
+        <p className={STATUS_CLASS}>{confirmMessage(count)}</p>
+        <div className={CONFIRM_ROW_CLASS}>
+          <Button
+            variant="danger"
+            size="s"
+            onClick={() => {
+              void runRemoval();
+            }}
+          >
+            {TEXT_CONFIRM}
+          </Button>
+          <Button variant="secondary" size="s" onClick={closeConfirm}>
+            {TEXT_CANCEL}
+          </Button>
+        </div>
+      </Dialog>
+    </>
   );
 }
 

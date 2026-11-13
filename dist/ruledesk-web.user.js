@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.13.0
+// @version      0.14.0
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -14,7 +14,7 @@
 !function(){function e(e,t){return(t||"")+" (SystemJS Error#"+e+" https://github.com/systemjs/systemjs/blob/main/docs/errors.md#"+e+")"}function t(e,t){if(-1!==e.indexOf("\\")&&(e=e.replace(j,"/")),"/"===e[0]&&"/"===e[1])return t.slice(0,t.indexOf(":")+1)+e;if("."===e[0]&&("/"===e[1]||"."===e[1]&&("/"===e[2]||2===e.length&&(e+="/"))||1===e.length&&(e+="/"))||"/"===e[0]){var n,r=t.slice(0,t.indexOf(":")+1);if(n="/"===t[r.length+1]?"file:"!==r?(n=t.slice(r.length+2)).slice(n.indexOf("/")+1):t.slice(8):t.slice(r.length+("/"===t[r.length])),"/"===e[0])return t.slice(0,t.length-n.length-1)+e;for(var i=n.slice(0,n.lastIndexOf("/")+1)+e,o=[],s=-1,u=0;u<i.length;u++)-1!==s?"/"===i[u]&&(o.push(i.slice(s,u+1)),s=-1):"."===i[u]?"."!==i[u+1]||"/"!==i[u+2]&&u+2!==i.length?"/"===i[u+1]||u+1===i.length?u+=1:s=u:(o.pop(),u+=2):s=u;return-1!==s&&o.push(i.slice(s)),t.slice(0,t.length-n.length)+o.join("")}}function n(e,n){return t(e,n)||(-1!==e.indexOf(":")?e:t("./"+e,n))}function r(e,n,r,i,o){for(var s in e){var a=t(s,r)||s,f=e[s];if("string"==typeof f){var l=c(i,t(f,r)||f,o);l?n[a]=l:u("W1",s,f,"bare specifier did not resolve")}}}function i(e,t,i){var o;for(o in e.imports&&r(e.imports,i.imports,t,i,null),e.scopes||{}){var s=n(o,t);r(e.scopes[o],i.scopes[s]||(i.scopes[s]={}),t,i,s)}for(o in e.depcache||{})i.depcache[n(o,t)]=e.depcache[o];for(o in e.integrity||{})i.integrity[n(o,t)]=e.integrity[o]}function o(e,t){if(t[e])return e;var n=e.length;do{var r=e.slice(0,n+1);if(r in t)return r}while(-1!==(n=e.lastIndexOf("/",n-1)))}function s(e,t){var n=o(e,t);if(n){var r=t[n];if(null===r)return;if(!(e.length>n.length&&"/"!==r[r.length-1]))return r+e.slice(n.length);u("W2",n,r,"should have a trailing '/'")}}function u(t,n,r,i){console.warn(e(t,"Package target "+i+", resolving target '"+r+"' for "+n))}function c(e,t,n){for(var r=e.scopes,i=n&&o(n,r);i;){var u=s(t,r[i]);if(u)return u;i=o(i.slice(0,i.lastIndexOf("/")),r)}return s(t,e.imports)||-1!==t.indexOf(":")&&t}function a(){this[M]={}}function f(e){return e.id}function l(e,t,n,r){if(e.onload(n,t.id,t.d&&t.d.map(f),!!r),n)throw n}function d(t,n,r,i){var o=t[M][n];if(o)return o;var s=[],u=Object.create(null);P&&Object.defineProperty(u,P,{value:"Module"});var c=Promise.resolve().then((function(){return t.instantiate(n,r,i)})).then((function(r){if(!r)throw Error(e(2,"Module "+n+" did not instantiate"));var i=r[1]((function(e,t){o.h=!0;var n=!1;if("string"==typeof e)e in u&&u[e]===t||(u[e]=t,n=!0);else{for(var r in e)t=e[r],r in u&&u[r]===t||(u[r]=t,n=!0);e&&e.__esModule&&(u.__esModule=e.__esModule)}if(n)for(var i=0;i<s.length;i++){var c=s[i];c&&c(u)}return t}),2===r[1].length?{import:function(e,r){return t.import(e,n,r)},meta:t.createContext(n)}:void 0);return o.e=i.execute||function(){},[r[0],i.setters||[],r[2]||[]]}),(function(e){throw o.e=null,o.er=e,l(t,o,e,!0),e})),a=c.then((function(e){return Promise.all(e[0].map((function(r,i){var o=e[1][i],s=e[2][i];return Promise.resolve(t.resolve(r,n)).then((function(e){var r=d(t,e,n,s);return Promise.resolve(r.I).then((function(){return o&&(r.i.push(o),!r.h&&r.I||o(r.n)),r}))}))}))).then((function(e){o.d=e}))}));return o=t[M][n]={id:n,i:s,n:u,m:i,I:c,L:a,h:!1,d:void 0,e:void 0,er:void 0,E:void 0,C:void 0,p:void 0}}function h(e,t,n,r){if(!r[t.id])return r[t.id]=!0,Promise.resolve(t.L).then((function(){return t.p&&null!==t.p.e||(t.p=n),Promise.all(t.d.map((function(t){return h(e,t,n,r)})))})).catch((function(n){if(t.er)throw n;throw t.e=null,l(e,t,n,!1),n}))}function p(e,t){return t.C=h(e,t,t,{}).then((function(){return v(e,t,{})})).then((function(){return t.n}))}function v(e,t,n){function r(){try{var n=o.call(L);if(n)return n=n.then((function(){t.C=t.n,t.E=null,l(e,t,null,!0)}),(function(n){throw t.er=n,t.E=null,l(e,t,n,!0),n})),t.E=n;t.C=t.n,t.L=t.I=void 0}catch(r){throw t.er=r,r}finally{l(e,t,t.er,!0)}}if(!n[t.id]){if(n[t.id]=!0,!t.e){if(t.er)throw t.er;return t.E?t.E:void 0}var i,o=t.e;return t.e=null,t.d.forEach((function(r){try{var o=v(e,r,n);o&&(i=i||[]).push(o)}catch(s){throw t.er=s,l(e,t,s,!1),s}})),i?Promise.all(i).then(r):r()}}function m(){[].forEach.call(document.querySelectorAll("script"),(function(t){if(!t.sp)if("systemjs-module"===t.type){if(t.sp=!0,!t.src)return;System.import("import:"===t.src.slice(0,7)?t.src.slice(7):n(t.src,g)).catch((function(e){if(e.message.indexOf("https://github.com/systemjs/systemjs/blob/main/docs/errors.md#3")>-1){var n=document.createEvent("Event");n.initEvent("error",!1,!1),t.dispatchEvent(n)}return Promise.reject(e)}))}else if("systemjs-importmap"===t.type){t.sp=!0;var r=t.src?(System.fetch||fetch)(t.src,{integrity:t.integrity,priority:t.fetchPriority,passThrough:!0}).then((function(e){if(!e.ok)throw Error("Invalid status code: "+e.status);return e.text()})).catch((function(n){return n.message=e("W4","Error fetching systemjs-import map "+t.src)+"\n"+n.message,console.warn(n),"function"==typeof t.onerror&&t.onerror(),"{}"})):t.innerHTML;W=W.then((function(){return r})).then((function(n){!function(t,n,r){var o={};try{o=JSON.parse(n)}catch(s){console.warn(Error(e("W5","systemjs-importmap contains invalid JSON")+"\n\n"+n+"\n"))}i(o,r,t)}(N,n,t.src||g)}))}}))}var g,y="undefined"!=typeof Symbol,b="undefined"!=typeof self,S="undefined"!=typeof document,w=b?self:global;if(S){var O=document.querySelector("base[href]");O&&(g=O.href)}if(!g&&"undefined"!=typeof location){var E=(g=location.href.split("#")[0].split("?")[0]).lastIndexOf("/");-1!==E&&(g=g.slice(0,E+1))}var x,j=/\\/g,P=y&&Symbol.toStringTag,M=y?Symbol():"@",I=a.prototype;I.import=function(e,t,n){var r=this;return t&&"object"==typeof t&&(n=t,t=void 0),Promise.resolve(r.prepareImport()).then((function(){return r.resolve(e,t,n)})).then((function(e){var t=d(r,e,void 0,n);return t.C||p(r,t)}))},I.createContext=function(e){var t=this;return{url:e,resolve:function(n,r){return Promise.resolve(t.resolve(n,r||e))}}},I.onload=function(){},I.register=function(e,t,n){x=[e,t,n]},I.getRegister=function(){var e=x;return x=void 0,e};var L=Object.freeze(Object.create(null));w.System=new a;var C,R,W=Promise.resolve(),N={imports:{},scopes:{},depcache:{},integrity:{}},T=S;if(I.prepareImport=function(e){return(T||e)&&(m(),T=!1),W},I.getImportMap=function(){return JSON.parse(JSON.stringify(N))},S&&(m(),window.addEventListener("DOMContentLoaded",m)),I.addImportMap=function(e,t){i(e,t||g,N)},S){window.addEventListener("error",(function(e){J=e.filename,_=e.error}));var A=location.origin}I.createScript=function(e){var t=document.createElement("script");t.async=!0,e.indexOf(A+"/")&&(t.crossOrigin="anonymous");var n=N.integrity[e];return n&&(t.integrity=n),t.src=e,t};var J,_,k={},U=I.register;I.register=function(e,t){if(S&&"loading"===document.readyState&&"string"!=typeof e){var n=document.querySelectorAll("script[src]"),r=n[n.length-1];if(r){C=e;var i=this;R=setTimeout((function(){k[r.src]=[e,t],i.import(r.src)}))}}else C=void 0;return U.call(this,e,t)},I.instantiate=function(t,n){var r=k[t];if(r)return delete k[t],r;var i=this;return Promise.resolve(I.createScript(t)).then((function(r){return new Promise((function(o,s){r.addEventListener("error",(function(){s(Error(e(3,"Error loading "+t+(n?" from "+n:""))))})),r.addEventListener("load",(function(){if(document.head.removeChild(r),J===t)s(_);else{var e=i.getRegister(t);e&&e[0]===C&&clearTimeout(R),o(e)}})),document.head.appendChild(r)}))}))},I.shouldFetch=function(){return!1},"undefined"!=typeof fetch&&(I.fetch=fetch);var $=I.instantiate,B=/^(text|application)\/(x-)?javascript(;|$)/;I.instantiate=function(t,n,r){var i=this;return this.shouldFetch(t,n,r)?this.fetch(t,{credentials:"same-origin",integrity:N.integrity[t],meta:r}).then((function(r){if(!r.ok)throw Error(e(7,r.status+" "+r.statusText+", loading "+t+(n?" from "+n:"")));var o=r.headers.get("content-type");if(!o||!B.test(o))throw Error(e(4,'Unknown Content-Type "'+o+'", loading '+t+(n?" from "+n:"")));return r.text().then((function(e){return e.indexOf("//# sourceURL=")<0&&(e+="\n//# sourceURL="+t),(0,eval)(e),i.getRegister(t)}))})):$.apply(this,arguments)},I.resolve=function(n,r){return c(N,t(n,r=r||g)||n,r)||function(t,n){throw Error(e(8,"Unable to resolve bare specifier '"+t+(n?"' from "+n:"'")))}(n,r)};var F=I.instantiate;I.instantiate=function(e,t,n){var r=N.depcache[e];if(r)for(var i=0;i<r.length;i++)d(this,this.resolve(r[i],e),e);return F.call(this,e,t,n)},b&&"function"==typeof importScripts&&(I.instantiate=function(e){var t=this;return Promise.resolve().then((function(){return importScripts(e),t.getRegister(e)}))}),function(e){function t(t){return!e.hasOwnProperty(t)||!isNaN(t)&&t<e.length||a&&e[t]&&"undefined"!=typeof window&&e[t].parent===window}var n,r,i,o=e.System.constructor.prototype,s=o.import;o.import=function(o,u,c){return function(){for(var o in n=r=void 0,e)t(o)||(n?r||(r=o):n=o,i=o)}(),s.call(this,o,u,c)};var u=[[],function(){return{}}],c=o.getRegister;o.getRegister=function(){var o=c.call(this);if(o)return o;var s,a=function(o){var s,u,c=0;for(var a in e)if(!t(a)){if(0===c&&a!==n||1===c&&a!==r)return a;s?(i=a,u=o&&u||a):s=a===i,c++}return u}(this.firstGlobalProp);if(!a)return u;try{s=e[a]}catch(f){return u}return[[],function(e){return{execute:function(){e(s),e({default:s,__useDefault:!0})}}}]};var a="undefined"!=typeof navigator&&-1!==navigator.userAgent.indexOf("Trident")}("undefined"!=typeof self?self:global),function(e){var t=e.System.constructor.prototype,r=/^[^#?]+\.(css|html|json|wasm)([?#].*)?$/,i=t.shouldFetch.bind(t);t.shouldFetch=function(e){return i(e)||r.test(e)};var o=/^application\/json(;|$)/,s=/^text\/css(;|$)/,u=/^application\/wasm(;|$)/,c=t.fetch;t.fetch=function(t,r){return c(t,r).then((function(i){if(r.passThrough)return i;if(!i.ok)return i;var c=i.headers.get("content-type");return o.test(c)?i.json().then((function(e){return new Response(new Blob(['System.register([],function(e){return{execute:function(){e("default",'+JSON.stringify(e)+")}}})"],{type:"application/javascript"}))})):s.test(c)?i.text().then((function(e){return e=e.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,(function(e,r,i,o){return["url(",r,n(i||o,t),r,")"].join("")})),new Response(new Blob(["System.register([],function(e){return{execute:function(){var s=new CSSStyleSheet();s.replaceSync("+JSON.stringify(e)+');e("default",s)}}})'],{type:"application/javascript"}))})):u.test(c)?(WebAssembly.compileStreaming?WebAssembly.compileStreaming(i):i.arrayBuffer().then(WebAssembly.compile)).then((function(n){e.System.wasmModules||(e.System.wasmModules=Object.create(null)),e.System.wasmModules[t]=n;var r=[],i=[];return WebAssembly.Module.imports&&WebAssembly.Module.imports(n).forEach((function(e){var t=JSON.stringify(e.module);-1===r.indexOf(t)&&(r.push(t),i.push("function(m){i["+t+"]=m}"))})),new Response(new Blob(["System.register(["+r.join(",")+"],function(e){var i={};return{setters:["+i.join(",")+"],execute:function(){return WebAssembly.instantiate(System.wasmModules["+JSON.stringify(t)+"],i).then(function(m){e(m.exports)})}}})"],{type:"application/javascript"}))})):i}))}}("undefined"!=typeof self?self:global);var q="undefined"!=typeof Symbol&&Symbol.toStringTag;I.get=function(e){var t=this[M][e];if(t&&null===t.e&&!t.E)return t.er?null:t.n},I.set=function(t,n){try{new URL(t)}catch(s){console.warn(Error(e("W3",'"'+t+'" is not a valid URL to set in the module registry')))}var r;q&&"Module"===n[q]?r=n:(r=Object.assign(Object.create(null),n),q&&Object.defineProperty(r,q,{value:"Module"}));var i=Promise.resolve(r),o=this[M][t]||(this[M][t]={id:t,i:[],h:!1,d:[],e:null,er:void 0,E:void 0});return!o.e&&!o.E&&(Object.assign(o,{n:r,I:void 0,L:void 0,C:i}),r)},I.has=function(e){return!!this[M][e]},I.delete=function(e){var t=this[M],n=t[e];if(!n||n.p&&null!==n.p.e||n.E)return!1;var r=n.i;return n.d&&n.d.forEach((function(e){var t=e.i.indexOf(n);-1!==t&&e.i.splice(t,1)})),delete t[e],function(){var n=t[e];if(!n||!r||null!==n.e||n.E)return!1;r.forEach((function(e){n.i.push(e),e(n.n)})),r=null}};var D="undefined"!=typeof Symbol&&Symbol.iterator;I.entries=function(){var e,t,n=this,r=Object.keys(n[M]),i=0,o={next:function(){for(;void 0!==(t=r[i++])&&void 0===(e=n.get(t)););return{done:void 0===t,value:void 0!==t&&[t,e]}}};return o[D]=function(){return this},o}}();
 !function(t){function e(t){t.registerRegistry=Object.create(null),t.namedRegisterAliases=Object.create(null)}var r=t.System;e(r);var i,s,n=r.constructor.prototype,l=r.constructor,a=function(){l.call(this),e(this)};a.prototype=n,r.constructor=a;var o=n.register;n.register=function(t,e,r,n){if("string"!=typeof t)return o.apply(this,arguments);var l=[e,r,n];return this.registerRegistry[t]=l,i||(i=l,s=t),Promise.resolve().then((function(){i=null,s=null})),o.apply(this,[e,r,n])};var u=n.resolve;n.resolve=function(t,e){try{return u.call(this,t,e)}catch(r){if(t in this.registerRegistry)return this.namedRegisterAliases[t]||t;throw r}};var c=n.instantiate;n.instantiate=function(t,e,r){var i=this.registerRegistry[t];return i?(this.registerRegistry[t]=null,i):c.call(this,t,e,r)};var g=n.getRegister;n.getRegister=function(t){var e=g.call(this,t);s&&t&&(this.namedRegisterAliases[s]=t);var r=i||e;return i=null,s=null,r}}("undefined"!=typeof self?self:global);
 ;(typeof System!='undefined')&&(System=new System.constructor());
-System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({E:resolveFavoritesUserId,L:createFavoritesSyncTabId,P:readArtistsMirror,Q:Q,T:listArtistTags,V:writeArtistsMirror,W:reloadFromStorage,X:save,Z:setSyncState,a$:prepareBackgroundImageFile,a2:a,a3:applyTokenProperties,a4:resolveAppearancePalette,a5:getSiteSkinCss,a6:$,aB:Select,aE:Segmented,aH:TextField,aI:Button,aJ:clampBackgroundDim,aL:featurePanelLabel,aM:getFeatureChoice,aO:setFeatureChoiceValue,aP:applyCssOnlyFeatureChoice,aR:setFeatureEnabled,aS:applyCssOnlyFeatureEnabled,aT:isFeatureEnabled,aU:b,aV:Chip,aW:readSiteBlacklist,aX:AutocompleteField,aY:ProgressBar,aZ:createDefaultCustomTheme,ag:d,ah:Card,ai:SectionLabel,aj:Switch,al:setTweaksEnabled,am:NumberField,ao:setUpdatesGroupSize,ap:getUpdatesGroupSize,ar:setPlaylistChunkSize,as:getPlaylistChunkSize,au:setGridFavButtonsEnabled,av:setGridFavButtonsVisible,aw:P,ax:T,ay:A,b0:writeSiteBlacklist,b2:load,b3:createDefaultStorage,b4:clearStorageCache,b5:clearFavsCache,b6:object,b8:optional,b9:string,bA:EmptyState,bB:buildPlaylistQueries,bC:buildUpdatesSearchUrl,bD:isPlaylist,bE:IconButton,bF:IconTrash,bG:getSeenPostId,bQ:IconX,bR:isFollowingArtist,bS:addArtist,bT:removeArtist,bW:array,bX:nullable,bb:literal,bd:stripLegacyPanelWindowSize,be:migrateMarksFavToFavs,bg:createDefaultFavs,bh:parseFavsStrict,bi:setAppearance,bj:loadFavSet,bl:extractFavIdsFromMarks,bo:getTweaksEnabled,bp:getGridFavButtonsEnabled,bq:getFeatureChoiceValue,br:getScreenPixelSize,bs:listPlaylists,bt:readTagsFromLocation,bu:addCollection,bv:serialize,bw:renameCollection,bx:deleteCollection,by:buildSearchUrl,bz:createPlaylist,c:applyAppearanceTheme,d:detectPageKind,e:ensureDocumentStyles,f:featureChoiceBodyClass,g:getAppearance,j:ensureStyleElement,k:buildOwnPageCss,m:mountCards,n:normalizeArtistTag,o:onThumbsAdded,r:runFeaturesYielding,s:syncFavoritesPage,t:parseRdwHash,u:getSyncState,v:readFavoritesSyncMode,w:runFavoritesSync,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
+System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({E:resolveFavoritesUserId,L:createFavoritesSyncTabId,P:readArtistsMirror,Q:Q,T:listArtistTags,V:writeArtistsMirror,W:reloadFromStorage,X:save,Z:setSyncState,a$:prepareBackgroundImageFile,a2:a,a3:applyTokenProperties,a4:resolveAppearancePalette,a5:getSiteSkinCss,a6:$,aB:Select,aE:Segmented,aH:TextField,aI:Button,aJ:clampBackgroundDim,aL:featurePanelLabel,aN:setFeatureEnabled,aO:applyCssOnlyFeatureEnabled,aP:isFeatureEnabled,aR:setFeatureChoiceValue,aS:applyCssOnlyFeatureChoice,aT:getFeatureChoice,aU:b,aV:Chip,aW:readSiteBlacklist,aX:AutocompleteField,aY:ProgressBar,aZ:createDefaultCustomTheme,ag:d,ah:Card,ai:SectionLabel,aj:Switch,al:setTweaksEnabled,am:NumberField,ao:setUpdatesGroupSize,ap:getUpdatesGroupSize,ar:setPlaylistChunkSize,as:getPlaylistChunkSize,au:setGridFavButtonsEnabled,av:setGridFavButtonsVisible,aw:P,ax:T,ay:A,b0:writeSiteBlacklist,b2:load,b3:createDefaultStorage,b4:clearStorageCache,b5:clearFavsCache,b6:object,b8:optional,b9:string,bA:EmptyState,bB:buildPlaylistQueries,bC:buildUpdatesSearchUrl,bD:isPlaylist,bE:IconButton,bF:IconTrash,bG:getSeenPostId,bQ:IconX,bR:isFollowingArtist,bS:addArtist,bT:removeArtist,bW:array,bX:nullable,bb:literal,bd:stripLegacyPanelWindowSize,be:migrateMarksFavToFavs,bg:createDefaultFavs,bh:parseFavsStrict,bi:setAppearance,bj:loadFavSet,bl:extractFavIdsFromMarks,bo:getTweaksEnabled,bp:getGridFavButtonsEnabled,bq:getFeatureChoiceValue,br:getScreenPixelSize,bs:listPlaylists,bt:readTagsFromLocation,bu:addCollection,bv:serialize,bw:renameCollection,bx:deleteCollection,by:buildSearchUrl,bz:createPlaylist,c:applyAppearanceTheme,d:detectPageKind,e:ensureDocumentStyles,f:featureChoiceBodyClass,g:getAppearance,j:ensureStyleElement,k:buildOwnPageCss,m:mountCards,n:normalizeArtistTag,o:onThumbsAdded,r:runFeaturesYielding,s:syncFavoritesPage,t:parseRdwHash,u:getSyncState,v:readFavoritesSyncMode,w:runFavoritesSync,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
 var STORAGE_BACKUP_KEY = exports("bk","ruledesk-web.storage.backup");
 var FAVS_STORAGE_KEY = exports("bf","ruledesk-web.favs");
 var DEBUG_KEY = "ruledesk-web.debug";
@@ -25,7 +25,7 @@ var SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
 var RDW_SKIN_CLASS = "rdw-skin";
 var RDW_THEME_ATTR = exports("a8","data-rdw-theme");
 var APPEARANCE_THEME_SITE = exports("a9","site");
-var APPEARANCE_THEME_SITE_DARK = exports("aa","site-dark");
+var APPEARANCE_THEME_SITE_DARK = exports("ac","site-dark");
 var APPEARANCE_THEME_LIGHT = exports("aC","light");
 var APPEARANCE_THEME_DARK = exports("aD","dark");
 var APPEARANCE_THEME_CUSTOM = exports("az","custom");
@@ -168,6 +168,7 @@ var PANEL_UI_CLASS = exports("a7",{
 	scrollRegion: "rdw-scroll-region",
 	settingsGroup: "rdw-settings-group",
 	settingsRow: "rdw-settings-row",
+	settingsCaption: "rdw-settings-caption",
 	pageCard: "rdw-page-card"
 });
 var UNFOLLOW_UNDO_MS = exports("bU",5e3);
@@ -176,8 +177,8 @@ var ARTISTS_EMPTY_HINT = exports("bH","Follow artists with the Follow button nex
 var ARTIST_FILTER_LABEL = exports("bL","Filter artists");
 var UNFOLLOW_UNDO_LABEL = exports("bO","Undo");
 var UNFOLLOWED_PREFIX = exports("bN","Unfollowed ");
-var FEATURE_CHECKBOX_ID_PREFIX = exports("aQ","rdw-feature-");
-var FEATURE_CHOICE_ID_PREFIX = exports("aN","rdw-feature-choice-");
+var FEATURE_CHECKBOX_ID_PREFIX = exports("aM","rdw-feature-");
+var FEATURE_CHOICE_ID_PREFIX = exports("aQ","rdw-feature-choice-");
 var UPDATES_GROUP_SIZE_ID = exports("an","rdw-updates-group-size");
 var PLAYLIST_CHUNK_SIZE_ID = exports("aq","rdw-playlist-chunk-size");
 var ARTIST_FILTER_ID = exports("bM","rdw-artist-filter");
@@ -338,8 +339,8 @@ var CONTRAST_OFFSET$1 = .05;
 * Hex equivalents of `docs/design/site-desktop.css` light `* { --c-* }`.
 * Script-page Site default chrome; keep in sync with skin/theme site palette.
 */
-var SITE_LIGHT_C_BG = exports("ab","#aae5a4");
-var SITE_LIGHT_C_BG_ALT = exports("ac","#89cf81");
+var SITE_LIGHT_C_BG = exports("aa","#aae5a4");
+var SITE_LIGHT_C_BG_ALT = exports("ab","#89cf81");
 var SITE_LIGHT_C_BG_OVERLAY = "#98d491";
 var SITE_LIGHT_C_TEXT = "#000000";
 var SITE_LIGHT_C_TEXT_SOFT = "#666666";
@@ -2059,6 +2060,25 @@ var AppearanceStoredSchema = /* @__PURE__ */ object({
 	theme: AppearanceThemeSchema,
 	custom: /* @__PURE__ */ optional(AppearanceCustomStoredSchema)
 });
+/**
+* Package B: module toggle id for «Video player tweaks»
+* (`settings.features[VIDEO_PLAYER_FEATURE_ID]`).
+*/
+var VIDEO_PLAYER_FEATURE_ID = "video-player";
+/** Package B: `settings.featureChoice[VIDEO_PLAYER_FEATURE_ID]` values. */
+var VIDEO_SIZE_FIT_HEIGHT = "fit-height";
+var VIDEO_SIZE_FIT_WIDTH = "fit-width";
+var VIDEO_SIZE_ORIGINAL = "original";
+var DEFAULT_VIDEO_SIZE = VIDEO_SIZE_FIT_HEIGHT;
+/**
+* Package B: persisted player prefs under
+* `settings.featureState[VIDEO_PLAYER_FEATURE_ID]`.
+*/
+var VideoPlayerStateSchema = /* @__PURE__ */ object({
+	volume: /* @__PURE__ */ optional(/* @__PURE__ */ number()),
+	muted: /* @__PURE__ */ optional(/* @__PURE__ */ boolean()),
+	playbackRate: /* @__PURE__ */ optional(/* @__PURE__ */ number())
+});
 var SettingsSchema = /* @__PURE__ */ object({
 	gridFavButtons: /* @__PURE__ */ boolean(),
 	updatesGroupSize: /* @__PURE__ */ optional(int().check(/* @__PURE__ */ _nonnegative())),
@@ -2105,6 +2125,26 @@ var FavsSchema = exports("ba",/* @__PURE__ */ object({
 	ids: /* @__PURE__ */ array(int()),
 	sync: /* @__PURE__ */ optional(FavsSyncSchema)
 }));
+function createDefaultVideoPlayerState() {
+	return {
+		volume: 1,
+		muted: false,
+		playbackRate: 1
+	};
+}
+function parseVideoPlayerState(raw) {
+	const parsed = VideoPlayerStateSchema.safeParse(raw);
+	if (!parsed.success) return createDefaultVideoPlayerState();
+	const defaults = createDefaultVideoPlayerState();
+	const volume = parsed.data.volume;
+	const muted = parsed.data.muted;
+	const playbackRate = parsed.data.playbackRate;
+	return {
+		volume: volume !== void 0 && Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : defaults.volume,
+		muted: muted ?? defaults.muted,
+		playbackRate: playbackRate !== void 0 && Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : defaults.playbackRate
+	};
+}
 function isUnknownRecord$1(value) {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -3317,7 +3357,7 @@ function z$1(t, r, u, i, f, o, e, l, c, a) {
 			else r.__e = u.__e;
 			r.__k || (r.__k = u.__k || []), t && t.then || D$1(r), n.__e(t, r, u);
 		}
-	} else l = r.__e = F(u.__e, r, u, i, f, o, e, c, a, t);
+	} else l = r.__e = F$1(u.__e, r, u, i, f, o, e, c, a, t);
 	return (s = n.diffed) && s(r), l;
 }
 function B$1(n, t) {
@@ -3344,7 +3384,7 @@ function E$1(t, r, u) {
 		}
 	});
 }
-function F(t, r, u, i, f, o, e, l, c, a) {
+function F$1(t, r, u, i, f, o, e, l, c, a) {
 	var s, h, y, _, k, b, m, M, $ = u.props || p$1, x = r.props, C = r.type;
 	if ("svg" == C ? f = "http://www.w3.org/2000/svg" : "math" == C ? f = "http://www.w3.org/1998/Math/MathML" : f || (f = "http://www.w3.org/1999/xhtml"), o) {
 		for (s = 0; s < o.length; s++) if ((k = o[s]) && (C ? k.localName == C : 3 == k.nodeType)) {
@@ -3461,6 +3501,10 @@ function _(n, u, i) {
 function A(n, u) {
 	var i = y(t++, 3);
 	!a$1.__s && E(i.__H, u) && (i.__P = true, i.__ = n, i.u = u, r.__H.__h.push(i));
+}
+function F(n, u) {
+	var i = y(t++, 4);
+	!a$1.__s && E(i.__H, u) && (i.__P = false, i.__ = n, i.u = u, r.__h.push(i));
 }
 function T(n) {
 	return f$1 = 5, w(function() {
@@ -3606,7 +3650,7 @@ function a(t, e, n$1, u, a, i) {
 var KEY_ARROW_DOWN = "ArrowDown";
 var KEY_ARROW_UP = "ArrowUp";
 var KEY_ENTER$3 = "Enter";
-var KEY_ESCAPE$1 = "Escape";
+var KEY_ESCAPE$2 = "Escape";
 var NO_ACTIVE_INDEX = -1;
 var AUTOCOMPLETE_FIELD_CSS = `
 ${KIT_FOCUS_CSS}
@@ -3742,7 +3786,7 @@ function AutocompleteField(props) {
 					if (hasSuggestions) setOpen(true);
 				},
 				onKeyDown: (event) => {
-					if (event.key === KEY_ESCAPE$1) {
+					if (event.key === KEY_ESCAPE$2) {
 						if (listOpen) {
 							event.preventDefault();
 							setOpen(false);
@@ -4102,6 +4146,173 @@ function Chip(props) {
 		]
 	})] });
 }
+var KEY_ESCAPE$1 = "Escape";
+var KEY_TAB = "Tab";
+var EVENT_KEYDOWN$1 = "keydown";
+var EVENT_MOUSEDOWN$1 = "mousedown";
+var DIALOG_Z_INDEX = 40;
+var DIALOG_MAX_WIDTH_PX = 360;
+var DIALOG_BACKDROP_PADDING_PX = 16;
+var DIALOG_BACKDROP_ALPHA = .45;
+var DIALOG_PANEL_PADDING_PX = 16;
+var DIALOG_PANEL_GAP_PX = 12;
+var FOCUSABLE_SELECTOR = [
+	"a[href]",
+	"button:not([disabled])",
+	"textarea:not([disabled])",
+	"input:not([disabled])",
+	"select:not([disabled])",
+	"[tabindex]:not([tabindex=\"-1\"])"
+].join(", ");
+var DIALOG_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: ${String(DIALOG_Z_INDEX)};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: ${String(DIALOG_BACKDROP_PADDING_PX)}px;
+  background: rgba(0, 0, 0, ${String(DIALOG_BACKDROP_ALPHA)});
+}
+.rdw-dialog {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: ${String(DIALOG_MAX_WIDTH_PX)}px;
+  display: grid;
+  gap: ${String(DIALOG_PANEL_GAP_PX)}px;
+  padding: ${String(DIALOG_PANEL_PADDING_PX)}px;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-2);
+  color: var(--rdw-text);
+  font: 12.5px/1.4 var(--rdw-font);
+}
+.rdw-dialog__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rdw-text);
+}
+`;
+function listFocusable(root) {
+	const nodes = root.querySelectorAll(FOCUSABLE_SELECTOR);
+	const result = [];
+	for (const node of nodes) {
+		if (!(node instanceof HTMLElement)) continue;
+		if (node.closest("[hidden]") !== null) continue;
+		result.push(node);
+	}
+	return result;
+}
+function pathIncludesNode$1(path, node) {
+	if (node === null) return false;
+	for (const entry of path) if (entry === node) return true;
+	return false;
+}
+function Dialog(props) {
+	const panelRef = T(null);
+	const wasOpenRef = T(false);
+	const restoreFocusRef = T(null);
+	const titleId = P();
+	const hasTitle = props.title !== void 0 && props.title.length > 0;
+	A(() => {
+		if (!props.open) {
+			if (wasOpenRef.current) {
+				wasOpenRef.current = false;
+				const restore = restoreFocusRef.current;
+				restoreFocusRef.current = null;
+				if (restore !== null && typeof restore.focus === "function") restore.focus();
+			}
+			return;
+		}
+		if (!wasOpenRef.current) {
+			const active = document.activeElement;
+			restoreFocusRef.current = active instanceof HTMLElement ? active : null;
+			wasOpenRef.current = true;
+		}
+		const panel = panelRef.current;
+		if (panel !== null) {
+			const initial = props.initialFocusRef?.current ?? null;
+			if (initial !== null && typeof initial.focus === "function") initial.focus();
+			else {
+				const first = listFocusable(panel)[0];
+				if (first !== void 0) first.focus();
+				else panel.focus();
+			}
+		}
+		const onKeyDown = (event) => {
+			if (event.key === KEY_ESCAPE$1) {
+				event.preventDefault();
+				event.stopPropagation();
+				props.onClose();
+				return;
+			}
+			if (event.key !== KEY_TAB) return;
+			const currentPanel = panelRef.current;
+			if (currentPanel === null) return;
+			const focusable = listFocusable(currentPanel);
+			if (focusable.length === 0) {
+				event.preventDefault();
+				currentPanel.focus();
+				return;
+			}
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (first === void 0 || last === void 0) return;
+			const active = document.activeElement;
+			if (event.shiftKey) {
+				if (active === first || !currentPanel.contains(active)) {
+					event.preventDefault();
+					last.focus();
+				}
+				return;
+			}
+			if (active === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+		const onPointerDown = (event) => {
+			const currentPanel = panelRef.current;
+			if (currentPanel === null) return;
+			if (pathIncludesNode$1(event.composedPath(), currentPanel)) return;
+			props.onClose();
+		};
+		document.addEventListener(EVENT_KEYDOWN$1, onKeyDown, true);
+		document.addEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
+		return () => {
+			document.removeEventListener(EVENT_KEYDOWN$1, onKeyDown, true);
+			document.removeEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
+		};
+	}, [
+		props.open,
+		props.onClose,
+		props.initialFocusRef
+	]);
+	if (!props.open) return null;
+	const className = ["rdw-dialog", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: DIALOG_CSS }), /* @__PURE__ */ a("div", {
+		className: "rdw-dialog-backdrop",
+		children: /* @__PURE__ */ a("div", {
+			ref: panelRef,
+			className,
+			role: "dialog",
+			"aria-modal": "true",
+			"aria-label": hasTitle ? void 0 : props["aria-label"],
+			"aria-labelledby": hasTitle ? titleId : void 0,
+			tabIndex: -1,
+			children: [hasTitle ? /* @__PURE__ */ a("h2", {
+				id: titleId,
+				className: "rdw-dialog__title",
+				children: props.title
+			}) : null, props.children]
+		})
+	})] });
+}
 var EMPTY_STATE_CSS = `
 .rdw-empty {
   display: grid;
@@ -4247,8 +4458,8 @@ function NumberField(props) {
 		})]
 	})] });
 }
-var KEY_ESCAPE$2 = "Escape";
-var EVENT_KEYDOWN$1 = "keydown";
+var KEY_ESCAPE$3 = "Escape";
+var EVENT_KEYDOWN$2 = "keydown";
 var EVENT_MOUSEDOWN = "mousedown";
 var POPOVER_CSS = `
 ${KIT_FOCUS_CSS}
@@ -4286,7 +4497,7 @@ function Popover(props) {
 		}
 		wasOpenRef.current = true;
 		const onKeyDown = (event) => {
-			if (event.key === KEY_ESCAPE$2) {
+			if (event.key === KEY_ESCAPE$3) {
 				event.preventDefault();
 				props.onClose();
 			}
@@ -4299,10 +4510,10 @@ function Popover(props) {
 			if (pathIncludesNode(path, props.anchorRef?.current ?? null)) return;
 			props.onClose();
 		};
-		document.addEventListener(EVENT_KEYDOWN$1, onKeyDown);
+		document.addEventListener(EVENT_KEYDOWN$2, onKeyDown);
 		document.addEventListener(EVENT_MOUSEDOWN, onPointerDown);
 		return () => {
-			document.removeEventListener(EVENT_KEYDOWN$1, onKeyDown);
+			document.removeEventListener(EVENT_KEYDOWN$2, onKeyDown);
 			document.removeEventListener(EVENT_MOUSEDOWN, onPointerDown);
 		};
 	}, [
@@ -4848,6 +5059,13 @@ var WHERE_NOT_OUR_CONTROL = `:where(:not([class*="rdw-"])${`:not(#${SEARCH_TOOLS
 var RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 /** Native "I came" counter row — hide with panel chrome (E HANDOFF). */
 var POST_PANEL_ICAME_ROW = "li:has(a[onclick^=\"iCame(\"])";
+/** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
+var POST_ACTIONS_HOST_ID = "rdw-post-actions";
+/**
+* Body class while search-tools «AI posts» row is rendered
+* (`SEARCH_TOOLS_AI_ROW_BODY_CLASS` in search-tools.tsx — F HANDOFF).
+*/
+var SEARCH_TOOLS_AI_ROW_BODY_CLASS$1 = "rdw-search-tools-ai-posts";
 /** F bulk-select chrome — keep in sync with src/features/favorites-bulk.tsx. */
 var FAV_BULK_SELECTED_CLASS = "rdw-fav-bulk-selected";
 var FAV_BULK_CHECK_CLASS = "rdw-fav-bulk-check";
@@ -5081,8 +5299,8 @@ ${ROOT} ${SITE_SELECTORS.tagsHeadingAfterSearchTools} {
   display: none;
 }
 
-/* D: native AI filter row — search-tools mirrors #chkFilterAI */
-${ROOT} ${SITE_SELECTORS.filterAiRow} {
+/* F: native AI filter row — only while search-tools AI posts row is rendered */
+${ROOT} body.${SEARCH_TOOLS_AI_ROW_BODY_CLASS$1} ${SITE_SELECTORS.filterAiRow} {
   display: none;
 }
 
@@ -5883,6 +6101,14 @@ ${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} ${POST_PANEL_ICAME_ROW} {
   display: none !important;
 }
 
+/*
+ * A: comments moved into the panel column — lift site max-width: 680px
+ * so #post-comments fills the narrow column.
+ */
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} #${POST_ACTIONS_HOST_ID} #post-comments {
+  max-width: none;
+}
+
 ${ROOT} img#image {
   border-radius: ${v.radiusL};
 }
@@ -6033,31 +6259,34 @@ function clearSiteThemeCookie() {
 		`path=/`
 	].join("; ");
 }
-function isSiteDesktopStylesheetPath(pathname) {
-	return pathname.endsWith(LIGHT_STYLESHEET_PATH) || pathname.endsWith(DARK_STYLESHEET_PATH);
+/**
+* Match site desktop CSS hrefs without URL-parsing.
+* `//css/desktop.css` is protocol-relative with host `css`; `new URL` yields
+* pathname `/desktop.css` and misses `/css/desktop.css` suffix checks.
+*/
+function hrefWithoutQuery(href) {
+	const queryIndex = href.indexOf("?");
+	return queryIndex === -1 ? href : href.slice(0, queryIndex);
+}
+function isSiteDesktopStylesheetHref(href) {
+	const path = hrefWithoutQuery(href);
+	return path.endsWith(LIGHT_STYLESHEET_PATH) || path.endsWith(DARK_STYLESHEET_PATH);
 }
 function stylesheetFilenameForTheme(theme) {
 	return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
 }
+/** Swap filename in the raw href so `//css/` and `/css/` forms stay intact. */
 function replaceStylesheetFilename(href, filename) {
-	const url = new URL(href, window.location.href);
-	const segments = url.pathname.split("/");
-	segments[segments.length - 1] = filename;
-	url.pathname = segments.join("/");
-	return url.href;
+	if (href.includes("desktop-dark.css")) return href.replace(SITE_THEME_STYLESHEET_DARK, filename);
+	if (href.includes("desktop.css")) return href.replace(SITE_THEME_STYLESHEET_LIGHT, filename);
+	return href;
 }
 function findSiteDesktopStylesheetLink() {
 	const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
 	for (const link of links) {
 		const href = link.getAttribute("href");
 		if (href === null || href.length === 0) continue;
-		let pathname;
-		try {
-			pathname = new URL(href, window.location.href).pathname;
-		} catch {
-			continue;
-		}
-		if (isSiteDesktopStylesheetPath(pathname)) return link;
+		if (isSiteDesktopStylesheetHref(href)) return link;
 	}
 	return null;
 }
@@ -6623,7 +6852,7 @@ function featureChoiceBodyClass(id, value) {
 	return `rdw-f-${id}-${value}`;
 }
 var GRID_DENSITY_FEATURE_ID = exports("G","grid-density");
-var FEATURE_ID$10 = GRID_DENSITY_FEATURE_ID;
+var FEATURE_ID$12 = GRID_DENSITY_FEATURE_ID;
 var COMPACT_PX = 150;
 var LARGE_PX = 250;
 var MASONRY_VALUE = exports("M","masonry");
@@ -6643,7 +6872,7 @@ var MASONRY_CONTENT_FLEX_SHRINK = 1;
 var MASONRY_CONTENT_FLEX_BASIS = "auto";
 var MASONRY_CONTENT_MIN_WIDTH_PX = 0;
 function sizeCss(choiceValue, px) {
-	const bodyClass = featureChoiceBodyClass(FEATURE_ID$10, choiceValue);
+	const bodyClass = featureChoiceBodyClass(FEATURE_ID$12, choiceValue);
 	return [
 		`body.${bodyClass} span.thumb,`,
 		`body.${bodyClass} span.thumb > a {`,
@@ -6657,7 +6886,7 @@ function sizeCss(choiceValue, px) {
 	].join("\n");
 }
 function masonryCss() {
-	const bodyClass = featureChoiceBodyClass(FEATURE_ID$10, MASONRY_VALUE);
+	const bodyClass = featureChoiceBodyClass(FEATURE_ID$12, MASONRY_VALUE);
 	const scope = `body.${bodyClass} ${MASONRY_LIST_SCOPE}`;
 	const contentScope = `body.${bodyClass} ${SITE_SELECTORS.postListContent}`;
 	const contentFlex = `${MASONRY_CONTENT_FLEX_GROW} ${MASONRY_CONTENT_FLEX_SHRINK} ${MASONRY_CONTENT_FLEX_BASIS}`;
@@ -6705,14 +6934,14 @@ function mountGridDensity(ctx) {
 	if (ctx.pageKind !== "list") return;
 	requestAnimationFrame(() => {
 		setTimeout(() => {
-			module.import('./masonry-layout-BFj2A2ig-Du-uLmyo.js').then((mod) => {
+			module.import('./masonry-layout-COLMJMFF-Du-uLmyo.js').then((mod) => {
 				mod.startMasonryLayout();
 			});
 		}, 0);
 	});
 }
 var gridDensityFeature = exports("bm",{
-	id: FEATURE_ID$10,
+	id: FEATURE_ID$12,
 	label: "Grid size",
 	pages: ["list", "favorites"],
 	defaultEnabled: true,
@@ -6745,11 +6974,11 @@ var gridDensityFeature = exports("bm",{
 	].join("\n"),
 	mount: mountGridDensity
 });
-var FEATURE_ID$9 = "menu-cleanup";
-var FEATURE_LABEL$9 = "Clean header menu";
+var FEATURE_ID$11 = "menu-cleanup";
+var FEATURE_LABEL$11 = "Clean header menu";
 var CONTENT_ID$1 = "content";
 var HIDDEN_CLASS = "rdw-menu-hidden";
-var BODY_FEATURE_CLASS$3 = featureBodyClass(FEATURE_ID$9);
+var BODY_FEATURE_CLASS$3 = featureBodyClass(FEATURE_ID$11);
 var MISSING_MENU_WARN = "Header menu not found";
 var HIDE_LINK_TEXT_SET = /* @__PURE__ */ new Set([
 	"iCame Top 100",
@@ -6762,13 +6991,13 @@ var HIDE_LINK_TEXT_SET = /* @__PURE__ */ new Set([
 	"TOS",
 	"My Favorites"
 ]);
-var FEATURE_PAGES$9 = [
+var FEATURE_PAGES$11 = [
 	"list",
 	"post",
 	"favorites",
 	"other"
 ];
-var FEATURE_CSS$9 = `body.${BODY_FEATURE_CLASS$3} li.${HIDDEN_CLASS} { display:none !important; }`;
+var FEATURE_CSS$11 = `body.${BODY_FEATURE_CLASS$3} li.${HIDDEN_CLASS} { display:none !important; }`;
 function isHeaderMenuLink(anchor, content) {
 	const listItem = anchor.closest("li");
 	if (listItem === null) return false;
@@ -6801,12 +7030,12 @@ function mountMenuCleanup(_ctx) {
 	}
 }
 var menuCleanupFeature = {
-	id: FEATURE_ID$9,
-	label: FEATURE_LABEL$9,
-	pages: [...FEATURE_PAGES$9],
+	id: FEATURE_ID$11,
+	label: FEATURE_LABEL$11,
+	pages: [...FEATURE_PAGES$11],
 	defaultEnabled: true,
 	cssOnly: true,
-	css: FEATURE_CSS$9,
+	css: FEATURE_CSS$11,
 	mount: mountMenuCleanup
 };
 function detectPageKind(search) {
@@ -6930,20 +7159,20 @@ function isBlacklisted(tags, score, rating, list) {
 	}
 	return false;
 }
-var FEATURE_ID$8 = "blacklist-hide";
-var FEATURE_LABEL$8 = "Hide blacklisted posts";
-var FEATURE_PAGES$8 = ["list"];
-var BODY_FEATURE_CLASS$2 = featureBodyClass(FEATURE_ID$8);
+var FEATURE_ID$10 = "blacklist-hide";
+var FEATURE_LABEL$10 = "Hide blacklisted posts";
+var FEATURE_PAGES$10 = ["list"];
+var BODY_FEATURE_CLASS$2 = featureBodyClass(FEATURE_ID$10);
 var CLASS_BLACKLISTED$1 = "rdw-blacklisted";
 var SCORE_TOKEN_PREFIX$2 = "score:";
 var RATING_TOKEN_PREFIX$1 = "rating:";
 var WHITESPACE_SPLIT = /\s+/;
-var FEATURE_CSS$8 = `
+var FEATURE_CSS$10 = `
 body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED$1} {
   display: none !important;
 }
 `.trim();
-var unsubscribeThumbsAdded$4;
+var unsubscribeThumbsAdded$5;
 var unsubscribeBlacklistChange;
 function parseAltTags(alt) {
 	const tags = [];
@@ -6975,7 +7204,7 @@ function applyBlacklistToRoot(root, list = readSiteBlacklist()) {
 	for (const thumb of thumbs) applyBlacklistToThumb(thumb, list);
 }
 function ensureSubscriptions() {
-	if (unsubscribeThumbsAdded$4 === void 0) unsubscribeThumbsAdded$4 = onThumbsAdded((root) => {
+	if (unsubscribeThumbsAdded$5 === void 0) unsubscribeThumbsAdded$5 = onThumbsAdded((root) => {
 		applyBlacklistToRoot(root);
 	});
 	if (unsubscribeBlacklistChange === void 0) unsubscribeBlacklistChange = onSiteBlacklistChange((list) => {
@@ -6988,12 +7217,12 @@ function mountBlacklistHide(ctx) {
 	ensureSubscriptions();
 }
 var blacklistHideFeature = {
-	id: FEATURE_ID$8,
-	label: FEATURE_LABEL$8,
-	pages: [...FEATURE_PAGES$8],
+	id: FEATURE_ID$10,
+	label: FEATURE_LABEL$10,
+	pages: [...FEATURE_PAGES$10],
 	defaultEnabled: true,
 	cssOnly: true,
-	css: FEATURE_CSS$8,
+	css: FEATURE_CSS$10,
 	mount: mountBlacklistHide
 };
 function buildAddFavUrl(postId) {
@@ -7129,6 +7358,47 @@ function listFavoriteThumbEntries(root = document) {
 		});
 	}
 	return entries;
+}
+var CELL_SEPARATOR_TAGS = /* @__PURE__ */ new Set([
+	"BR",
+	"HR",
+	"WBR"
+]);
+var CELL_SEPARATOR_TEXT_PATTERN = /^[|\u00b7•·,\s]*$/;
+/**
+* True for Remove links / light separators that belong to a favorites cell.
+* Stops adjacency walks before paginator, scripts, and other page chrome.
+*/
+function isFavoriteCellResidue(node, postId) {
+	if (node.nodeType === Node.TEXT_NODE) {
+		const text = node.textContent ?? "";
+		return CELL_SEPARATOR_TEXT_PATTERN.test(text);
+	}
+	if (!(node instanceof HTMLElement)) return false;
+	if (CELL_SEPARATOR_TAGS.has(node.tagName)) return true;
+	if (!(node instanceof HTMLAnchorElement)) return false;
+	const onclick = node.getAttribute("onclick");
+	if (onclick === null) return false;
+	const removeId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+	if (removeId === null) return false;
+	return postId === null || removeId === postId;
+}
+/**
+* Remove a favorites cell from the DOM: the thumb and, when Remove / separators
+* sit between this thumb and the next `span.thumb`, those siblings too.
+* Never injects into `a#p{ID}`; never deletes paginator/other non-cell nodes.
+*/
+function removeFavoriteCell(thumb) {
+	const postId = resolveFavoriteThumbPostId(thumb);
+	const nodesToRemove = [thumb];
+	let sibling = thumb.nextSibling;
+	while (sibling !== null) {
+		if (sibling instanceof HTMLElement && sibling.matches(SITE_SELECTORS.thumb)) break;
+		if (!isFavoriteCellResidue(sibling, postId)) break;
+		nodesToRemove.push(sibling);
+		sibling = sibling.nextSibling;
+	}
+	for (const node of nodesToRemove) node.remove();
 }
 function collectFavoritePostIds(root) {
 	const ids = [];
@@ -7649,9 +7919,9 @@ async function runFavoritesSync(options) {
 		};
 	}
 }
-var FEATURE_ID$7 = "favorites-bulk";
-var FEATURE_LABEL$7 = "Bulk remove favorites";
-var FEATURE_PAGES$7 = ["favorites"];
+var FEATURE_ID$9 = "favorites-bulk";
+var FEATURE_LABEL$9 = "Bulk remove favorites";
+var FEATURE_PAGES$9 = ["favorites"];
 var ROOT_ID$2 = "rdw-favorites-bulk";
 var ROOT_CLASS$2 = "rdw-favorites-bulk";
 var BAR_CLASS = "rdw-favorites-bulk-bar";
@@ -7671,10 +7941,12 @@ var TEXT_STOP = "Stop";
 var TEXT_DISMISS = "Dismiss";
 var TEXT_REMOVE_SELECTED_PREFIX = "Remove selected (";
 var TEXT_REMOVE_SELECTED_SUFFIX = ")";
+var TEXT_SELECTED_SUFFIX = " selected";
 var TEXT_CONFIRM_PREFIX = "Remove ";
 var TEXT_CONFIRM_MID = " favorite";
 var TEXT_CONFIRM_MID_PLURAL = " favorites";
 var TEXT_CONFIRM_SUFFIX = "? This cannot be undone on the site.";
+var TEXT_CONFIRM_ARIA = "Confirm bulk remove favorites";
 var TEXT_PROGRESS_OF = " of ";
 var TEXT_ERROR_DELETED_PREFIX = "Deleted ";
 var TEXT_ERROR_DELETED_MID = " of ";
@@ -7692,20 +7964,25 @@ var CHECK_SIZE = "1.25rem";
 var CHECK_INSET = "0.25rem";
 var CHECK_Z_INDEX = 2;
 var CHECK_FONT_SIZE = "0.75rem";
-var BODY_CLASS$3 = featureBodyClass(FEATURE_ID$7);
+var BODY_CLASS$3 = featureBodyClass(FEATURE_ID$9);
 var BODY_SELECTING_CLASS = `${BODY_CLASS$3}-selecting`;
-var FEATURE_CSS$7 = `
+var FEATURE_CSS$9 = `
 body.${BODY_CLASS$3} .${ROOT_CLASS$2} {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
   margin: 0.5rem 0;
-  box-sizing: border-box;
+  flex: 0 0 100%;
+  grid-column: 1 / -1;
 }
 body.${BODY_CLASS$3} .${BAR_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 body.${BODY_CLASS$3} .${STATUS_CLASS} {
   flex: 1 1 12rem;
@@ -7715,11 +7992,8 @@ body.${BODY_CLASS$3} .${STATUS_CLASS} {
   line-height: 1.3;
 }
 body.${BODY_CLASS$3} .${CONFIRM_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
-  box-sizing: border-box;
+  display: grid;
+  gap: 0.75rem;
 }
 body.${BODY_CLASS$3} .${CONFIRM_ROW_CLASS} {
   display: flex;
@@ -7762,6 +8036,9 @@ body.${BODY_CLASS$3} span.thumb.${CLASS_THUMB_SELECTED} > .${CLASS_THUMB_CHECK} 
 `.trim();
 function removeSelectedLabel(count) {
 	return `${TEXT_REMOVE_SELECTED_PREFIX}${String(count)}${TEXT_REMOVE_SELECTED_SUFFIX}`;
+}
+function selectedCountLabel(count) {
+	return `${String(count)}${TEXT_SELECTED_SUFFIX}`;
 }
 function confirmMessage(count) {
 	return `${TEXT_CONFIRM_PREFIX}${String(count)}${count === 1 ? TEXT_CONFIRM_MID : TEXT_CONFIRM_MID_PLURAL}${TEXT_CONFIRM_SUFFIX}`;
@@ -7829,12 +8106,30 @@ function applySelectionChrome(entries, selected) {
 		}
 	}
 }
+/**
+* Place the bar as its own full-width row above the thumbs grid/list —
+* not as a sibling grid/flex item beside the first thumb.
+*/
 function findBarHost() {
-	const firstThumb = document.querySelector(SITE_SELECTORS.thumb);
-	if (firstThumb !== null && firstThumb.parentNode !== null) return {
-		parent: firstThumb.parentNode,
-		before: firstThumb
+	const imageList = document.querySelector(SITE_SELECTORS.imageList);
+	if (imageList !== null && imageList.parentNode !== null) return {
+		parent: imageList.parentNode,
+		before: imageList
 	};
+	const firstThumb = document.querySelector(SITE_SELECTORS.thumb);
+	if (firstThumb !== null) {
+		const grid = firstThumb.parentElement;
+		if (grid !== null && grid.parentNode !== null) {
+			if (grid !== document.body && grid !== document.documentElement) return {
+				parent: grid.parentNode,
+				before: grid
+			};
+			return {
+				parent: grid,
+				before: firstThumb
+			};
+		}
+	}
 	const paginator = document.querySelector("#paginator");
 	if (paginator !== null && paginator.parentNode !== null) return {
 		parent: paginator.parentNode,
@@ -7844,6 +8139,15 @@ function findBarHost() {
 		parent: document.body,
 		before: document.body.firstChild
 	};
+}
+function removeDomCellForPost(postId) {
+	const entry = listFavoriteThumbEntries().find((item) => item.postId === postId);
+	if (entry !== void 0) {
+		removeFavoriteCell(entry.thumb);
+		return;
+	}
+	const fallback = document.getElementById(`s${postId}`);
+	if (fallback instanceof HTMLElement) removeFavoriteCell(fallback);
 }
 function FavoritesBulkBar(props) {
 	const [phase, setPhase] = d({ kind: "idle" });
@@ -7869,10 +8173,11 @@ function FavoritesBulkBar(props) {
 		};
 	}, []);
 	A(() => {
-		if (phase.kind !== "selecting") return;
+		if (phase.kind !== "selecting" && phase.kind !== "confirm") return;
 		const onClickCapture = (event) => {
 			const target = event.target;
 			if (!(target instanceof Element)) return;
+			if (target.closest(".rdw-dialog-backdrop") !== null) return;
 			const thumb = target.closest(SITE_SELECTORS.thumb);
 			if (!(thumb instanceof HTMLElement)) return;
 			if (!document.body.contains(thumb)) return;
@@ -7880,6 +8185,7 @@ function FavoritesBulkBar(props) {
 			if (postId === null) return;
 			event.preventDefault();
 			event.stopPropagation();
+			if (phase.kind === "confirm") return;
 			setSelected((prev) => {
 				const next = new Set(prev);
 				if (next.has(postId)) next.delete(postId);
@@ -7917,6 +8223,9 @@ function FavoritesBulkBar(props) {
 			kind: "confirm",
 			count
 		});
+	};
+	const closeConfirm = () => {
+		setPhase({ kind: "selecting" });
 	};
 	const runRemoval = async () => {
 		const ids = [...selectedRef.current];
@@ -7961,12 +8270,7 @@ function FavoritesBulkBar(props) {
 					return;
 				}
 				removeFav(postId);
-				const entry = listFavoriteThumbEntries().find((item) => item.postId === postId);
-				if (entry !== void 0) entry.thumb.remove();
-				else {
-					const fallback = document.getElementById(`s${postId}`);
-					if (fallback !== null) fallback.remove();
-				}
+				removeDomCellForPost(postId);
 				done += 1;
 				setSelected((prev) => {
 					const next = new Set(prev);
@@ -8013,30 +8317,6 @@ function FavoritesBulkBar(props) {
 			children: TEXT_SELECT
 		})
 	});
-	if (phase.kind === "confirm") return /* @__PURE__ */ a(Card, {
-		className: CONFIRM_CLASS,
-		children: [/* @__PURE__ */ a("p", {
-			className: STATUS_CLASS,
-			children: confirmMessage(phase.count)
-		}), /* @__PURE__ */ a("div", {
-			className: CONFIRM_ROW_CLASS,
-			children: [/* @__PURE__ */ a(Button, {
-				variant: "danger",
-				size: "s",
-				onClick: () => {
-					runRemoval();
-				},
-				children: TEXT_CONFIRM
-			}), /* @__PURE__ */ a(Button, {
-				variant: "secondary",
-				size: "s",
-				onClick: () => {
-					setPhase({ kind: "selecting" });
-				},
-				children: TEXT_CANCEL
-			})]
-		})]
-	});
 	if (phase.kind === "removing") {
 		const ratio = phase.total === 0 ? 0 : phase.done / phase.total;
 		return /* @__PURE__ */ a("div", {
@@ -8075,9 +8355,14 @@ function FavoritesBulkBar(props) {
 		})]
 	});
 	const count = selected.size;
-	return /* @__PURE__ */ a("div", {
+	const confirmOpen = phase.kind === "confirm";
+	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("div", {
 		className: BAR_CLASS,
 		children: [
+			/* @__PURE__ */ a("span", {
+				className: STATUS_CLASS,
+				children: selectedCountLabel(count)
+			}),
 			/* @__PURE__ */ a(Button, {
 				variant: "secondary",
 				size: "s",
@@ -8093,7 +8378,7 @@ function FavoritesBulkBar(props) {
 			/* @__PURE__ */ a(Button, {
 				variant: "danger",
 				size: "s",
-				disabled: count === 0,
+				disabled: count === 0 || confirmOpen,
 				onClick: beginConfirm,
 				children: removeSelectedLabel(count)
 			}),
@@ -8104,7 +8389,31 @@ function FavoritesBulkBar(props) {
 				children: TEXT_CANCEL
 			})
 		]
-	});
+	}), /* @__PURE__ */ a(Dialog, {
+		open: confirmOpen,
+		onClose: closeConfirm,
+		"aria-label": TEXT_CONFIRM_ARIA,
+		className: CONFIRM_CLASS,
+		children: [/* @__PURE__ */ a("p", {
+			className: STATUS_CLASS,
+			children: confirmMessage(count)
+		}), /* @__PURE__ */ a("div", {
+			className: CONFIRM_ROW_CLASS,
+			children: [/* @__PURE__ */ a(Button, {
+				variant: "danger",
+				size: "s",
+				onClick: () => {
+					runRemoval();
+				},
+				children: TEXT_CONFIRM
+			}), /* @__PURE__ */ a(Button, {
+				variant: "secondary",
+				size: "s",
+				onClick: closeConfirm,
+				children: TEXT_CANCEL
+			})]
+		})]
+	})] });
 }
 function mountFavoritesBulk(_ctx) {
 	if (document.getElementById(ROOT_ID$2) !== null) return;
@@ -8119,11 +8428,11 @@ function mountFavoritesBulk(_ctx) {
 	Q(/* @__PURE__ */ a(FavoritesBulkBar, { onSelectionModeChange }), root);
 }
 var favoritesBulkFeature = {
-	id: FEATURE_ID$7,
-	label: FEATURE_LABEL$7,
-	pages: [...FEATURE_PAGES$7],
+	id: FEATURE_ID$9,
+	label: FEATURE_LABEL$9,
+	pages: [...FEATURE_PAGES$9],
 	defaultEnabled: true,
-	css: FEATURE_CSS$7,
+	css: FEATURE_CSS$9,
 	mount: mountFavoritesBulk
 };
 var BASE_GRID_CSS = `
@@ -8136,8 +8445,35 @@ var BASE_GRID_CSS = `
   anchor-name: ${THUMB_ANCHOR_NAME};
 }
 `;
+/**
+* Video CDN origin. Path after origin starts with `//images/` (verified double
+* slash on ws-cdn-video.rule34.xxx).
+*/
+var VIDEO_CDN_ORIGIN = "https://ws-cdn-video.rule34.xxx";
+var THUMB_PATH_PATTERN = /^\/thumbnails\/([^/]+)\/thumbnail_([^/]+)\.jpg$/i;
 function ensureThumbAnchor(thumb) {
 	thumb.classList.add(THUMB_CLASS);
+}
+/**
+* Build the CDN mp4 URL from a grid webm thumb `img.preview` src.
+* Thumb: `https://wimg.rule34.xxx/thumbnails/<dir>/thumbnail_<hash>.jpg?<id>`
+* Video: `https://ws-cdn-video.rule34.xxx//images/<dir>/<hash>.mp4?<id>`
+* Unparseable input → null (no guessing).
+*/
+function buildVideoUrlFromThumbUrl(thumbUrl) {
+	let parsed;
+	try {
+		parsed = new URL(thumbUrl);
+	} catch {
+		return null;
+	}
+	if (parsed.hostname !== "wimg.rule34.xxx") return null;
+	const match = THUMB_PATH_PATTERN.exec(parsed.pathname);
+	if (match === null) return null;
+	const dir = match[1];
+	const hash = match[2];
+	if (dir === void 0 || hash === void 0 || dir.length === 0 || hash.length === 0) return null;
+	return `${VIDEO_CDN_ORIGIN}//images/${dir}/${hash}.mp4${parsed.search}`;
 }
 /** Kit IconButton root class — prefer for preview badges. */
 var KIT_ICON_BUTTON_CLASS = "rdw-icon-btn";
@@ -8367,7 +8703,7 @@ body.${CSS_CLASS.gridFavsHidden} .${CSS_CLASS.cardFav} {
   align-items: center;
 }
 `;
-var unsubscribeThumbsAdded$3;
+var unsubscribeThumbsAdded$4;
 /**
 * Document overlays for preview badges + feed bar (mock layout 1).
 * Appended after CARD_CSS so hover-only visibility wins over marked-always-visible.
@@ -8470,8 +8806,8 @@ ${ICON_BUTTON_CSS}
 }
 `;
 function ensureThumbsAddedSubscription() {
-	if (unsubscribeThumbsAdded$3 !== void 0) return;
-	unsubscribeThumbsAdded$3 = onThumbsAdded((root) => {
+	if (unsubscribeThumbsAdded$4 !== void 0) return;
+	unsubscribeThumbsAdded$4 = onThumbsAdded((root) => {
 		mountCards(root);
 	});
 }
@@ -8482,7 +8818,7 @@ function ensureDocumentStyles() {
 	style.textContent = `${BASE_GRID_CSS}\n${CARD_CSS}\n${DOCUMENT_OVERLAY_CSS}`;
 	document.head.append(style);
 }
-function findThumbLink$1(thumb, postId) {
+function findThumbLink$2(thumb, postId) {
 	const byId = thumb.querySelector(`#p${postId}`);
 	if (byId instanceof HTMLAnchorElement) return byId;
 	const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
@@ -8490,7 +8826,7 @@ function findThumbLink$1(thumb, postId) {
 }
 function attachFavButton(thumb, postId, marked) {
 	if (thumb.querySelector(SITE_SELECTORS.cardFavButton) !== null) return;
-	const link = findThumbLink$1(thumb, postId);
+	const link = findThumbLink$2(thumb, postId);
 	if (link === null) return;
 	ensureThumbAnchor(thumb);
 	const button = createFavButton(postId, marked);
@@ -8722,9 +9058,9 @@ function mountUpdatesBar(root = document, search = window.location.search) {
 	}
 	mountFullBar(imageList, search, tagsParam);
 }
-var FEATURE_ID$6 = "feed";
-var FEATURE_LABEL$6 = "Feed in site menu";
-var FEATURE_PAGES$6 = [
+var FEATURE_ID$8 = "feed";
+var FEATURE_LABEL$8 = "Feed in site menu";
+var FEATURE_PAGES$8 = [
 	"list",
 	"post",
 	"favorites",
@@ -8760,8 +9096,8 @@ var NEW_PLAQUE_TOP_PX = 6;
 var NEW_PLAQUE_ACCENT = "#2f6fed";
 var EVENT_PAGESHOW$1 = "pageshow";
 var EVENT_CLICK$1 = "click";
-var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$6);
-var FEATURE_CSS$6 = `
+var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$8);
+var FEATURE_CSS$8 = `
 body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS} {
   position: relative;
 }
@@ -8787,7 +9123,7 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
   }
 }
 `;
-var unsubscribeThumbsAdded$2;
+var unsubscribeThumbsAdded$3;
 var pageshowBound$1 = false;
 var boundFeedLink = null;
 function findPostsMenuItem() {
@@ -8898,8 +9234,8 @@ function markNewThumbs(root, seenPostId) {
 	}
 }
 function ensureNewThumbsSubscription() {
-	if (unsubscribeThumbsAdded$2 !== void 0) return;
-	unsubscribeThumbsAdded$2 = onThumbsAdded((root) => {
+	if (unsubscribeThumbsAdded$3 !== void 0) return;
+	unsubscribeThumbsAdded$3 = onThumbsAdded((root) => {
 		markNewThumbs(root, getSeenPostId());
 	});
 }
@@ -8916,11 +9252,11 @@ function mountFeed(ctx) {
 	mountUpdatesBar(document, ctx.search);
 }
 var feedFeature = {
-	id: FEATURE_ID$6,
-	label: FEATURE_LABEL$6,
-	pages: [...FEATURE_PAGES$6],
+	id: FEATURE_ID$8,
+	label: FEATURE_LABEL$8,
+	pages: [...FEATURE_PAGES$8],
 	defaultEnabled: true,
-	css: FEATURE_CSS$6,
+	css: FEATURE_CSS$8,
 	mount: mountFeed
 };
 var SEEN_DIM_FEATURE_ID = "seen-dim";
@@ -8929,7 +9265,7 @@ var SEEN_DIM_LABEL = "Dim seen posts";
 var SEEN_DIM_OPACITY = "0.65";
 var SEEN_DIM_HOVER_OPACITY = "1";
 var EVENT_PAGESHOW = "pageshow";
-var unsubscribeThumbsAdded$1;
+var unsubscribeThumbsAdded$2;
 var pageshowBound = false;
 function stampSeenOnThumbs(root = document) {
 	const marks = load().marks;
@@ -8947,7 +9283,7 @@ function onPageShow(event) {
 	stampSeenOnThumbs(document);
 }
 function ensureListSubscriptions$1() {
-	if (unsubscribeThumbsAdded$1 === void 0) unsubscribeThumbsAdded$1 = onThumbsAdded((root) => {
+	if (unsubscribeThumbsAdded$2 === void 0) unsubscribeThumbsAdded$2 = onThumbsAdded((root) => {
 		stampSeenOnThumbs(root);
 	});
 	if (!pageshowBound) {
@@ -9031,12 +9367,12 @@ async function fetchNextPage(url) {
 		nextUrl: readNextUrl(doc)
 	};
 }
-var FEATURE_ID$5 = "infinite-scroll";
-var FEATURE_LABEL$5 = "Infinite scroll";
-var FEATURE_PAGES$5 = ["list"];
-var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$5);
-var ROOT_MARGIN_PX = 800;
-var ROOT_MARGIN = `${String(ROOT_MARGIN_PX)}px`;
+var FEATURE_ID$7 = "infinite-scroll";
+var FEATURE_LABEL$7 = "Infinite scroll";
+var FEATURE_PAGES$7 = ["list"];
+var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$7);
+/** Prefetch when remaining distance to list end ≤ this many viewport heights. */
+var PREFETCH_REMAINING_VIEWPORT_HEIGHTS = 2;
 var MIN_REQUEST_INTERVAL_MS = 1e3;
 var CLASS_SENTINEL = "rdw-infinite-sentinel";
 var CLASS_STATUS = "rdw-infinite-status";
@@ -9052,7 +9388,7 @@ var PAGINATION_NEXT_SELECTOR = "div.pagination a[alt=\"next\"]";
 var WARN_MISSING = "infinite-scroll: missing image-list or next link; not mounted";
 var SCORE_TOKEN_PREFIX$1 = "score:";
 var RATING_TOKEN_PREFIX = "rating:";
-var FEATURE_CSS$5 = `
+var FEATURE_CSS$7 = `
 body.${BODY_FEATURE_CLASS$1} .${CLASS_SENTINEL} {
   display: block;
   width: 100%;
@@ -9205,11 +9541,19 @@ function setStatusError(status, onRetry) {
 function clearStatus(status) {
 	status.replaceChildren();
 }
-/** True when the sentinel is within rootMargin of the viewport (IO may not re-fire). */
+function prefetchRootMarginPx() {
+	return PREFETCH_REMAINING_VIEWPORT_HEIGHTS * window.innerHeight;
+}
+function prefetchRootMarginCss() {
+	return `${String(prefetchRootMarginPx())}px`;
+}
+/** True when the sentinel is within the prefetch margin of the viewport (IO may not re-fire). */
 function isSentinelNear(sentinel) {
 	const rect = sentinel.getBoundingClientRect();
-	const viewBottom = window.innerHeight + ROOT_MARGIN_PX;
-	return rect.top < viewBottom && rect.bottom > -800;
+	const marginPx = prefetchRootMarginPx();
+	const viewBottom = window.innerHeight + marginPx;
+	const viewTop = -marginPx;
+	return rect.top < viewBottom && rect.bottom > viewTop;
 }
 function mountInfiniteScroll(_ctx) {
 	const imageList = document.querySelector(SITE_SELECTORS.imageList);
@@ -9295,22 +9639,22 @@ function mountInfiniteScroll(_ctx) {
 		}
 	}, {
 		root: null,
-		rootMargin: ROOT_MARGIN,
+		rootMargin: prefetchRootMarginCss(),
 		threshold: 0
 	});
 	observer.observe(sentinel);
 }
 var infiniteScrollFeature = {
-	id: FEATURE_ID$5,
-	label: FEATURE_LABEL$5,
-	pages: [...FEATURE_PAGES$5],
+	id: FEATURE_ID$7,
+	label: FEATURE_LABEL$7,
+	pages: [...FEATURE_PAGES$7],
 	defaultEnabled: true,
-	css: FEATURE_CSS$5,
+	css: FEATURE_CSS$7,
 	mount: mountInfiniteScroll
 };
-var FEATURE_ID$4 = "playlist-bar";
-var FEATURE_LABEL$4 = "Collection header";
-var FEATURE_PAGES$4 = ["list"];
+var FEATURE_ID$6 = "playlist-bar";
+var FEATURE_LABEL$6 = "Collection header";
+var FEATURE_PAGES$6 = ["list"];
 var ROOT_ID$1 = "rdw-playlist-bar";
 var ROOT_CLASS$1 = "rdw-playlist-bar";
 var TITLE_CLASS = "rdw-playlist-bar-title";
@@ -9327,8 +9671,8 @@ var TEXT_CAPTION = "Posts are ordered by the site (newest first).";
 var TEXT_PREV = "Previous";
 var TEXT_NEXT = "Next";
 var WARN_MISSING_HOST = "playlist-bar: image-list not found; playlist bar not mounted";
-var BODY_CLASS$1 = featureBodyClass(FEATURE_ID$4);
-var FEATURE_CSS$4 = `
+var BODY_CLASS$1 = featureBodyClass(FEATURE_ID$6);
+var FEATURE_CSS$6 = `
 body.${BODY_CLASS$1} .${ROOT_CLASS$1} {
   display: flex;
   flex-direction: column;
@@ -9527,21 +9871,21 @@ function mountPlaylistBar(ctx) {
 	insertBar(fallback, bar, null);
 }
 var playlistBarFeature = {
-	id: FEATURE_ID$4,
-	label: FEATURE_LABEL$4,
-	pages: [...FEATURE_PAGES$4],
+	id: FEATURE_ID$6,
+	label: FEATURE_LABEL$6,
+	pages: [...FEATURE_PAGES$6],
 	defaultEnabled: true,
-	css: FEATURE_CSS$4,
+	css: FEATURE_CSS$6,
 	mount: mountPlaylistBar
 };
-var FEATURE_ID$3 = "playlist-menu";
-var FEATURE_LABEL$3 = "Add to collection button";
-var FEATURE_PAGES$3 = ["list", "post"];
+var FEATURE_ID$5 = "playlist-menu";
+var FEATURE_LABEL$5 = "Add to collection button";
+var FEATURE_PAGES$5 = ["list", "post"];
 var CLASS_ADD = "rdw-playlist-add";
 var CLASS_ADD_IN = "rdw-playlist-add--in";
 var CLASS_MENU = "rdw-playlist-menu";
 var CLASS_MENU_POPUP = "rdw-playlist-menu--popup";
-var CLASS_LIST$1 = "rdw-playlist-menu-list";
+var CLASS_LIST = "rdw-playlist-menu-list";
 var CLASS_ITEM$2 = "rdw-playlist-menu-item";
 var CLASS_CHECK$1 = "rdw-playlist-menu-check";
 var CLASS_NAME$1 = "rdw-playlist-menu-name";
@@ -9570,9 +9914,9 @@ var EVENT_KEYDOWN = "keydown";
 var EVENT_POINTERDOWN = "pointerdown";
 var KEY_ESCAPE = "Escape";
 var KEY_ENTER$2 = "Enter";
-var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$3)}`;
-var FEATURE_CSS$3 = `
-${BODY_SELECTOR$1} .${CLASS_ADD} {
+var BODY_SELECTOR$3 = `body.${featureBodyClass(FEATURE_ID$5)}`;
+var FEATURE_CSS$5 = `
+${BODY_SELECTOR$3} .${CLASS_ADD} {
   position: absolute;
   top: ${String(BUTTON_BELOW_FAV_TOP_PX)}px;
   right: ${String(BUTTON_OFFSET_PX)}px;
@@ -9599,24 +9943,24 @@ ${BODY_SELECTOR$1} .${CLASS_ADD} {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   opacity: 0;
 }
-${BODY_SELECTOR$1} .${THUMB_CLASS}:hover .${CLASS_ADD},
-${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
+${BODY_SELECTOR$3} .${THUMB_CLASS}:hover .${CLASS_ADD},
+${BODY_SELECTOR$3} .${CLASS_ADD}:focus-visible {
   opacity: 0.65;
 }
-${BODY_SELECTOR$1} .${THUMB_CLASS} .${CLASS_ADD}:hover,
-${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
+${BODY_SELECTOR$3} .${THUMB_CLASS} .${CLASS_ADD}:hover,
+${BODY_SELECTOR$3} .${CLASS_ADD}:focus-visible {
   opacity: 1;
 }
-${BODY_SELECTOR$1} .${CLASS_ADD}:focus-visible {
+${BODY_SELECTOR$3} .${CLASS_ADD}:focus-visible {
   outline: ${FOCUS_OUTLINE};
   outline-offset: ${FOCUS_OUTLINE_OFFSET};
 }
-${BODY_SELECTOR$1} .${CLASS_ADD}.${CLASS_ADD_IN} {
+${BODY_SELECTOR$3} .${CLASS_ADD}.${CLASS_ADD_IN} {
   background: #ffd75e;
   border-color: #c79a00;
   color: #5c4500;
 }
-${BODY_SELECTOR$1} .${CLASS_MENU} {
+${BODY_SELECTOR$3} .${CLASS_MENU} {
   box-sizing: border-box;
   min-width: ${String(MENU_MIN_WIDTH_PX)}px;
   max-height: ${String(MENU_MAX_HEIGHT_PX)}px;
@@ -9628,12 +9972,12 @@ ${BODY_SELECTOR$1} .${CLASS_MENU} {
   color: #1a1a1a;
   font: 13px/1.3 Segoe UI, system-ui, sans-serif;
 }
-${BODY_SELECTOR$1} .${CLASS_MENU}.${CLASS_MENU_POPUP} {
+${BODY_SELECTOR$3} .${CLASS_MENU}.${CLASS_MENU_POPUP} {
   position: fixed;
   z-index: ${String(MENU_Z_INDEX)};
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
 }
-${BODY_SELECTOR$1} .${CLASS_LIST$1} {
+${BODY_SELECTOR$3} .${CLASS_LIST} {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -9641,7 +9985,7 @@ ${BODY_SELECTOR$1} .${CLASS_LIST$1} {
   padding: 0;
   list-style: none;
 }
-${BODY_SELECTOR$1} .${CLASS_ITEM$2} {
+${BODY_SELECTOR$3} .${CLASS_ITEM$2} {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -9656,15 +10000,15 @@ ${BODY_SELECTOR$1} .${CLASS_ITEM$2} {
   text-align: left;
   cursor: pointer;
 }
-${BODY_SELECTOR$1} .${CLASS_ITEM$2}:hover,
-${BODY_SELECTOR$1} .${CLASS_ITEM$2}:focus-visible {
+${BODY_SELECTOR$3} .${CLASS_ITEM$2}:hover,
+${BODY_SELECTOR$3} .${CLASS_ITEM$2}:focus-visible {
   background: #e8f0fe;
 }
-${BODY_SELECTOR$1} .${CLASS_ITEM$2}:focus-visible {
+${BODY_SELECTOR$3} .${CLASS_ITEM$2}:focus-visible {
   outline: ${FOCUS_OUTLINE};
   outline-offset: ${FOCUS_OUTLINE_OFFSET};
 }
-${BODY_SELECTOR$1} .${CLASS_CHECK$1} {
+${BODY_SELECTOR$3} .${CLASS_CHECK$1} {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9672,14 +10016,14 @@ ${BODY_SELECTOR$1} .${CLASS_CHECK$1} {
   flex: 0 0 1rem;
   font-weight: 700;
 }
-${BODY_SELECTOR$1} .${CLASS_NAME$1} {
+${BODY_SELECTOR$3} .${CLASS_NAME$1} {
   flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-${BODY_SELECTOR$1} .${CLASS_NEW$1},
-${BODY_SELECTOR$1} .${CLASS_NEW_SUBMIT} {
+${BODY_SELECTOR$3} .${CLASS_NEW$1},
+${BODY_SELECTOR$3} .${CLASS_NEW_SUBMIT} {
   display: block;
   width: 100%;
   box-sizing: border-box;
@@ -9693,18 +10037,18 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_SUBMIT} {
   cursor: pointer;
   text-align: left;
 }
-${BODY_SELECTOR$1} .${CLASS_NEW$1}:focus-visible,
-${BODY_SELECTOR$1} .${CLASS_NEW_SUBMIT}:focus-visible,
-${BODY_SELECTOR$1} .${CLASS_NEW_INPUT}:focus-visible {
+${BODY_SELECTOR$3} .${CLASS_NEW$1}:focus-visible,
+${BODY_SELECTOR$3} .${CLASS_NEW_SUBMIT}:focus-visible,
+${BODY_SELECTOR$3} .${CLASS_NEW_INPUT}:focus-visible {
   outline: ${FOCUS_OUTLINE};
   outline-offset: ${FOCUS_OUTLINE_OFFSET};
 }
-${BODY_SELECTOR$1} .${CLASS_NEW_FORM$1} {
+${BODY_SELECTOR$3} .${CLASS_NEW_FORM$1} {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
 }
-${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
+${BODY_SELECTOR$3} .${CLASS_NEW_INPUT} {
   box-sizing: border-box;
   width: 100%;
   margin: 0;
@@ -9714,7 +10058,7 @@ ${BODY_SELECTOR$1} .${CLASS_NEW_INPUT} {
   font: inherit;
 }
 `;
-var unsubscribeThumbsAdded;
+var unsubscribeThumbsAdded$1;
 var openPopup = null;
 var escapeBound = false;
 var pointerBound = false;
@@ -9734,7 +10078,7 @@ function applyAddButtonState(button, postId) {
 	button.setAttribute("aria-pressed", inPlaylist ? "true" : "false");
 	button.setAttribute("aria-label", `${LABEL_ADD} ${String(postId)}`);
 }
-function findThumbLink(thumb, postId) {
+function findThumbLink$1(thumb, postId) {
 	const byId = thumb.querySelector(`#p${postId}`);
 	if (byId instanceof HTMLAnchorElement) return byId;
 	const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
@@ -9898,7 +10242,7 @@ function createPlaylistMenu(postId, options) {
 	root.setAttribute("role", "menu");
 	root.setAttribute(ATTR_POST_ID, String(postId));
 	const list = document.createElement("div");
-	list.className = CLASS_LIST$1;
+	list.className = CLASS_LIST;
 	list.setAttribute("role", "group");
 	fillPlaylistList(list, postId);
 	const newHost = document.createElement("div");
@@ -9929,7 +10273,7 @@ function attachAddButton(thumb, postId) {
 	if (thumb.querySelector(`button.${CLASS_ADD}`) !== null) return;
 	const numericId = parsePostId(postId);
 	if (numericId === null) return;
-	const link = findThumbLink(thumb, postId);
+	const link = findThumbLink$1(thumb, postId);
 	if (link === null) return;
 	ensureThumbAnchor(thumb);
 	const button = document.createElement("button");
@@ -9957,8 +10301,8 @@ function stampPlaylistButtons(root = document) {
 	}
 }
 function ensureListSubscriptions() {
-	if (unsubscribeThumbsAdded !== void 0) return;
-	unsubscribeThumbsAdded = onThumbsAdded((root) => {
+	if (unsubscribeThumbsAdded$1 !== void 0) return;
+	unsubscribeThumbsAdded$1 = onThumbsAdded((root) => {
 		stampPlaylistButtons(root);
 	});
 }
@@ -9968,11 +10312,11 @@ function mountPlaylistMenu(ctx) {
 	ensureListSubscriptions();
 }
 var playlistMenuFeature = {
-	id: FEATURE_ID$3,
-	label: FEATURE_LABEL$3,
-	pages: [...FEATURE_PAGES$3],
+	id: FEATURE_ID$5,
+	label: FEATURE_LABEL$5,
+	pages: [...FEATURE_PAGES$5],
 	defaultEnabled: true,
-	css: FEATURE_CSS$3,
+	css: FEATURE_CSS$5,
 	mount: mountPlaylistMenu
 };
 var TEXT_COLLECTIONS = "Collections";
@@ -9984,7 +10328,7 @@ var ARIA_COLLECTIONS = "Custom collections";
 var LABEL_TOGGLE_PREFIX = "Toggle collection";
 var KEY_ENTER$1 = "Enter";
 var CLASS_WRAP$1 = "rdw-post-panel-collections";
-var CLASS_TRIGGER$1 = "rdw-post-panel-collections-btn";
+var CLASS_TRIGGER = "rdw-post-panel-collections-btn";
 var CLASS_ITEM$1 = "rdw-post-panel-collection-item";
 var CLASS_CHECK = "rdw-post-panel-collection-check";
 var CLASS_NAME = "rdw-post-panel-collection-name";
@@ -10052,8 +10396,8 @@ function CollectionsMenu(props) {
 		ref: bindTrigger,
 		children: [/* @__PURE__ */ a(Button, {
 			variant: "secondary",
-			size: "s",
-			className: CLASS_TRIGGER$1,
+			size: "m",
+			className: CLASS_TRIGGER,
 			"aria-label": TEXT_COLLECTIONS,
 			onClick: () => {
 				setOpen((value) => !value);
@@ -10124,57 +10468,28 @@ function CollectionsMenu(props) {
 		})]
 	});
 }
-var TEXT_MORE = "More";
-var ARIA_MORE = "More post actions";
-var CLASS_WRAP = "rdw-post-panel-more";
-var CLASS_TRIGGER = "rdw-post-panel-more-btn";
-var CLASS_LIST = "rdw-post-panel-more-list";
-var CLASS_ITEM = "rdw-post-panel-more-item";
-function MoreMenu(props) {
-	const [open, setOpen] = d(false);
-	const triggerRef = T(null);
-	const close = b(() => {
-		setOpen(false);
-	}, []);
-	const bindTrigger = b((node) => {
-		const button = node?.querySelector("button");
-		triggerRef.current = button instanceof HTMLButtonElement ? button : null;
-	}, []);
+var LABEL_REPORT = "Report";
+var CLASS_WRAP = "rdw-post-panel-post-actions";
+var CLASS_ITEM = "rdw-post-panel-post-action";
+function buttonLabel(text) {
+	if (text === "Report to moderation") return LABEL_REPORT;
+	return text;
+}
+/** Full-width open buttons that proxy native link-list clicks. No Popover. */
+function PostActionsList(props) {
 	if (props.links.length === 0) return null;
 	return /* @__PURE__ */ a("div", {
 		className: CLASS_WRAP,
-		ref: bindTrigger,
-		children: [
-			/* @__PURE__ */ a(SectionLabel, { children: TEXT_MORE }),
-			/* @__PURE__ */ a(Button, {
-				variant: "secondary",
-				size: "s",
-				className: CLASS_TRIGGER,
-				"aria-label": TEXT_MORE,
-				onClick: () => {
-					setOpen((value) => !value);
-				},
-				children: TEXT_MORE
-			}),
-			/* @__PURE__ */ a(Popover, {
-				open,
-				onClose: close,
-				anchorRef: triggerRef,
-				"aria-label": ARIA_MORE,
-				className: CLASS_LIST,
-				children: props.links.map((link) => /* @__PURE__ */ a(Button, {
-					variant: "ghost",
-					size: "s",
-					className: CLASS_ITEM,
-					"aria-label": link.text,
-					onClick: () => {
-						link.anchor.click();
-						close();
-					},
-					children: link.text
-				}, link.text))
-			})
-		]
+		children: props.links.map((link) => /* @__PURE__ */ a(Button, {
+			variant: "secondary",
+			size: "m",
+			className: CLASS_ITEM,
+			"aria-label": buttonLabel(link.text),
+			onClick: () => {
+				link.anchor.click();
+			},
+			children: buttonLabel(link.text)
+		}, link.text))
 	});
 }
 /** Read-only helpers for native post-page markup used by the side panel. */
@@ -10182,6 +10497,7 @@ var LINK_LIST_SELECTOR = "div.link-list ul";
 var STATS_SELECTOR = "div#stats";
 var FLEXI_SELECTOR = "#fit-to-screen div.flexi, div#right-col div.flexi, div.flexi";
 var HEADER_SELECTOR = "div#header";
+var POST_COMMENTS_ID = "post-comments";
 var MORE_LINK_TEXTS = [
 	"Edit",
 	"Resize image",
@@ -10463,17 +10779,24 @@ function measureHeaderOffsetPx(gapPx) {
 	if (!(header instanceof HTMLElement)) return gapPx;
 	return header.getBoundingClientRect().height + gapPx;
 }
+/** Native comments block on the post page (moved into the panel, not cloned). */
+function findPostComments() {
+	const node = document.getElementById(POST_COMMENTS_ID);
+	return node instanceof HTMLElement ? node : null;
+}
 var TEXT_FAVORITE = "Favorite";
 var TEXT_IN_FAVORITES = "In favorites";
 var TEXT_ORIGINAL = "Original";
 var TEXT_SCORE = "Score";
 var TEXT_VOTE_UP = "Vote up";
 var TEXT_ICAME = "I came";
+var TEXT_COMMENTS = "Comments";
 var LABEL_ORIGINAL = "Open original image";
 var LABEL_VOTE_UP = "Vote up";
 var LABEL_ICAME = "I came";
 var WARN_ICAME_COUNT = "post-actions: I came counter — нужна разметка";
 var CLASS_ROOT = "rdw-post-panel";
+var CLASS_CARD = "rdw-post-panel-card";
 var CLASS_ACTIONS = "rdw-post-panel-actions";
 var CLASS_FAV = "rdw-post-panel-fav";
 var CLASS_ORIGINAL = "rdw-post-panel-original";
@@ -10486,6 +10809,8 @@ var CLASS_STAT_VALUE = "rdw-post-panel-stat-value";
 var CLASS_SOURCE = "rdw-post-panel-source";
 var CLASS_ICAME = "rdw-post-panel-icame";
 var CLASS_ICAME_COUNT = "rdw-post-panel-icame-count";
+var CLASS_COMMENTS = "rdw-post-panel-comments";
+var CLASS_COMMENTS_HOST = "rdw-post-panel-comments-host";
 function parseNumericPostId(postId) {
 	if (postId === null || postId.length === 0) return null;
 	const parsed = Number(postId);
@@ -10508,6 +10833,7 @@ function PostPanel(props) {
 		return findOriginalAnchor()?.href ?? null;
 	});
 	const [iCame] = d(() => findICameTarget());
+	const [hasComments] = d(() => findPostComments() !== null);
 	A(() => {
 		if (props.postId === null) return;
 		return observeScoreSpan(props.postId, (text) => {
@@ -10570,71 +10896,108 @@ function PostPanel(props) {
 	const onICameClick = b(() => {
 		iCame?.anchor.click();
 	}, [iCame]);
-	return /* @__PURE__ */ a(Card, {
+	const showScoreCard = props.postId !== null || iCame !== null;
+	return /* @__PURE__ */ a("div", {
 		className: CLASS_ROOT,
-		as: "section",
 		children: [
-			/* @__PURE__ */ a("div", {
-				className: CLASS_ACTIONS,
-				children: [
-					props.postId !== null ? /* @__PURE__ */ a(Button, {
-						variant: favorited ? "primary" : "secondary",
-						size: "s",
-						className: CLASS_FAV,
-						loading: favPending,
-						"aria-label": favorited ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}` : `${UI_TEXT.cardFavAddLabel} ${props.postId}`,
-						onClick: () => {
-							onFavClick();
-						},
-						children: [favorited ? /* @__PURE__ */ a(IconStarFilled, { size: 14 }) : /* @__PURE__ */ a(IconStar, { size: 14 }), favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE]
-					}) : null,
-					numericId !== null ? /* @__PURE__ */ a(CollectionsMenu, { postId: numericId }) : null,
-					originalHref !== null ? /* @__PURE__ */ a("a", {
-						className: CLASS_ORIGINAL,
-						href: originalHref,
-						target: "_blank",
-						rel: "noopener",
-						"aria-label": LABEL_ORIGINAL,
-						children: [TEXT_ORIGINAL, /* @__PURE__ */ a(IconExternalLink, { size: 12 })]
-					}) : null
-				]
+			/* @__PURE__ */ a(Card, {
+				className: CLASS_CARD,
+				as: "section",
+				children: /* @__PURE__ */ a("div", {
+					className: CLASS_ACTIONS,
+					children: [
+						props.postId !== null ? /* @__PURE__ */ a(Button, {
+							variant: favorited ? "primary" : "secondary",
+							size: "m",
+							className: CLASS_FAV,
+							loading: favPending,
+							"aria-label": favorited ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}` : `${UI_TEXT.cardFavAddLabel} ${props.postId}`,
+							onClick: () => {
+								onFavClick();
+							},
+							children: [favorited ? /* @__PURE__ */ a(IconStarFilled, { size: 14 }) : /* @__PURE__ */ a(IconStar, { size: 14 }), favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE]
+						}) : null,
+						numericId !== null ? /* @__PURE__ */ a(CollectionsMenu, { postId: numericId }) : null,
+						originalHref !== null ? /* @__PURE__ */ a("a", {
+							className: CLASS_ORIGINAL,
+							href: originalHref,
+							target: "_blank",
+							rel: "noopener",
+							"aria-label": LABEL_ORIGINAL,
+							children: [TEXT_ORIGINAL, /* @__PURE__ */ a(IconExternalLink, { size: 12 })]
+						}) : null
+					]
+				})
 			}),
-			props.postId !== null ? /* @__PURE__ */ a("div", {
-				className: CLASS_SCORE,
-				children: [/* @__PURE__ */ a("div", { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_SCORE }), /* @__PURE__ */ a("b", {
-					className: CLASS_SCORE_VALUE,
-					children: scoreText
-				})] }), /* @__PURE__ */ a(Button, {
-					variant: "secondary",
-					size: "s",
-					className: CLASS_VOTE,
-					loading: votePending,
-					"aria-label": LABEL_VOTE_UP,
-					onClick: () => {
-						onVoteClick();
-					},
-					children: TEXT_VOTE_UP
-				})]
-			}) : null,
-			stats.length > 0 ? /* @__PURE__ */ a("div", {
-				className: CLASS_STATS,
-				children: stats.map((row) => /* @__PURE__ */ a(StatRowView, { row }, row.label))
-			}) : null,
-			iCame !== null ? /* @__PURE__ */ a("div", {
-				className: CLASS_ICAME,
-				children: [/* @__PURE__ */ a(Button, {
-					variant: "secondary",
-					size: "s",
-					"aria-label": LABEL_ICAME,
-					onClick: onICameClick,
-					children: TEXT_ICAME
-				}), iCame.count !== null ? /* @__PURE__ */ a("span", {
-					className: CLASS_ICAME_COUNT,
-					children: iCame.count
+			showScoreCard ? /* @__PURE__ */ a(Card, {
+				className: CLASS_CARD,
+				as: "section",
+				children: [props.postId !== null ? /* @__PURE__ */ a("div", {
+					className: CLASS_SCORE,
+					children: [/* @__PURE__ */ a("div", { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_SCORE }), /* @__PURE__ */ a("b", {
+						className: CLASS_SCORE_VALUE,
+						children: scoreText
+					})] }), /* @__PURE__ */ a(Button, {
+						variant: "secondary",
+						size: "m",
+						className: CLASS_VOTE,
+						loading: votePending,
+						"aria-label": LABEL_VOTE_UP,
+						onClick: () => {
+							onVoteClick();
+						},
+						children: TEXT_VOTE_UP
+					})]
+				}) : null, iCame !== null ? /* @__PURE__ */ a("div", {
+					className: CLASS_ICAME,
+					children: [/* @__PURE__ */ a(Button, {
+						variant: "secondary",
+						size: "m",
+						"aria-label": LABEL_ICAME,
+						onClick: onICameClick,
+						children: TEXT_ICAME
+					}), iCame.count !== null ? /* @__PURE__ */ a("span", {
+						className: CLASS_ICAME_COUNT,
+						children: iCame.count
+					}) : null]
 				}) : null]
 			}) : null,
-			/* @__PURE__ */ a(MoreMenu, { links: moreLinks })
+			moreLinks.length > 0 ? /* @__PURE__ */ a(Card, {
+				className: CLASS_CARD,
+				as: "section",
+				children: /* @__PURE__ */ a(PostActionsList, { links: moreLinks })
+			}) : null,
+			stats.length > 0 ? /* @__PURE__ */ a(Card, {
+				className: `${CLASS_CARD} ${CLASS_STATS}`,
+				as: "section",
+				children: stats.map((row) => /* @__PURE__ */ a(StatRowView, { row }, row.label))
+			}) : null,
+			hasComments ? /* @__PURE__ */ a(CommentsCard, {}) : null
 		]
+	});
+}
+function CommentsCard() {
+	const hostRef = T(null);
+	F(() => {
+		const host = hostRef.current;
+		const comments = findPostComments();
+		if (host === null || comments === null) return;
+		if (comments.parentElement === host) return;
+		const originParent = comments.parentNode;
+		const originNext = comments.nextSibling;
+		host.append(comments);
+		return () => {
+			if (originParent === null) return;
+			if (comments.parentElement === host || comments.parentNode === null) originParent.insertBefore(comments, originNext);
+		};
+	}, []);
+	return /* @__PURE__ */ a(Card, {
+		className: `${CLASS_CARD} ${CLASS_COMMENTS}`,
+		as: "section",
+		children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_COMMENTS }), /* @__PURE__ */ a("div", {
+			className: CLASS_COMMENTS_HOST,
+			ref: hostRef
+		})]
 	});
 }
 function StatRowView(props) {
@@ -10657,70 +11020,101 @@ function StatRowView(props) {
 		children: row.value
 	})] });
 }
-var FEATURE_ID$2 = "post-actions";
-var FEATURE_LABEL$2 = "Post side panel";
-var FEATURE_PAGES$2 = ["post"];
+var FEATURE_ID$4 = "post-actions";
+var FEATURE_LABEL$4 = "Post side panel";
+var FEATURE_PAGES$4 = ["post"];
 /** Body class while the panel host is in the document — CSS hide handoff for G. */
 var POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 var NARROW_BREAKPOINT_PX = 1100;
 var NARROW_MEDIA_QUERY = `(max-width: ${String(1099)}px)`;
-var PANEL_WIDTH_PX = 220;
+var PANEL_WIDTH_PX = 360;
+var PANEL_MIN_WIDTH_PX = 320;
+var PANEL_MAX_WIDTH_PX = 420;
+var PANEL_FONT_SIZE_PX = 13;
+var PANEL_BUTTON_HEIGHT_PX = 36;
+var PANEL_GAP_PX = 12;
+var PANEL_CARD_PADDING_PX = 12;
 var PANEL_STICKY_GAP_PX = 12;
 var PANEL_Z_INDEX = 100;
+var SCORE_VALUE_FONT_SIZE_PX = 18;
 var STICKY_TOP_VAR = "--rdw-post-panel-sticky-top";
 var CLASS_PANEL = "rdw-post-actions";
 var CLASS_MODE_WIDE = "rdw-post-actions--wide";
 var CLASS_MODE_NARROW = "rdw-post-actions--narrow";
 var WARN_NO_FLEXI = "post-actions: div.flexi missing; panel not mounted";
-var BODY_SELECTOR = `body.${featureBodyClass(FEATURE_ID$2)}`;
-var FEATURE_CSS$2 = `
-${BODY_SELECTOR} #fit-to-screen div.flexi,
-${BODY_SELECTOR} div#right-col div.flexi,
-${BODY_SELECTOR} div.flexi {
+var BODY_SELECTOR$2 = `body.${featureBodyClass(FEATURE_ID$4)}`;
+var FEATURE_CSS$4 = `
+${BODY_SELECTOR$2} #fit-to-screen div.flexi,
+${BODY_SELECTOR$2} div#right-col div.flexi,
+${BODY_SELECTOR$2} div.flexi {
   flex-wrap: wrap;
   align-items: flex-start;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
   box-sizing: border-box;
   width: ${String(PANEL_WIDTH_PX)}px;
-  max-width: 100%;
-  flex: 0 0 ${String(PANEL_WIDTH_PX)}px;
+  min-width: ${String(PANEL_MIN_WIDTH_PX)}px;
+  max-width: min(${String(PANEL_MAX_WIDTH_PX)}px, 100%);
+  flex: 0 1 ${String(PANEL_WIDTH_PX)}px;
   z-index: ${String(PANEL_Z_INDEX)};
-  font: 12px/1.35 var(--rdw-font);
+  font: ${String(PANEL_FONT_SIZE_PX)}px/1.35 var(--rdw-font);
   color: var(--rdw-text);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
   position: sticky;
   top: var(${STICKY_TOP_VAR}, ${String(PANEL_STICKY_GAP_PX)}px);
   align-self: flex-start;
+  max-height: calc(100vh - var(${STICKY_TOP_VAR}, ${String(PANEL_STICKY_GAP_PX)}px) - ${String(PANEL_STICKY_GAP_PX)}px);
+  overflow-y: auto;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
   position: static;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   flex: 1 1 100%;
   margin: 0.75rem 0 0;
+  max-height: none;
+  overflow-y: visible;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel {
-  padding: 10px;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel {
   display: grid;
-  gap: 10px;
+  gap: ${String(PANEL_GAP_PX)}px;
   position: relative;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-card {
+  padding: ${String(PANEL_CARD_PADDING_PX)}px;
+  display: grid;
+  gap: ${String(PANEL_GAP_PX)}px;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-btn {
+  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: ${String(PANEL_GAP_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
   grid-column: 1 / -1;
+  width: 100%;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collections {
+  min-width: 0;
+  position: relative;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collections .rdw-btn {
+  width: 100%;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-original {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
   box-sizing: border-box;
-  min-height: 28px;
+  width: 100%;
+  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
   padding: 0 10px;
   border: 1px solid var(--rdw-border);
   border-radius: var(--rdw-radius-m);
@@ -10728,47 +11122,58 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
   color: var(--rdw-text);
   text-decoration: none;
   font: inherit;
-  font-size: 12px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
+  font-weight: 600;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-score {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: ${String(PANEL_GAP_PX)}px;
   background: var(--rdw-surface-2);
   border-radius: var(--rdw-radius-m);
-  padding: 6px 8px;
+  padding: ${String(PANEL_GAP_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
-  font-size: 18px;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
+  font-size: ${String(SCORE_VALUE_FONT_SIZE_PX)}px;
   font-variant-numeric: tabular-nums;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
-  display: grid;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
   grid-template-columns: 62px 1fr;
-  gap: 3px 8px;
-  font-size: 12px;
+  column-gap: ${String(PANEL_GAP_PX)}px;
+  row-gap: ${String(PANEL_GAP_PX)}px;
+  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
   color: var(--rdw-muted);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-source {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-source {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--rdw-accent);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: ${String(PANEL_GAP_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-more {
-  position: relative;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-icame .rdw-btn {
+  flex: 1 1 auto;
+  width: 100%;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-post-actions {
+  display: grid;
+  gap: ${String(PANEL_GAP_PX)}px;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-post-action {
+  width: 100%;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-comments-host {
+  min-width: 0;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -10783,11 +11188,11 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item {
   text-align: left;
   cursor: pointer;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:hover,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:focus-visible {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:hover,
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:focus-visible {
   background: var(--rdw-surface-2);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-check {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-check {
   width: 15px;
   height: 15px;
   flex: 0 0 15px;
@@ -10798,22 +11203,24 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-check {
   color: var(--rdw-surface);
   background: transparent;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item[aria-checked="true"] .rdw-post-panel-collection-check {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item[aria-checked="true"] .rdw-post-panel-collection-check {
   background: var(--rdw-accent);
   border-color: var(--rdw-accent);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-name {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-new-form {
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collection-new-form {
   display: grid;
   gap: 6px;
 }
 @media ${NARROW_MEDIA_QUERY} {
-  ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
+  ${BODY_SELECTOR$2} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
     position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 `.trim();
@@ -10896,7 +11303,7 @@ function mountPostActions(ctx) {
 	host.id = POST_ACTIONS_ID;
 	host.className = CLASS_PANEL;
 	host.setAttribute("role", "complementary");
-	host.setAttribute("aria-label", FEATURE_LABEL$2);
+	host.setAttribute("aria-label", FEATURE_LABEL$4);
 	const postId = readPostIdFromSearch(ctx.search);
 	panelHost = host;
 	document.body.classList.add(POST_PANEL_MOUNTED_CLASS);
@@ -10905,16 +11312,16 @@ function mountPostActions(ctx) {
 	Q(k$1(PostPanel, { postId }), host);
 }
 var postActionsFeature = {
-	id: FEATURE_ID$2,
-	label: FEATURE_LABEL$2,
-	pages: [...FEATURE_PAGES$2],
+	id: FEATURE_ID$4,
+	label: FEATURE_LABEL$4,
+	pages: [...FEATURE_PAGES$4],
 	defaultEnabled: true,
-	css: FEATURE_CSS$2,
+	css: FEATURE_CSS$4,
 	mount: mountPostActions
 };
-var FEATURE_ID$1 = "search-tools";
-var FEATURE_LABEL$1 = "Search tools";
-var FEATURE_PAGES$1 = ["list", "post"];
+var FEATURE_ID$3 = "search-tools";
+var FEATURE_LABEL$3 = "Search tools";
+var FEATURE_PAGES$3 = ["list", "post"];
 /**
 * Followed artists for Feed chip / source detection (read-only).
 * Mirror first — GM snapshots on bfcache pages can omit recent follows.
@@ -10961,7 +11368,17 @@ var EVENT_CHANGE = "change";
 var EVENT_CLICK = "click";
 var EVENT_AWESOMPLETE_SELECT = "awesomplete-selectcomplete";
 var WARN_NO_FORM = "search-tools: search form not found; not mounted";
-var BODY_CLASS = featureBodyClass(FEATURE_ID$1);
+var BODY_CLASS = featureBodyClass(FEATURE_ID$3);
+/**
+* Set on document.body while the panel's «AI posts» row is rendered.
+* Site-skin (HANDOFF G) must hide native Filter AI only under this class.
+*/
+var SEARCH_TOOLS_AI_ROW_BODY_CLASS = "rdw-search-tools-ai-posts";
+var FILTER_AI_WAIT_TIMEOUT_MS = 4e3;
+var FILTER_AI_OBSERVER_OPTIONS = {
+	childList: true,
+	subtree: true
+};
 var TAG_TYPES = [
 	"artist",
 	"character",
@@ -11038,7 +11455,7 @@ var SOURCE_OPTIONS = [
 ];
 var SORT_TOKEN_TO_MODE = /* @__PURE__ */ new Map();
 for (const option of SORT_OPTIONS) if (option.token !== null) SORT_TOKEN_TO_MODE.set(option.token, option.value);
-var FEATURE_CSS$1 = [
+var FEATURE_CSS$3 = [
 	`body.${BODY_CLASS} .${ROOT_CLASS} {`,
 	"  margin-top: 8px;",
 	"  max-width: 100%;",
@@ -11247,6 +11664,42 @@ function findFilterAiCheckbox() {
 	const node = document.querySelector(SITE_SELECTORS.filterAiCheckbox);
 	return node instanceof HTMLInputElement ? node : null;
 }
+function setAiRowBodyClass(active) {
+	document.body.classList.toggle(SEARCH_TOOLS_AI_ROW_BODY_CLASS, active);
+}
+/**
+* Resolve #chkFilterAI now or when the site injects it. Disconnects on find
+* or timeout. Returns a cancel function for unmount.
+*/
+function waitForFilterAiCheckbox(onFound, onTimeout) {
+	const existing = findFilterAiCheckbox();
+	if (existing !== null) {
+		onFound(existing);
+		return () => {};
+	}
+	let settled = false;
+	const finish = (action) => {
+		if (settled) return;
+		settled = true;
+		observer.disconnect();
+		window.clearTimeout(timeoutId);
+		action();
+	};
+	const observer = new MutationObserver(() => {
+		const checkbox = findFilterAiCheckbox();
+		if (checkbox === null) return;
+		finish(() => {
+			onFound(checkbox);
+		});
+	});
+	observer.observe(document.documentElement, FILTER_AI_OBSERVER_OPTIONS);
+	const timeoutId = window.setTimeout(() => {
+		finish(onTimeout);
+	}, FILTER_AI_WAIT_TIMEOUT_MS);
+	return () => {
+		finish(() => {});
+	};
+}
 function readAiPostsMode(checkbox) {
 	return checkbox.checked ? "hide" : "show";
 }
@@ -11399,11 +11852,7 @@ function SearchToolsPanel(props) {
 	const { input } = props;
 	const [view, setView] = d(() => readPanelView(input.value, window.location.search));
 	const [scoreDraft, setScoreDraft] = d(view.minScore);
-	const [aiPosts, setAiPosts] = d(() => {
-		const checkbox = findFilterAiCheckbox();
-		if (checkbox === null) return null;
-		return readAiPostsMode(checkbox);
-	});
+	const [aiPosts, setAiPosts] = d(null);
 	const scoreFocusedRef = T(false);
 	const navTimerRef = T(null);
 	const lastPolledValueRef = T(input.value);
@@ -11479,18 +11928,24 @@ function SearchToolsPanel(props) {
 		};
 	}, [input]);
 	A(() => {
-		const checkbox = findFilterAiCheckbox();
-		if (checkbox === null) {
-			setAiPosts(null);
-			return;
-		}
-		setAiPosts(readAiPostsMode(checkbox));
+		let checkbox = null;
 		const onCheckboxChange = () => {
+			if (checkbox === null) return;
 			setAiPosts(readAiPostsMode(checkbox));
 		};
-		checkbox.addEventListener(EVENT_CHANGE, onCheckboxChange);
+		const cancelWait = waitForFilterAiCheckbox((found) => {
+			checkbox = found;
+			setAiPosts(readAiPostsMode(found));
+			setAiRowBodyClass(true);
+			found.addEventListener(EVENT_CHANGE, onCheckboxChange);
+		}, () => {
+			setAiPosts(null);
+			setAiRowBodyClass(false);
+		});
 		return () => {
-			checkbox.removeEventListener(EVENT_CHANGE, onCheckboxChange);
+			cancelWait();
+			if (checkbox !== null) checkbox.removeEventListener(EVENT_CHANGE, onCheckboxChange);
+			setAiRowBodyClass(false);
 		};
 	}, []);
 	const onChipsClick = (event) => {
@@ -11777,19 +12232,19 @@ function mountSearchTools(_ctx) {
 	Q(/* @__PURE__ */ a(SearchToolsPanel, { input }), root);
 }
 var searchToolsFeature = {
-	id: FEATURE_ID$1,
-	label: FEATURE_LABEL$1,
-	pages: [...FEATURE_PAGES$1],
+	id: FEATURE_ID$3,
+	label: FEATURE_LABEL$3,
+	pages: [...FEATURE_PAGES$3],
 	defaultEnabled: true,
-	css: FEATURE_CSS$1,
+	css: FEATURE_CSS$3,
 	mount: mountSearchTools
 };
-var FEATURE_ID = "tag-groups";
-var FEATURE_LABEL = "Collapse tags";
+var FEATURE_ID$2 = "tag-groups";
+var FEATURE_LABEL$2 = "Collapse tags";
 var TAG_SIDEBAR_SELECTOR = "ul#tag-sidebar";
 var TOGGLE_CLASS = "rdw-tag-group-toggle";
 var COLLAPSED_CLASS = "rdw-tag-group-collapsed";
-var BODY_FEATURE_CLASS = featureBodyClass(FEATURE_ID);
+var BODY_FEATURE_CLASS = featureBodyClass(FEATURE_ID$2);
 var MISSING_SIDEBAR_WARN = "Tag sidebar not found";
 var GROUP_HEADER_NAME_SET = /* @__PURE__ */ new Set([
 	"Copyright",
@@ -11799,8 +12254,8 @@ var GROUP_HEADER_NAME_SET = /* @__PURE__ */ new Set([
 	"Meta"
 ]);
 var DEFAULT_COLLAPSED = ["General", "Meta"];
-var FEATURE_PAGES = ["list", "post"];
-var FEATURE_CSS = [
+var FEATURE_PAGES$2 = ["list", "post"];
+var FEATURE_CSS$2 = [
 	`body.${BODY_FEATURE_CLASS} li.${COLLAPSED_CLASS} { display: none; }`,
 	`body.${BODY_FEATURE_CLASS} button.${TOGGLE_CLASS} {`,
 	"  background: transparent;",
@@ -11892,17 +12347,385 @@ function mountTagGroups(ctx) {
 	const groups = collectGroups(sidebar);
 	for (const group of groups) mountToggle(group, collapsedNames, ctx);
 }
+var tagGroupsFeature = {
+	id: FEATURE_ID$2,
+	label: FEATURE_LABEL$2,
+	pages: [...FEATURE_PAGES$2],
+	defaultEnabled: true,
+	css: FEATURE_CSS$2,
+	mount: mountTagGroups
+};
+/**
+* DOM-ready scheduling helpers. Favorites sync resume lives in deferred app start
+* so this module stays off the favs/storage import path.
+*/
+/**
+* Run `callback` once the document is interactive enough for body mounts.
+* At document-start, waits for DOMContentLoaded; if already past that, runs now.
+*/
+function whenDomReady(callback) {
+	if (document.readyState === "interactive" || document.readyState === "complete") {
+		callback();
+		return;
+	}
+	document.addEventListener("DOMContentLoaded", callback, { once: true });
+}
+/**
+* After first paint: rAF → zero-delay task → callback.
+* Use for feature mounts and heavy module work.
+*/
+function scheduleAfterFirstPaint(callback) {
+	requestAnimationFrame(() => {
+		setTimeout(callback, 0);
+	});
+}
+/**
+* Post-page Fluid Player tweaks: persist volume/mute/rate, wheel volume,
+* and CSS size modes (Fit height / Fit width / Original).
+*
+* Does not replace the Fluid wrapper or rename its classes — only the
+* video element and wrapper size via CSS variables / max-* rules.
+*/
+var FEATURE_ID$1 = VIDEO_PLAYER_FEATURE_ID;
+var FEATURE_LABEL$1 = "Video player tweaks";
+var FEATURE_PAGES$1 = ["post"];
+var VIDEO_ELEMENT_ID = "gelcomVideoPlayer";
+var FLUID_WRAPPER_ID = "fluid_video_wrapper_gelcomVideoPlayer";
+var FLUID_WRAPPER_CLASS = "fluid_video_wrapper";
+var VOLUME_WHEEL_STEP = .05;
+var VOLUME_MIN = 0;
+var VOLUME_MAX = 1;
+var CHROME_GAP_PX = 12;
+var ASPECT_RATIO_CSS_VAR = "--rdw-vp-aspect-ratio";
+var CHROME_OFFSET_CSS_VAR = "--rdw-vp-chrome-offset";
+var ASPECT_RATIO_FALLBACK = "16 / 9";
+var WARN_NO_VIDEO = "video-player: #gelcomVideoPlayer missing; tweaks not mounted";
+var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$1)}`;
+var WRAPPER_SELECTOR = `#${FLUID_WRAPPER_ID}.${FLUID_WRAPPER_CLASS}`;
+var SIZE_LABEL_FIT_HEIGHT = "Fit height";
+var SIZE_LABEL_FIT_WIDTH = "Fit width";
+var SIZE_LABEL_ORIGINAL = "Original";
+function sizeModeCss(value) {
+	const scope = `body.${featureChoiceBodyClass(FEATURE_ID$1, value)} ${WRAPPER_SELECTOR}`;
+	if (value === "original") return "";
+	if (value === "fit-width") return [
+		`${scope} {`,
+		`  max-width: 100%;`,
+		`  aspect-ratio: var(${ASPECT_RATIO_CSS_VAR}, ${ASPECT_RATIO_FALLBACK});`,
+		`}`
+	].join("\n");
+	return [
+		`${scope} {`,
+		`  max-height: calc(100vh - var(${CHROME_OFFSET_CSS_VAR}, 0px));`,
+		`  max-width: 100%;`,
+		`  aspect-ratio: var(${ASPECT_RATIO_CSS_VAR}, ${ASPECT_RATIO_FALLBACK});`,
+		`}`
+	].join("\n");
+}
+var FEATURE_CSS$1 = [
+	`${BODY_SELECTOR$1} ${WRAPPER_SELECTOR} {`,
+	`  box-sizing: border-box;`,
+	`}`,
+	sizeModeCss(VIDEO_SIZE_FIT_HEIGHT),
+	sizeModeCss(VIDEO_SIZE_FIT_WIDTH)
+].join("\n");
+function clampVolume(value) {
+	if (!Number.isFinite(value)) return VOLUME_MIN;
+	return Math.min(VOLUME_MAX, Math.max(VOLUME_MIN, value));
+}
+function readStoredState(ctx) {
+	return ctx.getState(parseVideoPlayerState);
+}
+function writeStoredState(ctx, state) {
+	ctx.setState({
+		volume: state.volume,
+		muted: state.muted,
+		playbackRate: state.playbackRate
+	});
+}
+function findVideo() {
+	const node = document.getElementById(VIDEO_ELEMENT_ID);
+	return node instanceof HTMLVideoElement ? node : null;
+}
+function findWrapper() {
+	const node = document.getElementById(FLUID_WRAPPER_ID);
+	if (!(node instanceof HTMLElement)) return null;
+	if (!node.classList.contains("fluid_video_wrapper")) return null;
+	return node;
+}
+function updateChromeOffsetVar(wrapper) {
+	const offsetPx = measureHeaderOffsetPx(CHROME_GAP_PX);
+	wrapper.style.setProperty(CHROME_OFFSET_CSS_VAR, `${String(offsetPx)}px`);
+}
+function updateAspectRatioVar(wrapper, video) {
+	const width = video.videoWidth;
+	const height = video.videoHeight;
+	if (width <= 0 || height <= 0) return;
+	wrapper.style.setProperty(ASPECT_RATIO_CSS_VAR, `${String(width)} / ${String(height)}`);
+}
+/**
+* Apply persisted volume/mute/rate. Fluid's own volume UI may not mirror
+* programmatic `video.volume` / `video.muted` — see LIVE-CHECK note.
+*/
+function applyPersistedPlayback(video, state) {
+	const volume = state.volume ?? VOLUME_MAX;
+	const muted = state.muted ?? false;
+	const playbackRate = state.playbackRate ?? 1;
+	video.volume = clampVolume(volume);
+	video.muted = muted;
+	video.playbackRate = playbackRate;
+}
+function persistFromVideo(ctx, video) {
+	writeStoredState(ctx, {
+		volume: clampVolume(video.volume),
+		muted: video.muted,
+		playbackRate: video.playbackRate
+	});
+}
+function isEventOverPlayer(target, video, wrapper) {
+	if (!(target instanceof Node)) return false;
+	if (wrapper !== null && wrapper.contains(target)) return true;
+	return video === target || video.contains(target);
+}
+function onWheelVolume(event, video, wrapper, ctx) {
+	if (event.shiftKey) return;
+	if (!isEventOverPlayer(event.target, video, wrapper)) return;
+	event.preventDefault();
+	const direction = event.deltaY < 0 ? 1 : -1;
+	const next = clampVolume(video.volume + direction * VOLUME_WHEEL_STEP);
+	video.volume = next;
+	if (next > VOLUME_MIN && video.muted) video.muted = false;
+	persistFromVideo(ctx, video);
+}
+function bindPlayer(ctx, video) {
+	const wrapper = findWrapper();
+	const state = readStoredState(ctx);
+	const applyLayout = () => {
+		if (wrapper !== null) {
+			updateChromeOffsetVar(wrapper);
+			updateAspectRatioVar(wrapper, video);
+		}
+	};
+	const onLoadedMetadata = () => {
+		applyPersistedPlayback(video, readStoredState(ctx));
+		applyLayout();
+	};
+	if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+		applyPersistedPlayback(video, state);
+		applyLayout();
+	}
+	video.addEventListener("loadedmetadata", onLoadedMetadata);
+	video.addEventListener("volumechange", () => {
+		persistFromVideo(ctx, video);
+	});
+	video.addEventListener("ratechange", () => {
+		persistFromVideo(ctx, video);
+	});
+	const onWheel = (event) => {
+		onWheelVolume(event, video, wrapper, ctx);
+	};
+	(wrapper ?? video).addEventListener("wheel", onWheel, { passive: false });
+	const onResize = () => {
+		applyLayout();
+	};
+	window.addEventListener("resize", onResize);
+}
+function mountVideoPlayer(ctx) {
+	scheduleAfterFirstPaint(() => {
+		const video = findVideo();
+		if (video === null) {
+			log.warn(WARN_NO_VIDEO);
+			return;
+		}
+		bindPlayer(ctx, video);
+	});
+}
+var videoPlayerFeature = {
+	id: FEATURE_ID$1,
+	label: FEATURE_LABEL$1,
+	pages: [...FEATURE_PAGES$1],
+	defaultEnabled: true,
+	choice: {
+		label: "Video size",
+		options: [
+			{
+				value: VIDEO_SIZE_FIT_HEIGHT,
+				label: SIZE_LABEL_FIT_HEIGHT
+			},
+			{
+				value: VIDEO_SIZE_FIT_WIDTH,
+				label: SIZE_LABEL_FIT_WIDTH
+			},
+			{
+				value: VIDEO_SIZE_ORIGINAL,
+				label: SIZE_LABEL_ORIGINAL
+			}
+		],
+		defaultValue: DEFAULT_VIDEO_SIZE
+	},
+	css: FEATURE_CSS$1,
+	mount: mountVideoPlayer
+};
+var FEATURE_ID = "video-preview";
+var FEATURE_LABEL = "Video preview on hover";
+/** Settings caption for Phase 2 F/H (Switch hint under the toggle). */
+var VIDEO_PREVIEW_SETTING_CAPTION = "Each preview loads the video file itself.";
+var FEATURE_PAGES = ["list", "favorites"];
+var VIDEO_CLASS = "rdw-video-preview";
+var WEBM_PREVIEW_SELECTOR = "img.preview.webm-thumb";
+var VIDEO_Z_INDEX = 3;
+var PRELOAD_NONE = "none";
+var BODY_SELECTOR = `body.${featureBodyClass(FEATURE_ID)}`;
+var FEATURE_CSS = `
+${BODY_SELECTOR} .${VIDEO_CLASS} {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: ${String(VIDEO_Z_INDEX)};
+  margin: 0;
+  padding: 0;
+  border: 0;
+  object-fit: contain;
+  pointer-events: none;
+}
+@supports (anchor-name: --a) {
+  ${BODY_SELECTOR} .${VIDEO_CLASS} {
+    position-anchor: ${THUMB_ANCHOR_NAME};
+    top: anchor(top);
+    left: anchor(left);
+    width: anchor-size(width);
+    height: anchor-size(height);
+  }
+}
+`.trim();
+var failedPostIds = /* @__PURE__ */ new Set();
+var boundThumbGeneration = /* @__PURE__ */ new WeakMap();
+var bindGeneration = 0;
+var activePreview = null;
+var hoverTimerId = null;
+var hoverThumb = null;
+var started = false;
+function clearHoverTimer() {
+	if (hoverTimerId === null) return;
+	window.clearTimeout(hoverTimerId);
+	hoverTimerId = null;
+}
+function tearDownActive() {
+	const current = activePreview;
+	if (current === null) return;
+	activePreview = null;
+	current.video.removeEventListener("error", current.onError);
+	current.video.pause();
+	current.video.src = "";
+	current.video.load();
+	current.video.remove();
+}
+function findThumbLink(thumb, postId) {
+	const byId = thumb.querySelector(`#p${postId}`);
+	if (byId instanceof HTMLAnchorElement) return byId;
+	const byHref = thumb.querySelector(SITE_SELECTORS.thumbLink);
+	return byHref instanceof HTMLAnchorElement ? byHref : null;
+}
+function findWebmThumbImage(thumb) {
+	const img = thumb.querySelector(WEBM_PREVIEW_SELECTOR);
+	if (!(img instanceof HTMLImageElement)) return null;
+	return img;
+}
+function startPreview(thumb) {
+	const postId = extractPostIdFromThumb(thumb);
+	if (postId === null || failedPostIds.has(postId)) return;
+	const img = findWebmThumbImage(thumb);
+	if (img === null) return;
+	const videoUrl = buildVideoUrlFromThumbUrl(img.currentSrc || img.src);
+	if (videoUrl === null) return;
+	const link = findThumbLink(thumb, postId);
+	if (link === null) return;
+	tearDownActive();
+	ensureThumbAnchor(thumb);
+	const video = document.createElement("video");
+	video.className = VIDEO_CLASS;
+	video.muted = true;
+	video.defaultMuted = true;
+	video.loop = true;
+	video.playsInline = true;
+	video.setAttribute("playsinline", "");
+	video.preload = PRELOAD_NONE;
+	video.setAttribute("aria-hidden", "true");
+	const onError = () => {
+		failedPostIds.add(postId);
+		if (activePreview?.video === video) tearDownActive();
+		else {
+			video.removeEventListener("error", onError);
+			video.pause();
+			video.src = "";
+			video.load();
+			video.remove();
+		}
+	};
+	video.addEventListener("error", onError);
+	video.src = videoUrl;
+	link.after(video);
+	activePreview = {
+		thumb,
+		video,
+		postId,
+		onError
+	};
+	const playResult = video.play();
+	if (playResult !== void 0) playResult.catch(() => {});
+}
+function onThumbPointerEnter(event) {
+	const thumb = event.currentTarget;
+	if (!(thumb instanceof HTMLElement)) return;
+	const postId = extractPostIdFromThumb(thumb);
+	if (postId === null || failedPostIds.has(postId)) return;
+	if (findWebmThumbImage(thumb) === null) return;
+	clearHoverTimer();
+	hoverThumb = thumb;
+	hoverTimerId = window.setTimeout(() => {
+		hoverTimerId = null;
+		if (hoverThumb !== thumb) return;
+		startPreview(thumb);
+	}, 400);
+}
+function onThumbPointerLeave(event) {
+	const thumb = event.currentTarget;
+	if (!(thumb instanceof HTMLElement)) return;
+	if (hoverThumb === thumb) hoverThumb = null;
+	clearHoverTimer();
+	if (activePreview?.thumb === thumb) tearDownActive();
+}
+function bindThumb(thumb) {
+	if (boundThumbGeneration.get(thumb) === bindGeneration) return;
+	if (findWebmThumbImage(thumb) === null) return;
+	boundThumbGeneration.set(thumb, bindGeneration);
+	thumb.addEventListener("pointerenter", onThumbPointerEnter);
+	thumb.addEventListener("pointerleave", onThumbPointerLeave);
+}
+function bindThumbsInRoot(root) {
+	const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+	for (const thumb of thumbs) if (thumb instanceof HTMLElement) bindThumb(thumb);
+}
+function startBindings() {
+	if (started) return;
+	started = true;
+	bindThumbsInRoot(document);
+	onThumbsAdded((root) => {
+		bindThumbsInRoot(root);
+	});
+}
+function mountVideoPreview(ctx) {
+	if (ctx.pageKind !== "list" && ctx.pageKind !== "favorites") return;
+	scheduleAfterFirstPaint(() => {
+		startBindings();
+	});
+}
 var FEATURES = exports("aK",[
 	feedFeature,
 	menuCleanupFeature,
-	{
-		id: FEATURE_ID,
-		label: FEATURE_LABEL,
-		pages: [...FEATURE_PAGES],
-		defaultEnabled: true,
-		css: FEATURE_CSS,
-		mount: mountTagGroups
-	},
+	tagGroupsFeature,
 	searchToolsFeature,
 	seenDimFeature,
 	playlistMenuFeature,
@@ -11911,7 +12734,17 @@ var FEATURES = exports("aK",[
 	infiniteScrollFeature,
 	postActionsFeature,
 	gridDensityFeature,
-	favoritesBulkFeature
+	favoritesBulkFeature,
+	videoPlayerFeature,
+	{
+		id: FEATURE_ID,
+		label: FEATURE_LABEL,
+		pages: [...FEATURE_PAGES],
+		defaultEnabled: false,
+		settingsCaption: VIDEO_PREVIEW_SETTING_CAPTION,
+		css: FEATURE_CSS,
+		mount: mountVideoPreview
+	}
 ]);
 var mountedIds = /* @__PURE__ */ new Set();
 var activePageKind = null;
@@ -12130,40 +12963,16 @@ function applyLayoutBeforePaint() {
 		ensureSearchToolsPlaceholder();
 	}
 }
-/**
-* DOM-ready scheduling helpers. Favorites sync resume lives in deferred app start
-* so this module stays off the favs/storage import path.
-*/
-/**
-* Run `callback` once the document is interactive enough for body mounts.
-* At document-start, waits for DOMContentLoaded; if already past that, runs now.
-*/
-function whenDomReady(callback) {
-	if (document.readyState === "interactive" || document.readyState === "complete") {
-		callback();
-		return;
-	}
-	document.addEventListener("DOMContentLoaded", callback, { once: true });
-}
-/**
-* After first paint: rAF → zero-delay task → callback.
-* Use for feature mounts and heavy module work.
-*/
-function scheduleAfterFirstPaint(callback) {
-	requestAnimationFrame(() => {
-		setTimeout(callback, 0);
-	});
-}
 bootEarly();
 whenDomReady(() => {
 	applyLayoutBeforePaint();
 	scheduleAfterFirstPaint(() => {
-		module.import('./app-CS3vBhOz-CYd2TUqH.js').then(({ startApp }) => {
+		module.import('./app-B7njDvjb-DD3sd0Ht.js').then(({ startApp }) => {
 			startApp();
 		});
 	});
 });})}}));
-System.register("./masonry-layout-BFj2A2ig-Du-uLmyo.js", ['./___monkey.entry.js'],(function(exports){'use strict';var onThumbsAdded,featureChoiceBodyClass,MASONRY_VALUE,GRID_DENSITY_FEATURE_ID,MASONRY_LIST_SCOPE,SITE_SELECTORS,MASONRY_SPAN_CSS_VAR;return{setters:[function(module){onThumbsAdded=module.o;featureChoiceBodyClass=module.f;MASONRY_VALUE=module.M;GRID_DENSITY_FEATURE_ID=module.G;MASONRY_LIST_SCOPE=module.a;SITE_SELECTORS=module.S;MASONRY_SPAN_CSS_VAR=module.b;}],execute:(function(){exports("startMasonryLayout",startMasonryLayout);/**
+System.register("./masonry-layout-COLMJMFF-Du-uLmyo.js", ['./___monkey.entry.js'],(function(exports){'use strict';var onThumbsAdded,featureChoiceBodyClass,MASONRY_VALUE,GRID_DENSITY_FEATURE_ID,MASONRY_LIST_SCOPE,SITE_SELECTORS,MASONRY_SPAN_CSS_VAR;return{setters:[function(module){onThumbsAdded=module.o;featureChoiceBodyClass=module.f;MASONRY_VALUE=module.M;GRID_DENSITY_FEATURE_ID=module.G;MASONRY_LIST_SCOPE=module.a;SITE_SELECTORS=module.S;MASONRY_SPAN_CSS_VAR=module.b;}],execute:(function(){exports("startMasonryLayout",startMasonryLayout);/**
 * CSS-grid masonry spans for list thumbs. Loaded after first paint from
 * grid-density mount (dynamic import) so the 0.12 CSS-first boot stays intact.
 */
@@ -12338,7 +13147,7 @@ function startMasonryLayout() {
 	}
 	syncLayoutToBodyClass();
 }})}}));
-System.register("./app-CS3vBhOz-CYd2TUqH.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$,PANEL_UI_CLASS,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.c;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.h;SEARCH_PARAM_TAGS=module.i;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.j;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.k;HEADER_SELECTOR=module.H;RDW_OWN_PAGE_CLASS=module.p;MENU_ITEM_ID=module.q;parseRdwHash=module.t;getSyncState=module.u;readFavoritesSyncMode=module.v;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.w;UI_TEXT=module.U;Q=module.Q;RDW_PAGE_ROOT_ID=module.x;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.z;RDW_HASH_COLLECTIONS=module.A;MENU_LABEL=module.B;RDW_HASH_FOLLOWING=module.D;resolveFavoritesUserId=module.E;MY_FAVORITES_CONTAINER_ID=module.I;RDW_HASH_SETTINGS=module.J;RDW_HASH_PREFIX=module.K;createFavoritesSyncTabId=module.L;APPEARANCE_BACKGROUND_KEY=module.O;readArtistsMirror=module.P;listArtistTags=module.T;writeArtistsMirror=module.V;reloadFromStorage=module.W;save=module.X;CURRENT_PAGE_CLASS=module.Y;setSyncState=module.Z;SEARCH_PARAM_PAGE=module._;FAVORITES_PAGE=module.$;FAVORITES_SECTION_VIEW=module.a0;SEARCH_PATH=module.a1;a=module.a2;applyTokenProperties=module.a3;resolveAppearancePalette=module.a4;getSiteSkinCss=module.a5;$=module.a6;PANEL_UI_CLASS=module.a7;RDW_THEME_ATTR=module.a8;APPEARANCE_THEME_SITE=module.a9;APPEARANCE_THEME_SITE_DARK=module.aa;SITE_LIGHT_C_BG=module.ab;SITE_LIGHT_C_BG_ALT=module.ac;SITE_DARK_C_BG=module.ad;SITE_DARK_C_BORDER=module.ae;APPEARANCE_BACKGROUND_TOO_LARGE=module.af;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
+System.register("./app-B7njDvjb-DD3sd0Ht.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$,PANEL_UI_CLASS,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,APPEARANCE_THEME_SITE_DARK,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.c;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.h;SEARCH_PARAM_TAGS=module.i;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.j;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.k;HEADER_SELECTOR=module.H;RDW_OWN_PAGE_CLASS=module.p;MENU_ITEM_ID=module.q;parseRdwHash=module.t;getSyncState=module.u;readFavoritesSyncMode=module.v;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.w;UI_TEXT=module.U;Q=module.Q;RDW_PAGE_ROOT_ID=module.x;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.z;RDW_HASH_COLLECTIONS=module.A;MENU_LABEL=module.B;RDW_HASH_FOLLOWING=module.D;resolveFavoritesUserId=module.E;MY_FAVORITES_CONTAINER_ID=module.I;RDW_HASH_SETTINGS=module.J;RDW_HASH_PREFIX=module.K;createFavoritesSyncTabId=module.L;APPEARANCE_BACKGROUND_KEY=module.O;readArtistsMirror=module.P;listArtistTags=module.T;writeArtistsMirror=module.V;reloadFromStorage=module.W;save=module.X;CURRENT_PAGE_CLASS=module.Y;setSyncState=module.Z;SEARCH_PARAM_PAGE=module._;FAVORITES_PAGE=module.$;FAVORITES_SECTION_VIEW=module.a0;SEARCH_PATH=module.a1;a=module.a2;applyTokenProperties=module.a3;resolveAppearancePalette=module.a4;getSiteSkinCss=module.a5;$=module.a6;PANEL_UI_CLASS=module.a7;RDW_THEME_ATTR=module.a8;APPEARANCE_THEME_SITE=module.a9;SITE_LIGHT_C_BG=module.aa;SITE_LIGHT_C_BG_ALT=module.ab;APPEARANCE_THEME_SITE_DARK=module.ac;SITE_DARK_C_BG=module.ad;SITE_DARK_C_BORDER=module.ae;APPEARANCE_BACKGROUND_TOO_LARGE=module.af;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
 var PAGE_TITLE_CLASS$1 = "rdw-page-title";
 /** Matches kit SectionLabel class. */
 var SECTION_LABEL_CLASS = "rdw-section-label";
@@ -12372,6 +13181,7 @@ var PAGE_CONTENT_CSS = `
 }
 .${PANEL_UI_CLASS.settingsRow} {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -12380,13 +13190,12 @@ var PAGE_CONTENT_CSS = `
   font-size: 12.5px;
   color: var(--rdw-text);
 }
-.${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
-  background: var(--rdw-surface-2);
-}
-/* Site default / Site dark: flat rows (no zebra) inside cards. */
-:host-context(${SITE_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even),
-:host-context(${SITE_DARK_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
-  background: transparent;
+.${PANEL_UI_CLASS.settingsCaption} {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--rdw-muted);
 }
 /*
  * Card vs page: surface not darker than page; Site default card = --c-bg,
@@ -12581,21 +13390,21 @@ var collectionsFactory = null;
 var followingFactory = null;
 function getSettingsFactory() {
 	if (settingsFactory === null) settingsFactory = async () => {
-		const mod = await module.import('./settings-page-Di1vMWgm-BSLqIxZh.js');
+		const mod = await module.import('./settings-page-hbv0vCg1-DEOFxiyw.js');
 		return /* @__PURE__ */ a(mod.SettingsPage, {});
 	};
 	return settingsFactory;
 }
 function getCollectionsFactory() {
 	if (collectionsFactory === null) collectionsFactory = async () => {
-		const mod = await module.import('./collections-page-D2N17473-DsoYi2t2.js');
+		const mod = await module.import('./collections-page-CxgkltcO-DsoYi2t2.js');
 		return /* @__PURE__ */ a(mod.CollectionsPage, {});
 	};
 	return collectionsFactory;
 }
 function getFollowingFactory() {
 	if (followingFactory === null) followingFactory = async () => {
-		const mod = await module.import('./following-page-D7zwU5Uf-CqBcxhYS.js');
+		const mod = await module.import('./following-page-DdL5SnRY-_FiQaA7g.js');
 		return /* @__PURE__ */ a(mod.FollowingPage, {});
 	};
 	return followingFactory;
@@ -13296,7 +14105,7 @@ async function startApp() {
 	await yieldToMain();
 	maybeResumeFavoritesSync();
 }})}}));
-System.register("./settings-page-Di1vMWgm-BSLqIxZh.js", ['./___monkey.entry.js','./app-CS3vBhOz-CYd2TUqH.js','./autocomplete-G_UpHZS5-CaNhSgM3.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,getFeatureChoice,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ag;a=module.a2;PANEL_UI_CLASS=module.a7;Card=module.ah;SectionLabel=module.ai;Switch=module.aj;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.ak;setTweaksEnabled=module.al;NumberField=module.am;UPDATES_GROUP_SIZE_ID=module.an;setUpdatesGroupSize=module.ao;getUpdatesGroupSize=module.ap;PLAYLIST_CHUNK_SIZE_ID=module.aq;setPlaylistChunkSize=module.ar;getPlaylistChunkSize=module.as;GRID_FAV_CHECKBOX_ID=module.at;setGridFavButtonsEnabled=module.au;setGridFavButtonsVisible=module.av;P=module.aw;T=module.ax;A=module.ay;APPEARANCE_THEME_CUSTOM=module.az;KIT_FOCUS_CSS=module.aA;Select=module.aB;APPEARANCE_THEME_SITE=module.a9;APPEARANCE_THEME_SITE_DARK=module.aa;APPEARANCE_THEME_LIGHT=module.aC;APPEARANCE_THEME_DARK=module.aD;$=module.a6;Segmented=module.aE;APPEARANCE_CUSTOM_BASE_LIGHT=module.aF;APPEARANCE_CUSTOM_BASE_DARK=module.aG;TextField=module.aH;Button=module.aI;clampBackgroundDim=module.aJ;FEATURES=module.aK;featurePanelLabel=module.aL;getFeatureChoice=module.aM;FEATURE_CHOICE_ID_PREFIX=module.aN;setFeatureChoiceValue=module.aO;applyCssOnlyFeatureChoice=module.aP;FEATURE_CHECKBOX_ID_PREFIX=module.aQ;setFeatureEnabled=module.aR;applyCssOnlyFeatureEnabled=module.aS;isFeatureEnabled=module.aT;b=module.aU;Chip=module.aV;readSiteBlacklist=module.aW;AutocompleteField=module.aX;ProgressBar=module.aY;createDefaultCustomTheme=module.aZ;AppearanceThemeSchema=module.a_;getAppearance=module.g;prepareBackgroundImageFile=module.a$;writeSiteBlacklist=module.b0;runFavoritesSync=module.w;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.b1;load=module.b2;createDefaultStorage=module.b3;clearStorageCache=module.b4;clearFavsCache=module.b5;getSyncState=module.u;object=module.b6;StorageSchema=module.b7;optional=module.b8;string=module.b9;FavsSchema=module.ba;literal=module.bb;IMPORT_SCHEMA_ERROR_PREFIX=module.bc;stripLegacyPanelWindowSize=module.bd;save=module.X;migrateMarksFavToFavs=module.be;FAVS_STORAGE_KEY=module.bf;createDefaultFavs=module.bg;parseFavsStrict=module.bh;setAppearance=module.bi;applyAppearanceTheme=module.c;getSiteSkinCss=module.a5;loadFavSet=module.bj;STORAGE_BACKUP_KEY=module.bk;extractFavIdsFromMarks=module.bl;gridDensityFeature=module.bm;FAVORITES_SYNC_MODE_INCREMENTAL=module.bn;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bo;getGridFavButtonsEnabled=module.bp;getFeatureChoiceValue=module.bq;getScreenPixelSize=module.br;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
+System.register("./settings-page-hbv0vCg1-DEOFxiyw.js", ['./___monkey.entry.js','./app-B7njDvjb-DD3sd0Ht.js','./autocomplete-DLd-F3P0-CaNhSgM3.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,getFeatureChoice,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ag;a=module.a2;PANEL_UI_CLASS=module.a7;Card=module.ah;SectionLabel=module.ai;Switch=module.aj;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.ak;setTweaksEnabled=module.al;NumberField=module.am;UPDATES_GROUP_SIZE_ID=module.an;setUpdatesGroupSize=module.ao;getUpdatesGroupSize=module.ap;PLAYLIST_CHUNK_SIZE_ID=module.aq;setPlaylistChunkSize=module.ar;getPlaylistChunkSize=module.as;GRID_FAV_CHECKBOX_ID=module.at;setGridFavButtonsEnabled=module.au;setGridFavButtonsVisible=module.av;P=module.aw;T=module.ax;A=module.ay;APPEARANCE_THEME_CUSTOM=module.az;KIT_FOCUS_CSS=module.aA;Select=module.aB;APPEARANCE_THEME_SITE=module.a9;APPEARANCE_THEME_SITE_DARK=module.ac;APPEARANCE_THEME_LIGHT=module.aC;APPEARANCE_THEME_DARK=module.aD;$=module.a6;Segmented=module.aE;APPEARANCE_CUSTOM_BASE_LIGHT=module.aF;APPEARANCE_CUSTOM_BASE_DARK=module.aG;TextField=module.aH;Button=module.aI;clampBackgroundDim=module.aJ;FEATURES=module.aK;featurePanelLabel=module.aL;FEATURE_CHECKBOX_ID_PREFIX=module.aM;setFeatureEnabled=module.aN;applyCssOnlyFeatureEnabled=module.aO;isFeatureEnabled=module.aP;FEATURE_CHOICE_ID_PREFIX=module.aQ;setFeatureChoiceValue=module.aR;applyCssOnlyFeatureChoice=module.aS;getFeatureChoice=module.aT;b=module.aU;Chip=module.aV;readSiteBlacklist=module.aW;AutocompleteField=module.aX;ProgressBar=module.aY;createDefaultCustomTheme=module.aZ;AppearanceThemeSchema=module.a_;getAppearance=module.g;prepareBackgroundImageFile=module.a$;writeSiteBlacklist=module.b0;runFavoritesSync=module.w;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.b1;load=module.b2;createDefaultStorage=module.b3;clearStorageCache=module.b4;clearFavsCache=module.b5;getSyncState=module.u;object=module.b6;StorageSchema=module.b7;optional=module.b8;string=module.b9;FavsSchema=module.ba;literal=module.bb;IMPORT_SCHEMA_ERROR_PREFIX=module.bc;stripLegacyPanelWindowSize=module.bd;save=module.X;migrateMarksFavToFavs=module.be;FAVS_STORAGE_KEY=module.bf;createDefaultFavs=module.bg;parseFavsStrict=module.bh;setAppearance=module.bi;applyAppearanceTheme=module.c;getSiteSkinCss=module.a5;loadFavSet=module.bj;STORAGE_BACKUP_KEY=module.bk;extractFavIdsFromMarks=module.bl;gridDensityFeature=module.bm;FAVORITES_SYNC_MODE_INCREMENTAL=module.bn;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bo;getGridFavButtonsEnabled=module.bp;getFeatureChoiceValue=module.bq;getScreenPixelSize=module.br;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
 var THEME_OPTIONS = [
 	{
 		value: APPEARANCE_THEME_SITE,
@@ -14542,6 +15351,11 @@ function FavoritesSyncSection(props = {}) {
 }
 /** Grid density is owned by Appearance; omit from Page module list. */
 var PAGE_FEATURE_SKIP = /* @__PURE__ */ new Set(["grid-density"]);
+var APPEARANCE_FLAT_ROWS_CSS = `
+.rdw-appearance__row:nth-child(even) {
+  background: transparent;
+}
+`.trim();
 function FeatureModules() {
 	const [, bump] = d(0);
 	const refresh = () => {
@@ -14551,33 +15365,10 @@ function FeatureModules() {
 		className: PANEL_UI_CLASS.settingsGroup,
 		children: FEATURES.filter((feature) => !PAGE_FEATURE_SKIP.has(feature.id)).map((feature) => {
 			const label = featurePanelLabel(feature.id, feature.label);
-			if (feature.choice !== void 0) {
-				const selected = getFeatureChoice(feature.id);
-				return /* @__PURE__ */ a("div", {
-					className: PANEL_UI_CLASS.settingsRow,
-					id: `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`,
-					children: /* @__PURE__ */ a(Select, {
-						label,
-						options: feature.choice.options.map((option) => ({
-							value: option.value,
-							label: option.label
-						})),
-						value: selected,
-						onChange: (value) => {
-							setFeatureChoiceValue(feature.id, value);
-							if (feature.cssOnly === true) {
-								applyCssOnlyFeatureChoice(feature.id, value);
-								refresh();
-								return;
-							}
-							window.location.reload();
-						}
-					})
-				}, feature.id);
-			}
-			return /* @__PURE__ */ a("div", {
+			const choice = feature.choice;
+			return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("div", {
 				className: PANEL_UI_CLASS.settingsRow,
-				children: /* @__PURE__ */ a(Switch, {
+				children: [/* @__PURE__ */ a(Switch, {
 					id: `${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`,
 					label,
 					checked: isFeatureEnabled(feature.id),
@@ -14590,8 +15381,31 @@ function FeatureModules() {
 						}
 						window.location.reload();
 					}
+				}), feature.settingsCaption !== void 0 ? /* @__PURE__ */ a("p", {
+					className: PANEL_UI_CLASS.settingsCaption,
+					children: feature.settingsCaption
+				}) : null]
+			}), choice !== void 0 ? /* @__PURE__ */ a("div", {
+				className: PANEL_UI_CLASS.settingsRow,
+				id: `${FEATURE_CHOICE_ID_PREFIX}${feature.id}`,
+				children: /* @__PURE__ */ a(Select, {
+					label: choice.label ?? label,
+					options: choice.options.map((option) => ({
+						value: option.value,
+						label: option.label
+					})),
+					value: getFeatureChoice(feature.id),
+					onChange: (value) => {
+						setFeatureChoiceValue(feature.id, value);
+						if (feature.cssOnly === true) {
+							applyCssOnlyFeatureChoice(feature.id, value);
+							refresh();
+							return;
+						}
+						window.location.reload();
+					}
 				})
-			}, feature.id);
+			}) : null] }, feature.id);
 		})
 	});
 }
@@ -14605,7 +15419,7 @@ function SettingsPage() {
 		children: [
 			/* @__PURE__ */ a(Card, {
 				className: PANEL_UI_CLASS.pageCard,
-				children: /* @__PURE__ */ a(AppearanceSection, {})
+				children: [/* @__PURE__ */ a(AppearanceSection, {}), /* @__PURE__ */ a("style", { children: APPEARANCE_FLAT_ROWS_CSS })]
 			}),
 			/* @__PURE__ */ a(Card, {
 				className: PANEL_UI_CLASS.pageCard,
@@ -14688,7 +15502,7 @@ function SettingsPage() {
 		]
 	});
 }})}}));
-System.register("./collections-page-D2N17473-DsoYi2t2.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ag;listPlaylists=module.bs;readTagsFromLocation=module.bt;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;SectionLabel=module.ai;addCollection=module.bu;$=module.a6;Button=module.aI;UI_TEXT=module.U;serialize=module.bv;renameCollection=module.bw;deleteCollection=module.bx;buildSearchUrl=module.by;createPlaylist=module.bz;EmptyState=module.bA;buildPlaylistQueries=module.bB;getPlaylistChunkSize=module.as;buildUpdatesSearchUrl=module.bC;load=module.b2;isPlaylist=module.bD;A=module.ay;TextField=module.aH;IconButton=module.bE;IconTrash=module.bF;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
+System.register("./collections-page-CxgkltcO-DsoYi2t2.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ag;listPlaylists=module.bs;readTagsFromLocation=module.bt;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;SectionLabel=module.ai;addCollection=module.bu;$=module.a6;Button=module.aI;UI_TEXT=module.U;serialize=module.bv;renameCollection=module.bw;deleteCollection=module.bx;buildSearchUrl=module.by;createPlaylist=module.bz;EmptyState=module.bA;buildPlaylistQueries=module.bB;getPlaylistChunkSize=module.as;buildUpdatesSearchUrl=module.bC;load=module.b2;isPlaylist=module.bD;A=module.ay;TextField=module.aH;IconButton=module.bE;IconTrash=module.bF;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
 var PLAYLIST_META_CLASS = "rdw-playlist-meta";
 var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
 var PLAYLIST_PART_CLASS = "rdw-playlist-part";
@@ -15061,7 +15875,7 @@ function CollectionsPage() {
 		})]
 	})] });
 }})}}));
-System.register("./following-page-D7zwU5Uf-CqBcxhYS.js", ['./___monkey.entry.js','./autocomplete-G_UpHZS5-CaNhSgM3.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ag;T=module.ax;A=module.ay;getSeenPostId=module.bG;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;UI_TEXT=module.U;$=module.a6;EmptyState=module.bA;ARTISTS_EMPTY_HINT=module.bH;ARTISTS_EMPTY_TITLE=module.bI;Button=module.aI;SEARCH_PATH=module.a1;SEARCH_PARAM_PAGE=module._;SEARCH_PAGE=module.bJ;SEARCH_SECTION=module.bK;TextField=module.aH;ARTIST_FILTER_LABEL=module.bL;ARTIST_FILTER_ID=module.bM;UNFOLLOWED_PREFIX=module.bN;UNFOLLOW_UNDO_LABEL=module.bO;buildSearchUrl=module.by;TAG_TYPE_INCLUDE=module.bP;IconButton=module.bE;IconX=module.bQ;AutocompleteField=module.aX;normalizeArtistTag=module.n;isFollowingArtist=module.bR;addArtist=module.bS;log=module.l;removeArtist=module.bT;UNFOLLOW_UNDO_MS=module.bU;load=module.b2;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
+System.register("./following-page-DdL5SnRY-_FiQaA7g.js", ['./___monkey.entry.js','./autocomplete-DLd-F3P0-CaNhSgM3.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ag;T=module.ax;A=module.ay;getSeenPostId=module.bG;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;UI_TEXT=module.U;$=module.a6;EmptyState=module.bA;ARTISTS_EMPTY_HINT=module.bH;ARTISTS_EMPTY_TITLE=module.bI;Button=module.aI;SEARCH_PATH=module.a1;SEARCH_PARAM_PAGE=module._;SEARCH_PAGE=module.bJ;SEARCH_SECTION=module.bK;TextField=module.aH;ARTIST_FILTER_LABEL=module.bL;ARTIST_FILTER_ID=module.bM;UNFOLLOWED_PREFIX=module.bN;UNFOLLOW_UNDO_LABEL=module.bO;buildSearchUrl=module.by;TAG_TYPE_INCLUDE=module.bP;IconButton=module.bE;IconX=module.bQ;AutocompleteField=module.aX;normalizeArtistTag=module.n;isFollowingArtist=module.bR;addArtist=module.bS;log=module.l;removeArtist=module.bT;UNFOLLOW_UNDO_MS=module.bU;load=module.b2;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
 var ADD_INPUT_ID = "rdw-following-add-tag";
 var OPEN_POSTS_LABEL = "Open Posts";
 var OPEN_POSTS_HREF = `${SEARCH_PATH}?${SEARCH_PARAM_PAGE}=${SEARCH_PAGE}&s=${SEARCH_SECTION}`;
@@ -15296,7 +16110,7 @@ function FollowingPage() {
 		})
 	})] });
 }})}}));
-System.register("./autocomplete-G_UpHZS5-CaNhSgM3.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bV;log=module.l;SITE_ORIGIN=module.h;array=module.bW;object=module.b6;optional=module.b8;nullable=module.bX;string=module.b9;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
+System.register("./autocomplete-DLd-F3P0-CaNhSgM3.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bV;log=module.l;SITE_ORIGIN=module.h;array=module.bW;object=module.b6;optional=module.b8;nullable=module.bX;string=module.b9;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
 var AUTOCOMPLETE_TAG_TYPE_ARTIST = exports("A","artist");
 var HTTP_TOO_MANY_REQUESTS = 429;
 var ABORT_ERROR_NAME = "AbortError";

@@ -15,25 +15,14 @@ import {
 } from "../../src/ui/tokens";
 
 describe("PAGE_CONTENT_CSS site theme polish", () => {
-  it("keeps zebra for non-site themes but clears it under site / site-dark", () => {
-    expect(PAGE_CONTENT_CSS).toContain(
+  it("does not zebra settings rows under any theme", () => {
+    expect(PAGE_CONTENT_CSS).not.toMatch(
+      new RegExp(
+        String.raw`\.${PANEL_UI_CLASS.settingsRow}:nth-child\(even\)\s*\{[^}]*background:\s*var\(--rdw-surface-2\)`,
+      ),
+    );
+    expect(PAGE_CONTENT_CSS).not.toContain(
       `.${PANEL_UI_CLASS.settingsRow}:nth-child(even)`,
-    );
-    expect(PAGE_CONTENT_CSS).toContain("background: var(--rdw-surface-2)");
-
-    const siteSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
-    const darkSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
-    expect(PAGE_CONTENT_CSS).toContain(`:host-context(${siteSel})`);
-    expect(PAGE_CONTENT_CSS).toContain(`:host-context(${darkSel})`);
-    expect(PAGE_CONTENT_CSS).toMatch(
-      new RegExp(
-        String.raw`:host-context\(\[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"\]\)[\s\S]*?\.${PANEL_UI_CLASS.settingsRow}:nth-child\(even\)[\s\S]*?background:\s*transparent`,
-      ),
-    );
-    expect(PAGE_CONTENT_CSS).toMatch(
-      new RegExp(
-        String.raw`:host-context\(\[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"\]\)[\s\S]*?\.${PANEL_UI_CLASS.settingsRow}:nth-child\(even\)[\s\S]*?background:\s*transparent`,
-      ),
     );
   });
 
@@ -51,6 +40,9 @@ describe("PAGE_CONTENT_CSS site theme polish", () => {
     expect(PAGE_CONTENT_CSS).toContain("rdw-page-title");
     expect(PAGE_CONTENT_CSS).toContain("rdw-section-label");
     const siteSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+    const darkSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+    expect(PAGE_CONTENT_CSS).toContain(`:host-context(${siteSel})`);
+    expect(PAGE_CONTENT_CSS).toContain(`:host-context(${darkSel})`);
     expect(PAGE_CONTENT_CSS).toContain(
       `:host-context(${siteSel}) .rdw-section-label`,
     );

@@ -22,6 +22,12 @@ const CLASS_SEPARATOR = "rdw-infinite-page";
 const CLASS_RETRY = "rdw-infinite-retry";
 const CLASS_BLACKLISTED = "rdw-blacklisted";
 
+/** Must match PREFETCH_REMAINING_VIEWPORT_HEIGHTS in infinite-scroll.ts. */
+const PREFETCH_REMAINING_VIEWPORT_HEIGHTS = 2;
+/** Pre-0.14 fixed rootMargin; tests assert the new threshold is not this. */
+const LEGACY_ROOT_MARGIN_PX = 800;
+const TEST_VIEWPORT_HEIGHT_PX = 600;
+
 type IoCallback = IntersectionObserverCallback;
 
 let ioInstances: MockIntersectionObserver[] = [];
@@ -224,6 +230,91 @@ describe("infiniteScrollFeature", () => {
       `body.${featureBodyClass("infinite-scroll")}`,
     );
     expect(infiniteScrollFeature.css).toContain("grid-column: 1 / -1");
+  });
+
+  it("uses two viewport heights as IntersectionObserver rootMargin", () => {
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT_PX,
+    });
+    buildListPage();
+    mockFetchSequence([
+      {
+        body: pageHtml([buildThumbHtml("s200", "tag", 1, "s")], null),
+      },
+    ]);
+
+    infiniteScrollFeature.mount(makeCtx());
+
+    const instance = ioInstances[0];
+    expect(instance).toBeDefined();
+    const expectedMarginPx =
+      PREFETCH_REMAINING_VIEWPORT_HEIGHTS * TEST_VIEWPORT_HEIGHT_PX;
+    expect(instance?.rootMargin).toBe(`${String(expectedMarginPx)}px`);
+    expect(instance?.rootMargin).not.toBe(`${String(LEGACY_ROOT_MARGIN_PX)}px`);
+  });
+
+  it("loads when sentinel is beyond legacy 800px but within two viewport heights", async () => {
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT_PX,
+    });
+    // Legacy viewBottom = IH+800; new = IH+2*IH. Pick a top between them.
+    const sentinelTopBeyondLegacy =
+      TEST_VIEWPORT_HEIGHT_PX + LEGACY_ROOT_MARGIN_PX + 100;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({
+        x: 0,
+        y: sentinelTopBeyondLegacy,
+        width: 10,
+        height: 1,
+      }),
+    );
+
+    const { imageList } = buildListPage();
+    mockFetchSequence([
+      {
+        body: pageHtml([buildThumbHtml("s200", "tag", 1, "s")], null),
+      },
+    ]);
+
+    infiniteScrollFeature.mount(makeCtx());
+    await triggerAndSettle(() => imageList.querySelector("#s200") !== null);
+
+    expect(imageList.querySelector("#s200")).not.toBeNull();
+  });
+
+  it("does not load when sentinel is farther than two viewport heights", async () => {
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: TEST_VIEWPORT_HEIGHT_PX,
+    });
+    const sentinelTopBeyondPrefetch =
+      TEST_VIEWPORT_HEIGHT_PX +
+      PREFETCH_REMAINING_VIEWPORT_HEIGHTS * TEST_VIEWPORT_HEIGHT_PX +
+      50;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({
+        x: 0,
+        y: sentinelTopBeyondPrefetch,
+        width: 10,
+        height: 1,
+      }),
+    );
+
+    buildListPage();
+    const fetchMock = mockFetchSequence([
+      {
+        body: pageHtml([buildThumbHtml("s200", "tag", 1, "s")], null),
+      },
+    ]);
+
+    infiniteScrollFeature.mount(makeCtx());
+    await triggerIntersect();
+    await flushMicrotasks();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.querySelector("#s200")).toBeNull();
   });
 
   it("does nothing when image-list is missing", () => {

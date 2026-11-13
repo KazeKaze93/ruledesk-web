@@ -13,6 +13,7 @@ export {
   type ChipProps,
   type ChipVariant,
 } from "./chip";
+export { Dialog, DIALOG_CSS, type DialogProps } from "./dialog";
 export {
   EmptyState,
   EMPTY_STATE_CSS,

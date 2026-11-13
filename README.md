@@ -16,7 +16,15 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 **Tampermonkey → Dashboard → Settings → Security → Content Script API → UserScripts API Dynamic.**
 
-Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typically 0/5 vs ~5/5 with Instant; pages also open faster. Prefer Dynamic for RuleDesk Web.
+Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typically 0/5 vs ~5/5 with UserScripts API; pages also open faster. Prefer Dynamic for RuleDesk Web.
+
+### 0.14.0 notes
+
+- **Post comments column:** native `#post-comments` moves into the post panel (reply form stays on the page)
+- **Video player tweaks:** persist volume/mute/rate, wheel volume; **Video size** Fit height / Fit width / Original (default Fit height)
+- **Video preview on hover:** optional grid webm preview (default off; each preview loads the video file itself)
+- **Bulk favorites:** confirm remove uses kit Dialog; select bar above the grid
+- **Infinite scroll:** prefetch margin ~2 viewport heights ahead of the sentinel
 
 ### 0.13.0 notes
 
@@ -110,6 +118,8 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
 | `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS grid + row-span on list; content flex-grows; favorites falls back to default) |
+| `video-player` | Video player tweaks | on | post | Persist volume/mute/rate, wheel volume; **Video size** choice: Fit height / Fit width / Original |
+| `video-preview` | Video preview on hover | off | list, favorites | Hover preview on webm thumbs (loads the video file itself) |
 
 **Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 

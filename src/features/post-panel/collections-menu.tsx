@@ -125,7 +125,7 @@ export function CollectionsMenu(
     <div className={CLASS_WRAP} ref={bindTrigger}>
       <Button
         variant="secondary"
-        size="s"
+        size="m"
         className={CLASS_TRIGGER}
         aria-label={TEXT_COLLECTIONS}
         onClick={() => {

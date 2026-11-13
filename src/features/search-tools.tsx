@@ -100,6 +100,18 @@ const WARN_NO_FORM = "search-tools: search form not found; not mounted";
 
 const BODY_CLASS = featureBodyClass(FEATURE_ID);
 
+/**
+ * Set on document.body while the panel's «AI posts» row is rendered.
+ * Site-skin (HANDOFF G) must hide native Filter AI only under this class.
+ */
+export const SEARCH_TOOLS_AI_ROW_BODY_CLASS = "rdw-search-tools-ai-posts";
+
+const FILTER_AI_WAIT_TIMEOUT_MS = 4000;
+const FILTER_AI_OBSERVER_OPTIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+};
+
 const TAG_TYPES = [
   "artist",
   "character",
@@ -514,6 +526,55 @@ function findFilterAiCheckbox(): HTMLInputElement | null {
   return node instanceof HTMLInputElement ? node : null;
 }
 
+function setAiRowBodyClass(active: boolean): void {
+  document.body.classList.toggle(SEARCH_TOOLS_AI_ROW_BODY_CLASS, active);
+}
+
+/**
+ * Resolve #chkFilterAI now or when the site injects it. Disconnects on find
+ * or timeout. Returns a cancel function for unmount.
+ */
+function waitForFilterAiCheckbox(
+  onFound: (checkbox: HTMLInputElement) => void,
+  onTimeout: () => void,
+): () => void {
+  const existing = findFilterAiCheckbox();
+  if (existing !== null) {
+    onFound(existing);
+    return (): void => {};
+  }
+
+  let settled = false;
+  const finish = (action: () => void): void => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    observer.disconnect();
+    window.clearTimeout(timeoutId);
+    action();
+  };
+
+  const observer = new MutationObserver(() => {
+    const checkbox = findFilterAiCheckbox();
+    if (checkbox === null) {
+      return;
+    }
+    finish(() => {
+      onFound(checkbox);
+    });
+  });
+  observer.observe(document.documentElement, FILTER_AI_OBSERVER_OPTIONS);
+
+  const timeoutId = window.setTimeout(() => {
+    finish(onTimeout);
+  }, FILTER_AI_WAIT_TIMEOUT_MS);
+
+  return (): void => {
+    finish(() => {});
+  };
+}
+
 function readAiPostsMode(checkbox: HTMLInputElement): AiPostsMode {
   return checkbox.checked ? "hide" : "show";
 }
@@ -726,13 +787,7 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
     readPanelView(input.value, window.location.search),
   );
   const [scoreDraft, setScoreDraft] = useState<number | null>(view.minScore);
-  const [aiPosts, setAiPosts] = useState<AiPostsMode | null>(() => {
-    const checkbox = findFilterAiCheckbox();
-    if (checkbox === null) {
-      return null;
-    }
-    return readAiPostsMode(checkbox);
-  });
+  const [aiPosts, setAiPosts] = useState<AiPostsMode | null>(null);
   const scoreFocusedRef = useRef(false);
   const navTimerRef = useRef<number | null>(null);
   const lastPolledValueRef = useRef(input.value);
@@ -849,18 +904,33 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
   }, [input]);
 
   useEffect(() => {
-    const checkbox = findFilterAiCheckbox();
-    if (checkbox === null) {
-      setAiPosts(null);
-      return;
-    }
-    setAiPosts(readAiPostsMode(checkbox));
+    let checkbox: HTMLInputElement | null = null;
     const onCheckboxChange = (): void => {
+      if (checkbox === null) {
+        return;
+      }
       setAiPosts(readAiPostsMode(checkbox));
     };
-    checkbox.addEventListener(EVENT_CHANGE, onCheckboxChange);
+
+    const cancelWait = waitForFilterAiCheckbox(
+      (found) => {
+        checkbox = found;
+        setAiPosts(readAiPostsMode(found));
+        setAiRowBodyClass(true);
+        found.addEventListener(EVENT_CHANGE, onCheckboxChange);
+      },
+      () => {
+        setAiPosts(null);
+        setAiRowBodyClass(false);
+      },
+    );
+
     return () => {
-      checkbox.removeEventListener(EVENT_CHANGE, onCheckboxChange);
+      cancelWait();
+      if (checkbox !== null) {
+        checkbox.removeEventListener(EVENT_CHANGE, onCheckboxChange);
+      }
+      setAiRowBodyClass(false);
     };
   }, []);
 

@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 
 import { DEBUG_KEY } from "../../src/config/constants";
-import { searchToolsFeature } from "../../src/features/search-tools";
+import {
+  SEARCH_TOOLS_AI_ROW_BODY_CLASS,
+  searchToolsFeature,
+} from "../../src/features/search-tools";
 import {
   featureBodyClass,
   type FeatureContext,
@@ -606,6 +609,57 @@ describe("searchToolsFeature", () => {
     expect(
       root?.querySelector('[role="radiogroup"][aria-label="AI posts"]'),
     ).toBeNull();
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(false);
+  });
+
+  it("keeps native Filter AI visible (no body class) until timeout without checkbox", () => {
+    buildSearchForm("cat");
+    mountFeature();
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(false);
+    expect(
+      document
+        .getElementById(ROOT_ID)
+        ?.querySelector('[role="radiogroup"][aria-label="AI posts"]'),
+    ).toBeNull();
+  });
+
+  it("adds AI-row body class only after #chkFilterAI appears via MutationObserver", async () => {
+    buildSearchForm("cat");
+    mountFeature();
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(false);
+    expect(
+      document
+        .getElementById(ROOT_ID)
+        ?.querySelector('[role="radiogroup"][aria-label="AI posts"]'),
+    ).toBeNull();
+
+    await act(async () => {
+      mountFilterAiCheckbox(false);
+      // jsdom delivers MutationObserver callbacks on a microtask.
+      await Promise.resolve();
+    });
+
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(true);
+    expect(
+      document
+        .getElementById(ROOT_ID)
+        ?.querySelector('[role="radiogroup"][aria-label="AI posts"]'),
+    ).not.toBeNull();
+    expect(SEARCH_TOOLS_AI_ROW_BODY_CLASS).toBe("rdw-search-tools-ai-posts");
   });
 
   it("mirrors #chkFilterAI into AI posts Show/Hide under Source", () => {
@@ -617,6 +671,9 @@ describe("searchToolsFeature", () => {
       `#${ROOT_ID} [role="radiogroup"][aria-label="AI posts"]`,
     );
     expect(group).not.toBeNull();
+    expect(
+      document.body.classList.contains(SEARCH_TOOLS_AI_ROW_BODY_CLASS),
+    ).toBe(true);
     expect(aiPostsRadio("Show").getAttribute("aria-checked")).toBe("true");
     expect(aiPostsRadio("Hide").getAttribute("aria-checked")).toBe("false");
   });

@@ -31,6 +31,8 @@ export type FeatureChoiceOption = {
 export type FeatureChoice = {
   options: FeatureChoiceOption[];
   defaultValue: string;
+  /** Select label when the feature also shows an enable Switch (defaults to feature.label). */
+  label?: string;
 };
 
 export type Feature = {
@@ -42,5 +44,7 @@ export type Feature = {
   /** Live toggle via body class + CSS only; mount runs at most once per page load. */
   cssOnly?: boolean;
   choice?: FeatureChoice;
+  /** Optional hint under the settings Switch (e.g. video-preview bandwidth note). */
+  settingsCaption?: string;
   mount: (ctx: FeatureContext) => void;
 };

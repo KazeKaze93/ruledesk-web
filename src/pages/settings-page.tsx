@@ -1,5 +1,5 @@
 import type { JSX } from "preact";
-import { render as preactRender } from "preact";
+import { Fragment, render as preactRender } from "preact";
 import { useState } from "preact/hooks";
 
 import { UI_TEXT } from "../config/constants";
@@ -48,6 +48,18 @@ import { FavoritesSyncSection } from "./favorites-sync-section";
 /** Grid density is owned by Appearance; omit from Page module list. */
 const PAGE_FEATURE_SKIP = new Set(["grid-density"]);
 
+/**
+ * AppearanceSection injects its own zebra; this late style (after the section)
+ * clears it for all themes so the Grid row matches flat settings cards.
+ * appearance-section.tsx is out of Package F ownership.
+ */
+const APPEARANCE_ROW_CLASS = "rdw-appearance__row";
+const APPEARANCE_FLAT_ROWS_CSS = `
+.${APPEARANCE_ROW_CLASS}:nth-child(even) {
+  background: transparent;
+}
+`.trim();
+
 function FeatureModules(): JSX.Element {
   const [, bump] = useState(0);
   const refresh = (): void => {
@@ -59,51 +71,55 @@ function FeatureModules(): JSX.Element {
       {FEATURES.filter((feature) => !PAGE_FEATURE_SKIP.has(feature.id)).map(
         (feature) => {
           const label = featurePanelLabel(feature.id, feature.label);
-          if (feature.choice !== undefined) {
-            const selected = getFeatureChoice(feature.id);
-            return (
-              <div
-                key={feature.id}
-                className={PANEL_UI_CLASS.settingsRow}
-                id={`${FEATURE_CHOICE_ID_PREFIX}${feature.id}`}
-              >
-                <Select
+          const choice = feature.choice;
+          return (
+            <Fragment key={feature.id}>
+              <div className={PANEL_UI_CLASS.settingsRow}>
+                <Switch
+                  id={`${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`}
                   label={label}
-                  options={feature.choice.options.map((option) => ({
-                    value: option.value,
-                    label: option.label,
-                  }))}
-                  value={selected}
-                  onChange={(value) => {
-                    setFeatureChoiceValue(feature.id, value);
+                  checked={isFeatureEnabled(feature.id)}
+                  onChange={(checked) => {
+                    setFeatureEnabled(feature.id, checked);
                     if (feature.cssOnly === true) {
-                      applyCssOnlyFeatureChoice(feature.id, value);
+                      applyCssOnlyFeatureEnabled(feature.id, checked);
                       refresh();
                       return;
                     }
                     window.location.reload();
                   }}
                 />
+                {feature.settingsCaption !== undefined ? (
+                  <p className={PANEL_UI_CLASS.settingsCaption}>
+                    {feature.settingsCaption}
+                  </p>
+                ) : null}
               </div>
-            );
-          }
-          return (
-            <div key={feature.id} className={PANEL_UI_CLASS.settingsRow}>
-              <Switch
-                id={`${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`}
-                label={label}
-                checked={isFeatureEnabled(feature.id)}
-                onChange={(checked) => {
-                  setFeatureEnabled(feature.id, checked);
-                  if (feature.cssOnly === true) {
-                    applyCssOnlyFeatureEnabled(feature.id, checked);
-                    refresh();
-                    return;
-                  }
-                  window.location.reload();
-                }}
-              />
-            </div>
+              {choice !== undefined ? (
+                <div
+                  className={PANEL_UI_CLASS.settingsRow}
+                  id={`${FEATURE_CHOICE_ID_PREFIX}${feature.id}`}
+                >
+                  <Select
+                    label={choice.label ?? label}
+                    options={choice.options.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    }))}
+                    value={getFeatureChoice(feature.id)}
+                    onChange={(value) => {
+                      setFeatureChoiceValue(feature.id, value);
+                      if (feature.cssOnly === true) {
+                        applyCssOnlyFeatureChoice(feature.id, value);
+                        refresh();
+                        return;
+                      }
+                      window.location.reload();
+                    }}
+                  />
+                </div>
+              ) : null}
+            </Fragment>
           );
         },
       )}
@@ -125,6 +141,7 @@ export function SettingsPage(): JSX.Element {
     <div className={PANEL_UI_CLASS.scrollRegion}>
       <Card className={PANEL_UI_CLASS.pageCard}>
         <AppearanceSection />
+        <style>{APPEARANCE_FLAT_ROWS_CSS}</style>
       </Card>
 
       <Card className={PANEL_UI_CLASS.pageCard}>

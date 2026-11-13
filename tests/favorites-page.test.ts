@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectFavoritePostIds,
   listFavoriteThumbEntries,
+  removeFavoriteCell,
   resolveFavoriteThumbPostId,
   syncFavoritesPage,
 } from "../src/site/favorites-page";
@@ -39,6 +40,24 @@ function buildFavoritesFragment(): HTMLDivElement {
     <span class="thumb" id="s222">
       <a href="#" onclick="document.location='index.php?page=favorites&s=delete&id=222&return_pid=5'; return false;"><b>Remove</b></a>
     </span>
+  `;
+  return root;
+}
+
+/** Remove sits outside the thumb with separators — live leftovers after thumb-only delete. */
+function buildFavoritesFragmentWithAdjacentRemove(): HTMLDivElement {
+  const root = document.createElement("div");
+  root.innerHTML = `
+    <span class="thumb" id="s111">
+      <a id="p111" href="index.php?page=post&s=view&id=111"><img class="preview"></a>
+    </span>
+    <a href="#" onclick="document.location='index.php?page=favorites&s=delete&id=111&return_pid=0'; return false;"><b>Remove</b></a>
+    |
+    <br>
+    <span class="thumb" id="s222">
+      <a id="p222" href="index.php?page=post&s=view&id=222"><img class="preview"></a>
+    </span>
+    <a href="#" onclick="document.location='index.php?page=favorites&s=delete&id=222&return_pid=0'; return false;"><b>Remove</b></a>
   `;
   return root;
 }
@@ -90,5 +109,53 @@ describe("favorites page sync", () => {
     expect(remove).toBeInstanceOf(HTMLAnchorElement);
     remove?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(isFav(111)).toBe(false);
+  });
+
+  it("removeFavoriteCell drops thumb when Remove is inside the thumb", () => {
+    const root = buildFavoritesFragment();
+    const thumb = root.querySelector("#s111");
+    expect(thumb).toBeInstanceOf(HTMLElement);
+    if (!(thumb instanceof HTMLElement)) {
+      return;
+    }
+    removeFavoriteCell(thumb);
+    expect(root.querySelector("#s111")).toBeNull();
+    expect(root.querySelector("#s222")).not.toBeNull();
+    expect(root.textContent).not.toContain("id=111");
+  });
+
+  it("removeFavoriteCell drops adjacent Remove and separators until the next thumb", () => {
+    const root = buildFavoritesFragmentWithAdjacentRemove();
+    const thumb = root.querySelector("#s111");
+    expect(thumb).toBeInstanceOf(HTMLElement);
+    if (!(thumb instanceof HTMLElement)) {
+      return;
+    }
+    removeFavoriteCell(thumb);
+    expect(root.querySelector("#s111")).toBeNull();
+    expect(root.querySelector("a[onclick*='id=111']")).toBeNull();
+    expect(root.querySelector("#s222")).not.toBeNull();
+    expect(root.querySelector("a[onclick*='id=222']")).not.toBeNull();
+    expect(root.textContent).not.toContain("|");
+  });
+
+  it("removeFavoriteCell does not remove the paginator after the last thumb", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <span class="thumb" id="s111">
+        <a id="p111" href="index.php?page=post&s=view&id=111"><img class="preview"></a>
+      </span>
+      <a href="#" onclick="document.location='index.php?page=favorites&s=delete&id=111&return_pid=0'; return false;">Remove</a>
+      <div id="paginator"><b>1</b></div>
+    `;
+    const thumb = root.querySelector("#s111");
+    expect(thumb).toBeInstanceOf(HTMLElement);
+    if (!(thumb instanceof HTMLElement)) {
+      return;
+    }
+    removeFavoriteCell(thumb);
+    expect(root.querySelector("#s111")).toBeNull();
+    expect(root.querySelector("a[onclick*='id=111']")).toBeNull();
+    expect(root.querySelector("#paginator")).not.toBeNull();
   });
 });

@@ -49,6 +49,7 @@ export const PAGE_CONTENT_CSS = `
 }
 .${PANEL_UI_CLASS.settingsRow} {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -57,13 +58,12 @@ export const PAGE_CONTENT_CSS = `
   font-size: 12.5px;
   color: var(--rdw-text);
 }
-.${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
-  background: var(--rdw-surface-2);
-}
-/* Site default / Site dark: flat rows (no zebra) inside cards. */
-:host-context(${SITE_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even),
-:host-context(${SITE_DARK_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
-  background: transparent;
+.${PANEL_UI_CLASS.settingsCaption} {
+  flex: 1 0 100%;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--rdw-muted);
 }
 /*
  * Card vs page: surface not darker than page; Site default card = --c-bg,

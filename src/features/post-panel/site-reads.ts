@@ -7,6 +7,8 @@ export const FLEXI_SELECTOR =
   "#fit-to-screen div.flexi, div#right-col div.flexi, div.flexi";
 export const IMAGE_ID = "image";
 export const HEADER_SELECTOR = "div#header";
+export const POST_COMMENTS_ID = "post-comments";
+export const COMMENT_LIST_ID = "comment-list";
 
 export const ORIGINAL_LINK_TEXT = "Original image";
 export const ADD_FAVORITES_LINK_TEXT = "Add to favorites";
@@ -452,4 +454,10 @@ export function measureHeaderOffsetPx(gapPx: number): number {
     return gapPx;
   }
   return header.getBoundingClientRect().height + gapPx;
+}
+
+/** Native comments block on the post page (moved into the panel, not cloned). */
+export function findPostComments(): HTMLElement | null {
+  const node = document.getElementById(POST_COMMENTS_ID);
+  return node instanceof HTMLElement ? node : null;
 }

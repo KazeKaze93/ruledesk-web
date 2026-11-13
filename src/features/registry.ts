@@ -11,6 +11,8 @@ import { postActionsFeature } from "./post-actions";
 import { searchToolsFeature } from "./search-tools";
 import { tagGroupsFeature } from "./tag-groups";
 import type { Feature } from "./types";
+import { videoPlayerFeature } from "./video-player";
+import { videoPreviewFeature } from "./video-preview";
 
 // Package A: masonry-layout is started from gridDensityFeature.mount (dynamic
 // import after first paint) — no separate FEATURES entry required.
@@ -28,4 +30,6 @@ export const FEATURES: Feature[] = [
   postActionsFeature,
   gridDensityFeature,
   favoritesBulkFeature,
+  videoPlayerFeature,
+  videoPreviewFeature,
 ];

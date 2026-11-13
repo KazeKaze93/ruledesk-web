@@ -16,6 +16,7 @@ import { clearStorageCache } from "../../src/storage/store";
 
 const ROOT_ID = "rdw-favorites-bulk";
 const BODY_CLASS = featureBodyClass("favorites-bulk");
+const IMAGE_LIST_CLASS = "image-list";
 
 const memory = new Map<string, unknown>();
 
@@ -46,35 +47,77 @@ function makeCtx(): FeatureContext {
   };
 }
 
-function buildFavoritesPage(ids: number[]): void {
+function appendFavoriteThumb(
+  parent: ParentNode,
+  id: number,
+  options: { readonly removeInsideThumb?: boolean } = {},
+): void {
+  const removeInsideThumb = options.removeInsideThumb !== false;
+  const thumb = document.createElement("span");
+  thumb.className = "thumb";
+  thumb.id = `s${String(id)}`;
+
+  const postLink = document.createElement("a");
+  postLink.id = `p${String(id)}`;
+  postLink.href = `index.php?page=post&s=view&id=${String(id)}`;
+  const img = document.createElement("img");
+  img.className = "preview";
+  postLink.append(img);
+  thumb.append(postLink);
+
+  const remove = document.createElement("a");
+  remove.href = "#";
+  remove.setAttribute(
+    "onclick",
+    `document.location='index.php?page=favorites&s=delete&id=${String(id)}&return_pid=0'; return false;`,
+  );
+  remove.textContent = "Remove";
+
+  if (removeInsideThumb) {
+    thumb.append(remove);
+    parent.append(thumb);
+    return;
+  }
+
+  parent.append(thumb);
+  parent.append(remove);
+  parent.append(document.createTextNode(" | "));
+  const br = document.createElement("br");
+  parent.append(br);
+}
+
+function buildFavoritesPage(
+  ids: number[],
+  options: {
+    readonly inImageList?: boolean;
+    readonly removeInsideThumb?: boolean;
+  } = {},
+): HTMLElement | null {
+  const host =
+    options.inImageList === true
+      ? (() => {
+          const list = document.createElement("div");
+          list.className = IMAGE_LIST_CLASS;
+          document.body.append(list);
+          return list;
+        })()
+      : document.body;
+
   for (const id of ids) {
-    const thumb = document.createElement("span");
-    thumb.className = "thumb";
-    thumb.id = `s${String(id)}`;
-
-    const postLink = document.createElement("a");
-    postLink.id = `p${String(id)}`;
-    postLink.href = `index.php?page=post&s=view&id=${String(id)}`;
-    const img = document.createElement("img");
-    img.className = "preview";
-    postLink.append(img);
-
-    const remove = document.createElement("a");
-    remove.href = "#";
-    remove.setAttribute(
-      "onclick",
-      `document.location='index.php?page=favorites&s=delete&id=${String(id)}&return_pid=0'; return false;`,
-    );
-    remove.textContent = "Remove";
-
-    thumb.append(postLink, remove);
-    document.body.append(thumb);
+    if (options.removeInsideThumb === undefined) {
+      appendFavoriteThumb(host, id);
+    } else {
+      appendFavoriteThumb(host, id, {
+        removeInsideThumb: options.removeInsideThumb,
+      });
+    }
   }
 
   const paginator = document.createElement("div");
   paginator.id = "paginator";
   paginator.innerHTML = "<b>1</b>";
   document.body.append(paginator);
+  return options.inImageList === true ? host : null;
 }
 
 function mountFeature(): void {
@@ -155,6 +198,34 @@ describe("favoritesBulkFeature", () => {
     expect(root?.textContent).toContain("Select");
   });
 
+  it("places the bar above the image-list grid, not inside it beside the first thumb", () => {
+    const list = buildFavoritesPage([11, 22], { inImageList: true });
+    expect(list).not.toBeNull();
+    mountFeature();
+
+    const root = document.getElementById(ROOT_ID);
+    expect(root).not.toBeNull();
+    expect(list?.contains(root)).toBe(false);
+    expect(root?.nextElementSibling).toBe(list);
+    expect(favoritesBulkFeature.css).toContain("grid-column: 1 / -1");
+    expect(favoritesBulkFeature.css).toContain("flex: 0 0 100%");
+  });
+
+  it("shows selection count with Select page / Clear / Remove selected / Cancel on one row", () => {
+    buildFavoritesPage([11, 22]);
+    mountFeature();
+    clickButtonWithText("Select");
+
+    const root = document.getElementById(ROOT_ID);
+    const text = root?.textContent ?? "";
+    expect(text).toContain("0 selected");
+    expect(text).toContain("Select page");
+    expect(text).toContain("Clear");
+    expect(text).toContain("Remove selected (0)");
+    expect(text).toContain("Cancel");
+    expect(root?.querySelector(".rdw-favorites-bulk-bar")).not.toBeNull();
+  });
+
   it("toggles selection chrome as a sibling of a#p{ID}, not inside it", () => {
     buildFavoritesPage([11]);
     mountFeature();
@@ -177,6 +248,7 @@ describe("favoritesBulkFeature", () => {
       expect(postLink.contains(check)).toBe(false);
       expect(postLink.nextElementSibling).toBe(check);
     }
+    expect(document.getElementById(ROOT_ID)?.textContent).toContain("1 selected");
   });
 
   it("blocks navigation when toggling a thumb in selection mode", () => {
@@ -196,7 +268,7 @@ describe("favoritesBulkFeature", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it("opens kit confirm instead of window.confirm for Remove selected", () => {
+  it("opens kit Dialog confirm instead of window.confirm for Remove selected", () => {
     buildFavoritesPage([11, 22]);
     mountFeature();
     clickButtonWithText("Select");
@@ -206,10 +278,18 @@ describe("favoritesBulkFeature", () => {
     expect(window.confirm).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain("cannot be undone on the site");
     expect(document.body.textContent).toContain("Remove 2 favorites");
+    const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+    expect(dialog).not.toBeNull();
+    expect(document.querySelector(".rdw-dialog-backdrop")).not.toBeNull();
     const confirmBtn = [...document.querySelectorAll("button")].find(
       (button) => button.textContent?.trim() === "Confirm",
     );
     expect(confirmBtn).toBeTruthy();
+    // Control bar stays; confirm is overlay, not an in-flow full-width Card.
+    expect(document.querySelector(".rdw-favorites-bulk-bar")?.textContent).toContain(
+      "2 selected",
+    );
+    expect(document.querySelector(".rdw-card.rdw-favorites-bulk-confirm")).toBeNull();
   });
 
   it("removes favorites one-by-one with the sync pause between requests", async () => {
@@ -245,6 +325,34 @@ describe("favoritesBulkFeature", () => {
     expect(isFav(22)).toBe(false);
     expect(document.getElementById("s22")).toBeNull();
     expect(document.getElementById(ROOT_ID)?.textContent).toContain("Select");
+  });
+
+  it("removes adjacent Remove link and separators when Remove is outside the thumb", async () => {
+    vi.useFakeTimers();
+    buildFavoritesPage([11, 22], { removeInsideThumb: false });
+    addFav(11);
+    addFav(22);
+    mountFeature();
+    mockFetchOk();
+
+    expect(document.body.textContent).toContain("Remove");
+    expect(document.body.textContent).toContain("|");
+
+    clickButtonWithText("Select");
+    clickButtonWithText("Select page");
+    clickButtonWithText("Remove selected (2)");
+    clickButtonWithText("Confirm");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(document.getElementById("s11")).toBeNull();
+    expect(document.getElementById("s22")).toBeNull();
+    expect(document.body.textContent).not.toContain("Remove");
+    expect(document.body.textContent).not.toContain("|");
   });
 
   it("stops on non-200 without retries and reports deleted count + failed id", async () => {

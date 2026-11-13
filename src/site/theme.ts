@@ -48,10 +48,20 @@ export function clearSiteThemeCookie(): void {
   ].join("; ");
 }
 
-function isSiteDesktopStylesheetPath(pathname: string): boolean {
+/**
+ * Match site desktop CSS hrefs without URL-parsing.
+ * `//css/desktop.css` is protocol-relative with host `css`; `new URL` yields
+ * pathname `/desktop.css` and misses `/css/desktop.css` suffix checks.
+ */
+function hrefWithoutQuery(href: string): string {
+  const queryIndex = href.indexOf("?");
+  return queryIndex === -1 ? href : href.slice(0, queryIndex);
+}
+
+function isSiteDesktopStylesheetHref(href: string): boolean {
+  const path = hrefWithoutQuery(href);
   return (
-    pathname.endsWith(LIGHT_STYLESHEET_PATH) ||
-    pathname.endsWith(DARK_STYLESHEET_PATH)
+    path.endsWith(LIGHT_STYLESHEET_PATH) || path.endsWith(DARK_STYLESHEET_PATH)
   );
 }
 
@@ -61,12 +71,15 @@ function stylesheetFilenameForTheme(theme: SiteTheme): string {
     : SITE_THEME_STYLESHEET_LIGHT;
 }
 
+/** Swap filename in the raw href so `//css/` and `/css/` forms stay intact. */
 function replaceStylesheetFilename(href: string, filename: string): string {
-  const url = new URL(href, window.location.href);
-  const segments = url.pathname.split("/");
-  segments[segments.length - 1] = filename;
-  url.pathname = segments.join("/");
-  return url.href;
+  if (href.includes(SITE_THEME_STYLESHEET_DARK)) {
+    return href.replace(SITE_THEME_STYLESHEET_DARK, filename);
+  }
+  if (href.includes(SITE_THEME_STYLESHEET_LIGHT)) {
+    return href.replace(SITE_THEME_STYLESHEET_LIGHT, filename);
+  }
+  return href;
 }
 
 function findSiteDesktopStylesheetLink(): HTMLLinkElement | null {
@@ -78,13 +91,7 @@ function findSiteDesktopStylesheetLink(): HTMLLinkElement | null {
     if (href === null || href.length === 0) {
       continue;
     }
-    let pathname: string;
-    try {
-      pathname = new URL(href, window.location.href).pathname;
-    } catch {
-      continue;
-    }
-    if (isSiteDesktopStylesheetPath(pathname)) {
+    if (isSiteDesktopStylesheetHref(href)) {
       return link;
     }
   }
