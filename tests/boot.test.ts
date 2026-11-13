@@ -5,8 +5,17 @@ import {
   injectSiteSkinHook,
   injectTokenStyles,
 } from "../src/boot/appearance-dom";
+import {
+  cheapParseAppearance,
+  clearRawStorageCache,
+  peekAppearanceForPaint,
+  readRawStorageOnce,
+} from "../src/boot/cheap-appearance";
 import { bootEarly } from "../src/boot/early";
-import { whenDomReady } from "../src/boot/ready";
+import {
+  scheduleAfterFirstPaint,
+  whenDomReady,
+} from "../src/boot/ready";
 import {
   DEBUG_KEY,
   DEFAULT_APPEARANCE_THEME,
@@ -17,6 +26,7 @@ import {
   TOKEN_STYLE_ID,
 } from "../src/config/constants";
 import { getSiteSkinCss } from "../src/skin/site-skin";
+import { SITE_DARK_PALETTE_RESOLVED } from "../src/skin/theme";
 import { clearStorageCache } from "../src/storage/store";
 import { LIGHT_PALETTE, TOKEN_VAR } from "../src/ui/tokens";
 
@@ -25,6 +35,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearStorageCache();
+  clearRawStorageCache();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -39,7 +50,61 @@ function installGmMocks(): void {
   });
 }
 
-describe("boot early appearance", () => {
+describe("cheap appearance parse (no zod)", () => {
+  beforeEach(() => {
+    installGmMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reads theme from nested settings without validating marks", () => {
+    const appearance = cheapParseAppearance({
+      version: 1,
+      collections: "not-an-array",
+      artists: null,
+      marks: { boom: "invalid" },
+      settings: {
+        appearance: { theme: "site-dark" },
+      },
+    });
+    expect(appearance).toEqual({ theme: "site-dark" });
+  });
+
+  it("defaults when appearance missing", () => {
+    expect(cheapParseAppearance(undefined).theme).toBe(DEFAULT_APPEARANCE_THEME);
+    expect(cheapParseAppearance({ version: 1 }).theme).toBe(
+      DEFAULT_APPEARANCE_THEME,
+    );
+  });
+
+  it("peekAppearanceForPaint uses a single GM read", () => {
+    const spy = vi.fn((key: string, defaultValue?: unknown): unknown => {
+      if (!memory.has(key)) {
+        return defaultValue;
+      }
+      return memory.get(key);
+    });
+    vi.stubGlobal("GM_getValue", spy);
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {},
+      settings: { appearance: { theme: "dark" } },
+    });
+    expect(peekAppearanceForPaint().theme).toBe("dark");
+    expect(peekAppearanceForPaint().theme).toBe("dark");
+    const storageReads = spy.mock.calls.filter(
+      (call) => call[0] === STORAGE_KEY,
+    );
+    expect(storageReads.length).toBe(1);
+    expect(readRawStorageOnce()).toBe(memory.get(STORAGE_KEY));
+  });
+});
+
+describe("boot early appearance — CSS first", () => {
   beforeEach(() => {
     installGmMocks();
     memory.set(DEBUG_KEY, false);
@@ -75,6 +140,74 @@ describe("boot early appearance", () => {
     expect(bodySpy).not.toHaveBeenCalled();
   });
 
+  it("injects CSS immediately after the cheap GM read (order contract)", () => {
+    const order: string[] = [];
+    vi.stubGlobal(
+      "GM_getValue",
+      (key: string, defaultValue?: unknown): unknown => {
+        if (key === STORAGE_KEY) {
+          order.push("gm-appearance");
+        }
+        if (!memory.has(key)) {
+          return defaultValue;
+        }
+        return memory.get(key);
+      },
+    );
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {},
+      settings: { appearance: { theme: "site-dark" } },
+    });
+
+    const parent = document.head ?? document.documentElement;
+    const originalAppend = parent.append.bind(parent);
+    vi.spyOn(parent, "append").mockImplementation((...nodes: Array<Node | string>) => {
+      for (const node of nodes) {
+        if (node instanceof HTMLStyleElement) {
+          order.push(`style:${node.id}`);
+        }
+      }
+      return originalAppend(...nodes);
+    });
+
+    bootEarly();
+
+    expect(order[0]).toBe("gm-appearance");
+    const firstStyle = order.findIndex((step) => step.startsWith("style:"));
+    expect(firstStyle).toBeGreaterThan(0);
+    expect(order.slice(firstStyle)).toEqual(
+      expect.arrayContaining([
+        `style:${TOKEN_STYLE_ID}`,
+        `style:${SITE_SKIN_STYLE_ID}`,
+      ]),
+    );
+    expect(order.indexOf("gm-appearance")).toBeLessThan(firstStyle);
+    expect(document.documentElement.getAttribute(RDW_THEME_ATTR)).toBe(
+      "site-dark",
+    );
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      SITE_DARK_PALETTE_RESOLVED.bg,
+    );
+  });
+
+  it("does not call store.load / favs on the pre-paint path", async () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: { "1": { seen: true } },
+      settings: { appearance: { theme: "light" } },
+    });
+    const store = await import("../src/storage/store");
+    const loadSpy = vi.spyOn(store, "load");
+    bootEarly();
+    expect(loadSpy).not.toHaveBeenCalled();
+    loadSpy.mockRestore();
+  });
+
   it("applies custom dark base via token stylesheet", () => {
     applyAppearanceToDocument({
       appearance: {
@@ -84,6 +217,7 @@ describe("boot early appearance", () => {
           backgroundDim: 0.2,
         },
       },
+      omitBackgroundImage: true,
     });
     expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
       "#16181c",
@@ -104,7 +238,7 @@ describe("boot early appearance", () => {
   });
 });
 
-describe("whenDomReady", () => {
+describe("whenDomReady + scheduleAfterFirstPaint", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -130,6 +264,23 @@ describe("whenDomReady", () => {
     whenDomReady(callback);
     expect(callback).toHaveBeenCalledTimes(1);
   });
+
+  it("runs after rAF then zero-delay timeout", () => {
+    vi.useFakeTimers();
+    const callback = vi.fn();
+    const raf = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      });
+    scheduleAfterFirstPaint(callback);
+    expect(callback).not.toHaveBeenCalled();
+    vi.runAllTimers();
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(raf).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });
 
 describe("boot order contract", () => {
@@ -147,7 +298,7 @@ describe("boot order contract", () => {
     vi.restoreAllMocks();
   });
 
-  it("injects styles before DOMContentLoaded and modules after", () => {
+  it("injects styles before DOMContentLoaded and modules after paint gate", () => {
     Object.defineProperty(document, "readyState", {
       configurable: true,
       get: () => "loading",
@@ -166,14 +317,26 @@ describe("boot order contract", () => {
     expect(startApp).not.toHaveBeenCalled();
 
     whenDomReady(() => {
-      startApp();
+      scheduleAfterFirstPaint(() => {
+        startApp();
+      });
     });
     expect(startApp).not.toHaveBeenCalled();
     expect(order).toEqual(["styles"]);
 
+    vi.useFakeTimers();
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation(
+      (cb: FrameRequestCallback) => {
+        cb(0);
+        return 1;
+      },
+    );
     document.dispatchEvent(new Event("DOMContentLoaded"));
+    expect(startApp).not.toHaveBeenCalled();
+    vi.runAllTimers();
     expect(startApp).toHaveBeenCalledTimes(1);
     expect(order).toEqual(["styles", "modules"]);
+    vi.useRealTimers();
   });
 });
 

@@ -4,7 +4,11 @@
  * Injected via applyAppearanceTheme → injectSiteSkinHook(getSiteSkinCss()).
  */
 
-import { RDW_SKIN_CLASS, RDW_THEME_ATTR } from "../config/constants";
+import {
+  CSS_CLASS,
+  RDW_SKIN_CLASS,
+  RDW_THEME_ATTR,
+} from "../config/constants";
 import { RDW_PAGE_ROOT_ID } from "../pages/constants";
 import { TOKEN_VAR } from "../ui/tokens";
 
@@ -13,10 +17,16 @@ const ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
 
 /** search-tools mount root (id + class in src/features/search-tools.tsx). */
 const SEARCH_TOOLS_ROOT_ID = "rdw-search-tools";
+/** Reset control class (src/features/search-tools.tsx). */
+const SEARCH_TOOLS_RESET_CLASS = "rdw-search-tools-reset";
 /** Exclude our light-DOM controls from site button/input chrome. */
 const NOT_RDW_CLASS = ':not([class*="rdw-"])';
 const NOT_SEARCH_TOOLS_DESCENDANT = `:not(#${SEARCH_TOOLS_ROOT_ID} *)`;
-const NOT_OUR_CONTROL = `${NOT_RDW_CLASS}${NOT_SEARCH_TOOLS_DESCENDANT}`;
+/**
+ * Same exclusions as :not…:not…, but :where() zeros their specificity so an
+ * ID-bearing :not cannot outrank accent rules like div.tag-search submit.
+ */
+const WHERE_NOT_OUR_CONTROL = `:where(${NOT_RDW_CLASS}${NOT_SEARCH_TOOLS_DESCENDANT})`;
 
 const v = {
   bg: `var(${TOKEN_VAR.bg})`,
@@ -357,6 +367,26 @@ ${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:last-of-type:hover {
   color: ${v.accent};
 }
 
+/* Artist Follow: kit secondary on theme tokens (beats document-chrome #fff) */
+${ROOT} button.${CSS_CLASS.artistFollow} {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  border-radius: ${v.radiusS};
+}
+
+${ROOT} button.${CSS_CLASS.artistFollow}:hover {
+  background: ${v.accentSoft};
+  border-color: ${v.accent};
+  color: ${v.accent};
+}
+
+${ROOT} button.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked} {
+  background: ${v.accentSoft};
+  border-color: ${v.accent};
+  color: ${v.accent};
+}
+
 /* —— search field —— */
 ${ROOT} div.tag-search input[type="text"],
 ${ROOT} div.tag-search input[type="search"] {
@@ -391,11 +421,30 @@ ${ROOT} div.tag-search button[type="submit"]:hover {
   filter: brightness(1.05);
 }
 
-${ROOT} input[type="text"]${NOT_OUR_CONTROL}:focus,
-${ROOT} input[type="password"]${NOT_OUR_CONTROL}:focus,
-${ROOT} input[type="search"]${NOT_OUR_CONTROL}:focus,
-${ROOT} textarea${NOT_OUR_CONTROL}:focus,
-${ROOT} select${NOT_OUR_CONTROL}:focus {
+/* Kit ghost / link-button: single line in the search-tools foot row */
+${ROOT} #${SEARCH_TOOLS_ROOT_ID} .${SEARCH_TOOLS_RESET_CLASS} {
+  flex-shrink: 0;
+  white-space: nowrap;
+  background: transparent;
+  border-color: transparent;
+  color: ${v.accent};
+  font-weight: 600;
+  padding: 0;
+  min-height: auto;
+  height: auto;
+}
+
+${ROOT} #${SEARCH_TOOLS_ROOT_ID} .${SEARCH_TOOLS_RESET_CLASS}:hover {
+  color: ${v.text};
+  background: transparent;
+  border-color: transparent;
+}
+
+${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} select${WHERE_NOT_OUR_CONTROL}:focus {
   background: ${v.surface};
   outline: 2px solid ${v.accent};
   outline-offset: 1px;
@@ -598,29 +647,29 @@ ${ROOT} .manual-page-chooser > input[type="submit"] {
 }
 
 /* —— forms / tables (site chrome; skip search-tools + any .rdw-* control) —— */
-${ROOT} input${NOT_OUR_CONTROL},
-${ROOT} select${NOT_OUR_CONTROL},
-${ROOT} textarea${NOT_OUR_CONTROL},
-${ROOT} button${NOT_OUR_CONTROL} {
+${ROOT} input${WHERE_NOT_OUR_CONTROL},
+${ROOT} select${WHERE_NOT_OUR_CONTROL},
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL},
+${ROOT} button${WHERE_NOT_OUR_CONTROL} {
   color: ${v.text};
   font-family: ${v.font};
 }
 
-${ROOT} input[type="text"]${NOT_OUR_CONTROL},
-${ROOT} input[type="password"]${NOT_OUR_CONTROL},
-${ROOT} input[type="search"]${NOT_OUR_CONTROL},
-${ROOT} input[type="number"]${NOT_OUR_CONTROL},
-${ROOT} select${NOT_OUR_CONTROL},
-${ROOT} textarea${NOT_OUR_CONTROL} {
+${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="number"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} select${WHERE_NOT_OUR_CONTROL},
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL} {
   background: ${v.surface};
   border: 1px solid ${v.border};
   border-radius: ${v.radiusS};
   color: ${v.text};
 }
 
-${ROOT} button${NOT_OUR_CONTROL},
-${ROOT} input[type="submit"]${NOT_OUR_CONTROL},
-${ROOT} input[type="button"]${NOT_OUR_CONTROL},
+${ROOT} button${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL},
 ${ROOT} .gdprbutton button {
   background: ${v.surface};
   border: 1px solid ${v.border};
@@ -630,9 +679,9 @@ ${ROOT} .gdprbutton button {
   cursor: pointer;
 }
 
-${ROOT} button${NOT_OUR_CONTROL}:hover,
-${ROOT} input[type="submit"]${NOT_OUR_CONTROL}:hover,
-${ROOT} input[type="button"]${NOT_OUR_CONTROL}:hover,
+${ROOT} button${WHERE_NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL}:hover,
 ${ROOT} .gdprbutton button:hover {
   background: ${v.accentSoft};
   border-color: ${v.accent};

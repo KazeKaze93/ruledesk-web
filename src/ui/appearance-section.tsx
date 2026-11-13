@@ -1,6 +1,6 @@
 import type { JSX } from "preact";
 import { render } from "preact";
-import { useId, useRef, useState } from "preact/hooks";
+import { useEffect, useId, useRef, useState } from "preact/hooks";
 
 import { getSiteSkinCss } from "../skin/site-skin";
 import {
@@ -29,12 +29,14 @@ import {
   type AppearanceCustomBase,
 } from "../storage/schema";
 import {
-  clearAppearanceBackgroundDataUrl,
+  clearBackground,
+  loadBackground,
+  saveBackground,
+} from "../storage/background-store";
+import {
   getAppearance,
-  getAppearanceBackgroundDataUrl,
   getFeatureChoiceValue,
   setAppearance,
-  setAppearanceBackgroundDataUrl,
   setFeatureChoiceValue,
 } from "../storage/store";
 import { Button } from "./kit/button";
@@ -193,13 +195,17 @@ function ensureCustom(appearance: Appearance): AppearanceCustom {
   return appearance.custom ?? createDefaultCustomTheme();
 }
 
-function persistAndApply(appearance: Appearance): void {
+function persistAndApply(
+  appearance: Appearance,
+  backgroundDataUrl?: string | null,
+): void {
   const parsed = setAppearance(appearance);
-  const backgroundDataUrl = getAppearanceBackgroundDataUrl();
   applyAppearanceTheme({
     appearance: parsed,
     siteSkinCss: getSiteSkinCss(),
-    ...(backgroundDataUrl !== undefined
+    ...(backgroundDataUrl !== undefined &&
+    backgroundDataUrl !== null &&
+    backgroundDataUrl.length > 0
       ? { backgroundDataUrl }
       : {}),
   });
@@ -227,6 +233,9 @@ export function AppearanceSection(
     const current = getAppearance();
     return current.custom?.backgroundImage ?? "";
   });
+  const [storedBackgroundUrl, setStoredBackgroundUrl] = useState<string | null>(
+    null,
+  );
   const [fileError, setFileError] = useState<string>("");
   const [imageMeta, setImageMeta] = useState<{
     width: number;
@@ -235,16 +244,42 @@ export function AppearanceSection(
   } | null>(null);
   const [screenHint] = useState<string>(() => formatScreenHint());
 
+  // First paint uses base palette colors only; stored image loads async after.
+  useEffect(() => {
+    let cancelled = false;
+    void loadBackground().then((dataUrl) => {
+      if (cancelled || dataUrl === null) {
+        return;
+      }
+      setStoredBackgroundUrl(dataUrl);
+      const current = getAppearance();
+      if (current.theme !== APPEARANCE_THEME_CUSTOM) {
+        return;
+      }
+      applyAppearanceTheme({
+        appearance: current,
+        siteSkinCss: getSiteSkinCss(),
+        backgroundDataUrl: dataUrl,
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const custom = ensureCustom(appearance);
   const isCustom = appearance.theme === APPEARANCE_THEME_CUSTOM;
   const hasBackground =
-    (getAppearanceBackgroundDataUrl()?.length ?? 0) > 0 ||
+    (storedBackgroundUrl?.length ?? 0) > 0 ||
     (custom.backgroundImage?.length ?? 0) > 0 ||
     bgUrlDraft.length > 0;
 
-  function commitAppearance(next: Appearance): void {
+  function commitAppearance(
+    next: Appearance,
+    backgroundDataUrl?: string | null,
+  ): void {
     setAppearanceState(next);
-    persistAndApply(next);
+    persistAndApply(next, backgroundDataUrl);
     setFileError("");
   }
 
@@ -255,10 +290,13 @@ export function AppearanceSection(
     }
     const theme = parsed.data;
     if (theme === APPEARANCE_THEME_CUSTOM) {
-      commitAppearance({
-        theme,
-        custom: ensureCustom(appearance),
-      });
+      commitAppearance(
+        {
+          theme,
+          custom: ensureCustom(appearance),
+        },
+        storedBackgroundUrl,
+      );
       return;
     }
     commitAppearance({ theme });
@@ -282,10 +320,13 @@ export function AppearanceSection(
         ? { backgroundImage: current.backgroundImage }
         : {}),
     };
-    commitAppearance({
-      theme: APPEARANCE_THEME_CUSTOM,
-      custom: nextCustom,
-    });
+    commitAppearance(
+      {
+        theme: APPEARANCE_THEME_CUSTOM,
+        custom: nextCustom,
+      },
+      storedBackgroundUrl,
+    );
   }
 
   function onBgUrlCommit(url: string): void {
@@ -301,7 +342,8 @@ export function AppearanceSection(
       ...(trimmed.length > 0 ? { backgroundImage: trimmed } : {}),
     };
     if (trimmed.length > 0) {
-      clearAppearanceBackgroundDataUrl();
+      setStoredBackgroundUrl(null);
+      void clearBackground();
     }
     commitAppearance({
       theme: APPEARANCE_THEME_CUSTOM,
@@ -319,10 +361,13 @@ export function AppearanceSection(
         ? { backgroundImage: base.backgroundImage }
         : {}),
     };
-    commitAppearance({
-      theme: APPEARANCE_THEME_CUSTOM,
-      custom: nextCustom,
-    });
+    commitAppearance(
+      {
+        theme: APPEARANCE_THEME_CUSTOM,
+        custom: nextCustom,
+      },
+      storedBackgroundUrl,
+    );
   }
 
   async function onFileSelected(file: File | undefined): Promise<void> {
@@ -331,7 +376,8 @@ export function AppearanceSection(
     }
     try {
       const prepared = await prepareBackgroundImageFile(file);
-      setAppearanceBackgroundDataUrl(prepared.dataUrl);
+      await saveBackground(prepared.dataUrl);
+      setStoredBackgroundUrl(prepared.dataUrl);
       setBgUrlDraft("");
       setImageMeta({
         width: prepared.sourceWidth,
@@ -345,10 +391,13 @@ export function AppearanceSection(
           base.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
         ),
       };
-      commitAppearance({
-        theme: APPEARANCE_THEME_CUSTOM,
-        custom: nextCustom,
-      });
+      commitAppearance(
+        {
+          theme: APPEARANCE_THEME_CUSTOM,
+          custom: nextCustom,
+        },
+        prepared.dataUrl,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not read image file";
@@ -357,7 +406,8 @@ export function AppearanceSection(
   }
 
   function onRemoveBackground(): void {
-    clearAppearanceBackgroundDataUrl();
+    void clearBackground();
+    setStoredBackgroundUrl(null);
     setBgUrlDraft("");
     setImageMeta(null);
     const base = ensureCustom(getAppearance());
@@ -371,7 +421,8 @@ export function AppearanceSection(
   }
 
   function onResetDefaults(): void {
-    clearAppearanceBackgroundDataUrl();
+    void clearBackground();
+    setStoredBackgroundUrl(null);
     setBgUrlDraft("");
     setImageMeta(null);
     const defaults = createDefaultCustomTheme();

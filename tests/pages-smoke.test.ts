@@ -79,12 +79,12 @@ describe("own pages smoke", () => {
     vi.restoreAllMocks();
   });
 
-  it("mounts Settings with Appearance, Page, Blacklist, Favorites, Data", () => {
+  it("mounts Settings with Appearance, Page, Blacklist, Favorites, Data", async () => {
     const header = document.getElementById("header");
     if (!(header instanceof HTMLElement)) {
       throw new Error("header missing");
     }
-    showRdwPage(RDW_ROUTE_SETTINGS, header);
+    await showRdwPage(RDW_ROUTE_SETTINGS, header);
     const text = shadowRoot().textContent ?? "";
     expect(text).toContain("Appearance");
     expect(text).toContain("Page");
@@ -98,12 +98,12 @@ describe("own pages smoke", () => {
     expect(shadowRoot().querySelector(`.${PANEL_UI_CLASS.pageCard}`)).not.toBeNull();
   });
 
-  it("mounts Following empty state with add field and Open Posts", () => {
+  it("mounts Following empty state with add field and Open Posts", async () => {
     const header = document.getElementById("header");
     if (!(header instanceof HTMLElement)) {
       throw new Error("header missing");
     }
-    showRdwPage(RDW_ROUTE_FOLLOWING, header);
+    await showRdwPage(RDW_ROUTE_FOLLOWING, header);
     const shadow = shadowRoot();
     const text = shadow.textContent ?? "";
     expect(text).toContain("No followed artists yet");
@@ -113,12 +113,12 @@ describe("own pages smoke", () => {
     expect(shadow.querySelector("#rdw-following-add-tag")).not.toBeNull();
   });
 
-  it("mounts Collections with Custom Collection and Dynamic Collection labels", () => {
+  it("mounts Collections with Custom Collection and Dynamic Collection labels", async () => {
     const header = document.getElementById("header");
     if (!(header instanceof HTMLElement)) {
       throw new Error("header missing");
     }
-    showRdwPage(RDW_ROUTE_COLLECTIONS, header);
+    await showRdwPage(RDW_ROUTE_COLLECTIONS, header);
     const text = shadowRoot().textContent ?? "";
     expect(text).toContain("Custom Collection");
     expect(text).toContain("Dynamic Collection");

@@ -1,4 +1,5 @@
 import {
+  FAVS_SCHEMA_VERSION,
   FAVS_STORAGE_KEY,
   STORAGE_KEY,
 } from "../config/constants";
@@ -6,6 +7,7 @@ import { log } from "../log";
 import { pruneMarksIfNeeded } from "./marks-prune";
 import {
   FavsSchema,
+  FavsSyncSchema,
   StorageSchema,
   createDefaultFavs,
   stripLegacyPanelWindowSize,
@@ -28,6 +30,55 @@ function getGmGetValue(): GmGetValue {
 
 function getGmSetValue(): GmSetValue {
   return GM_setValue;
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isIntNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function isIntNumberArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every(isIntNumber);
+}
+
+/**
+ * Cheap page-path shape check: version + integer id array.
+ * Optional `sync` is validated with the small FavsSyncSchema when present.
+ * Full FavsSchema is reserved for {@link parseFavsStrict} (import / migration).
+ */
+export function cheapParseFavs(raw: unknown): FavsData | null {
+  if (!isUnknownRecord(raw)) {
+    return null;
+  }
+  if (raw.version !== FAVS_SCHEMA_VERSION) {
+    return null;
+  }
+  if (!isIntNumberArray(raw.ids)) {
+    return null;
+  }
+  const next: FavsData = {
+    version: FAVS_SCHEMA_VERSION,
+    ids: raw.ids,
+  };
+  if (raw.sync !== undefined) {
+    const syncParsed = FavsSyncSchema.safeParse(raw.sync);
+    if (syncParsed.success) {
+      next.sync = syncParsed.data;
+    }
+  }
+  return next;
+}
+
+/** Full zod parse for import / migration callers. */
+export function parseFavsStrict(raw: unknown): FavsData | null {
+  const parsed = FavsSchema.safeParse(raw);
+  if (!parsed.success) {
+    return null;
+  }
+  return parsed.data;
 }
 
 function normalizePostId(id: number | string): number | null {
@@ -53,19 +104,18 @@ function readFavsRaw(): FavsData {
   if (raw === undefined || raw === null) {
     return createDefaultFavs();
   }
-  const parsed = FavsSchema.safeParse(raw);
-  if (!parsed.success) {
+  const parsed = cheapParseFavs(raw);
+  if (parsed === null) {
     log.error("Invalid favs storage content; using empty favs", {
       key: FAVS_STORAGE_KEY,
     });
     return createDefaultFavs();
   }
-  return parsed.data;
+  return parsed;
 }
 
 function writeFavsData(data: FavsData): void {
-  const parsed = FavsSchema.parse(data);
-  getGmSetValue()(FAVS_STORAGE_KEY, parsed);
+  getGmSetValue()(FAVS_STORAGE_KEY, data);
 }
 
 function setCacheFromData(data: FavsData): void {
@@ -96,10 +146,21 @@ function writeMainStorage(data: StorageData): void {
  * Extract legacy `marks.*.fav === true` into favs.ids, strip `fav` from marks,
  * strip legacy panel window size from featureState, save both keys.
  * Idempotent. Preserves `marks.seen` and other featureState keys.
+ * Favs blob: full zod when rewriting after a marks/panel change; cheap read otherwise.
  */
 export function migrateMarksFavToFavs(): void {
   const main = readMainStorageRaw();
-  const favs = readFavsRaw();
+  const favsRaw = getGmGetValue()(FAVS_STORAGE_KEY, undefined);
+  const favsCheap =
+    favsRaw === undefined || favsRaw === null
+      ? createDefaultFavs()
+      : cheapParseFavs(favsRaw);
+  const favs = favsCheap ?? createDefaultFavs();
+  if (favsCheap === null && favsRaw !== undefined && favsRaw !== null) {
+    log.error("Invalid favs storage content; using empty favs", {
+      key: FAVS_STORAGE_KEY,
+    });
+  }
   const ids = new Set(favs.ids);
   let marksChanged = false;
   let mainToWrite: StorageData | null = null;
@@ -155,7 +216,16 @@ export function migrateMarksFavToFavs(): void {
     nextFavs.ids.some((id) => !favs.ids.includes(id));
 
   if (idsChanged) {
-    writeFavsData(nextFavs);
+    const strict = parseFavsStrict(nextFavs);
+    if (strict === null) {
+      log.error("migrateMarksFavToFavs: strict favs validate failed; skipping write", {
+        key: FAVS_STORAGE_KEY,
+      });
+    } else {
+      writeFavsData(strict);
+      setCacheFromData(strict);
+      return;
+    }
   }
 
   setCacheFromData(nextFavs);

@@ -10,11 +10,8 @@ import {
   TOKEN_STYLE_ID,
 } from "../config/constants";
 import { RDW_PAGE_ROOT_ID } from "../pages/constants";
-import {
-  APPEARANCE_CUSTOM_BASE_DARK,
-  type Appearance,
-  type AppearanceTheme,
-} from "../storage/schema";
+import { resolveAppearancePalette } from "../skin/theme";
+import type { Appearance, AppearanceTheme } from "../storage/schema";
 import {
   applyCustomThemeProperties,
   applyTokenProperties,
@@ -22,8 +19,6 @@ import {
   clearCustomThemeProperties,
   DARK_PALETTE,
   LIGHT_PALETTE,
-  paletteForMode,
-  type PaletteMode,
   type TokenPalette,
 } from "../ui/tokens";
 
@@ -39,25 +34,12 @@ export function themeEnablesSkin(theme: AppearanceTheme): boolean {
   );
 }
 
-export function paletteModeForTheme(appearance: Appearance): PaletteMode {
-  const theme = appearance.theme;
-  if (
-    theme === APPEARANCE_THEME_DARK ||
-    theme === APPEARANCE_THEME_SITE_DARK
-  ) {
-    return "dark";
-  }
-  if (theme === APPEARANCE_THEME_CUSTOM) {
-    return appearance.custom?.base === APPEARANCE_CUSTOM_BASE_DARK
-      ? "dark"
-      : "light";
-  }
-  // site / light → light palette for script pages and tokens
-  return "light";
-}
-
+/**
+ * Canonical palette for an Appearance (site themes → SITE_* colors).
+ * Delegates to {@link resolveAppearancePalette} from skin/theme.
+ */
 export function resolveTokenPalette(appearance: Appearance): TokenPalette {
-  return paletteForMode(paletteModeForTheme(appearance));
+  return resolveAppearancePalette(appearance);
 }
 
 /**
@@ -119,15 +101,21 @@ export function applyHtmlThemeAttributes(theme: AppearanceTheme): void {
 
 export type ApplyAppearanceOptions = {
   readonly appearance: Appearance;
-  /** Data URL from the dedicated GM background key, if any. */
+  /** Data URL from background-store / IDB, if any. Not read on the hot path. */
   readonly backgroundDataUrl?: string;
   /** Site-skin CSS text for #SITE_SKIN_STYLE_ID. */
   readonly siteSkinCss?: string;
+  /**
+   * When true, skip background-image custom props (pre-paint: base color only).
+   * Dim may still apply for custom themes.
+   */
+  readonly omitBackgroundImage?: boolean;
 };
 
 /**
  * Document-start-safe appearance apply:
- * html class/attr + token CSS (+ empty site-skin hook) + custom setProperty.
+ * html class/attr + token CSS (+ site-skin) + optional custom props.
+ * Palette from {@link resolveAppearancePalette} (site ≠ Light/Dark).
  * Also syncs live #rdw-page-root Shadow host to the same palette.
  */
 export function applyAppearanceToDocument(
@@ -135,7 +123,7 @@ export function applyAppearanceToDocument(
 ): void {
   const { appearance } = options;
   applyHtmlThemeAttributes(appearance.theme);
-  const palette = resolveTokenPalette(appearance);
+  const palette = resolveAppearancePalette(appearance);
   injectTokenStyles(palette);
   syncPageRootTokens(palette);
   injectSiteSkinHook(options.siteSkinCss ?? "");
@@ -143,10 +131,12 @@ export function applyAppearanceToDocument(
   const root = document.documentElement;
   clearCustomThemeProperties(root);
 
+  const omitImage = options.omitBackgroundImage === true;
+  const backgroundImage = omitImage
+    ? undefined
+    : options.backgroundDataUrl ?? appearance.custom?.backgroundImage;
+
   if (appearance.theme === APPEARANCE_THEME_CUSTOM && appearance.custom !== undefined) {
-    const backgroundImage =
-      options.backgroundDataUrl ??
-      appearance.custom.backgroundImage;
     const overrides =
       backgroundImage !== undefined && backgroundImage.length > 0
         ? {
@@ -162,6 +152,7 @@ export function applyAppearanceToDocument(
           };
     applyCustomThemeProperties(root, overrides);
   } else if (
+    !omitImage &&
     options.backgroundDataUrl !== undefined &&
     options.backgroundDataUrl.length > 0
   ) {
@@ -174,6 +165,9 @@ export function applyAppearanceToDocument(
 export function defaultPaletteForTheme(theme: AppearanceTheme): TokenPalette {
   if (theme === APPEARANCE_THEME_DARK || theme === APPEARANCE_THEME_SITE_DARK) {
     return DARK_PALETTE;
+  }
+  if (theme === APPEARANCE_THEME_SITE) {
+    return resolveAppearancePalette({ theme: APPEARANCE_THEME_SITE });
   }
   return LIGHT_PALETTE;
 }

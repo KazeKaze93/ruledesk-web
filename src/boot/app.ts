@@ -1,48 +1,61 @@
-import { runFeatures } from "../features/runtime";
+import { runFeaturesYielding, yieldToMain } from "../features/runtime";
 import { startRdwPages } from "../pages/router";
 import { getSiteSkinCss } from "../skin/site-skin";
 import { applyAppearanceTheme } from "../skin/theme";
 import { syncFavoritesPage } from "../site/favorites-page";
+import { maybeResumeFavoritesSync } from "../site/favorites-sync-runner";
 import { detectPageKind } from "../site/pages";
-import {
-  getAppearance,
-  getAppearanceBackgroundDataUrl,
-} from "../storage/store";
+import { loadBackground } from "../storage/background-store";
+import { getAppearance } from "../storage/store";
 import { mountArtistSidebar } from "../ui/artists-sidebar";
 import { mountCards } from "../ui/cards";
 
 /**
- * Re-apply appearance once head/body exist so the site stylesheet link
- * can be swapped (document-start often runs before that link is parsed).
+ * Re-apply appearance with full store validation + async IDB background.
+ * Pre-paint only had cheap appearance + base CSS (no background image).
  */
-function syncAppearanceAfterDomReady(): void {
+async function syncAppearanceAfterPaint(): Promise<void> {
   const appearance = getAppearance();
-  const backgroundDataUrl = getAppearanceBackgroundDataUrl();
+  const backgroundDataUrl = await loadBackground();
   applyAppearanceTheme({
     appearance,
     siteSkinCss: getSiteSkinCss(),
-    ...(backgroundDataUrl !== undefined ? { backgroundDataUrl } : {}),
+    ...(backgroundDataUrl !== null && backgroundDataUrl.length > 0
+      ? { backgroundDataUrl }
+      : {}),
   });
 }
 
 /**
- * Feature + own-page mount — only after DOM is ready (body exists).
- * Floating panel (#ruledesk-web-root / #ruledesk-web-toggle) is removed.
+ * Feature + own-page mount — after first paint (body exists).
+ * Modules run one-by-one with yields between them.
  */
-export function startApp(): void {
-  syncAppearanceAfterDomReady();
+export async function startApp(): Promise<void> {
+  await syncAppearanceAfterPaint();
+  await yieldToMain();
 
   const pageKind = detectPageKind(window.location.search);
+  const search = window.location.search;
+
   if (pageKind === "list") {
     mountCards();
+    await yieldToMain();
     mountArtistSidebar();
+    await yieldToMain();
   } else if (pageKind === "post") {
     mountArtistSidebar();
+    await yieldToMain();
   } else if (pageKind === "favorites") {
     syncFavoritesPage();
+    await yieldToMain();
   }
 
-  runFeatures(pageKind, window.location.search);
+  await runFeaturesYielding(pageKind, search);
+  await yieldToMain();
+
   // After Feed inserts its nav item so Collections/Following sit after Feed.
-  startRdwPages();
+  await startRdwPages();
+  await yieldToMain();
+
+  maybeResumeFavoritesSync();
 }

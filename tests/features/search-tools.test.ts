@@ -7,6 +7,10 @@ import {
   featureBodyClass,
   type FeatureContext,
 } from "../../src/features/types";
+import {
+  clearArtistsMirror,
+  writeArtistsMirror,
+} from "../../src/storage/artists-mirror";
 import { clearStorageCache, save } from "../../src/storage/store";
 import { createDefaultStorage } from "../../src/storage/schema";
 
@@ -22,6 +26,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearStorageCache();
+  clearArtistsMirror();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -202,6 +207,17 @@ describe("searchToolsFeature", () => {
     mountFeature();
     expect(chipLabels()).toEqual(["Any of 2 tags"]);
     expect(chipRoots()[0]?.getAttribute("title")).toBe("a b");
+  });
+
+  it("labels Feed chip from mirror artists absent from GM store", () => {
+    save({
+      ...createDefaultStorage(),
+      artists: [{ tag: "nyx_x" }],
+    });
+    writeArtistsMirror(["nyx_x", "mirror_only"]);
+    buildSearchForm("( nyx_x ~ mirror_only )");
+    mountFeature();
+    expect(chipLabels()).toEqual(["Feed · 2 artists"]);
   });
 
   it("does not move form, input, or awesomplete and keeps the same parent", () => {

@@ -10,9 +10,14 @@ import {
 } from "../../src/config/constants";
 import { featureChoiceBodyClass } from "../../src/features/types";
 import {
+  SITE_DARK_PALETTE_RESOLVED,
+  SITE_DEFAULT_PALETTE_RESOLVED,
+} from "../../src/skin/theme";
+import {
   clearStorageCache,
   getAppearance,
   getFeatureChoiceValue,
+  setAppearance,
 } from "../../src/storage/store";
 import {
   APPEARANCE_SECTION_CSS,
@@ -23,6 +28,16 @@ import { fireClick, flushEffects } from "../kit/render";
 
 const memory = new Map<string, unknown>();
 const LIGHT_HREF = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_LIGHT}?v=1`;
+
+const loadBackgroundMock = vi.fn(async (): Promise<string | null> => null);
+const saveBackgroundMock = vi.fn(async (_dataUrl: string): Promise<void> => {});
+const clearBackgroundMock = vi.fn(async (): Promise<void> => {});
+
+vi.mock("../../src/storage/background-store", () => ({
+  loadBackground: (): Promise<string | null> => loadBackgroundMock(),
+  saveBackground: (dataUrl: string): Promise<void> => saveBackgroundMock(dataUrl),
+  clearBackground: (): Promise<void> => clearBackgroundMock(),
+}));
 
 function installGmMocks(): void {
   memory.clear();
@@ -95,6 +110,12 @@ describe("createAppearanceSection", () => {
 
   beforeEach(() => {
     installGmMocks();
+    loadBackgroundMock.mockReset();
+    saveBackgroundMock.mockReset();
+    clearBackgroundMock.mockReset();
+    loadBackgroundMock.mockResolvedValue(null);
+    saveBackgroundMock.mockResolvedValue(undefined);
+    clearBackgroundMock.mockResolvedValue(undefined);
     memory.set(DEBUG_KEY, false);
     document.head.replaceChildren();
     document.body.replaceChildren();
@@ -213,5 +234,52 @@ describe("createAppearanceSection", () => {
     await flushEffects();
 
     expect(getAppearance().custom?.base).toBe("light");
+    expect(clearBackgroundMock).toHaveBeenCalled();
+  });
+
+  it("site themes inject site palettes, not Light/Dark", async () => {
+    host = createAppearanceSection();
+    document.body.append(host);
+
+    fireClick(selectTriggers(host)[0]!);
+    chooseSelectOption(host, "Site dark");
+    await flushEffects();
+
+    const tokenStyle = document.getElementById(TOKEN_STYLE_ID);
+    expect(tokenStyle?.textContent).toContain(SITE_DARK_PALETTE_RESOLVED.bg);
+    expect(tokenStyle?.textContent).not.toContain(
+      `${TOKEN_VAR.bg}: ${DARK_PALETTE.bg}`,
+    );
+
+    fireClick(selectTriggers(host)[0]!);
+    chooseSelectOption(host, "Site default");
+    await flushEffects();
+
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
+      SITE_DEFAULT_PALETTE_RESOLVED.bg,
+    );
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).not.toContain(
+      `${TOKEN_VAR.bg}: ${LIGHT_PALETTE.bg}`,
+    );
+  });
+
+  it("loads stored background after first paint via loadBackground", async () => {
+    const dataUrl = "data:image/jpeg;base64,asyncbg";
+    loadBackgroundMock.mockResolvedValue(dataUrl);
+    setAppearance({
+      theme: "custom",
+      custom: { base: "light", backgroundDim: 0 },
+    });
+
+    host = createAppearanceSection();
+    document.body.append(host);
+    // First paint: base color only (no image yet).
+    expect(document.body.style.backgroundImage).toBe("");
+    await flushEffects();
+    await Promise.resolve();
+    await flushEffects();
+
+    expect(loadBackgroundMock).toHaveBeenCalled();
+    expect(document.body.style.backgroundImage).toContain(dataUrl);
   });
 });

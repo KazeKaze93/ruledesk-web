@@ -22,6 +22,7 @@ import {
   parsePlaylistQuery,
   parseTags,
 } from "../search/query";
+import { readArtistsMirror } from "../storage/artists-mirror";
 import { getUpdatesGroupSize, listArtistTags } from "../storage/store";
 import {
   Button,
@@ -39,6 +40,18 @@ import { featureBodyClass, type Feature, type FeatureContext } from "./types";
 const FEATURE_ID = "search-tools";
 const FEATURE_LABEL = "Search tools";
 const FEATURE_PAGES = ["list", "post"] as const;
+
+/**
+ * Followed artists for Feed chip / source detection (read-only).
+ * Mirror first — GM snapshots on bfcache pages can omit recent follows.
+ */
+function resolveFollowedArtistTags(): string[] {
+  const mirrored = readArtistsMirror();
+  if (mirrored !== null && mirrored.length > 0) {
+    return [...mirrored];
+  }
+  return listArtistTags();
+}
 
 const TAGS_INPUT_SELECTOR = 'input[name="tags"]';
 const TAG_SIDEBAR_SELECTOR = "ul#tag-sidebar";
@@ -493,7 +506,7 @@ function detectSourceMode(search: string): SourceMode {
     return "favorites";
   }
   const tagsRaw = params.get(SEARCH_PARAM_TAGS) ?? "";
-  const artists = listArtistTags();
+  const artists = resolveFollowedArtistTags();
   if (
     isFullUpdatesQuery(tagsRaw, artists) ||
     isPartialUpdatesQuery(tagsRaw, artists)
@@ -565,7 +578,7 @@ function orGroupLabel(members: readonly string[]): {
     ),
     UPDATES_OR_CLOSE,
   ]);
-  const artists = listArtistTags();
+  const artists = resolveFollowedArtistTags();
   const count = members.length;
   if (isFullUpdatesQuery(query, artists)) {
     return {
@@ -904,7 +917,7 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
       return;
     }
     if (source === "feed") {
-      const artists = listArtistTags();
+      const artists = resolveFollowedArtistTags();
       if (artists.length === 0) {
         setView((prev) => ({ ...prev, source: detectSourceMode(window.location.search) }));
         return;

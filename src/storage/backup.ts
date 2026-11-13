@@ -1,17 +1,22 @@
 import * as z from "zod/mini";
 
 import {
-  APPEARANCE_BACKGROUND_KEY,
   FAVS_STORAGE_KEY,
   IMPORT_SCHEMA_ERROR_PREFIX,
   STORAGE_BACKUP_KEY,
 } from "../config/constants";
 import { log } from "../log";
 import {
+  clearBackground,
+  loadBackground,
+  saveBackground,
+} from "./background-store";
+import {
   clearFavsCache,
   extractFavIdsFromMarks,
   loadFavSet,
   migrateMarksFavToFavs,
+  parseFavsStrict,
 } from "./favs";
 import {
   FavsSchema,
@@ -83,20 +88,22 @@ function formatSchemaError(error: z.core.$ZodError): string {
   return `${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`;
 }
 
-function readBackgroundRaw(): string | undefined {
-  const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, undefined);
-  if (typeof raw !== "string" || raw.length === 0) {
+async function readBackgroundForBackup(): Promise<string | undefined> {
+  const dataUrl = await loadBackground();
+  if (dataUrl === null || dataUrl.length === 0) {
     return undefined;
   }
-  return raw;
+  return dataUrl;
 }
 
-function writeBackgroundRaw(value: string | undefined): void {
+async function writeBackgroundForBackup(
+  value: string | undefined,
+): Promise<void> {
   if (value === undefined || value.length === 0) {
-    getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
+    await clearBackground();
     return;
   }
-  getGmSetValue()(APPEARANCE_BACKGROUND_KEY, value);
+  await saveBackground(value);
 }
 
 function readFavsForBackup(): FavsData {
@@ -104,14 +111,14 @@ function readFavsForBackup(): FavsData {
   if (raw === undefined || raw === null) {
     return createDefaultFavs();
   }
-  const parsed = FavsSchema.safeParse(raw);
-  if (!parsed.success) {
+  const parsed = parseFavsStrict(raw);
+  if (parsed === null) {
     log.error("backup: invalid favs; exporting empty favs", {
       key: FAVS_STORAGE_KEY,
     });
     return createDefaultFavs();
   }
-  return parsed.data;
+  return parsed;
 }
 
 function writeFavsForBackup(data: FavsData): void {
@@ -119,8 +126,8 @@ function writeFavsForBackup(data: FavsData): void {
   clearFavsCache();
 }
 
-function snapshotCurrentToBackupKey(): void {
-  const background = readBackgroundRaw();
+async function snapshotCurrentToBackupKey(): Promise<void> {
+  const background = await readBackgroundForBackup();
   const snapshot: BackupFile = {
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
@@ -206,14 +213,14 @@ function storageWithoutMarkFavs(storage: StorageData): StorageData {
   return { ...storage, marks: stripped.marks };
 }
 
-function applyImportedState(
+async function applyImportedState(
   storage: StorageData,
   favs: FavsData | undefined,
   background: string | undefined,
   applyBackground: boolean,
   applyFavs: boolean,
-): BackupImportSummary {
-  snapshotCurrentToBackupKey();
+): Promise<BackupImportSummary> {
+  await snapshotCurrentToBackupKey();
   const storageToWrite = applyFavs
     ? storage
     : storageWithoutMarkFavs(storage);
@@ -223,7 +230,7 @@ function applyImportedState(
     writeFavsForBackup(favs);
   }
   if (applyBackground) {
-    writeBackgroundRaw(background);
+    await writeBackgroundForBackup(background);
   }
   migrateMarksFavToFavs();
   clearStorageCache();
@@ -245,8 +252,10 @@ export function buildBackupFilename(date: Date = new Date()): string {
   return `ruledesk-web-backup-${backupDateStamp(date)}.json`;
 }
 
-/** Build a validated backup object from current Tampermonkey keys. */
-export function buildBackupFile(options: BackupExportOptions): BackupFile {
+/** Build a validated backup object from current storage + optional IDB background. */
+export async function buildBackupFile(
+  options: BackupExportOptions,
+): Promise<BackupFile> {
   const storage = load();
   const file: BackupFile = {
     format: BACKUP_FORMAT,
@@ -256,7 +265,7 @@ export function buildBackupFile(options: BackupExportOptions): BackupFile {
     ...(options.includeFavorites ? { favs: readFavsForBackup() } : {}),
   };
   if (options.includeBackground) {
-    const background = readBackgroundRaw();
+    const background = await readBackgroundForBackup();
     if (background !== undefined) {
       return { ...file, background };
     }
@@ -282,8 +291,10 @@ export function downloadBackupText(json: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function exportBackupDownload(options: BackupExportOptions): BackupFile {
-  const file = buildBackupFile(options);
+export async function exportBackupDownload(
+  options: BackupExportOptions,
+): Promise<BackupFile> {
+  const file = await buildBackupFile(options);
   downloadBackupText(serializeBackupFile(file), buildBackupFilename());
   return file;
 }
@@ -293,10 +304,10 @@ export function exportBackupDownload(options: BackupExportOptions): BackupFile {
  * Invalid input leaves storage/favs/background unchanged.
  * A file without a `favs` field leaves the local fav set untouched.
  */
-export function importBackupJson(
+export async function importBackupJson(
   raw: string,
   mode: BackupImportMode,
-): BackupImportResult {
+): Promise<BackupImportResult> {
   let json: unknown;
   try {
     json = JSON.parse(raw);
@@ -320,7 +331,7 @@ export function importBackupJson(
 
   try {
     if (mode === IMPORT_MODE_REPLACE) {
-      const summary = applyImportedState(
+      const summary = await applyImportedState(
         incoming.storage,
         hasFavsField ? incomingFavs : undefined,
         hasBackgroundField ? incoming.background : undefined,
@@ -350,7 +361,7 @@ export function importBackupJson(
       hasFavsField && incomingFavs !== undefined
         ? mergeFavs(currentFavs, incomingFavs)
         : undefined;
-    const summary = applyImportedState(
+    const summary = await applyImportedState(
       mergedStorage,
       mergedFavs,
       incoming.background,

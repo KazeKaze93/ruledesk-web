@@ -21,6 +21,7 @@ const EVENT_CLICK = "click";
 const HISTORY_STATE_TITLE = "";
 
 let routerBound = false;
+let syncGeneration = 0;
 
 export { isRdwRoute, parseRdwHash } from "./constants";
 
@@ -34,13 +35,13 @@ function findHeader(): HTMLElement | null {
   return header instanceof HTMLElement ? header : null;
 }
 
-function enterRoute(route: RdwRoute): void {
+async function enterRoute(route: RdwRoute): Promise<void> {
   const header = findHeader();
   if (header === null) {
     return;
   }
   document.documentElement.classList.add(RDW_OWN_PAGE_CLASS);
-  showRdwPage(route, header);
+  await showRdwPage(route, header);
   setOwnPageCurrentHighlight(route);
 }
 
@@ -50,7 +51,8 @@ function leaveRoute(): void {
   clearOwnPageCurrentHighlight();
 }
 
-function syncFromHash(): void {
+async function syncFromHash(): Promise<void> {
+  const generation = ++syncGeneration;
   const header = findHeader();
   if (header === null) {
     leaveRoute();
@@ -61,15 +63,18 @@ function syncFromHash(): void {
     leaveRoute();
     return;
   }
-  enterRoute(route);
+  await enterRoute(route);
+  if (generation !== syncGeneration) {
+    return;
+  }
 }
 
 function onHashChange(): void {
-  syncFromHash();
+  void syncFromHash();
 }
 
 function onPopState(): void {
-  syncFromHash();
+  void syncFromHash();
 }
 
 function isModifiedClick(event: MouseEvent): boolean {
@@ -86,7 +91,7 @@ function isModifiedClick(event: MouseEvent): boolean {
  * First visit to a #rdw/* route pushes history; switching among script pages
  * replaces so Back returns to the underlying site page.
  */
-export function navigateToRdwRoute(route: RdwRoute): void {
+export async function navigateToRdwRoute(route: RdwRoute): Promise<void> {
   const nextHash = `${RDW_HASH_PREFIX}${route}`;
   const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
   const alreadyOnScriptPage = parseRdwHash(window.location.hash) !== null;
@@ -95,7 +100,7 @@ export function navigateToRdwRoute(route: RdwRoute): void {
   } else {
     window.history.pushState(window.history.state, HISTORY_STATE_TITLE, nextUrl);
   }
-  syncFromHash();
+  await syncFromHash();
 }
 
 function onDocumentClick(event: MouseEvent): void {
@@ -133,13 +138,14 @@ function onDocumentClick(event: MouseEvent): void {
     return;
   }
   event.preventDefault();
-  navigateToRdwRoute(route);
+  void navigateToRdwRoute(route);
 }
 
 /**
  * Install navbar items + hash router. No menu / no page when div#header is absent.
+ * Page Preact modules load lazily on first #rdw/* open (factories in host).
  */
-export function startRdwPages(): void {
+export async function startRdwPages(): Promise<void> {
   ensureOwnPageStyle();
   const header = findHeader();
   if (header === null) {
@@ -153,5 +159,5 @@ export function startRdwPages(): void {
     window.addEventListener(EVENT_POPSTATE, onPopState);
     document.addEventListener(EVENT_CLICK, onDocumentClick);
   }
-  syncFromHash();
+  await syncFromHash();
 }

@@ -127,6 +127,65 @@ function mountFeatureOnce(feature: Feature): void {
   }
 }
 
+export type ApplyFeatureChromeOptions = {
+  /** Pre-paint: pass choice from cheap peek instead of reading store. */
+  readonly choiceValue?: string;
+};
+
+/**
+ * Body class + feature CSS + mount once. Used by layout-before-paint and runtime.
+ * Records the id in mountedIds so deferred runFeatures will not remount.
+ */
+export function applyFeatureChrome(
+  feature: Feature,
+  pageKind: PageKind,
+  search: string,
+  options: ApplyFeatureChromeOptions = {},
+): void {
+  if (mountedIds.has(feature.id)) {
+    return;
+  }
+  if (!feature.pages.includes(pageKind)) {
+    return;
+  }
+
+  activePageKind = pageKind;
+  activeSearch = search;
+
+  document.body.classList.add(featureBodyClass(feature.id));
+  if (feature.choice !== undefined) {
+    const choiceValue =
+      options.choiceValue ??
+      (() => {
+        const stored = getFeatureChoiceValue(feature.id);
+        if (
+          stored !== undefined &&
+          feature.choice.options.some((option) => option.value === stored)
+        ) {
+          return stored;
+        }
+        return feature.choice.defaultValue;
+      })();
+    clearChoiceBodyClasses(feature);
+    document.body.classList.add(
+      featureChoiceBodyClass(feature.id, choiceValue),
+    );
+  }
+
+  ensureFeatureCss(feature);
+  mountedIds.add(feature.id);
+  try {
+    feature.mount(createContext(feature, pageKind, search));
+  } catch (error) {
+    log.error(`Feature mount failed: ${feature.id}`, error);
+  }
+}
+
+/** Mark a feature id as already handled (tests / reserve-only chrome). */
+export function markFeatureMounted(id: string): void {
+  mountedIds.add(id);
+}
+
 /**
  * Live-apply a cssOnly feature enable/disable: body classes + CSS injection.
  * Mounts once if not yet mounted when enabling. Does not remount on re-enable.
@@ -185,6 +244,13 @@ export function resetFeatureRuntimeState(): void {
   activeSearch = "";
 }
 
+/** Zero-delay yield so the browser can paint / handle input between mounts. */
+export function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 export function runFeatures(
   pageKind: PageKind,
   search: string,
@@ -198,6 +264,9 @@ export function runFeatures(
   }
 
   for (const feature of features) {
+    if (mountedIds.has(feature.id)) {
+      continue;
+    }
     if (!feature.pages.includes(pageKind)) {
       continue;
     }
@@ -205,30 +274,38 @@ export function runFeatures(
       continue;
     }
 
-    document.body.classList.add(featureBodyClass(feature.id));
-    if (feature.choice !== undefined) {
-      const choiceValue = (() => {
-        const stored = getFeatureChoiceValue(feature.id);
-        if (
-          stored !== undefined &&
-          feature.choice.options.some((option) => option.value === stored)
-        ) {
-          return stored;
-        }
-        return feature.choice.defaultValue;
-      })();
-      document.body.classList.add(
-        featureChoiceBodyClass(feature.id, choiceValue),
-      );
+    applyFeatureChrome(feature, pageKind, search);
+  }
+}
+
+/**
+ * Mount remaining features one-by-one, yielding to the main thread between each.
+ * Skips ids already mounted during layout-before-paint.
+ */
+export async function runFeaturesYielding(
+  pageKind: PageKind,
+  search: string,
+  features: readonly Feature[] = FEATURES,
+): Promise<void> {
+  activePageKind = pageKind;
+  activeSearch = search;
+
+  if (!getTweaksEnabled()) {
+    return;
+  }
+
+  for (const feature of features) {
+    if (mountedIds.has(feature.id)) {
+      continue;
+    }
+    if (!feature.pages.includes(pageKind)) {
+      continue;
+    }
+    if (!getFeatureEnabled(feature.id, feature.defaultEnabled)) {
+      continue;
     }
 
-    ensureFeatureCss(feature);
-
-    mountedIds.add(feature.id);
-    try {
-      feature.mount(createContext(feature, pageKind, search));
-    } catch (error) {
-      log.error(`Feature mount failed: ${feature.id}`, error);
-    }
+    applyFeatureChrome(feature, pageKind, search);
+    await yieldToMain();
   }
 }

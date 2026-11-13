@@ -19,6 +19,9 @@ import {
   createDefaultCustomTheme,
   hasInsufficientTextContrast,
   parseHexColor,
+  resolveAppearancePalette,
+  SITE_DARK_PALETTE_RESOLVED,
+  SITE_DEFAULT_PALETTE_RESOLVED,
 } from "../../src/skin/theme";
 import { getSiteTheme } from "../../src/site/theme";
 import { DARK_PALETTE, LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
@@ -73,6 +76,23 @@ describe("contrast helpers", () => {
     const ratio = contrastRatio("#1c2228", "#aae5a4");
     expect(ratio).not.toBeNull();
     expect(ratio!).toBeGreaterThanOrEqual(CONTRAST_RATIO_MIN);
+  });
+
+  it("site palettes meet text-on-surface AA without swapping text", () => {
+    const siteDefault = contrastRatio(
+      SITE_DEFAULT_PALETTE_RESOLVED.text,
+      SITE_DEFAULT_PALETTE_RESOLVED.surface,
+    );
+    const siteDark = contrastRatio(
+      SITE_DARK_PALETTE_RESOLVED.text,
+      SITE_DARK_PALETTE_RESOLVED.surface,
+    );
+    expect(siteDefault).not.toBeNull();
+    expect(siteDark).not.toBeNull();
+    expect(siteDefault!).toBeGreaterThanOrEqual(CONTRAST_RATIO_MIN);
+    expect(siteDark!).toBeGreaterThanOrEqual(CONTRAST_RATIO_MIN);
+    expect(SITE_DEFAULT_PALETTE_RESOLVED.text).toBe("#000000");
+    expect(SITE_DARK_PALETTE_RESOLVED.text).toBe("#c0c0c0");
   });
 
   it("clamps background dim to 0–0.8", () => {
@@ -134,7 +154,13 @@ describe("applyAppearanceTheme", () => {
     expect(getSiteTheme()).toBe("light");
     expect(link.getAttribute("href")).toBe(LIGHT_HREF);
     expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
-      LIGHT_PALETTE.bg,
+      SITE_DEFAULT_PALETTE_RESOLVED.bg,
+    );
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).not.toContain(
+      `${TOKEN_VAR.bg}: ${LIGHT_PALETTE.bg}`,
+    );
+    expect(resolveAppearancePalette({ theme: "site" }).bg).toBe(
+      SITE_DEFAULT_PALETTE_RESOLVED.bg,
     );
   });
 
@@ -155,7 +181,13 @@ describe("applyAppearanceTheme", () => {
     expect(getSiteTheme()).toBe("dark");
     expect(link.getAttribute("href")).toBe(DARK_HREF);
     expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).toContain(
-      DARK_PALETTE.bg,
+      SITE_DARK_PALETTE_RESOLVED.bg,
+    );
+    expect(document.getElementById(TOKEN_STYLE_ID)?.textContent).not.toContain(
+      `${TOKEN_VAR.bg}: ${DARK_PALETTE.bg}`,
+    );
+    expect(resolveAppearancePalette({ theme: "site-dark" }).bg).toBe(
+      SITE_DARK_PALETTE_RESOLVED.bg,
     );
   });
 

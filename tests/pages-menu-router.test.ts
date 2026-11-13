@@ -5,10 +5,12 @@ import {
   RDW_HASH_COLLECTIONS,
   RDW_HASH_FOLLOWING,
   RDW_HASH_SETTINGS,
+  RDW_PAGE_ROOT_ID,
   RDW_ROUTE_COLLECTIONS,
   RDW_ROUTE_FOLLOWING,
   RDW_ROUTE_SETTINGS,
 } from "../src/pages/constants";
+import { hideRdwPage } from "../src/pages/host";
 import {
   installSiteMenu,
   persistFavoritesUserId,
@@ -78,34 +80,35 @@ describe("navigateToRdwRoute history", () => {
   });
 
   afterEach(() => {
+    hideRdwPage();
     document.body.replaceChildren();
     document.documentElement.className = "";
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("pushState on first script page, replaceState when switching among #rdw/*", () => {
+  it("pushState on first script page, replaceState when switching among #rdw/*", async () => {
     const pushSpy = vi.spyOn(window.history, "pushState");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
 
-    navigateToRdwRoute(RDW_ROUTE_COLLECTIONS);
+    await navigateToRdwRoute(RDW_ROUTE_COLLECTIONS);
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy).not.toHaveBeenCalled();
     expect(window.location.hash).toBe(RDW_HASH_COLLECTIONS);
 
-    navigateToRdwRoute(RDW_ROUTE_SETTINGS);
+    await navigateToRdwRoute(RDW_ROUTE_SETTINGS);
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     expect(window.location.hash).toBe(RDW_HASH_SETTINGS);
 
-    navigateToRdwRoute(RDW_ROUTE_FOLLOWING);
+    await navigateToRdwRoute(RDW_ROUTE_FOLLOWING);
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy).toHaveBeenCalledTimes(2);
     expect(window.location.hash).toBe(RDW_HASH_FOLLOWING);
   });
 
-  it("navbar #rdw clicks use push then replace", () => {
-    startRdwPages();
+  it("navbar #rdw clicks use push then replace", async () => {
+    await startRdwPages();
     const pushSpy = vi.spyOn(window.history, "pushState");
     const replaceSpy = vi.spyOn(window.history, "replaceState");
 
@@ -127,16 +130,22 @@ describe("navigateToRdwRoute history", () => {
     collections.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }),
     );
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe(RDW_HASH_COLLECTIONS);
+      expect(document.getElementById(RDW_PAGE_ROOT_ID)).not.toBeNull();
+    });
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy).not.toHaveBeenCalled();
-    expect(window.location.hash).toBe(RDW_HASH_COLLECTIONS);
 
     settings.dispatchEvent(
       new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }),
     );
+    await vi.waitFor(() => {
+      expect(window.location.hash).toBe(RDW_HASH_SETTINGS);
+      expect(document.getElementById(RDW_PAGE_ROOT_ID)).not.toBeNull();
+    });
     expect(pushSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy).toHaveBeenCalledTimes(1);
-    expect(window.location.hash).toBe(RDW_HASH_SETTINGS);
   });
 });
 

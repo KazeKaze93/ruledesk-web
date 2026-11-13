@@ -1,9 +1,12 @@
 import {
   applyAppearanceToDocument,
+  injectTokenStyles,
+  syncPageRootTokens,
   themeEnablesSkin,
 } from "../boot/appearance-dom";
 import {
   APPEARANCE_THEME_CUSTOM,
+  APPEARANCE_THEME_DARK,
   APPEARANCE_THEME_SITE,
   APPEARANCE_THEME_SITE_DARK,
   RDW_SKIN_CLASS,
@@ -11,14 +14,18 @@ import {
 import { getSiteSkinCss } from "./site-skin";
 import { forceLightSiteBase, setSiteTheme } from "../site/theme";
 import {
+  APPEARANCE_CUSTOM_BASE_DARK,
   APPEARANCE_CUSTOM_BASE_LIGHT,
   type Appearance,
   type AppearanceCustom,
 } from "../storage/schema";
 import {
+  DARK_PALETTE,
+  LIGHT_PALETTE,
   parseHexColor,
   relativeLuminance,
   TOKEN_VAR,
+  type TokenPalette,
 } from "../ui/tokens";
 
 /** WCAG AA normal-text minimum contrast ratio. */
@@ -40,9 +47,147 @@ const BODY_BG_POSITION = "background-position";
 const BODY_BG_REPEAT = "background-repeat";
 const BODY_BG_ATTACHMENT = "background-attachment";
 
+/**
+ * Hex equivalents of `docs/design/site-desktop.css` `* { --c-* }` (site light).
+ * HSL sources: --c-bg / --c-bg-alt / --c-bg-deep / --c-bg-overlay.
+ */
+const SITE_C_BG = "#aae5a4"; // hsl(114, 56%, 77%)
+const SITE_C_BG_ALT = "#89cf81"; // hsl(114, 45%, 66%)
+const SITE_C_BG_DEEP = "#6fb668"; // hsl(114, 35%, 56%)
+const SITE_C_BG_OVERLAY = "#98d491"; // hsl(114, 44%, 70%)
+const SITE_C_TEXT = "#000000";
+const SITE_C_TEXT_SOFT = "#666666";
+const SITE_C_LINK = "#000099"; // --c-link: #009
+const SITE_C_LINK_ARTIST = "#cc0000";
+const SITE_C_LINK_CHARACTER = "#00aa00";
+const SITE_C_LINK_COPYRIGHT = "#aa00aa";
+const SITE_C_LINK_METADATA = "#ff8800";
+
+/** Site dark chrome tokens (script pages under theme=site-dark). */
+const SITE_DARK_BG = "#303a30";
+const SITE_DARK_SURFACE = "#293129";
+const SITE_DARK_SURFACE2 = "#303030";
+const SITE_DARK_BORDER = "#505a50";
+const SITE_DARK_TEXT = "#c0c0c0";
+const SITE_DARK_MUTED = "#878787";
+const SITE_DARK_ACCENT = "#b0e0b0";
+const SITE_DARK_ACCENT_SOFT = "#505a50";
+const SITE_DARK_TAG_ARTIST = "#f0a0a0";
+const SITE_DARK_TAG_CHARACTER = "#f0f0a0";
+const SITE_DARK_TAG_COPYRIGHT = "#f0a0f0";
+const SITE_DARK_TAG_METADATA = "#90d9ed";
+
+/**
+ * Script-page / token palette for Appearance theme "Site default".
+ * Maps site `--c-*` onto `--rdw-*` (danger/radius/shadow/font from Light).
+ */
+export const SITE_DEFAULT_PALETTE: TokenPalette = {
+  bg: SITE_C_BG,
+  surface: SITE_C_BG_ALT,
+  surface2: SITE_C_BG_OVERLAY,
+  border: SITE_C_BG_DEEP,
+  text: SITE_C_TEXT,
+  muted: SITE_C_TEXT_SOFT,
+  accent: SITE_C_LINK,
+  accentSoft: SITE_C_BG_ALT,
+  danger: LIGHT_PALETTE.danger,
+  dangerSoft: LIGHT_PALETTE.dangerSoft,
+  tagArtist: SITE_C_LINK_ARTIST,
+  tagCharacter: SITE_C_LINK_CHARACTER,
+  tagCopyright: SITE_C_LINK_COPYRIGHT,
+  tagMetadata: SITE_C_LINK_METADATA,
+  radiusS: LIGHT_PALETTE.radiusS,
+  radiusM: LIGHT_PALETTE.radiusM,
+  radiusL: LIGHT_PALETTE.radiusL,
+  shadow1: LIGHT_PALETTE.shadow1,
+  shadow2: LIGHT_PALETTE.shadow2,
+  font: LIGHT_PALETTE.font,
+};
+
+/**
+ * Script-page / token palette for Appearance theme "Site dark".
+ * Danger/radius/shadow/font from Dark; chrome colors from site dark list.
+ */
+export const SITE_DARK_PALETTE: TokenPalette = {
+  bg: SITE_DARK_BG,
+  surface: SITE_DARK_SURFACE,
+  surface2: SITE_DARK_SURFACE2,
+  border: SITE_DARK_BORDER,
+  text: SITE_DARK_TEXT,
+  muted: SITE_DARK_MUTED,
+  accent: SITE_DARK_ACCENT,
+  accentSoft: SITE_DARK_ACCENT_SOFT,
+  danger: DARK_PALETTE.danger,
+  dangerSoft: DARK_PALETTE.dangerSoft,
+  tagArtist: SITE_DARK_TAG_ARTIST,
+  tagCharacter: SITE_DARK_TAG_CHARACTER,
+  tagCopyright: SITE_DARK_TAG_COPYRIGHT,
+  tagMetadata: SITE_DARK_TAG_METADATA,
+  radiusS: DARK_PALETTE.radiusS,
+  radiusM: DARK_PALETTE.radiusM,
+  radiusL: DARK_PALETTE.radiusL,
+  shadow1: DARK_PALETTE.shadow1,
+  shadow2: DARK_PALETTE.shadow2,
+  font: DARK_PALETTE.font,
+};
+
+/**
+ * Pick text color for a surface: prefer `preferred`, else the first
+ * neighboring candidate that meets {@link CONTRAST_RATIO_MIN}.
+ */
+export function pickContrastingText(
+  surface: string,
+  preferred: string,
+  neighbors: readonly string[],
+): { text: string; ratio: number | null; swapped: boolean } {
+  const preferredRatio = contrastRatio(preferred, surface);
+  if (
+    preferredRatio !== null &&
+    preferredRatio >= CONTRAST_RATIO_MIN
+  ) {
+    return { text: preferred, ratio: preferredRatio, swapped: false };
+  }
+  for (const candidate of neighbors) {
+    const ratio = contrastRatio(candidate, surface);
+    if (ratio !== null && ratio >= CONTRAST_RATIO_MIN) {
+      return { text: candidate, ratio, swapped: true };
+    }
+  }
+  return {
+    text: preferred,
+    ratio: preferredRatio,
+    swapped: false,
+  };
+}
+
+function finalizeSitePaletteText(palette: TokenPalette): TokenPalette {
+  const picked = pickContrastingText(palette.surface, palette.text, [
+    palette.bg,
+    palette.muted,
+    palette.accent,
+    LIGHT_PALETTE.text,
+    DARK_PALETTE.text,
+  ]);
+  if (!picked.swapped) {
+    return palette;
+  }
+  return {
+    ...palette,
+    text: picked.text,
+  };
+}
+
+/** Site default after contrast gate (text-on-surface). */
+export const SITE_DEFAULT_PALETTE_RESOLVED: TokenPalette =
+  finalizeSitePaletteText(SITE_DEFAULT_PALETTE);
+
+/** Site dark after contrast gate (text-on-surface). */
+export const SITE_DARK_PALETTE_RESOLVED: TokenPalette =
+  finalizeSitePaletteText(SITE_DARK_PALETTE);
+
 export type ApplyAppearanceThemeOptions = {
   readonly appearance: Appearance;
-  /** Data URL from the dedicated GM background key, if any. */
+  /** Data URL from the dedicated background store, if any. */
   readonly backgroundDataUrl?: string;
   /** Site-skin CSS; defaults to getSiteSkinCss() when omitted. */
   readonly siteSkinCss?: string;
@@ -90,6 +235,30 @@ export function hasInsufficientTextContrast(
     return false;
   }
   return ratio < CONTRAST_RATIO_MIN;
+}
+
+/**
+ * Canonical token palette for an Appearance value.
+ * Site themes use site chrome colors — not RuleDesk Light/Dark.
+ * Callers (boot/host) should use this instead of light/dark-only resolvers.
+ */
+export function resolveAppearancePalette(appearance: Appearance): TokenPalette {
+  const theme = appearance.theme;
+  if (theme === APPEARANCE_THEME_SITE_DARK) {
+    return SITE_DARK_PALETTE_RESOLVED;
+  }
+  if (theme === APPEARANCE_THEME_SITE) {
+    return SITE_DEFAULT_PALETTE_RESOLVED;
+  }
+  if (theme === APPEARANCE_THEME_DARK) {
+    return DARK_PALETTE;
+  }
+  if (theme === APPEARANCE_THEME_CUSTOM) {
+    return appearance.custom?.base === APPEARANCE_CUSTOM_BASE_DARK
+      ? DARK_PALETTE
+      : LIGHT_PALETTE;
+  }
+  return LIGHT_PALETTE;
 }
 
 function escapeUrlForCss(url: string): string {
@@ -274,6 +443,8 @@ export async function prepareBackgroundImageFile(
 /**
  * Full theme apply for boot and settings UI:
  * site cookie/stylesheet + html.rdw-skin / tokens / site-skin / custom props + body image.
+ * Token palette comes from {@link resolveAppearancePalette} and is written once via
+ * injectTokenStyles + syncPageRootTokens (same tick as applyAppearanceToDocument).
  */
 export function applyAppearanceTheme(
   options: ApplyAppearanceThemeOptions,
@@ -288,6 +459,11 @@ export function applyAppearanceTheme(
       ? { backgroundDataUrl: options.backgroundDataUrl }
       : {}),
   });
+
+  // Canonical palette (site ≠ Light/Dark). Same-tick write avoids dual-source lag.
+  const palette = resolveAppearancePalette(appearance);
+  injectTokenStyles(palette);
+  syncPageRootTokens(palette);
 
   // Defensive: site modes must not keep rdw-skin even if attrs race.
   if (!themeEnablesSkin(appearance.theme)) {
@@ -316,8 +492,11 @@ export function applyAppearanceTheme(
     clearBodyBackground();
   }
 
+  const textOnSurface = contrastRatio(palette.text, palette.surface);
+
   return {
-    contrastWarning: false,
-    contrastRatio: null,
+    contrastWarning:
+      textOnSurface !== null && textOnSurface < CONTRAST_RATIO_MIN,
+    contrastRatio: textOnSurface,
   };
 }

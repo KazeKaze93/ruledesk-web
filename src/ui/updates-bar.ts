@@ -20,6 +20,10 @@ import {
   extractPostIdFromThumb,
 } from "../site/selectors";
 import {
+  readArtistsMirror,
+  writeArtistsMirror,
+} from "../storage/artists-mirror";
+import {
   getSeenPostId,
   listArtistTags,
   reloadFromStorage,
@@ -36,6 +40,30 @@ const TEXT_NEW_SUFFIX = " new";
 const TEXT_MARKED_SEEN_PREFIX = "Marked as seen up to #";
 const TEXT_ONLY_NEW = "Only new";
 const TEXT_SHOW_ALL = "Show all";
+
+/**
+ * Followed artists for feed-bar recognition.
+ * Mirror first — GM_getValue on bfcache pages can be a frozen snapshot.
+ */
+function resolveFollowedArtistTags(): string[] {
+  const mirrored = readArtistsMirror();
+  if (mirrored !== null && mirrored.length > 0) {
+    return [...mirrored];
+  }
+  return listArtistTags();
+}
+
+/**
+ * store load syncs the mirror from GM; restore a non-empty pre-read mirror so a
+ * bfcache-stale GM snapshot cannot wipe tags followed on another page.
+ */
+function reloadStoragePreservingArtistsMirror(): void {
+  const mirrored = readArtistsMirror();
+  reloadFromStorage();
+  if (mirrored !== null && mirrored.length > 0) {
+    writeArtistsMirror(mirrored);
+  }
+}
 
 function readPid(search: string): number {
   const params = new URLSearchParams(search);
@@ -276,8 +304,8 @@ export function mountUpdatesBar(
     return;
   }
 
-  reloadFromStorage();
-  const artistTags = listArtistTags();
+  const artistTags = resolveFollowedArtistTags();
+  reloadStoragePreservingArtistsMirror();
   const isFull = isFullUpdatesQuery(tagsParam, artistTags);
   const isPartial = isPartialUpdatesQuery(tagsParam, artistTags);
   if (!isFull && !isPartial) {

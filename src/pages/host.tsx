@@ -1,10 +1,9 @@
 import { render as preactRender } from "preact";
 import type { ComponentChild, JSX } from "preact";
 
-import { resolveTokenPalette } from "../boot/appearance-dom";
+import { resolveAppearancePalette } from "../skin/theme";
 import { getAppearance } from "../storage/store";
 import { applyTokenProperties } from "../ui/tokens";
-import { CollectionsPage } from "./collections-page";
 import {
   MENU_LABEL,
   PAGE_CONTENT_MAX_WIDTH_PX,
@@ -14,16 +13,14 @@ import {
   RDW_ROUTE_SETTINGS,
   type RdwRoute,
 } from "./constants";
-import { FollowingPage } from "./following-page";
 import { PAGE_CONTENT_CSS } from "./page-css";
-import { SettingsPage } from "./settings-page";
 
 const PAGE_SHELL_CLASS = "rdw-page-shell";
 const PAGE_TITLE_CLASS = "rdw-page-title";
 
 /**
  * Structural shell only — palette tokens come from applyTokenProperties on the
- * host (same source as document :root via resolveTokenPalette).
+ * host (same source as document :root via resolveAppearancePalette).
  */
 const PAGE_HOST_CSS = `
 :host {
@@ -79,21 +76,58 @@ function titleForRoute(route: RdwRoute): string {
   return MENU_LABEL.settings;
 }
 
-function pageForRoute(route: RdwRoute): JSX.Element {
+type PageFactory = () => Promise<JSX.Element>;
+
+let settingsFactory: PageFactory | null = null;
+let collectionsFactory: PageFactory | null = null;
+let followingFactory: PageFactory | null = null;
+
+function getSettingsFactory(): PageFactory {
+  if (settingsFactory === null) {
+    settingsFactory = async (): Promise<JSX.Element> => {
+      const mod = await import("./settings-page");
+      return <mod.SettingsPage />;
+    };
+  }
+  return settingsFactory;
+}
+
+function getCollectionsFactory(): PageFactory {
+  if (collectionsFactory === null) {
+    collectionsFactory = async (): Promise<JSX.Element> => {
+      const mod = await import("./collections-page");
+      return <mod.CollectionsPage />;
+    };
+  }
+  return collectionsFactory;
+}
+
+function getFollowingFactory(): PageFactory {
+  if (followingFactory === null) {
+    followingFactory = async (): Promise<JSX.Element> => {
+      const mod = await import("./following-page");
+      return <mod.FollowingPage />;
+    };
+  }
+  return followingFactory;
+}
+
+function pageFactoryForRoute(route: RdwRoute): PageFactory {
   if (route === RDW_ROUTE_COLLECTIONS) {
-    return <CollectionsPage />;
+    return getCollectionsFactory();
   }
   if (route === RDW_ROUTE_FOLLOWING) {
-    return <FollowingPage />;
+    return getFollowingFactory();
   }
-  return <SettingsPage />;
+  return getSettingsFactory();
 }
 
 let hostElement: HTMLElement | null = null;
 let mountPoint: HTMLElement | null = null;
+let renderGeneration = 0;
 
 function syncHostTokens(host: HTMLElement): void {
-  applyTokenProperties(host, resolveTokenPalette(getAppearance()));
+  applyTokenProperties(host, resolveAppearancePalette(getAppearance()));
 }
 
 function ensureHost(header: HTMLElement): {
@@ -125,17 +159,26 @@ function ensureHost(header: HTMLElement): {
 }
 
 /** Mount Preact page for route into #rdw-page-root after div#header. */
-export function showRdwPage(route: RdwRoute, header: HTMLElement): void {
+export async function showRdwPage(
+  route: RdwRoute,
+  header: HTMLElement,
+): Promise<void> {
   const { host, mount } = ensureHost(header);
   syncHostTokens(host);
+  const generation = ++renderGeneration;
+  const page = await pageFactoryForRoute(route)();
+  if (generation !== renderGeneration || mountPoint !== mount) {
+    return;
+  }
   preactRender(
-    <PageShell title={titleForRoute(route)}>{pageForRoute(route)}</PageShell>,
+    <PageShell title={titleForRoute(route)}>{page}</PageShell>,
     mount,
   );
 }
 
 /** Unmount own page and remove #rdw-page-root. */
 export function hideRdwPage(): void {
+  renderGeneration += 1;
   if (mountPoint !== null) {
     preactRender(null, mountPoint);
   }

@@ -1,3 +1,4 @@
+import { SITE_SELECTORS } from "../site/selectors";
 import { featureChoiceBodyClass, type Feature } from "./types";
 
 const FEATURE_ID = "grid-density";
@@ -15,6 +16,11 @@ const MASONRY_THUMB_MARGIN_INLINE_PX = 0;
 const MASONRY_THUMB_MARGIN_BOTTOM_PX = 4;
 const MASONRY_PREVIEW_WIDTH_PERCENT = 100;
 const MASONRY_BORDER_RADIUS_PX = 4;
+/** Grow into flex row of #post-list so column-width can span content width. */
+const MASONRY_CONTENT_FLEX_GROW = 1;
+const MASONRY_CONTENT_FLEX_SHRINK = 1;
+const MASONRY_CONTENT_FLEX_BASIS = "auto";
+const MASONRY_CONTENT_MIN_WIDTH_PX = 0;
 
 function sizeCss(choiceValue: string, px: number): string {
   const bodyClass = featureChoiceBodyClass(FEATURE_ID, choiceValue);
@@ -34,8 +40,14 @@ function sizeCss(choiceValue: string, px: number): string {
 function masonryCss(): string {
   const bodyClass = featureChoiceBodyClass(FEATURE_ID, MASONRY_VALUE);
   const scope = `body.${bodyClass} ${MASONRY_LIST_SCOPE}`;
+  const contentScope = `body.${bodyClass} ${SITE_SELECTORS.postListContent}`;
+  const contentFlex = `${MASONRY_CONTENT_FLEX_GROW} ${MASONRY_CONTENT_FLEX_SHRINK} ${MASONRY_CONTENT_FLEX_BASIS}`;
   const thumbMargin = `${MASONRY_THUMB_MARGIN_TOP_PX}px ${MASONRY_THUMB_MARGIN_INLINE_PX}px ${MASONRY_THUMB_MARGIN_BOTTOM_PX}px`;
   return [
+    `${contentScope} {`,
+    `  flex: ${contentFlex} !important;`,
+    `  min-width: ${MASONRY_CONTENT_MIN_WIDTH_PX}px !important;`,
+    `}`,
     `${scope} div.image-list {`,
     `  display: block !important;`,
     `  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,

@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CSS_CLASS } from "../src/config/constants";
+import {
+  clearArtistsMirror,
+  readArtistsMirror,
+  writeArtistsMirror,
+} from "../src/storage/artists-mirror";
 import { createDefaultStorage } from "../src/storage/schema";
 import { clearStorageCache, load, save } from "../src/storage/store";
 import { mountArtistSidebar } from "../src/ui/artists-sidebar";
@@ -10,6 +15,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearStorageCache();
+  clearArtistsMirror();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -85,6 +91,42 @@ describe("mountArtistSidebar", () => {
     expect(button?.getAttribute("aria-pressed")).toBe("true");
     expect(button?.hasAttribute("title")).toBe(false);
     expect(load().artists).toEqual([{ tag: "nyx_x" }]);
+  });
+
+  it("merges mirror-only artists into storage on Follow so other-page follows are kept", () => {
+    const data = createDefaultStorage();
+    data.artists = [{ tag: "already" }];
+    save(data);
+    writeArtistsMirror(["already", "from_other_page"]);
+
+    document.body.innerHTML = listSidebarMarkup();
+    mountArtistSidebar(document, "?page=post&s=list&tags=cat");
+
+    const button = document.querySelector(`button.${CSS_CLASS.artistFollow}`);
+    expect(button?.textContent).toBe("Follow");
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(button?.textContent).toBe("Following");
+    expect(load().artists.map((entry) => entry.tag).sort()).toEqual([
+      "already",
+      "from_other_page",
+      "nyx_x",
+    ]);
+    expect([...(readArtistsMirror() ?? [])].sort()).toEqual([
+      "already",
+      "from_other_page",
+      "nyx_x",
+    ]);
+  });
+
+  it("marks Following when the artist is only present in the mirror", () => {
+    writeArtistsMirror(["nyx_x"]);
+    document.body.innerHTML = postSidebarMarkup();
+    mountArtistSidebar(document, "?page=post&s=view&id=1");
+
+    const button = document.querySelector(`button.${CSS_CLASS.artistFollow}`);
+    expect(button?.textContent).toBe("Following");
+    expect(button?.getAttribute("aria-pressed")).toBe("true");
   });
 });
 

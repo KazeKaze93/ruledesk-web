@@ -15,6 +15,10 @@ import {
 } from "../site/selectors";
 import { ensureThumbAnchor } from "../site/thumb";
 import {
+  readArtistsMirror,
+  writeArtistsMirror,
+} from "../storage/artists-mirror";
+import {
   getSeenPostId,
   getUpdatesGroupSize,
   listArtistTags,
@@ -44,6 +48,31 @@ export const FEED_NEW_CLASS = "new";
 
 const NO_ARTISTS_TITLE = "Follow artists to build your feed";
 const MISSING_POSTS_WARN = "feed: Posts menu item not found";
+
+/**
+ * Followed artists for Feed href / page recognition.
+ * Prefers the localStorage mirror (fresh across pages); GM_getValue on bfcache
+ * pages can return a frozen snapshot, so reloadFromStorage alone is not enough.
+ */
+function resolveFollowedArtistTags(): string[] {
+  const mirrored = readArtistsMirror();
+  if (mirrored !== null && mirrored.length > 0) {
+    return [...mirrored];
+  }
+  return listArtistTags();
+}
+
+/**
+ * store load/save syncs the mirror from GM. On bfcache pages that GM snapshot
+ * is stale and would wipe tags followed on another page — restore afterward.
+ */
+function reloadStoragePreservingArtistsMirror(): void {
+  const mirrored = readArtistsMirror();
+  reloadFromStorage();
+  if (mirrored !== null && mirrored.length > 0) {
+    writeArtistsMirror(mirrored);
+  }
+}
 
 const NEW_PLAQUE_LEFT_PX = 6;
 const NEW_PLAQUE_TOP_PX = 6;
@@ -124,7 +153,7 @@ function findPostsMenuItem(): HTMLLIElement | null {
 }
 
 function resolveFeedHref(): string {
-  const artistTags = listArtistTags();
+  const artistTags = resolveFollowedArtistTags();
   if (artistTags.length === 0) {
     return RDW_HASH_FOLLOWING;
   }
@@ -142,17 +171,16 @@ function findFeedLink(): HTMLAnchorElement | null {
 
 /**
  * Recalculate Feed href from current followed artists (bfcache / late follow).
- * Always re-reads GM storage first — in-memory load() cache can be stale after
- * Follow on another page + Back (bfcache).
+ * Uses the artists mirror first; falls back to a fresh GM read when the mirror
+ * is missing or empty (GM alone is unreliable after Follow + Back / bfcache).
  */
 export function refreshFeedHref(): void {
-  reloadFromStorage();
   const feedLink = findFeedLink();
   if (feedLink === null) {
     return;
   }
   feedLink.href = resolveFeedHref();
-  const artistTags = listArtistTags();
+  const artistTags = resolveFollowedArtistTags();
   if (artistTags.length === 0) {
     feedLink.title = NO_ARTISTS_TITLE;
   } else {
@@ -200,13 +228,12 @@ function ensureFeedMenuItem(): HTMLLIElement | null {
     return null;
   }
 
-  reloadFromStorage();
   const feedItem = document.createElement("li");
   feedItem.id = FEED_MENU_ITEM_ID;
   const feedLink = document.createElement("a");
   feedLink.textContent = FEED_LINK_TEXT;
   feedLink.href = resolveFeedHref();
-  if (listArtistTags().length === 0) {
+  if (resolveFollowedArtistTags().length === 0) {
     feedLink.title = NO_ARTISTS_TITLE;
   }
   feedItem.append(feedLink);
@@ -282,9 +309,9 @@ function mountFeed(ctx: FeatureContext): void {
     return;
   }
 
-  // Fresh GM read — bfcache/stale load() cache must not diverge from href builders.
-  reloadFromStorage();
-  const artistTags = listArtistTags();
+  // Mirror-first artist list — GM bfcache snapshots must not drive href / recognition.
+  const artistTags = resolveFollowedArtistTags();
+  reloadStoragePreservingArtistsMirror();
   const onFeed = isFeedPage(ctx.search, artistTags);
   applyCurrentPageHighlight(feedItem, onFeed, ctx.pageKind);
 

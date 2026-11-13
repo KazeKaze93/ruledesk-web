@@ -1,8 +1,14 @@
-import { startApp } from "./boot/app";
 import { bootEarly } from "./boot/early";
-import { whenDomReady } from "./boot/ready";
+import { applyLayoutBeforePaint } from "./boot/layout";
+import { scheduleAfterFirstPaint, whenDomReady } from "./boot/ready";
 
 bootEarly();
+
 whenDomReady(() => {
-  startApp();
+  applyLayoutBeforePaint();
+  scheduleAfterFirstPaint(() => {
+    void import("./boot/app").then(({ startApp }) => {
+      void startApp();
+    });
+  });
 });

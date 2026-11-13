@@ -17,6 +17,7 @@ import {
 } from "../config/constants";
 import { log } from "../log";
 import { normalizeArtistTag } from "../search/query";
+import { readArtistsMirror, writeArtistsMirror } from "./artists-mirror";
 import {
   addFav,
   addFavs,
@@ -78,6 +79,31 @@ function setStorageCache(data: StorageData): void {
   storageCacheHydrated = true;
 }
 
+/** Authoritative replace: used after intentional GM writes ({@link save}). */
+function syncArtistsMirror(data: StorageData): void {
+  writeArtistsMirror(data.artists.map((entry) => entry.tag));
+}
+
+/**
+ * Seeds the mirror from GM only when missing/unparseable.
+ * Never replaces an existing fresher mirror (bfcache / cross-tab).
+ */
+function seedArtistsMirrorIfMissing(data: StorageData): void {
+  if (readArtistsMirror() !== null) {
+    return;
+  }
+  syncArtistsMirror(data);
+}
+
+/**
+ * Seeds the artists mirror from current storage when the mirror is missing.
+ * Does not clobber an existing mirror. Prefer {@link save} for authoritative updates.
+ * Package A may call this once on boot if load has not run yet.
+ */
+export function syncArtistsMirrorFromStorage(): void {
+  seedArtistsMirrorIfMissing(load());
+}
+
 /** Clears the in-memory main storage cache (tests / full remount). */
 export function clearStorageCache(): void {
   cachedStorage = null;
@@ -88,23 +114,31 @@ function loadUncached(): StorageData {
   const raw = readRaw();
   if (raw === undefined || raw === null) {
     migrateMarksFavToFavs();
-    return createDefaultStorage();
+    const empty = createDefaultStorage();
+    seedArtistsMirrorIfMissing(empty);
+    return empty;
   }
   const parsed = StorageSchema.safeParse(raw);
   if (!parsed.success) {
     backupInvalid(raw);
     migrateMarksFavToFavs();
-    return createDefaultStorage();
+    const empty = createDefaultStorage();
+    seedArtistsMirrorIfMissing(empty);
+    return empty;
   }
   migrateMarksFavToFavs();
   const after = readRaw();
   if (after === undefined || after === null) {
-    return createDefaultStorage();
+    const empty = createDefaultStorage();
+    seedArtistsMirrorIfMissing(empty);
+    return empty;
   }
   const reparsed = StorageSchema.safeParse(after);
   if (!reparsed.success) {
+    seedArtistsMirrorIfMissing(parsed.data);
     return parsed.data;
   }
+  seedArtistsMirrorIfMissing(reparsed.data);
   return reparsed.data;
 }
 
@@ -195,15 +229,19 @@ export function save(data: StorageData): void {
   migrateMarksFavToFavs();
   const after = readRaw();
   if (after === undefined || after === null) {
-    setStorageCache(createDefaultStorage());
+    const empty = createDefaultStorage();
+    setStorageCache(empty);
+    syncArtistsMirror(empty);
     return;
   }
   const reparsed = StorageSchema.safeParse(after);
   if (!reparsed.success) {
     setStorageCache(toWrite);
+    syncArtistsMirror(toWrite);
     return;
   }
   setStorageCache(reparsed.data);
+  syncArtistsMirror(reparsed.data);
 }
 
 export function addCollection(name: string, tags: TagEntry[]): Collection {

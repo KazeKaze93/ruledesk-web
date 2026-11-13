@@ -12,9 +12,13 @@ import { normalizeArtistTag } from "../search/query";
 import { detectPageKind } from "../site/pages";
 import { SITE_SELECTORS } from "../site/selectors";
 import {
-  addArtist,
-  isFollowingArtist,
-  removeArtist,
+  readArtistsMirror,
+  writeArtistsMirror,
+} from "../storage/artists-mirror";
+import {
+  listArtistTags,
+  reloadFromStorage,
+  save,
 } from "../storage/store";
 import { ensureDocumentStyles } from "./cards";
 
@@ -52,6 +56,73 @@ function extractArtistTagFromLi(li: Element): string | null {
   return null;
 }
 
+function mergeArtistTagsByTag(
+  left: readonly string[],
+  right: readonly string[],
+): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const tag of left) {
+    if (seen.has(tag)) {
+      continue;
+    }
+    seen.add(tag);
+    merged.push(tag);
+  }
+  for (const tag of right) {
+    if (seen.has(tag)) {
+      continue;
+    }
+    seen.add(tag);
+    merged.push(tag);
+  }
+  return merged;
+}
+
+/**
+ * Union of mirror + GM artists by tag.
+ * Before Follow/Unfollow write so a bfcache-stale GM snapshot cannot drop
+ * artists followed on another page (present only in the mirror).
+ *
+ * listArtistTags → reload syncs the mirror from GM; restore/merge immediately
+ * so that sync cannot leave the mirror permanently wiped.
+ */
+function readMergedArtistTags(): string[] {
+  const mirrored = readArtistsMirror();
+  const fromStorage = listArtistTags();
+  if (mirrored === null || mirrored.length === 0) {
+    return fromStorage;
+  }
+  const merged = mergeArtistTagsByTag(mirrored, fromStorage);
+  writeArtistsMirror(merged);
+  return merged;
+}
+
+function persistArtistTags(tags: readonly string[]): void {
+  const data = reloadFromStorage();
+  data.artists = tags.map((tag) => ({ tag }));
+  save(data);
+  writeArtistsMirror(tags);
+}
+
+function isFollowingResolved(tag: string): boolean {
+  return readMergedArtistTags().includes(tag);
+}
+
+function followArtist(tag: string): void {
+  const current = readMergedArtistTags();
+  if (current.includes(tag)) {
+    persistArtistTags(current);
+    return;
+  }
+  persistArtistTags([...current, tag]);
+}
+
+function unfollowArtist(tag: string): void {
+  const current = readMergedArtistTags();
+  persistArtistTags(current.filter((entry) => entry !== tag));
+}
+
 function applyFollowState(button: HTMLButtonElement, following: boolean): void {
   button.setAttribute("aria-pressed", following ? "true" : "false");
   button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
@@ -69,21 +140,21 @@ function attachFollowButton(li: HTMLElement, tag: string): void {
   button.type = "button";
   button.className = CSS_CLASS.artistFollow;
   button.dataset.rdwArtistTag = tag;
-  applyFollowState(button, isFollowingArtist(tag));
+  applyFollowState(button, isFollowingResolved(tag));
   button.addEventListener("click", (event: Event) => {
     event.preventDefault();
     event.stopPropagation();
     const following = button.getAttribute("aria-pressed") === "true";
     try {
       if (following) {
-        removeArtist(tag);
+        unfollowArtist(tag);
         applyFollowState(button, false);
       } else {
-        addArtist(tag);
+        followArtist(tag);
         applyFollowState(button, true);
       }
     } catch {
-      applyFollowState(button, isFollowingArtist(tag));
+      applyFollowState(button, isFollowingResolved(tag));
     }
   });
   li.append(button);

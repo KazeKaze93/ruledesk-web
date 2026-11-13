@@ -1,4 +1,8 @@
-import { ensureStyleElement } from "./appearance-dom";
+import {
+  applyAppearanceToDocument,
+  ensureStyleElement,
+} from "./appearance-dom";
+import { peekAppearanceForPaint } from "./cheap-appearance";
 import {
   RDW_OWN_PAGE_CLASS,
   RDW_OWN_PAGE_STYLE_ID,
@@ -6,14 +10,34 @@ import {
   parseRdwHash,
 } from "../pages/constants";
 import { getSiteSkinCss } from "../skin/site-skin";
-import { applyAppearanceTheme } from "../skin/theme";
+import { forceLightSiteBase, setSiteTheme } from "../site/theme";
 import {
-  getAppearance,
-  getAppearanceBackgroundDataUrl,
-} from "../storage/store";
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
+} from "../config/constants";
+import type { Appearance } from "../storage/schema";
 
 /**
- * If the URL already has #rdw/…, stamp html.rdw-own-page before paint.
+ * Pre-CSS operations on document-start (must stay minimal — A1 counts these):
+ * 1. GM_getValue(STORAGE_KEY) via {@link peekAppearanceForPaint}
+ * 2. cheap shape parse of settings.appearance (no zod)
+ * Then immediately inject theme + skin CSS (base color only, no background image).
+ */
+
+function syncSiteCookieAfterCss(appearance: Appearance): void {
+  if (appearance.theme === APPEARANCE_THEME_SITE_DARK) {
+    setSiteTheme("dark");
+    return;
+  }
+  if (appearance.theme === APPEARANCE_THEME_SITE) {
+    setSiteTheme("light");
+    return;
+  }
+  forceLightSiteBase();
+}
+
+/**
+ * If the URL already has #rdw/…, stamp html.rdw-own-page after CSS inject.
  * Kept here (not in pages/router) so document-start does not import Preact host.
  */
 function applyOwnPageClassEarly(): void {
@@ -31,17 +55,16 @@ function applyOwnPageClassEarly(): void {
 
 /**
  * Runs at userscript document-start, before DOMContentLoaded.
- * Reads settings, syncs site theme cookie, stamps html theme attrs,
- * injects token + site-skin CSS. Must not touch document.body.
- * If the URL already has #rdw/…, stamps html.rdw-own-page to avoid a flash.
+ * Hot path: cheap appearance GM read → inject token + site-skin CSS (no bg image).
+ * Cookie sync / rdw-own-page run only after styles are in the DOM.
  */
 export function bootEarly(): void {
-  applyOwnPageClassEarly();
-  const appearance = getAppearance();
-  const backgroundDataUrl = getAppearanceBackgroundDataUrl();
-  applyAppearanceTheme({
+  const appearance = peekAppearanceForPaint();
+  applyAppearanceToDocument({
     appearance,
     siteSkinCss: getSiteSkinCss(),
-    ...(backgroundDataUrl !== undefined ? { backgroundDataUrl } : {}),
+    omitBackgroundImage: true,
   });
+  syncSiteCookieAfterCss(appearance);
+  applyOwnPageClassEarly();
 }

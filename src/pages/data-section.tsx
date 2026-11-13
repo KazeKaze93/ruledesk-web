@@ -32,6 +32,7 @@ const FAVORITES_EXPORT_HINT =
 const IMPORT_MODE_LABEL = "Import mode";
 const EXPORT_LABEL = UI_TEXT.export;
 const IMPORT_LABEL = UI_TEXT.import;
+const EXPORT_ERROR_PREFIX = "Export failed:";
 const STORAGE_HINT =
   "Collections, artists, and settings live in Tampermonkey storage. Favorites are optional in this file. Blacklist and site theme are browser cookies and are not included.";
 
@@ -140,9 +141,15 @@ export function DataSection(props: DataSectionProps = {}): JSX.Element {
             onClick={() => {
               setError("");
               setSummary("");
-              exportBackupDownload({
+              void exportBackupDownload({
                 includeBackground,
                 includeFavorites,
+              }).catch((caught: unknown) => {
+                const message =
+                  caught instanceof Error
+                    ? caught.message
+                    : "Export failed unexpectedly";
+                setError(`${EXPORT_ERROR_PREFIX} ${message}`);
               });
             }}
           >
@@ -172,8 +179,8 @@ export function DataSection(props: DataSectionProps = {}): JSX.Element {
               setError("");
               setSummary("");
               void readFileText(file)
-                .then((text) => {
-                  const result = importBackupJson(text, mode);
+                .then((text) => importBackupJson(text, mode))
+                .then((result) => {
                   if (!result.ok) {
                     setError(`${UI_TEXT.importErrorPrefix} ${result.error}`);
                     return;

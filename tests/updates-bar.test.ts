@@ -5,6 +5,10 @@ import {
   UPDATES_BAR_ID,
   UI_TEXT,
 } from "../src/config/constants";
+import {
+  clearArtistsMirror,
+  writeArtistsMirror,
+} from "../src/storage/artists-mirror";
 import { createDefaultStorage } from "../src/storage/schema";
 import { clearStorageCache, getSeenPostId, save } from "../src/storage/store";
 import { FEED_NEW_CLASS } from "../src/features/feed";
@@ -15,6 +19,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearStorageCache();
+  clearArtistsMirror();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -224,8 +229,24 @@ describe("mountUpdatesBar", () => {
     data.artists = [{ tag: "a" }, { tag: "b" }, { tag: "c" }];
     data.updates = { seenPostId: 10 };
     memory.set(STORAGE_KEY, data);
+    writeArtistsMirror(["a", "b", "c"]);
 
     mountUpdatesBar(document, "?page=post&s=list&tags=(+a+~+b+)");
     expect(document.getElementById(UPDATES_BAR_ID)).toBeNull();
+  });
+
+  it("recognizes the feed bar from mirror artists absent from GM", () => {
+    seedArtists(10);
+    writeArtistsMirror(["a", "b", "mirror_only"]);
+    buildListPage(["42"], ["42"]);
+
+    mountUpdatesBar(
+      document,
+      "?page=post&s=list&tags=(+a+~+b+~+mirror_only+)",
+    );
+
+    const bar = document.getElementById(UPDATES_BAR_ID);
+    expect(bar).not.toBeNull();
+    expect(bar?.textContent).toContain("1 new");
   });
 });

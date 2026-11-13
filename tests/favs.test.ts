@@ -8,15 +8,18 @@ import {
 import {
   addFav,
   addFavs,
+  cheapParseFavs,
   clearFavsCache,
   getSyncState,
   isFav,
   loadFavSet,
   migrateMarksFavToFavs,
+  parseFavsStrict,
   removeFav,
   setSyncState,
 } from "../src/storage/favs";
 import {
+  FavsSchema,
   LEGACY_PANEL_FEATURE_STATE_ID,
   createDefaultStorage,
   stripLegacyPanelWindowSize,
@@ -129,6 +132,72 @@ describe("favs storage", () => {
 
     const stored = memory.get(FAVS_STORAGE_KEY) as { ids: number[] };
     expect(stored.ids).toHaveLength(15_000);
+  });
+
+  it("does not call FavsSchema.safeParse on ordinary first load", () => {
+    memory.set(FAVS_STORAGE_KEY, { version: 1, ids: [11, 22] });
+    const spy = vi.spyOn(FavsSchema, "safeParse");
+    clearFavsCache();
+    expect(loadFavSet().has(11)).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it("cheapParseFavs keeps ids when sync is invalid (full zod would reject)", () => {
+    const raw = {
+      version: 1,
+      ids: [7, 8, 9],
+      sync: {
+        nextPid: "not-an-int",
+        lastPid: 0,
+        startedAt: "2020-01-01T00:00:00.000Z",
+      },
+    };
+    expect(FavsSchema.safeParse(raw).success).toBe(false);
+    expect(parseFavsStrict(raw)).toBeNull();
+    const cheap = cheapParseFavs(raw);
+    expect(cheap).toEqual({ version: 1, ids: [7, 8, 9] });
+
+    memory.set(FAVS_STORAGE_KEY, raw);
+    clearFavsCache();
+    expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([7, 8, 9]);
+  });
+
+  it("lazy-reads favs only on first access", () => {
+    const getValue = vi.fn((key: string, defaultValue?: unknown): unknown => {
+      if (!memory.has(key)) {
+        return defaultValue;
+      }
+      return memory.get(key);
+    });
+    vi.stubGlobal("GM_getValue", getValue);
+    memory.set(FAVS_STORAGE_KEY, { version: 1, ids: [42] });
+    clearFavsCache();
+
+    const favReadsBefore = getValue.mock.calls.filter(
+      (call) => call[0] === FAVS_STORAGE_KEY,
+    ).length;
+    expect(favReadsBefore).toBe(0);
+
+    expect(isFav(42)).toBe(true);
+    const favReadsAfter = getValue.mock.calls.filter(
+      (call) => call[0] === FAVS_STORAGE_KEY,
+    ).length;
+    expect(favReadsAfter).toBeGreaterThan(0);
+
+    getValue.mockClear();
+    expect(isFav(42)).toBe(true);
+    expect(
+      getValue.mock.calls.filter((call) => call[0] === FAVS_STORAGE_KEY),
+    ).toHaveLength(0);
+  });
+
+  it("parseFavsStrict uses full FavsSchema for import validation", () => {
+    expect(parseFavsStrict({ version: 1, ids: [1] })).toEqual({
+      version: 1,
+      ids: [1],
+    });
+    expect(parseFavsStrict({ version: 1, ids: ["1"] })).toBeNull();
   });
 
   it("addFav / removeFav update cache for subsequent isFav", () => {

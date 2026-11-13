@@ -35,6 +35,7 @@ export const PAGE_CONTENT_CSS = `
   padding: 7px 8px;
   border-radius: var(--rdw-radius-m);
   font-size: 12.5px;
+  color: var(--rdw-text);
 }
 .${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
   background: var(--rdw-surface-2);
@@ -115,6 +116,7 @@ export const PAGE_CONTENT_CSS = `
   border: 1px solid var(--rdw-border);
   border-radius: var(--rdw-radius-m);
   background: var(--rdw-surface);
+  color: var(--rdw-text);
 }
 .${CSS_CLASS.itemName} {
   border: 0;

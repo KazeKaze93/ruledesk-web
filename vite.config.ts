@@ -15,7 +15,7 @@ export default defineConfig({
         namespace: "https://github.com/kazekaze93/ruledesk-web",
         description:
           "Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx",
-        version: "0.11.0",
+        version: "0.12.0",
         match: ["https://rule34.xxx/*"],
         "run-at": "document-start",
         grant: ["GM_getValue", "GM_setValue"],
@@ -24,6 +24,8 @@ export default defineConfig({
       },
       build: {
         fileName: "ruledesk-web.user.js",
+        // Dynamic import("./boot/app") stays one userscript file (SystemJS inlined).
+        systemjs: "inline",
       },
     }),
   ],

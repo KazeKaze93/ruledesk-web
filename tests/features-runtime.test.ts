@@ -7,12 +7,14 @@ import { FEATURES } from "../src/features/registry";
 import {
   applyCssOnlyFeatureChoice,
   applyCssOnlyFeatureEnabled,
+  applyFeatureChrome,
   getFeatureChoice,
   isFeatureEnabled,
   notifyThumbsAdded,
   onThumbsAdded,
   resetFeatureRuntimeState,
   runFeatures,
+  runFeaturesYielding,
 } from "../src/features/runtime";
 import type { Feature } from "../src/features/types";
 import {
@@ -148,6 +150,49 @@ describe("features runtime", () => {
     expect(order).toEqual(["first", "second"]);
   });
 
+  it("does not remount features already applied via applyFeatureChrome", () => {
+    const mounts: string[] = [];
+    const feature = makeFeature({
+      id: "layout-first",
+      pages: ["list"],
+      mountImpl: () => {
+        mounts.push("layout-first");
+      },
+    });
+    FEATURES.push(feature);
+    applyFeatureChrome(feature, "list", "?page=post&s=list");
+    runFeatures("list", "?page=post&s=list");
+    expect(mounts).toEqual(["layout-first"]);
+  });
+
+  it("runFeaturesYielding mounts one-by-one with yields between", async () => {
+    vi.useFakeTimers();
+    const order: string[] = [];
+    FEATURES.push(
+      makeFeature({
+        id: "a",
+        pages: ["list"],
+        mountImpl: () => {
+          order.push("a");
+        },
+      }),
+      makeFeature({
+        id: "b",
+        pages: ["list"],
+        mountImpl: () => {
+          order.push("b");
+        },
+      }),
+    );
+
+    const pending = runFeaturesYielding("list", "?page=post&s=list");
+    expect(order).toEqual(["a"]);
+    await vi.runAllTimersAsync();
+    await pending;
+    expect(order).toEqual(["a", "b"]);
+    vi.useRealTimers();
+  });
+
   it("isolates mount exceptions so later features still run", () => {
     const order: string[] = [];
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -202,6 +247,9 @@ describe("features runtime", () => {
 
     setFeatureChoiceValue("grid-density", "compact");
     document.body.className = "";
+    // runFeatures skips already-mounted ids (layout/runtime contract); reset
+    // simulates a fresh page load that must re-apply the stored choice class.
+    resetFeatureRuntimeState();
     runFeatures("list", "?page=post&s=list");
     expect(
       document.body.classList.contains(
@@ -489,13 +537,13 @@ describe("settings page feature apply", () => {
     });
   }
 
-  function openSettingsShadow(): ShadowRoot {
+  async function openSettingsShadow(): Promise<ShadowRoot> {
     const header = document.getElementById("header");
     expect(header).toBeInstanceOf(HTMLElement);
     if (!(header instanceof HTMLElement)) {
       throw new Error("expected #header");
     }
-    showRdwPage(RDW_ROUTE_SETTINGS, header);
+    await showRdwPage(RDW_ROUTE_SETTINGS, header);
     const host = document.getElementById(RDW_PAGE_ROOT_ID);
     expect(host).not.toBeNull();
     const shadow = host?.shadowRoot;
@@ -516,7 +564,7 @@ describe("settings page feature apply", () => {
     clickControl(control);
   }
 
-  it("reloads when a non-cssOnly feature is toggled", () => {
+  it("reloads when a non-cssOnly feature is toggled", async () => {
     const reload = vi.fn();
     vi.stubGlobal("location", {
       ...window.location,
@@ -532,12 +580,12 @@ describe("settings page feature apply", () => {
       }),
     );
 
-    const shadow = openSettingsShadow();
+    const shadow = await openSettingsShadow();
     clickSwitch(shadow, `${FEATURE_CHECKBOX_ID_PREFIX}needs-reload`);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("does not reload when a cssOnly feature is toggled", () => {
+  it("does not reload when a cssOnly feature is toggled", async () => {
     const reload = vi.fn();
     vi.stubGlobal("location", {
       ...window.location,
@@ -555,7 +603,7 @@ describe("settings page feature apply", () => {
     );
 
     runFeatures("list", "?page=post&s=list");
-    const shadow = openSettingsShadow();
+    const shadow = await openSettingsShadow();
     clickSwitch(shadow, `${FEATURE_CHECKBOX_ID_PREFIX}live-settings`);
     expect(reload).not.toHaveBeenCalled();
     expect(
@@ -563,7 +611,7 @@ describe("settings page feature apply", () => {
     ).toBe(true);
   });
 
-  it("reloads when Enable page tweaks is toggled", () => {
+  it("reloads when Enable page tweaks is toggled", async () => {
     const reload = vi.fn();
     vi.stubGlobal("location", {
       ...window.location,
@@ -571,13 +619,13 @@ describe("settings page feature apply", () => {
       search: "?page=post&s=list",
     });
 
-    const shadow = openSettingsShadow();
+    const shadow = await openSettingsShadow();
     clickSwitch(shadow, TWEAKS_SWITCH_ID);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show a reload-to-apply hint on Settings or Blacklist", () => {
-    const shadow = openSettingsShadow();
+  it("does not show a reload-to-apply hint on Settings or Blacklist", async () => {
+    const shadow = await openSettingsShadow();
     const text = shadow.textContent ?? "";
     expect(text).not.toContain("Reload the page to apply");
     expect(text).not.toContain("Saved. Reload the page to apply.");

@@ -1,31 +1,29 @@
-import { maybeResumeFavoritesSync } from "../site/favorites-sync-runner";
+/**
+ * DOM-ready scheduling helpers. Favorites sync resume lives in deferred app start
+ * so this module stays off the favs/storage import path.
+ */
 
 /**
  * Run `callback` once the document is interactive enough for body mounts.
  * At document-start, waits for DOMContentLoaded; if already past that, runs now.
- *
- * After the primary callback, {@link onDomReadySideEffects} runs once so Package H
- * can resume favorites sync without racing panel/page mount order.
  */
 export function whenDomReady(callback: () => void): void {
-  const run = (): void => {
-    callback();
-    onDomReadySideEffects();
-  };
   if (
     document.readyState === "interactive" ||
     document.readyState === "complete"
   ) {
-    run();
+    callback();
     return;
   }
-  document.addEventListener("DOMContentLoaded", run, { once: true });
+  document.addEventListener("DOMContentLoaded", callback, { once: true });
 }
 
 /**
- * Side effects after the main app callback on DOM ready.
- * Resumes abandoned favorites sync when the lock is stale.
+ * After first paint: rAF → zero-delay task → callback.
+ * Use for feature mounts and heavy module work.
  */
-export function onDomReadySideEffects(): void {
-  maybeResumeFavoritesSync();
+export function scheduleAfterFirstPaint(callback: () => void): void {
+  requestAnimationFrame(() => {
+    setTimeout(callback, 0);
+  });
 }

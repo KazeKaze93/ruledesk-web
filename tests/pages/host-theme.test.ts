@@ -10,6 +10,10 @@ import {
   clearStorageCache,
   setAppearance,
 } from "../../src/storage/store";
+import {
+  SITE_DARK_PALETTE_RESOLVED,
+  SITE_DEFAULT_PALETTE_RESOLVED,
+} from "../../src/skin/theme";
 import { DARK_PALETTE, LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 import { DEBUG_KEY, SITE_THEME_STYLESHEET_LIGHT } from "../../src/config/constants";
 
@@ -55,10 +59,10 @@ describe("rdw page host theme tokens", () => {
     vi.restoreAllMocks();
   });
 
-  it("updates Shadow host tokens on the first theme change without remount", () => {
+  it("updates Shadow host tokens on the first theme change without remount", async () => {
     setAppearance({ theme: "light" });
     applyAppearanceTheme({ appearance: { theme: "light" } });
-    showRdwPage(RDW_ROUTE_SETTINGS, header);
+    await showRdwPage(RDW_ROUTE_SETTINGS, header);
 
     const host = document.getElementById(RDW_PAGE_ROOT_ID);
     expect(host).toBeTruthy();
@@ -73,15 +77,23 @@ describe("rdw page host theme tokens", () => {
     );
   });
 
-  it("uses light palette for site and dark for site-dark on script pages", () => {
+  it("uses site palettes for site and site-dark on script pages", async () => {
     setAppearance({ theme: "site-dark" });
     applyAppearanceTheme({ appearance: { theme: "site-dark" } });
-    showRdwPage(RDW_ROUTE_SETTINGS, header);
+    await showRdwPage(RDW_ROUTE_SETTINGS, header);
+    // Re-apply after mount: syncPageRootTokens must keep site palette (not Dark).
+    applyAppearanceTheme({ appearance: { theme: "site-dark" } });
     const host = document.getElementById(RDW_PAGE_ROOT_ID)!;
-    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).toBe(DARK_PALETTE.bg);
+    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).toBe(
+      SITE_DARK_PALETTE_RESOLVED.bg,
+    );
+    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).not.toBe(DARK_PALETTE.bg);
 
     setAppearance({ theme: "site" });
     applyAppearanceTheme({ appearance: { theme: "site" } });
-    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).toBe(LIGHT_PALETTE.bg);
+    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).toBe(
+      SITE_DEFAULT_PALETTE_RESOLVED.bg,
+    );
+    expect(host.style.getPropertyValue(TOKEN_VAR.bg)).not.toBe(LIGHT_PALETTE.bg);
   });
 });

@@ -16,6 +16,10 @@ import {
   type FeatureContext,
 } from "../../src/features/types";
 import { RDW_HASH_FOLLOWING } from "../../src/pages/constants";
+import {
+  clearArtistsMirror,
+  writeArtistsMirror,
+} from "../../src/storage/artists-mirror";
 import { createDefaultStorage } from "../../src/storage/schema";
 import { clearStorageCache, save } from "../../src/storage/store";
 
@@ -26,6 +30,7 @@ const memory = new Map<string, unknown>();
 function installGmMocks(): void {
   memory.clear();
   clearStorageCache();
+  clearArtistsMirror();
   vi.stubGlobal(
     "GM_getValue",
     (key: string, defaultValue?: unknown): unknown => {
@@ -352,6 +357,7 @@ describe("feedFeature", () => {
     const data = createDefaultStorage();
     data.artists = [{ tag: "a" }, { tag: "b" }, { tag: "new_follow" }];
     memory.set(STORAGE_KEY, data);
+    writeArtistsMirror(["a", "b", "new_follow"]);
 
     feedFeature.mount(makeContext("list", search));
 
@@ -364,6 +370,23 @@ describe("feedFeature", () => {
     expect(
       document.getElementById(FEED_MENU_ITEM_ID)?.querySelector("a")?.href,
     ).toContain("new_follow");
+  });
+
+  it("uses mirror artists absent from GM for Feed href and recognition", () => {
+    seedArtists(["a"]);
+    writeArtistsMirror(["a", "mirror_only"]);
+    const { posts } = buildHeaderMenu();
+
+    feedFeature.mount(
+      makeContext("list", "?page=post&s=list&tags=(+a+~+mirror_only+)"),
+    );
+
+    const feedItem = document.getElementById(FEED_MENU_ITEM_ID);
+    const feedLink = feedItem?.querySelector("a");
+    expect(feedLink?.href).toContain("mirror_only");
+    expect(feedLink?.href).toContain("tags=%28+a+~+mirror_only+%29");
+    expect(feedItem?.classList.contains(CURRENT_PAGE_CLASS)).toBe(true);
+    expect(posts.classList.contains(CURRENT_PAGE_CLASS)).toBe(false);
   });
 
   it("refreshes Feed href on pageshow when not persisted", () => {

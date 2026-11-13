@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { RDW_SKIN_CLASS, RDW_THEME_ATTR } from "../../src/config/constants";
+import {
+  CSS_CLASS,
+  RDW_SKIN_CLASS,
+  RDW_THEME_ATTR,
+} from "../../src/config/constants";
 import { RDW_PAGE_ROOT_ID } from "../../src/pages/constants";
 import { getSiteSkinCss, SITE_SKIN_CSS } from "../../src/skin/site-skin";
 import { LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
@@ -8,8 +12,10 @@ import { LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 const HEX_IN_RULES = /#[0-9a-fA-F]{3,8}\b/;
 const COMMENT_BLOCK = /\/\*[\s\S]*?\*\//g;
 const SEARCH_TOOLS_ROOT_ID = "rdw-search-tools";
+const SEARCH_TOOLS_RESET_CLASS = "rdw-search-tools-reset";
 /** Only unscoped selector allowed: script page host on Site default/dark. */
 const UNSCOPED_PAGE_ROOT = `#${RDW_PAGE_ROOT_ID}`;
+const WHERE_NOT_OUR_CONTROL = `:where(:not([class*="rdw-"]):not(#${SEARCH_TOOLS_ROOT_ID} *))`;
 
 const KEY_SELECTORS = [
   `#site-title`,
@@ -171,12 +177,89 @@ describe("site-skin CSS export", () => {
   it("excludes search-tools root and rdw-* controls from site button/input chrome", () => {
     expect(SITE_SKIN_CSS).toContain(':not([class*="rdw-"])');
     expect(SITE_SKIN_CSS).toContain(`:not(#${SEARCH_TOOLS_ROOT_ID} *)`);
-    expect(SITE_SKIN_CSS).toContain(
-      `button:not([class*="rdw-"]):not(#${SEARCH_TOOLS_ROOT_ID} *)`,
-    );
+    expect(SITE_SKIN_CSS).toContain(`button${WHERE_NOT_OUR_CONTROL}`);
     const bare = stripComments(SITE_SKIN_CSS);
     expect(bare).not.toMatch(
       /html\.rdw-skin\s+button\s*,\s*html\.rdw-skin\s+input\[type="submit"\]/s,
+    );
+  });
+
+  it("wraps general button exclusions in :where so accent submit wins", () => {
+    expect(SITE_SKIN_CSS).toContain(
+      `input[type="submit"]${WHERE_NOT_OUR_CONTROL}`,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    // Pre-:where form inflated specificity via #rdw-search-tools and beat accent.
+    expect(bare).not.toMatch(
+      /input\[type="submit"\]:not\(\[class\*="rdw-"\]\):not\(#rdw-search-tools \*\)/,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /div\.tag-search input\[type="submit"\][\s\S]*?background:\s*var\(--rdw-accent\)/,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /\.manual-page-chooser\s*>\s*input\[type="submit"\][\s\S]*?background:\s*var\(--rdw-accent\)/,
+    );
+  });
+
+  it("keeps Reset search as a single-line kit ghost link-button", () => {
+    expect(SITE_SKIN_CSS).toContain(
+      `#${SEARCH_TOOLS_ROOT_ID} .${SEARCH_TOOLS_RESET_CLASS}`,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${SEARCH_TOOLS_ROOT_ID}\\s*\\.${SEARCH_TOOLS_RESET_CLASS}\\s*\\{[^}]*white-space:\\s*nowrap`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${SEARCH_TOOLS_ROOT_ID}\\s*\\.${SEARCH_TOOLS_RESET_CLASS}\\s*\\{[^}]*flex-shrink:\\s*0`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${SEARCH_TOOLS_ROOT_ID}\\s*\\.${SEARCH_TOOLS_RESET_CLASS}\\s*\\{[^}]*color:\\s*var\\(--rdw-accent\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${SEARCH_TOOLS_ROOT_ID}\\s*\\.${SEARCH_TOOLS_RESET_CLASS}\\s*\\{[^}]*background:\\s*transparent`,
+        "s",
+      ),
+    );
+  });
+
+  it("styles artist Follow as secondary button on theme tokens", () => {
+    expect(SITE_SKIN_CSS).toContain(`button.${CSS_CLASS.artistFollow}`);
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `button\\.${CSS_CLASS.artistFollow}\\s*\\{[^}]*background:\\s*var\\(--rdw-surface\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `button\\.${CSS_CLASS.artistFollow}\\s*\\{[^}]*border:\\s*1px solid var\\(--rdw-border\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `button\\.${CSS_CLASS.artistFollow}\\s*\\{[^}]*color:\\s*var\\(--rdw-text\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toContain(
+      `button.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked}`,
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    expect(bare).not.toMatch(
+      new RegExp(
+        `button\\.${CSS_CLASS.artistFollow}\\s*\\{[^}]*background:\\s*#fff`,
+        "s",
+      ),
     );
   });
 

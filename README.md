@@ -12,6 +12,15 @@ Managers that honor `@updateURL` / `@downloadURL` can auto-check that same raw U
 
 Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
+### 0.12.0 notes
+
+- **Faster start:** theme + site-skin CSS inject first (one cheap GM appearance read, no zod); heavy mounts and `#rdw/*` pages load after paint / on demand
+- **Feed after Follow/Back:** followed artists are mirrored in `localStorage` so Feed href / recognition stay current across bfcache
+- **Site theme palettes:** Site default / Site dark use site-matched token colors on RuleDesk chrome (not Light/Dark stand-ins)
+- **Custom background:** image lives in IndexedDB (async); first paint shows base palette only
+- **Skin polish:** Search/Go stay accent; Follow is secondary; Reset stays on one line
+- **Masonry:** list content flex-grows so columns fill the available width
+
 ## Own pages (site navbar)
 
 RuleDesk adds items to the site header navbar (`div#header ul#navbar`):
@@ -43,7 +52,7 @@ Own pages mount in `#rdw-page-root` (Shadow DOM) after `div#header` and hide the
 
 - Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages, or add tags on **Following** (tag field uses site autocomplete)
 - Navbar **Feed** opens a normal site search `( artist1 ~ artist2 )` (optional `id:>N` / group size; `0` = up to 400 artists per query). With no followed artists, Feed points to `#rdw/following`
-- Feed href and “is this a Feed page?” both re-read followed artists from storage (including after Follow + Back / bfcache)
+- Feed href and “is this a Feed page?” prefer a `localStorage` artists mirror (seeded/updated with GM) so Follow + Back / bfcache stay correct
 - On a full Feed result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
 - Empty Feed pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
@@ -57,12 +66,12 @@ Settings → **Appearance** → **Site theme**:
 
 | Theme | What you get |
 |---|---|
-| **Site default** | Native rule34 look (`html.rdw-skin` off; site `theme` cookie cleared) |
-| **Site dark** | Native site dark CSS (`theme=dark` cookie + `desktop-dark.css`) |
+| **Site default** | Native rule34 look (`html.rdw-skin` off; site `theme` cookie cleared); RuleDesk chrome uses site-green token palette |
+| **Site dark** | Native site dark CSS (`theme=dark` cookie + `desktop-dark.css`); RuleDesk chrome uses site-dark tokens |
 | **Light** / **Dark** | RuleDesk site skin (`html.rdw-skin`) with the matching token palette |
-| **Custom** | RuleDesk skin with a Light or Dark base; optional background image + dim (no per-color pickers). Legacy custom accent/bg/surface/text from 0.10 are dropped; base is chosen from the old `bg` brightness |
+| **Custom** | RuleDesk skin with a Light or Dark base; optional background image (IndexedDB) + dim (no per-color pickers). Legacy custom accent/bg/surface/text from 0.10 are dropped; base is chosen from the old `bg` brightness |
 
-Own pages (`#rdw/…` Shadow host) use the same palette tokens as the document (`:root` + sync onto `#rdw-page-root`).
+Own pages (`#rdw/…` Shadow host) use the same palette tokens as the document (`:root` + sync onto `#rdw-page-root`). Custom background applies after first paint.
 
 **Restore the native site look:** open **RuleDesk** (`#rdw/settings`) → Appearance → Theme → **Site default**.
 
@@ -88,13 +97,13 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `blacklist-hide` | Hide blacklisted thumbs | on | list | Hides thumbs matching the site blacklist cookie (no reload) |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
-| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS columns on list only; favorites falls back to default) |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS columns on list only; masonry content flex-grows; favorites falls back to default) |
 
 **Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 
 ## Data backup
 
-Settings → **Data** exports one JSON file `ruledesk-web-backup-<YYYY-MM-DD>.json` with storage, optional favs (**Include favorites**, off by default — restore via Favorites sync), and optional background image. Import supports **Merge** and **Replace**; a backup without favs leaves the local fav set unchanged. Seen marks are capped to the newest ~20 000 post ids on write. This is separate from the older collections-only export format below.
+Settings → **Data** exports one JSON file `ruledesk-web-backup-<YYYY-MM-DD>.json` with storage, optional favs (**Include favorites**, off by default — restore via Favorites sync), and optional background image (from IndexedDB when included). Import supports **Merge** and **Replace**; a backup without favs leaves the local fav set unchanged. Seen marks are capped to the newest ~20 000 post ids on write. This is separate from the older collections-only export format below.
 
 Example backup shape (no real data):
 

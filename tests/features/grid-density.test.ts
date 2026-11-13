@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { gridDensityFeature } from "../../src/features/grid-density";
 import { featureChoiceBodyClass } from "../../src/features/types";
+import { SITE_SELECTORS } from "../../src/site/selectors";
 
 describe("gridDensityFeature", () => {
   it("exposes choice defaultValue default and list+favorites pages", () => {
@@ -60,6 +61,17 @@ describe("gridDensityFeature", () => {
     expect(css).toContain("border-radius: 4px !important");
     expect(css).toContain("max-width: none !important");
     expect(css).toContain("max-height: none !important");
+  });
+
+  it("masonry grows #post-list div.content so columns fill flex content width", () => {
+    const css = gridDensityFeature.css;
+    const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
+    const masonryContent = `body.${masonryClass} ${SITE_SELECTORS.postListContent}`;
+
+    expect(SITE_SELECTORS.postListContent).toBe("#post-list div.content");
+    expect(css).toContain(masonryContent);
+    expect(css).toContain("flex: 1 1 auto !important");
+    expect(css).toContain("min-width: 0px !important");
   });
 
   it("masonry rules are scoped to #post-list so favorites does not get them", () => {
