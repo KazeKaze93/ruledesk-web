@@ -51,7 +51,8 @@ function buildVoteUrl(postId: string): string {
   return `${SITE_ORIGIN}${VOTE_PATH}?${params.toString()}`;
 }
 
-function buildRemoveFavUrl(postId: string): string {
+/** Favorites delete URL used by single-remove and bulk-remove (same request kind). */
+export function buildRemoveFavUrl(postId: string): string {
   const params = new URLSearchParams();
   params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
   params.set(SEARCH_PARAM_SECTION, FAVORITES_SECTION_DELETE);
@@ -126,20 +127,36 @@ export async function voteUp(postId: string): Promise<number | null> {
   }
 }
 
+export type RemoveFavoriteOptions = {
+  readonly signal?: AbortSignal;
+};
+
 export async function removeFavorite(
   postId: string,
+  options: RemoveFavoriteOptions = {},
 ): Promise<RemoveFavoriteResult> {
   try {
-    const response = await fetch(buildRemoveFavUrl(postId), {
+    const init: RequestInit = {
       method: FETCH_METHOD_GET,
       credentials: FETCH_CREDENTIALS,
-    });
+    };
+    if (options.signal !== undefined) {
+      init.signal = options.signal;
+    }
+    const response = await fetch(buildRemoveFavUrl(postId), init);
     if (!response.ok) {
       log.warn("remove favorite HTTP error", postId, response.status);
       return { status: "error" };
     }
     return { status: "removed" };
   } catch (error) {
+    if (
+      options.signal?.aborted === true ||
+      (error instanceof DOMException && error.name === "AbortError") ||
+      (error instanceof Error && error.name === "AbortError")
+    ) {
+      return { status: "error" };
+    }
     log.warn("remove favorite request failed", postId, error);
     return { status: "error" };
   }

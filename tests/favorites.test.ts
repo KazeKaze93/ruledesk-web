@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   addFavorite,
+  buildRemoveFavUrl,
   removeFavorite,
   voteUp,
 } from "../src/site/favorites";
+
 
 function mockFetchSequence(
   responses: Array<{ ok?: boolean; body: string } | Error>,
@@ -106,6 +108,15 @@ describe("voteUp", () => {
   });
 });
 
+describe("buildRemoveFavUrl", () => {
+  it("builds the favorites delete request URL", () => {
+    const url = buildRemoveFavUrl("55");
+    expect(url).toContain("page=favorites");
+    expect(url).toContain("s=delete");
+    expect(url).toContain("id=55");
+  });
+});
+
 describe("removeFavorite", () => {
   beforeEach(() => {
     vi.stubGlobal("GM_getValue", () => undefined);
@@ -118,9 +129,10 @@ describe("removeFavorite", () => {
   });
 
   it("returns removed when response.ok", async () => {
-    mockFetchSequence([{ body: "<html>ok</html>" }]);
+    const fetchMock = mockFetchSequence([{ body: "<html>ok</html>" }]);
     await expect(removeFavorite("55")).resolves.toEqual({ status: "removed" });
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(buildRemoveFavUrl("55"));
   });
 
   it("returns error when response is not ok", async () => {
@@ -133,3 +145,4 @@ describe("removeFavorite", () => {
     await expect(removeFavorite("55")).resolves.toEqual({ status: "error" });
   });
 });
+

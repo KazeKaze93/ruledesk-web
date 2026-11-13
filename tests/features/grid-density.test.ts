@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { gridDensityFeature } from "../../src/features/grid-density";
+import {
+  gridDensityFeature,
+  MASONRY_COLUMN_GAP_PX,
+  MASONRY_COLUMN_MIN_PX,
+  MASONRY_ROW_GAP_PX,
+  MASONRY_ROW_UNIT_PX,
+  MASONRY_SPAN_CSS_VAR,
+} from "../../src/features/grid-density";
 import { featureChoiceBodyClass } from "../../src/features/types";
 import { SITE_SELECTORS } from "../../src/site/selectors";
 
@@ -40,7 +47,7 @@ describe("gridDensityFeature", () => {
     );
   });
 
-  it("css has masonry column layout values under body.rdw-f-grid-density-masonry", () => {
+  it("css has masonry CSS grid layout under body.rdw-f-grid-density-masonry", () => {
     const css = gridDensityFeature.css;
     const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
     const masonryList = `body.${masonryClass} #post-list div.image-list`;
@@ -48,14 +55,25 @@ describe("gridDensityFeature", () => {
     const masonryPreview = `body.${masonryClass} #post-list span.thumb img.preview`;
 
     expect(css).toContain(masonryList);
-    expect(css).toContain("display: block !important");
+    expect(css).toContain("display: grid !important");
     expect(css).toContain("width: 100% !important");
-    expect(css).toContain("column-width: 240px !important");
-    expect(css).toContain("column-gap: 4px !important");
+    expect(css).toContain(
+      `grid-template-columns: repeat(auto-fill, minmax(${MASONRY_COLUMN_MIN_PX}px, 1fr)) !important`,
+    );
+    expect(css).toContain(
+      `grid-auto-rows: ${MASONRY_ROW_UNIT_PX}px !important`,
+    );
+    expect(css).toContain(
+      `column-gap: ${MASONRY_COLUMN_GAP_PX}px !important`,
+    );
+    expect(css).toContain(`row-gap: ${MASONRY_ROW_GAP_PX}px !important`);
+    expect(css).not.toContain("column-width:");
+    expect(css).not.toContain("break-inside:");
     expect(css).toContain(masonryThumb);
     expect(css).toContain("height: auto !important");
-    expect(css).toContain("break-inside: avoid !important");
-    expect(css).toContain("margin: 0px 0px 4px !important");
+    expect(css).toContain(
+      `grid-row-end: span var(${MASONRY_SPAN_CSS_VAR}`,
+    );
     expect(css).toContain(`body.${masonryClass} #post-list span.thumb > a`);
     expect(css).toContain(masonryPreview);
     expect(css).toContain("border-radius: 4px !important");
@@ -63,7 +81,7 @@ describe("gridDensityFeature", () => {
     expect(css).toContain("max-height: none !important");
   });
 
-  it("masonry grows #post-list div.content so columns fill flex content width", () => {
+  it("masonry grows #post-list div.content so grid fills flex content width", () => {
     const css = gridDensityFeature.css;
     const masonryClass = featureChoiceBodyClass("grid-density", "masonry");
     const masonryContent = `body.${masonryClass} ${SITE_SELECTORS.postListContent}`;
@@ -87,7 +105,8 @@ describe("gridDensityFeature", () => {
     expect(gridDensityFeature.pages).toContain("favorites");
   });
 
-  it("mount is a noop", () => {
+  it("mount on list does not mutate DOM synchronously (defers masonry-layout)", () => {
+    vi.useFakeTimers();
     const beforeHtml = document.body.innerHTML;
     const beforeClass = document.body.className;
     gridDensityFeature.mount({
@@ -100,5 +119,20 @@ describe("gridDensityFeature", () => {
     });
     expect(document.body.innerHTML).toBe(beforeHtml);
     expect(document.body.className).toBe(beforeClass);
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("mount on favorites is a sync noop", () => {
+    const beforeHtml = document.body.innerHTML;
+    gridDensityFeature.mount({
+      pageKind: "favorites",
+      search: "?page=favorites&s=view",
+      getState: <T>(parse: (raw: unknown) => T): T => parse(undefined),
+      setState: () => {
+        throw new Error("setState must not be called");
+      },
+    });
+    expect(document.body.innerHTML).toBe(beforeHtml);
   });
 });

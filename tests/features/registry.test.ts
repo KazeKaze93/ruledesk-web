@@ -17,6 +17,7 @@ describe("FEATURES registry", () => {
       "infinite-scroll",
       "post-actions",
       "grid-density",
+      "favorites-bulk",
     ]);
     expect(ids).not.toContain("top-bar");
     expect(ids).not.toContain("dark-theme");
@@ -24,4 +25,12 @@ describe("FEATURES registry", () => {
     expect(ids).not.toContain("followed-badge");
     expect(ids).not.toContain("search-tokens");
   });
+
+  it("exposes favorites-bulk for the favorites page after first paint", () => {
+    const feature = FEATURES.find((entry) => entry.id === "favorites-bulk");
+    expect(feature).toBeDefined();
+    expect(feature?.pages).toEqual(["favorites"]);
+    expect(feature?.defaultEnabled).toBe(true);
+  });
 });
+

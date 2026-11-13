@@ -12,6 +12,12 @@ export const SITE_SELECTORS = {
   postListContent: "#post-list div.content",
   contentRoot: "#content",
   artistFollowButton: `button.${CSS_CLASS.artistFollow}`,
+  /** Native AI filter checkbox (site owns click/cookie logic). */
+  filterAiCheckbox: "input.toggleSwitch#chkFilterAI",
+  /** Row wrapping the native AI filter control — hide when search-tools mirrors it. */
+  filterAiRow: "li:has(> label > span.switch > input.toggleSwitch#chkFilterAI)",
+  /** Stray Tags heading between #rdw-search-tools and the tag list. */
+  tagsHeadingAfterSearchTools: "#rdw-search-tools + h5",
 } as const;
 
 export const THUMB_ID_PATTERN = /^s(\d+)$/;

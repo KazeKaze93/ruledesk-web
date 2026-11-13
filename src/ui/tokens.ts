@@ -171,6 +171,96 @@ export function relativeLuminance(hex: string): number | null {
   return LUMA_R * r + LUMA_G * g + LUMA_B * b;
 }
 
+const CONTRAST_OFFSET = 0.05;
+
+/** WCAG AA normal-text minimum contrast ratio. */
+export const CONTRAST_RATIO_TEXT_MIN = 4.5;
+
+/** WCAG UI-component / large-text minimum contrast ratio (e.g. switch track). */
+export const CONTRAST_RATIO_UI_MIN = 3;
+
+/**
+ * Hex equivalents of `docs/design/site-desktop.css` light `* { --c-* }`.
+ * Script-page Site default chrome; keep in sync with skin/theme site palette.
+ */
+export const SITE_LIGHT_C_BG = "#aae5a4";
+export const SITE_LIGHT_C_BG_ALT = "#89cf81";
+export const SITE_LIGHT_C_BG_DEEP = "#6fb668";
+export const SITE_LIGHT_C_BG_OVERLAY = "#98d491";
+export const SITE_LIGHT_C_TEXT = "#000000";
+export const SITE_LIGHT_C_TEXT_SOFT = "#666666";
+export const SITE_LIGHT_C_LINK = "#000099";
+
+/** Site dark script-page chrome (theme=site-dark). */
+export const SITE_DARK_C_BG = "#303a30";
+export const SITE_DARK_C_SURFACE = "#293129";
+export const SITE_DARK_C_SURFACE2 = "#303030";
+export const SITE_DARK_C_BORDER = "#505a50";
+export const SITE_DARK_C_TEXT = "#c0c0c0";
+export const SITE_DARK_C_MUTED = "#878787";
+export const SITE_DARK_C_ACCENT = "#b0e0b0";
+
+/**
+ * Site default switch ON track: green-family control color (not link blue).
+ * Must keep ≥ {@link CONTRAST_RATIO_UI_MIN} vs card bg ({@link SITE_LIGHT_C_BG}).
+ */
+export const SITE_DEFAULT_SWITCH_ON = "#1a4d1a";
+
+/** Preferred thumb fill on Site default switch ON (page/card green). */
+export const SITE_DEFAULT_SWITCH_THUMB_ON = SITE_LIGHT_C_BG;
+
+/** WCAG contrast ratio of two hex colors; null if either is unparseable. */
+export function contrastRatio(
+  foreground: string,
+  background: string,
+): number | null {
+  const l1 = relativeLuminance(foreground);
+  const l2 = relativeLuminance(background);
+  if (l1 === null || l2 === null) {
+    return null;
+  }
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET);
+}
+
+/**
+ * Prefer `preferred` when it meets `minRatio` vs `background`; else first
+ * candidate that does. Falls back to `preferred` if none pass.
+ */
+export function pickContrastingHex(
+  background: string,
+  preferred: string,
+  candidates: readonly string[],
+  minRatio: number,
+): string {
+  const preferredRatio = contrastRatio(preferred, background);
+  if (preferredRatio !== null && preferredRatio >= minRatio) {
+    return preferred;
+  }
+  for (const candidate of candidates) {
+    const ratio = contrastRatio(candidate, background);
+    if (ratio !== null && ratio >= minRatio) {
+      return candidate;
+    }
+  }
+  return preferred;
+}
+
+/** Thumb fill for a switch ON track that meets UI contrast, if possible. */
+export function resolveSwitchThumbOn(
+  trackOn: string,
+  preferredThumb: string,
+  fallbacks: readonly string[] = ["#ffffff"],
+): string {
+  return pickContrastingHex(
+    trackOn,
+    preferredThumb,
+    fallbacks,
+    CONTRAST_RATIO_UI_MIN,
+  );
+}
+
 /** Pick light/dark custom base from a legacy background hex. */
 export function customBaseFromLegacyBg(bg: string | undefined): PaletteMode {
   if (bg === undefined) {

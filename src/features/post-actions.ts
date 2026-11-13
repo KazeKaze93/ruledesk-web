@@ -1,13 +1,13 @@
-import { CSS_CLASS, UI_TEXT } from "../config/constants";
+import { h, render } from "preact";
+
 import { log } from "../log";
-import { addFavorite, removeFavorite, voteUp } from "../site/favorites";
 import { readPostIdFromSearch } from "../site/pages";
-import { addFav, isFav, removeFav } from "../storage/favs";
+import { PostPanel } from "./post-panel/post-panel";
 import {
-  applyFavButtonState,
-  createFavButton,
-} from "../ui/fav-button";
-import { createPlaylistMenu } from "./playlist-menu";
+  findFlexi,
+  findMediaWrapper,
+  measureHeaderOffsetPx,
+} from "./post-panel/site-reads";
 import {
   POST_ACTIONS_ID,
   featureBodyClass,
@@ -19,129 +19,189 @@ const FEATURE_ID = "post-actions";
 const FEATURE_LABEL = "Post side panel";
 const FEATURE_PAGES = ["post"] as const;
 
-const HOST_RIGHT_COL_ID = "right-col";
-const LINK_LIST_SELECTOR = "div.link-list ul";
-const ORIGINAL_LINK_TEXT = "Original image";
-const ADD_FAVORITES_LINK_TEXT = "Add to favorites";
-const SCORE_SPAN_ID_PREFIX = "psc";
+/** Body class while the panel host is in the document — CSS hide handoff for G. */
+export const POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 
 const NARROW_BREAKPOINT_PX = 1100;
 const NARROW_MEDIA_QUERY = `(max-width: ${String(NARROW_BREAKPOINT_PX - 1)}px)`;
-const PANEL_WIDTH_PX = 160;
-const PANEL_TOP = "2.5rem";
+const PANEL_WIDTH_PX = 220;
+const PANEL_STICKY_GAP_PX = 12;
 const PANEL_Z_INDEX = 100;
+const STICKY_TOP_VAR = "--rdw-post-panel-sticky-top";
 
 const CLASS_PANEL = "rdw-post-actions";
-const CLASS_MODE_FIXED = "rdw-post-actions--fixed";
+const CLASS_MODE_WIDE = "rdw-post-actions--wide";
 const CLASS_MODE_NARROW = "rdw-post-actions--narrow";
-const CLASS_FAV_WRAP = "rdw-post-actions-fav-wrap";
-const CLASS_FAV_BUTTON = "rdw-post-actions-fav";
-const CLASS_FAV_LABEL = "rdw-post-actions-fav-label";
-const CLASS_ORIGINAL = "rdw-post-actions-original";
-const CLASS_SCORE_ROW = "rdw-post-actions-score-row";
-const CLASS_SCORE = "rdw-post-actions-score";
-const CLASS_VOTE = "rdw-post-actions-vote";
-const CLASS_OPTION = "rdw-post-actions-option";
 
-const TEXT_FAVORITE = "Favorite";
-const TEXT_IN_FAVORITES = "In favorites";
-const TEXT_ORIGINAL = "Original";
-const TEXT_SCORE_PREFIX = "Score: ";
-const TEXT_VOTE_UP = "Vote up";
-const TEXT_SCORE_UNKNOWN = "—";
-
-const LABEL_ORIGINAL = "Open original image";
-const LABEL_VOTE_UP = "Vote up";
-
-const EXCLUDED_OPTION_TEXTS: ReadonlySet<string> = new Set([
-  ORIGINAL_LINK_TEXT,
-  ADD_FAVORITES_LINK_TEXT,
-]);
-
-const WARN_NO_RIGHT_COL =
-  "post-actions: #right-col missing in narrow mode; panel stays on body";
-
-const FOCUS_OUTLINE = "2px solid #4c8bf5";
-const FOCUS_OUTLINE_OFFSET = "2px";
+const WARN_NO_FLEXI =
+  "post-actions: div.flexi missing; panel not mounted";
 
 const BODY_CLASS = featureBodyClass(FEATURE_ID);
 const BODY_SELECTOR = `body.${BODY_CLASS}`;
 
 const FEATURE_CSS = `
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.35rem;
-  box-sizing: border-box;
-  padding: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.3;
+${BODY_SELECTOR} #fit-to-screen div.flexi,
+${BODY_SELECTOR} div#right-col div.flexi,
+${BODY_SELECTOR} div.flexi {
+  flex-wrap: wrap;
+  align-items: flex-start;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_FIXED} {
-  position: fixed;
-  right: 0;
-  top: ${PANEL_TOP};
+${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_PANEL} {
+  box-sizing: border-box;
   width: ${String(PANEL_WIDTH_PX)}px;
+  max-width: 100%;
+  flex: 0 0 ${String(PANEL_WIDTH_PX)}px;
   z-index: ${String(PANEL_Z_INDEX)};
+  font: 12px/1.35 var(--rdw-font);
+  color: var(--rdw-text);
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
+  position: sticky;
+  top: var(${STICKY_TOP_VAR}, ${String(PANEL_STICKY_GAP_PX)}px);
+  align-self: flex-start;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
   position: static;
-  width: auto;
-  margin: 0 0 0.75rem;
+  width: 100%;
+  flex: 1 1 100%;
+  margin: 0.75rem 0 0;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_WRAP},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE_ROW} {
-  display: flex;
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel {
+  padding: 10px;
+  display: grid;
+  gap: 10px;
+  position: relative;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
+  grid-column: 1 / -1;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
+  display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE},
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION} {
-  color: inherit;
-  background: transparent;
-  border: 1px solid currentColor;
-  border-radius: 2px;
-  padding: 0.15rem 0.45rem;
-  cursor: pointer;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
   text-decoration: none;
   font: inherit;
-  text-align: left;
+  font-size: 12px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}.${CSS_CLASS.cardFavMarked} {
-  font-weight: 600;
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--rdw-surface-2);
+  border-radius: var(--rdw-radius-m);
+  padding: 6px 8px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_FAV_BUTTON}:focus-visible,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_ORIGINAL}:focus-visible,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE}:focus-visible,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION}:focus-visible {
-  outline: ${FOCUS_OUTLINE};
-  outline-offset: ${FOCUS_OUTLINE_OFFSET};
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_VOTE}:disabled,
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_OPTION}:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 3px 8px;
+  font-size: 12px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
+  color: var(--rdw-muted);
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-source {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--rdw-accent);
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-more {
+  position: relative;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:hover,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item:focus-visible {
+  background: var(--rdw-surface-2);
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-check {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--rdw-border);
+  border-radius: 4px;
+  color: var(--rdw-surface);
+  background: transparent;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-item[aria-checked="true"] .rdw-post-panel-collection-check {
+  background: var(--rdw-accent);
+  border-color: var(--rdw-accent);
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collection-new-form {
+  display: grid;
+  gap: 6px;
+}
+@media ${NARROW_MEDIA_QUERY} {
+  ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_WIDE} {
+    position: static;
+  }
 }
 `.trim();
 
 let layoutCleanup: (() => void) | null = null;
+let panelHost: HTMLElement | null = null;
 
 function removeExistingPanel(): void {
   if (layoutCleanup !== null) {
     layoutCleanup();
     layoutCleanup = null;
   }
+  if (panelHost !== null) {
+    render(null, panelHost);
+    panelHost.remove();
+    panelHost = null;
+  }
   const existing = document.getElementById(POST_ACTIONS_ID);
   if (existing !== null) {
     existing.remove();
   }
+  document.body.classList.remove(POST_PANEL_MOUNTED_CLASS);
 }
 
 function isNarrowViewport(): boolean {
@@ -151,30 +211,37 @@ function isNarrowViewport(): boolean {
   return window.innerWidth < NARROW_BREAKPOINT_PX;
 }
 
-function placePanel(panel: HTMLElement, narrow: boolean): void {
-  panel.classList.toggle(CLASS_MODE_FIXED, !narrow);
-  panel.classList.toggle(CLASS_MODE_NARROW, narrow);
-
-  if (narrow) {
-    const rightCol = document.getElementById(HOST_RIGHT_COL_ID);
-    if (rightCol !== null) {
-      rightCol.insertBefore(panel, rightCol.firstChild);
-      return;
-    }
-    log.warn(WARN_NO_RIGHT_COL);
-  }
-
-  if (panel.parentElement !== document.body) {
-    document.body.append(panel);
-  }
+function applyStickyTop(panel: HTMLElement): void {
+  const topPx = measureHeaderOffsetPx(PANEL_STICKY_GAP_PX);
+  panel.style.setProperty(STICKY_TOP_VAR, `${String(topPx)}px`);
 }
 
-function bindLayoutMode(panel: HTMLElement): void {
+function placePanel(panel: HTMLElement, flexi: HTMLElement): void {
+  const narrow = isNarrowViewport();
+  panel.classList.toggle(CLASS_MODE_WIDE, !narrow);
+  panel.classList.toggle(CLASS_MODE_NARROW, narrow);
+  applyStickyTop(panel);
+
+  const media = findMediaWrapper(flexi, POST_ACTIONS_ID);
+  if (media !== null) {
+    media.after(panel);
+    return;
+  }
+  flexi.append(panel);
+}
+
+function bindLayout(panel: HTMLElement, flexi: HTMLElement): void {
   const sync = (): void => {
-    placePanel(panel, isNarrowViewport());
+    placePanel(panel, flexi);
   };
   sync();
 
+  const onResize = (): void => {
+    sync();
+  };
+  window.addEventListener("resize", onResize);
+
+  let mediaCleanup: (() => void) | null = null;
   if (typeof window.matchMedia === "function") {
     const media = window.matchMedia(NARROW_MEDIA_QUERY);
     const onChange = (): void => {
@@ -182,312 +249,46 @@ function bindLayoutMode(panel: HTMLElement): void {
     };
     if (typeof media.addEventListener === "function") {
       media.addEventListener("change", onChange);
-      layoutCleanup = (): void => {
+      mediaCleanup = (): void => {
         media.removeEventListener("change", onChange);
       };
-      return;
-    }
-    if (typeof media.addListener === "function") {
+    } else if (typeof media.addListener === "function") {
       media.addListener(onChange);
-      layoutCleanup = (): void => {
+      mediaCleanup = (): void => {
         media.removeListener(onChange);
       };
-      return;
     }
   }
 
-  const onResize = (): void => {
-    sync();
-  };
-  window.addEventListener("resize", onResize);
   layoutCleanup = (): void => {
     window.removeEventListener("resize", onResize);
+    if (mediaCleanup !== null) {
+      mediaCleanup();
+    }
   };
-}
-
-function findOriginalAnchor(): HTMLAnchorElement | null {
-  const list = document.querySelector(LINK_LIST_SELECTOR);
-  const roots: ParentNode[] =
-    list !== null ? [list, document] : [document];
-  for (const root of roots) {
-    const links = root.querySelectorAll("a[href]");
-    for (const node of links) {
-      if (!(node instanceof HTMLAnchorElement)) {
-        continue;
-      }
-      if (node.textContent?.trim() !== ORIGINAL_LINK_TEXT) {
-        continue;
-      }
-      const href = node.getAttribute("href");
-      if (href === null || href.length === 0 || href === "#") {
-        continue;
-      }
-      return node;
-    }
-  }
-  return null;
-}
-
-function collectOptionAnchors(): HTMLAnchorElement[] {
-  const list = document.querySelector(LINK_LIST_SELECTOR);
-  if (list === null) {
-    return [];
-  }
-  const result: HTMLAnchorElement[] = [];
-  const links = list.querySelectorAll("a[href]");
-  for (const node of links) {
-    if (!(node instanceof HTMLAnchorElement)) {
-      continue;
-    }
-    const text = node.textContent?.trim() ?? "";
-    if (text.length === 0 || EXCLUDED_OPTION_TEXTS.has(text)) {
-      continue;
-    }
-    result.push(node);
-  }
-  return result;
-}
-
-function readScoreText(postId: string): string {
-  const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
-  if (span === null) {
-    return TEXT_SCORE_UNKNOWN;
-  }
-  const text = span.textContent?.trim() ?? "";
-  return text.length > 0 ? text : TEXT_SCORE_UNKNOWN;
-}
-
-function applyScoreValue(
-  postId: string,
-  scoreLabel: HTMLElement,
-  score: number,
-): void {
-  const text = String(score);
-  scoreLabel.textContent = `${TEXT_SCORE_PREFIX}${text}`;
-  const span = document.getElementById(`${SCORE_SPAN_ID_PREFIX}${postId}`);
-  if (span !== null) {
-    span.textContent = text;
-  }
-}
-
-function syncFavLabel(label: HTMLElement, marked: boolean): void {
-  label.textContent = marked ? TEXT_IN_FAVORITES : TEXT_FAVORITE;
-}
-
-/**
- * createFavButton wires its own click handler and drops addFavorite's score.
- * Clone strips that listener so this module can update Score / #psc{ID}.
- */
-function createPostFavControl(
-  postId: string,
-  scoreLabel: HTMLElement | null,
-): HTMLElement {
-  const marked = isFav(postId);
-  const template = createFavButton(postId, marked, CLASS_FAV_BUTTON);
-  const cloned = template.cloneNode(true);
-  if (!(cloned instanceof HTMLButtonElement)) {
-    return template;
-  }
-
-  applyFavButtonState(cloned, marked ? "marked" : "idle", postId);
-
-  const wrap = document.createElement("span");
-  wrap.className = CLASS_FAV_WRAP;
-
-  const label = document.createElement("span");
-  label.className = CLASS_FAV_LABEL;
-  syncFavLabel(label, marked);
-
-  cloned.addEventListener("click", (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void handlePostFavClick(cloned, label, postId, scoreLabel);
-  });
-
-  wrap.append(cloned, label);
-  return wrap;
-}
-
-async function handlePostFavClick(
-  button: HTMLButtonElement,
-  label: HTMLElement,
-  postId: string,
-  scoreLabel: HTMLElement | null,
-): Promise<void> {
-  if (button.disabled) {
-    return;
-  }
-
-  const currentlyMarked = button.getAttribute("aria-pressed") === "true";
-  applyFavButtonState(button, "pending", postId);
-
-  if (currentlyMarked) {
-    const result = await removeFavorite(postId);
-    if (result.status === "removed") {
-      removeFav(postId);
-      applyFavButtonState(button, "idle", postId);
-      syncFavLabel(label, false);
-      return;
-    }
-    applyFavButtonState(
-      button,
-      "marked_error",
-      postId,
-      UI_TEXT.cardFavErrorRequest,
-    );
-    syncFavLabel(label, true);
-    log.warn("post-actions: remove favorite failed", postId, result);
-    return;
-  }
-
-  const result = await addFavorite(postId);
-  if (result.status === "added" || result.status === "already") {
-    addFav(postId);
-    applyFavButtonState(button, "marked", postId);
-    syncFavLabel(label, true);
-    if (
-      result.status === "added" &&
-      result.score !== undefined &&
-      scoreLabel !== null
-    ) {
-      applyScoreValue(postId, scoreLabel, result.score);
-    }
-    return;
-  }
-  if (result.status === "not_logged_in") {
-    applyFavButtonState(
-      button,
-      "error",
-      postId,
-      UI_TEXT.cardFavErrorNotLoggedIn,
-    );
-    syncFavLabel(label, false);
-    log.warn("post-actions: favorite requires login", postId);
-    return;
-  }
-  applyFavButtonState(button, "error", postId, UI_TEXT.cardFavErrorRequest);
-  syncFavLabel(label, false);
-  log.warn("post-actions: favorite failed", postId, result);
-}
-
-function createOriginalLink(href: string): HTMLAnchorElement {
-  const link = document.createElement("a");
-  link.className = CLASS_ORIGINAL;
-  link.href = href;
-  link.target = "_blank";
-  link.rel = "noopener";
-  link.setAttribute("aria-label", LABEL_ORIGINAL);
-  link.textContent = TEXT_ORIGINAL;
-  return link;
-}
-
-function createScoreLabel(scoreText: string): HTMLElement {
-  const score = document.createElement("span");
-  score.className = CLASS_SCORE;
-  score.textContent = `${TEXT_SCORE_PREFIX}${scoreText}`;
-  return score;
-}
-
-function createVoteButton(
-  postId: string,
-  scoreLabel: HTMLElement,
-): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = CLASS_VOTE;
-  button.textContent = TEXT_VOTE_UP;
-  button.setAttribute("aria-label", LABEL_VOTE_UP);
-  button.addEventListener("click", (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void handleVoteUpClick(button, scoreLabel, postId);
-  });
-  return button;
-}
-
-async function handleVoteUpClick(
-  button: HTMLButtonElement,
-  scoreLabel: HTMLElement,
-  postId: string,
-): Promise<void> {
-  if (button.disabled) {
-    return;
-  }
-  button.disabled = true;
-  try {
-    const score = await voteUp(postId);
-    if (score !== null) {
-      applyScoreValue(postId, scoreLabel, score);
-    }
-  } finally {
-    button.disabled = false;
-  }
-}
-
-function createScoreRow(postId: string): HTMLElement {
-  const row = document.createElement("span");
-  row.className = CLASS_SCORE_ROW;
-  const scoreLabel = createScoreLabel(readScoreText(postId));
-  row.append(scoreLabel, createVoteButton(postId, scoreLabel));
-  return row;
-}
-
-function createOptionProxy(nativeLink: HTMLAnchorElement): HTMLButtonElement {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = CLASS_OPTION;
-  const text = nativeLink.textContent?.trim() ?? "";
-  button.textContent = text;
-  button.setAttribute("aria-label", text);
-  button.addEventListener("click", (event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    nativeLink.click();
-  });
-  return button;
-}
-
-function buildPanel(ctx: FeatureContext): HTMLElement {
-  const panel = document.createElement("div");
-  panel.id = POST_ACTIONS_ID;
-  panel.className = CLASS_PANEL;
-  panel.setAttribute("role", "complementary");
-  panel.setAttribute("aria-label", FEATURE_LABEL);
-
-  const postId = readPostIdFromSearch(ctx.search);
-  if (postId !== null) {
-    const scoreRow = createScoreRow(postId);
-    const scoreLabel = scoreRow.querySelector(`.${CLASS_SCORE}`);
-    const scoreEl =
-      scoreLabel instanceof HTMLElement ? scoreLabel : null;
-    panel.append(createPostFavControl(postId, scoreEl));
-    panel.append(createPlaylistMenu(Number(postId)));
-
-    const original = findOriginalAnchor();
-    if (original !== null) {
-      panel.append(createOriginalLink(original.href));
-    }
-
-    panel.append(scoreRow);
-  } else {
-    const original = findOriginalAnchor();
-    if (original !== null) {
-      panel.append(createOriginalLink(original.href));
-    }
-  }
-
-  for (const nativeLink of collectOptionAnchors()) {
-    panel.append(createOptionProxy(nativeLink));
-  }
-
-  return panel;
 }
 
 function mountPostActions(ctx: FeatureContext): void {
   removeExistingPanel();
-  const panel = buildPanel(ctx);
-  document.body.append(panel);
-  bindLayoutMode(panel);
+
+  const flexi = findFlexi();
+  if (flexi === null) {
+    log.warn(WARN_NO_FLEXI);
+    return;
+  }
+
+  const host = document.createElement("div");
+  host.id = POST_ACTIONS_ID;
+  host.className = CLASS_PANEL;
+  host.setAttribute("role", "complementary");
+  host.setAttribute("aria-label", FEATURE_LABEL);
+
+  const postId = readPostIdFromSearch(ctx.search);
+  panelHost = host;
+  document.body.classList.add(POST_PANEL_MOUNTED_CLASS);
+  placePanel(host, flexi);
+  bindLayout(host, flexi);
+  render(h(PostPanel, { postId }), host);
 }
 
 export const postActionsFeature: Feature = {
@@ -498,3 +299,5 @@ export const postActionsFeature: Feature = {
   css: FEATURE_CSS,
   mount: mountPostActions,
 };
+
+export { mountPostActions };

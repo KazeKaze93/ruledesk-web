@@ -1,5 +1,19 @@
 import type { JSX } from "preact";
 
+import {
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
+  RDW_THEME_ATTR,
+} from "../../config/constants";
+import {
+  SITE_DARK_C_ACCENT,
+  SITE_DARK_C_BG,
+  SITE_DARK_C_BORDER,
+  SITE_DEFAULT_SWITCH_ON,
+  SITE_DEFAULT_SWITCH_THUMB_ON,
+  SITE_LIGHT_C_BG_ALT,
+  resolveSwitchThumbOn,
+} from "../tokens";
 import { KIT_FOCUS_CSS, KIT_MIN_TARGET_PX } from "./shared";
 
 export type SwitchProps = {
@@ -10,6 +24,23 @@ export type SwitchProps = {
   readonly className?: string;
   readonly id?: string;
 };
+
+const SITE_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+const SITE_DARK_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+
+/** Resolved thumb for Site default ON track (contrast-checked). */
+export const SITE_DEFAULT_SWITCH_THUMB_RESOLVED = resolveSwitchThumbOn(
+  SITE_DEFAULT_SWITCH_ON,
+  SITE_DEFAULT_SWITCH_THUMB_ON,
+  [SITE_LIGHT_C_BG_ALT, "#ffffff"],
+);
+
+/** Resolved thumb for Site dark ON track (accent on card/page bg). */
+export const SITE_DARK_SWITCH_THUMB_RESOLVED = resolveSwitchThumbOn(
+  SITE_DARK_C_ACCENT,
+  SITE_DARK_C_BG,
+  ["#16181c", "#ffffff"],
+);
 
 export const SWITCH_CSS = `
 ${KIT_FOCUS_CSS}
@@ -64,6 +95,32 @@ ${KIT_FOCUS_CSS}
 .rdw-switch__label {
   font-size: 12.5px;
   color: var(--rdw-text);
+}
+/* Site default: green ON (not link blue); OFF stays border; thumb contrast-checked. */
+html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: ${SITE_DEFAULT_SWITCH_ON};
+}
+html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  background: ${SITE_DEFAULT_SWITCH_THUMB_RESOLVED};
+}
+html${SITE_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
+  background: var(--rdw-border);
+}
+/* Site dark: ON = accent; OFF = border; thumb contrast-checked vs accent. */
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: ${SITE_DARK_C_ACCENT};
+}
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  background: ${SITE_DARK_SWITCH_THUMB_RESOLVED};
+}
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
+  background: ${SITE_DARK_C_BORDER};
 }
 `;
 

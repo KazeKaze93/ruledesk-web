@@ -223,7 +223,7 @@ describe("infiniteScrollFeature", () => {
     expect(infiniteScrollFeature.css).toContain(
       `body.${featureBodyClass("infinite-scroll")}`,
     );
-    expect(infiniteScrollFeature.css).toContain("column-span: all");
+    expect(infiniteScrollFeature.css).toContain("grid-column: 1 / -1");
   });
 
   it("does nothing when image-list is missing", () => {

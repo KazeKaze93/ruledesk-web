@@ -12,6 +12,19 @@ Managers that honor `@updateURL` / `@downloadURL` can auto-check that same raw U
 
 Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
+### Tampermonkey (recommended)
+
+**Tampermonkey → Dashboard → Settings → Security → Content Script API → UserScripts API Dynamic.**
+
+Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typically 0/5 vs ~5/5 with Instant; pages also open faster. Prefer Dynamic for RuleDesk Web.
+
+### 0.13.0 notes
+
+- **Masonry grid:** CSS grid masonry density on list pages (row-span thumbs; infinite-scroll separators span full width)
+- **AI filter:** search-tools control to exclude AI-tagged posts
+- **Post panel:** redesigned post-page actions (Favorite, collections, Original, score, stats, More)
+- **Bulk favorites:** select and remove multiple favorites on the favorites page
+
 ### 0.12.0 notes
 
 - **Faster start:** theme + site-skin CSS inject first (one cheap GM appearance read, no zod); heavy mounts and `#rdw/*` pages load after paint / on demand
@@ -19,7 +32,6 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 - **Site theme palettes:** Site default / Site dark use site-matched token colors on RuleDesk chrome (not Light/Dark stand-ins)
 - **Custom background:** image lives in IndexedDB (async); first paint shows base palette only
 - **Skin polish:** Search/Go stay accent; Follow is secondary; Reset stays on one line
-- **Masonry:** list content flex-grows so columns fill the available width
 
 ## Own pages (site navbar)
 
@@ -27,7 +39,7 @@ RuleDesk adds items to the site header navbar (`div#header ul#navbar`):
 
 | Menu | Hash / URL | What it is |
 |---|---|---|
-| **Collections** | `#rdw/collections` | Custom Collection (saved tag searches) and Dynamic Collection (post-id playlists) |
+| **Collections** | `#rdw/collections` | Custom Collection (manually gathered post sets) and Dynamic Collection (saved searches) |
 | **Following** | `#rdw/following` | Followed artists; add/remove; empty state links to Posts |
 | **Favorites** | site favorites URL | Shown when a favorites user id is known; native My Favorites entry is hidden |
 | **RuleDesk** | `#rdw/settings` | Appearance, Page tweaks, Blacklist, Favorites sync, Data backup |
@@ -36,8 +48,8 @@ Own pages mount in `#rdw-page-root` (Shadow DOM) after `div#header` and hide the
 
 **Collections**
 
-- **Custom Collection:** save the current `page=post&s=list` search when `tags` is non-empty; open / rename / delete
-- **Dynamic Collection:** named sets of post ids (`kind: "posts"`); create from Collections or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Collection part size**)
+- **Custom Collection:** named sets of post ids (`kind: "posts"`) — a manually gathered post set; create from Collections or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Collection part size**)
+- **Dynamic Collection:** save the current `page=post&s=list` search when `tags` is non-empty (saved search); open / rename / delete
 
 ## Favorites
 
@@ -97,7 +109,7 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `blacklist-hide` | Hide blacklisted thumbs | on | list | Hides thumbs matching the site blacklist cookie (no reload) |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
-| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS columns on list only; masonry content flex-grows; favorites falls back to default) |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS grid + row-span on list; content flex-grows; favorites falls back to default) |
 
 **Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 
@@ -177,7 +189,7 @@ Example backup shape (no real data):
 }
 ```
 
-- Collections without `kind` (or `kind: "search"`) are saved searches (Custom Collection); `kind: "posts"` are Dynamic Collections with `postIds`
+- Collections without `kind` (or `kind: "search"`) are saved searches (Dynamic Collection); `kind: "posts"` are Custom Collections with `postIds`
 - `settings` / `updates` / `favIds` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `playlistChunkSize: 40`, `seenPostId: 0`
 - Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); legacy `marks.*.fav` becomes fav ids; `seenPostId` keeps the maximum of current and imported
 - Runtime fav ids are stored under `ruledesk-web.favs` (not inside the main storage key)

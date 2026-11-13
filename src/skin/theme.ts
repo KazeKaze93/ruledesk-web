@@ -24,6 +24,18 @@ import {
   LIGHT_PALETTE,
   parseHexColor,
   relativeLuminance,
+  SITE_DARK_C_ACCENT,
+  SITE_DARK_C_BG,
+  SITE_DARK_C_BORDER,
+  SITE_DARK_C_MUTED,
+  SITE_DARK_C_SURFACE2,
+  SITE_DARK_C_TEXT,
+  SITE_LIGHT_C_BG,
+  SITE_LIGHT_C_BG_ALT,
+  SITE_LIGHT_C_BG_OVERLAY,
+  SITE_LIGHT_C_LINK,
+  SITE_LIGHT_C_TEXT,
+  SITE_LIGHT_C_TEXT_SOFT,
   TOKEN_VAR,
   type TokenPalette,
 } from "../ui/tokens";
@@ -47,31 +59,14 @@ const BODY_BG_POSITION = "background-position";
 const BODY_BG_REPEAT = "background-repeat";
 const BODY_BG_ATTACHMENT = "background-attachment";
 
-/**
- * Hex equivalents of `docs/design/site-desktop.css` `* { --c-* }` (site light).
- * HSL sources: --c-bg / --c-bg-alt / --c-bg-deep / --c-bg-overlay.
- */
-const SITE_C_BG = "#aae5a4"; // hsl(114, 56%, 77%)
-const SITE_C_BG_ALT = "#89cf81"; // hsl(114, 45%, 66%)
-const SITE_C_BG_DEEP = "#6fb668"; // hsl(114, 35%, 56%)
-const SITE_C_BG_OVERLAY = "#98d491"; // hsl(114, 44%, 70%)
-const SITE_C_TEXT = "#000000";
-const SITE_C_TEXT_SOFT = "#666666";
-const SITE_C_LINK = "#000099"; // --c-link: #009
+/** Site light tag/link colors (not exported from tokens). */
 const SITE_C_LINK_ARTIST = "#cc0000";
 const SITE_C_LINK_CHARACTER = "#00aa00";
 const SITE_C_LINK_COPYRIGHT = "#aa00aa";
 const SITE_C_LINK_METADATA = "#ff8800";
 
-/** Site dark chrome tokens (script pages under theme=site-dark). */
-const SITE_DARK_BG = "#303a30";
-const SITE_DARK_SURFACE = "#293129";
-const SITE_DARK_SURFACE2 = "#303030";
-const SITE_DARK_BORDER = "#505a50";
-const SITE_DARK_TEXT = "#c0c0c0";
-const SITE_DARK_MUTED = "#878787";
-const SITE_DARK_ACCENT = "#b0e0b0";
-const SITE_DARK_ACCENT_SOFT = "#505a50";
+/** Site dark accent-soft / tag colors (not exported from tokens). */
+const SITE_DARK_ACCENT_SOFT = SITE_DARK_C_BORDER;
 const SITE_DARK_TAG_ARTIST = "#f0a0a0";
 const SITE_DARK_TAG_CHARACTER = "#f0f0a0";
 const SITE_DARK_TAG_COPYRIGHT = "#f0a0f0";
@@ -79,17 +74,18 @@ const SITE_DARK_TAG_METADATA = "#90d9ed";
 
 /**
  * Script-page / token palette for Appearance theme "Site default".
- * Maps site `--c-*` onto `--rdw-*` (danger/radius/shadow/font from Light).
+ * Card surface = --c-bg; border = --c-bg-alt (aligned with page-css host cards).
+ * Danger/radius/shadow/font from Light.
  */
 export const SITE_DEFAULT_PALETTE: TokenPalette = {
-  bg: SITE_C_BG,
-  surface: SITE_C_BG_ALT,
-  surface2: SITE_C_BG_OVERLAY,
-  border: SITE_C_BG_DEEP,
-  text: SITE_C_TEXT,
-  muted: SITE_C_TEXT_SOFT,
-  accent: SITE_C_LINK,
-  accentSoft: SITE_C_BG_ALT,
+  bg: SITE_LIGHT_C_BG,
+  surface: SITE_LIGHT_C_BG,
+  surface2: SITE_LIGHT_C_BG_OVERLAY,
+  border: SITE_LIGHT_C_BG_ALT,
+  text: SITE_LIGHT_C_TEXT,
+  muted: SITE_LIGHT_C_TEXT_SOFT,
+  accent: SITE_LIGHT_C_LINK,
+  accentSoft: SITE_LIGHT_C_BG_ALT,
   danger: LIGHT_PALETTE.danger,
   dangerSoft: LIGHT_PALETTE.dangerSoft,
   tagArtist: SITE_C_LINK_ARTIST,
@@ -106,16 +102,16 @@ export const SITE_DEFAULT_PALETTE: TokenPalette = {
 
 /**
  * Script-page / token palette for Appearance theme "Site dark".
- * Danger/radius/shadow/font from Dark; chrome colors from site dark list.
+ * Surface = page bg (not darker chrome); danger/radius/shadow/font from Dark.
  */
 export const SITE_DARK_PALETTE: TokenPalette = {
-  bg: SITE_DARK_BG,
-  surface: SITE_DARK_SURFACE,
-  surface2: SITE_DARK_SURFACE2,
-  border: SITE_DARK_BORDER,
-  text: SITE_DARK_TEXT,
-  muted: SITE_DARK_MUTED,
-  accent: SITE_DARK_ACCENT,
+  bg: SITE_DARK_C_BG,
+  surface: SITE_DARK_C_BG,
+  surface2: SITE_DARK_C_SURFACE2,
+  border: SITE_DARK_C_BORDER,
+  text: SITE_DARK_C_TEXT,
+  muted: SITE_DARK_C_MUTED,
+  accent: SITE_DARK_C_ACCENT,
   accentSoft: SITE_DARK_ACCENT_SOFT,
   danger: DARK_PALETTE.danger,
   dangerSoft: DARK_PALETTE.dangerSoft,

@@ -7,6 +7,7 @@ import {
   featureBodyClass,
   type FeatureContext,
 } from "../../src/features/types";
+import { SITE_SELECTORS } from "../../src/site/selectors";
 import {
   clearArtistsMirror,
   writeArtistsMirror,
@@ -96,6 +97,43 @@ function mediaRadio(label: string): HTMLButtonElement {
     }
   }
   throw new Error(`media button not found: ${label}`);
+}
+
+function aiPostsRadio(label: string): HTMLButtonElement {
+  const buttons = Array.from(
+    document.querySelectorAll(
+      `#${ROOT_ID} [role="radiogroup"][aria-label="AI posts"] button`,
+    ),
+  );
+  for (const node of buttons) {
+    if (!(node instanceof HTMLButtonElement)) {
+      continue;
+    }
+    if (node.textContent === label) {
+      return node;
+    }
+  }
+  throw new Error(`AI posts button not found: ${label}`);
+}
+
+function mountFilterAiCheckbox(checked = false): HTMLInputElement {
+  const li = document.createElement("li");
+  const label = document.createElement("label");
+  label.append("Filter AI posts");
+  const switchSpan = document.createElement("span");
+  switchSpan.className = "switch";
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.className = "toggleSwitch";
+  input.id = "chkFilterAI";
+  input.checked = checked;
+  const slider = document.createElement("span");
+  slider.className = "slider";
+  switchSpan.append(input, slider);
+  label.append(switchSpan);
+  li.append(label);
+  document.body.append(li);
+  return input;
 }
 
 function resetButton(): HTMLButtonElement {
@@ -558,5 +596,112 @@ describe("searchToolsFeature", () => {
       `#${ROOT_ID} [title="Sorts within the current search"]`,
     );
     expect(hinted).not.toBeNull();
+  });
+
+  it("omits the AI posts row when #chkFilterAI is absent", () => {
+    buildSearchForm("cat");
+    mountFeature();
+    const root = document.getElementById(ROOT_ID);
+    expect(root?.textContent).not.toContain("AI posts");
+    expect(
+      root?.querySelector('[role="radiogroup"][aria-label="AI posts"]'),
+    ).toBeNull();
+  });
+
+  it("mirrors #chkFilterAI into AI posts Show/Hide under Source", () => {
+    mountFilterAiCheckbox(false);
+    buildSearchForm("cat");
+    mountFeature();
+
+    const group = document.querySelector(
+      `#${ROOT_ID} [role="radiogroup"][aria-label="AI posts"]`,
+    );
+    expect(group).not.toBeNull();
+    expect(aiPostsRadio("Show").getAttribute("aria-checked")).toBe("true");
+    expect(aiPostsRadio("Hide").getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("selects Hide when the native AI filter checkbox is checked", () => {
+    mountFilterAiCheckbox(true);
+    buildSearchForm("cat");
+    mountFeature();
+    expect(aiPostsRadio("Hide").getAttribute("aria-checked")).toBe("true");
+    expect(aiPostsRadio("Show").getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("clicks the native checkbox when toggling AI posts Show/Hide", () => {
+    const checkbox = mountFilterAiCheckbox(false);
+    const clickSpy = vi.spyOn(checkbox, "click");
+    buildSearchForm("cat");
+    mountFeature();
+
+    click(aiPostsRadio("Hide"));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(checkbox.checked).toBe(true);
+    expect(aiPostsRadio("Hide").getAttribute("aria-checked")).toBe("true");
+
+    clickSpy.mockClear();
+    click(aiPostsRadio("Show"));
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(checkbox.checked).toBe(false);
+    expect(aiPostsRadio("Show").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("does not click the native checkbox when the AI option already matches", () => {
+    const checkbox = mountFilterAiCheckbox(false);
+    const clickSpy = vi.spyOn(checkbox, "click");
+    buildSearchForm("cat");
+    mountFeature();
+
+    click(aiPostsRadio("Show"));
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(checkbox.checked).toBe(false);
+  });
+
+  it("syncs AI posts Segmented when the native checkbox changes", () => {
+    const checkbox = mountFilterAiCheckbox(false);
+    buildSearchForm("cat");
+    mountFeature();
+    expect(aiPostsRadio("Show").getAttribute("aria-checked")).toBe("true");
+
+    act(() => {
+      checkbox.checked = true;
+      checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(aiPostsRadio("Hide").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("never reads or writes a filter_ai cookie when toggling AI posts", () => {
+    const checkbox = mountFilterAiCheckbox(false);
+    buildSearchForm("cat");
+    mountFeature();
+
+    const cookieBefore = document.cookie;
+    expect(cookieBefore).not.toContain("filter_ai");
+
+    const descriptor = Object.getOwnPropertyDescriptor(Document.prototype, "cookie");
+    const setSpy =
+      descriptor?.set !== undefined
+        ? vi.spyOn(document, "cookie", "set")
+        : null;
+
+    click(aiPostsRadio("Hide"));
+    expect(checkbox.checked).toBe(true);
+    expect(document.cookie).not.toContain("filter_ai");
+    if (setSpy !== null) {
+      for (const call of setSpy.mock.calls) {
+        expect(String(call[0] ?? "")).not.toContain("filter_ai");
+      }
+    }
+  });
+
+  it("exposes filter AI and tags-heading selectors for site-skin HANDOFF", () => {
+    expect(SITE_SELECTORS.filterAiCheckbox).toBe(
+      "input.toggleSwitch#chkFilterAI",
+    );
+    expect(SITE_SELECTORS.filterAiRow).toContain("#chkFilterAI");
+    expect(SITE_SELECTORS.tagsHeadingAfterSearchTools).toBe(
+      "#rdw-search-tools + h5",
+    );
   });
 });

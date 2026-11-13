@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   collectFavoritePostIds,
+  listFavoriteThumbEntries,
+  resolveFavoriteThumbPostId,
   syncFavoritesPage,
 } from "../src/site/favorites-page";
 import { addFav, clearFavsCache, isFav } from "../src/storage/favs";
 import { clearStorageCache } from "../src/storage/store";
+
 
 const memory = new Map<string, unknown>();
 
@@ -54,6 +57,19 @@ describe("favorites page sync", () => {
     const root = buildFavoritesFragment();
     expect(collectFavoritePostIds(root)).toEqual(["111", "222"]);
   });
+
+  it("lists thumb entries with resolvable post ids", () => {
+    const root = buildFavoritesFragment();
+    const entries = listFavoriteThumbEntries(root);
+    expect(entries.map((entry) => entry.postId)).toEqual(["111", "222"]);
+    const first = entries[0];
+    expect(first).toBeDefined();
+    if (first === undefined) {
+      return;
+    }
+    expect(resolveFavoriteThumbPostId(first.thumb)).toBe("111");
+  });
+
 
   it("marks collected ids as fav in one storage write", () => {
     const root = buildFavoritesFragment();

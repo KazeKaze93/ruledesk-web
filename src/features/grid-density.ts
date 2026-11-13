@@ -1,22 +1,31 @@
 import { SITE_SELECTORS } from "../site/selectors";
-import { featureChoiceBodyClass, type Feature } from "./types";
+import { featureChoiceBodyClass, type Feature, type FeatureContext } from "./types";
 
-const FEATURE_ID = "grid-density";
+export const GRID_DENSITY_FEATURE_ID = "grid-density";
+const FEATURE_ID = GRID_DENSITY_FEATURE_ID;
 const COMPACT_PX = 150;
 const LARGE_PX = 250;
-const MASONRY_VALUE = "masonry";
+export const MASONRY_VALUE = "masonry";
 /** List-page host for masonry; favorites has no #post-list so rules do not apply. */
-const MASONRY_LIST_SCOPE = "#post-list";
-const MASONRY_COLUMN_WIDTH_PX = 240;
-const MASONRY_COLUMN_GAP_PX = 4;
+export const MASONRY_LIST_SCOPE = "#post-list";
+/** minmax() track minimum — keep in sync with masonry-layout column math. */
+export const MASONRY_COLUMN_MIN_PX = 240;
+export const MASONRY_COLUMN_GAP_PX = 4;
+export const MASONRY_ROW_UNIT_PX = 4;
+export const MASONRY_ROW_GAP_PX = 0;
+/** Extra height baked into row-span so items separate with row-gap: 0. */
+export const MASONRY_ITEM_GAP_PX = 4;
+/** Per-thumb CSS variable driving `grid-row-end: span N` (set by masonry-layout). */
+export const MASONRY_SPAN_CSS_VAR = "--rdw-masonry-span";
 const MASONRY_LIST_WIDTH_PERCENT = 100;
 const MASONRY_THUMB_WIDTH_PERCENT = 100;
-const MASONRY_THUMB_MARGIN_TOP_PX = 0;
-const MASONRY_THUMB_MARGIN_INLINE_PX = 0;
-const MASONRY_THUMB_MARGIN_BOTTOM_PX = 4;
 const MASONRY_PREVIEW_WIDTH_PERCENT = 100;
 const MASONRY_BORDER_RADIUS_PX = 4;
-/** Grow into flex row of #post-list so column-width can span content width. */
+/** 1:1 placeholder span at min column width before JS runs. */
+const MASONRY_SPAN_FALLBACK = Math.ceil(
+  (MASONRY_COLUMN_MIN_PX + MASONRY_ITEM_GAP_PX) / MASONRY_ROW_UNIT_PX,
+);
+/** Grow into flex row of #post-list so grid tracks can span content width. */
 const MASONRY_CONTENT_FLEX_GROW = 1;
 const MASONRY_CONTENT_FLEX_SHRINK = 1;
 const MASONRY_CONTENT_FLEX_BASIS = "auto";
@@ -42,24 +51,26 @@ function masonryCss(): string {
   const scope = `body.${bodyClass} ${MASONRY_LIST_SCOPE}`;
   const contentScope = `body.${bodyClass} ${SITE_SELECTORS.postListContent}`;
   const contentFlex = `${MASONRY_CONTENT_FLEX_GROW} ${MASONRY_CONTENT_FLEX_SHRINK} ${MASONRY_CONTENT_FLEX_BASIS}`;
-  const thumbMargin = `${MASONRY_THUMB_MARGIN_TOP_PX}px ${MASONRY_THUMB_MARGIN_INLINE_PX}px ${MASONRY_THUMB_MARGIN_BOTTOM_PX}px`;
+  const gridColumns = `repeat(auto-fill, minmax(${MASONRY_COLUMN_MIN_PX}px, 1fr))`;
   return [
     `${contentScope} {`,
     `  flex: ${contentFlex} !important;`,
     `  min-width: ${MASONRY_CONTENT_MIN_WIDTH_PX}px !important;`,
     `}`,
     `${scope} div.image-list {`,
-    `  display: block !important;`,
+    `  display: grid !important;`,
     `  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,
-    `  column-width: ${MASONRY_COLUMN_WIDTH_PX}px !important;`,
+    `  grid-template-columns: ${gridColumns} !important;`,
+    `  grid-auto-rows: ${MASONRY_ROW_UNIT_PX}px !important;`,
     `  column-gap: ${MASONRY_COLUMN_GAP_PX}px !important;`,
+    `  row-gap: ${MASONRY_ROW_GAP_PX}px !important;`,
     `}`,
     `${scope} span.thumb {`,
     `  display: block !important;`,
     `  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
     `  height: auto !important;`,
-    `  margin: ${thumbMargin} !important;`,
-    `  break-inside: avoid !important;`,
+    `  margin: 0 !important;`,
+    `  grid-row-end: span var(${MASONRY_SPAN_CSS_VAR}, ${MASONRY_SPAN_FALLBACK}) !important;`,
     `}`,
     `${scope} span.thumb > a {`,
     `  display: block !important;`,
@@ -76,6 +87,23 @@ function masonryCss(): string {
     `  border-radius: ${MASONRY_BORDER_RADIUS_PX}px !important;`,
     `}`,
   ].join("\n");
+}
+
+/**
+ * Schedule masonry-layout after first paint (rAF + setTimeout 0), matching
+ * boot/ready.scheduleAfterFirstPaint so this stay off the CSS-first path.
+ */
+function mountGridDensity(ctx: FeatureContext): void {
+  if (ctx.pageKind !== "list") {
+    return;
+  }
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      void import("./masonry-layout").then((mod) => {
+        mod.startMasonryLayout();
+      });
+    }, 0);
+  });
 }
 
 export const gridDensityFeature: Feature = {
@@ -98,5 +126,5 @@ export const gridDensityFeature: Feature = {
     sizeCss("large", LARGE_PX),
     masonryCss(),
   ].join("\n"),
-  mount: () => {},
+  mount: mountGridDensity,
 };

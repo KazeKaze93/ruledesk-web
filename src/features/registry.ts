@@ -1,4 +1,5 @@
 import { blacklistHideFeature } from "./blacklist-hide";
+import { favoritesBulkFeature } from "./favorites-bulk";
 import { feedFeature } from "./feed";
 import { gridDensityFeature } from "./grid-density";
 import { seenDimFeature } from "./grid-marks";
@@ -10,6 +11,9 @@ import { postActionsFeature } from "./post-actions";
 import { searchToolsFeature } from "./search-tools";
 import { tagGroupsFeature } from "./tag-groups";
 import type { Feature } from "./types";
+
+// Package A: masonry-layout is started from gridDensityFeature.mount (dynamic
+// import after first paint) — no separate FEATURES entry required.
 
 export const FEATURES: Feature[] = [
   feedFeature,
@@ -23,4 +27,5 @@ export const FEATURES: Feature[] = [
   infiniteScrollFeature,
   postActionsFeature,
   gridDensityFeature,
+  favoritesBulkFeature,
 ];

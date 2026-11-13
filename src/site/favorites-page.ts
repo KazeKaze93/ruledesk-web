@@ -2,10 +2,81 @@ import { detectPageKind } from "./pages";
 import {
   SITE_SELECTORS,
   extractPostIdFromFavoritesDeleteOnclick,
+  extractPostIdFromThumb,
 } from "./selectors";
 import { addFavs, removeFav } from "../storage/favs";
 
 let removeClickBound = false;
+
+export type FavoriteThumbEntry = {
+  readonly thumb: HTMLElement;
+  readonly postId: string;
+};
+
+const POST_LINK_ID_PREFIX = "p";
+
+/**
+ * Resolve a favorites-page thumb's post id from Remove onclick, thumb id, or a#p{ID}.
+ */
+export function resolveFavoriteThumbPostId(thumb: Element): string | null {
+  const removeLinks = thumb.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
+  for (const link of removeLinks) {
+    if (!(link instanceof HTMLAnchorElement)) {
+      continue;
+    }
+    const onclick = link.getAttribute("onclick");
+    if (onclick === null) {
+      continue;
+    }
+    const fromOnclick = extractPostIdFromFavoritesDeleteOnclick(onclick);
+    if (fromOnclick !== null) {
+      return fromOnclick;
+    }
+  }
+
+  const fromThumbId = extractPostIdFromThumb(thumb);
+  if (fromThumbId !== null) {
+    return fromThumbId;
+  }
+
+  const postLinks = thumb.querySelectorAll(`a[id^="${POST_LINK_ID_PREFIX}"]`);
+  for (const link of postLinks) {
+    if (!(link instanceof HTMLAnchorElement)) {
+      continue;
+    }
+    const id = link.id;
+    if (!id.startsWith(POST_LINK_ID_PREFIX)) {
+      continue;
+    }
+    const postId = id.slice(POST_LINK_ID_PREFIX.length);
+    if (/^\d+$/.test(postId)) {
+      return postId;
+    }
+  }
+
+  return null;
+}
+
+/** Current-page favorite thumbs that have a resolvable post id. */
+export function listFavoriteThumbEntries(
+  root: ParentNode = document,
+): FavoriteThumbEntry[] {
+  const entries: FavoriteThumbEntry[] = [];
+  const seen = new Set<string>();
+  const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+  for (const node of thumbs) {
+    if (!(node instanceof HTMLElement)) {
+      continue;
+    }
+    const postId = resolveFavoriteThumbPostId(node);
+    if (postId === null || seen.has(postId)) {
+      continue;
+    }
+    seen.add(postId);
+    entries.push({ thumb: node, postId });
+  }
+  return entries;
+}
 
 export function collectFavoritePostIds(root: ParentNode): string[] {
   const ids: string[] = [];

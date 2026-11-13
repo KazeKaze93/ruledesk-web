@@ -10,6 +10,7 @@ import {
   RDW_THEME_ATTR,
 } from "../config/constants";
 import { RDW_PAGE_ROOT_ID } from "../pages/constants";
+import { SITE_SELECTORS } from "../site/selectors";
 import { TOKEN_VAR } from "../ui/tokens";
 
 const ROOT = `html.${RDW_SKIN_CLASS}`;
@@ -27,6 +28,29 @@ const NOT_SEARCH_TOOLS_DESCENDANT = `:not(#${SEARCH_TOOLS_ROOT_ID} *)`;
  * ID-bearing :not cannot outrank accent rules like div.tag-search submit.
  */
 const WHERE_NOT_OUR_CONTROL = `:where(${NOT_RDW_CLASS}${NOT_SEARCH_TOOLS_DESCENDANT})`;
+
+/**
+ * Body class Package E sets only while the post panel host is mounted
+ * (`POST_PANEL_MOUNTED_CLASS` in post-actions.ts).
+ */
+export const RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
+/** Native "I came" counter row — hide with panel chrome (E HANDOFF). */
+const POST_PANEL_ICAME_ROW = 'li:has(a[onclick^="iCame("])';
+
+/** F bulk-select chrome — keep in sync with src/features/favorites-bulk.tsx. */
+const FAV_BULK_SELECTED_CLASS = "rdw-fav-bulk-selected";
+const FAV_BULK_CHECK_CLASS = "rdw-fav-bulk-check";
+const FAV_BULK_ROOT_ID = "rdw-favorites-bulk";
+const FAV_BULK_BAR_CLASS = "rdw-favorites-bulk-bar";
+const FAV_BULK_STATUS_CLASS = "rdw-favorites-bulk-status";
+/** Body class while selection mode is active (featureBodyClass + "-selecting"). */
+const FAV_BULK_SELECTING_BODY_CLASS = "rdw-f-favorites-bulk-selecting";
+const FAV_BULK_OUTLINE_WIDTH = "2px";
+const FAV_BULK_OUTLINE_OFFSET = "2px";
+const FAV_BULK_CHECK_SIZE = "1.25rem";
+const FAV_BULK_CHECK_INSET = "0.25rem";
+const FAV_BULK_CHECK_Z_INDEX = 2;
+const FAV_BULK_CHECK_FONT_SIZE = "0.75rem";
 
 const v = {
   bg: `var(${TOKEN_VAR.bg})`,
@@ -233,8 +257,23 @@ ${ROOT} ul#tag-sidebar h6 {
   margin: 0 0 6px;
 }
 
-/* Standalone "Tags" (and similar) heading above the list card */
+/* Standalone "Tags"/"Search" (and similar) headings above the list card */
 ${ROOT} div.sidebar > h5 {
+  display: none;
+}
+
+/* Tags between search panel card and tag list (typical site markup) */
+${ROOT} div.tag-search + h5 {
+  display: none;
+}
+
+/* D: Tags heading immediately after search-tools when they are siblings */
+${ROOT} ${SITE_SELECTORS.tagsHeadingAfterSearchTools} {
+  display: none;
+}
+
+/* D: native AI filter row — search-tools mirrors #chkFilterAI */
+${ROOT} ${SITE_SELECTORS.filterAiRow} {
   display: none;
 }
 
@@ -547,6 +586,55 @@ ${ROOT} span.thumb > a[onclick]:hover {
 ${ROOT} span.thumb > a[onclick] b {
   font-weight: normal;
   color: inherit;
+}
+
+/* —— favorites bulk select (F HANDOFF; tokens for Light/Dark/Site) —— */
+${ROOT} body.${FAV_BULK_SELECTING_BODY_CLASS} span.thumb {
+  position: relative;
+  cursor: pointer;
+}
+
+${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} {
+  outline: ${FAV_BULK_OUTLINE_WIDTH} solid ${v.accent};
+  outline-offset: ${FAV_BULK_OUTLINE_OFFSET};
+  border-radius: ${v.radiusL};
+}
+
+/*
+ * Check badge is a sibling of a#p{ID}, never inside the link.
+ * Hidden until the thumb is selected.
+ */
+${ROOT} span.thumb > .${FAV_BULK_CHECK_CLASS} {
+  position: absolute;
+  top: ${FAV_BULK_CHECK_INSET};
+  left: ${FAV_BULK_CHECK_INSET};
+  z-index: ${String(FAV_BULK_CHECK_Z_INDEX)};
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: ${FAV_BULK_CHECK_SIZE};
+  height: ${FAV_BULK_CHECK_SIZE};
+  border-radius: 50%;
+  background: ${v.accent};
+  color: ${v.surface};
+  font-size: ${FAV_BULK_CHECK_FONT_SIZE};
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} > .${FAV_BULK_CHECK_CLASS} {
+  display: inline-flex;
+}
+
+${ROOT} #${FAV_BULK_ROOT_ID},
+${ROOT} .${FAV_BULK_BAR_CLASS} {
+  color: ${v.text};
+}
+
+${ROOT} #${FAV_BULK_ROOT_ID} .${FAV_BULK_STATUS_CLASS} {
+  color: ${v.muted};
 }
 
 ${ROOT} .webm-thumb {
@@ -973,6 +1061,19 @@ ${ROOT} .gdprinner {
 }
 
 /* —— post page —— */
+/* E: hide native left-column chrome only while body.rdw-post-panel-mounted */
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div#stats {
+  display: none !important;
+}
+
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div.link-list {
+  display: none !important;
+}
+
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} ${POST_PANEL_ICAME_ROW} {
+  display: none !important;
+}
+
 ${ROOT} img#image {
   border-radius: ${v.radiusL};
 }
@@ -1081,7 +1182,8 @@ ${ROOT_DARK} .pagination a.current,
 ${ROOT_DARK} .pagination span.current,
 ${ROOT_DARK} div.tag-search input[type="submit"],
 ${ROOT_DARK} div.tag-search button[type="submit"],
-${ROOT_DARK} .manual-page-chooser > input[type="submit"] {
+${ROOT_DARK} .manual-page-chooser > input[type="submit"],
+${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS} {
   color: ${v.text};
 }
 

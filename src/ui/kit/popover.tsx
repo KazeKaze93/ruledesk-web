@@ -1,4 +1,4 @@
-import type { ComponentChildren, JSX } from "preact";
+import type { ComponentChildren, JSX, RefObject } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 import { KIT_FOCUS_CSS } from "./shared";
@@ -9,7 +9,13 @@ export type PopoverProps = {
   readonly children?: ComponentChildren;
   readonly className?: string;
   readonly "aria-label"?: string;
+  /** Trigger (and optional extra roots) excluded from outside-click close; focus returns here. */
+  readonly anchorRef?: RefObject<HTMLElement | null>;
 };
+
+const KEY_ESCAPE = "Escape";
+const EVENT_KEYDOWN = "keydown";
+const EVENT_MOUSEDOWN = "mousedown";
 
 export const POPOVER_CSS = `
 ${KIT_FOCUS_CSS}
@@ -29,15 +35,41 @@ ${KIT_FOCUS_CSS}
 }
 `;
 
+function pathIncludesNode(
+  path: readonly EventTarget[],
+  node: Node | null,
+): boolean {
+  if (node === null) {
+    return false;
+  }
+  for (const entry of path) {
+    if (entry === node) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function Popover(props: PopoverProps): JSX.Element | null {
   const rootRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     if (!props.open) {
+      if (wasOpenRef.current) {
+        wasOpenRef.current = false;
+        const anchor = props.anchorRef?.current ?? null;
+        if (anchor !== null && typeof anchor.focus === "function") {
+          anchor.focus();
+        }
+      }
       return;
     }
+    wasOpenRef.current = true;
+
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") {
+      if (event.key === KEY_ESCAPE) {
+        event.preventDefault();
         props.onClose();
       }
     };
@@ -47,17 +79,22 @@ export function Popover(props: PopoverProps): JSX.Element | null {
         return;
       }
       // Shadow DOM retargets event.target to the host; composedPath keeps the real nodes.
-      if (!event.composedPath().includes(root)) {
-        props.onClose();
+      const path = event.composedPath();
+      if (pathIncludesNode(path, root)) {
+        return;
       }
+      if (pathIncludesNode(path, props.anchorRef?.current ?? null)) {
+        return;
+      }
+      props.onClose();
     };
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener(EVENT_KEYDOWN, onKeyDown);
+    document.addEventListener(EVENT_MOUSEDOWN, onPointerDown);
     return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener(EVENT_KEYDOWN, onKeyDown);
+      document.removeEventListener(EVENT_MOUSEDOWN, onPointerDown);
     };
-  }, [props.open, props.onClose]);
+  }, [props.open, props.onClose, props.anchorRef]);
 
   if (!props.open) {
     return null;

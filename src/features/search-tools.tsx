@@ -22,6 +22,7 @@ import {
   parsePlaylistQuery,
   parseTags,
 } from "../search/query";
+import { SITE_SELECTORS } from "../site/selectors";
 import { readArtistsMirror } from "../storage/artists-mirror";
 import { getUpdatesGroupSize, listArtistTags } from "../storage/store";
 import {
@@ -121,12 +122,20 @@ function isTagType(value: string): value is TagType {
 type MediaMode = "all" | "images" | "videos";
 type SortMode = "newest" | "oldest" | "score" | "updated" | "random";
 type SourceMode = "all" | "feed" | "favorites";
+type AiPostsMode = "show" | "hide";
 
 const MEDIA_OPTIONS = [
   { value: "all", label: "All" },
   { value: "images", label: "Images" },
   { value: "videos", label: "Videos" },
 ] as const;
+
+const AI_POSTS_OPTIONS = [
+  { value: "show", label: "Show" },
+  { value: "hide", label: "Hide" },
+] as const;
+
+const AI_POSTS_SECTION_LABEL = "AI posts";
 
 const SORT_OPTIONS: ReadonlyArray<{
   value: SortMode;
@@ -500,6 +509,15 @@ function findFavoritesHref(): string | null {
   return href;
 }
 
+function findFilterAiCheckbox(): HTMLInputElement | null {
+  const node = document.querySelector(SITE_SELECTORS.filterAiCheckbox);
+  return node instanceof HTMLInputElement ? node : null;
+}
+
+function readAiPostsMode(checkbox: HTMLInputElement): AiPostsMode {
+  return checkbox.checked ? "hide" : "show";
+}
+
 function detectSourceMode(search: string): SourceMode {
   const params = new URLSearchParams(search);
   if (params.get(SEARCH_PARAM_PAGE) === FAVORITES_PAGE) {
@@ -708,6 +726,13 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
     readPanelView(input.value, window.location.search),
   );
   const [scoreDraft, setScoreDraft] = useState<number | null>(view.minScore);
+  const [aiPosts, setAiPosts] = useState<AiPostsMode | null>(() => {
+    const checkbox = findFilterAiCheckbox();
+    if (checkbox === null) {
+      return null;
+    }
+    return readAiPostsMode(checkbox);
+  });
   const scoreFocusedRef = useRef(false);
   const navTimerRef = useRef<number | null>(null);
   const lastPolledValueRef = useRef(input.value);
@@ -822,6 +847,22 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
       window.clearInterval(pollId);
     };
   }, [input]);
+
+  useEffect(() => {
+    const checkbox = findFilterAiCheckbox();
+    if (checkbox === null) {
+      setAiPosts(null);
+      return;
+    }
+    setAiPosts(readAiPostsMode(checkbox));
+    const onCheckboxChange = (): void => {
+      setAiPosts(readAiPostsMode(checkbox));
+    };
+    checkbox.addEventListener(EVENT_CHANGE, onCheckboxChange);
+    return () => {
+      checkbox.removeEventListener(EVENT_CHANGE, onCheckboxChange);
+    };
+  }, []);
 
   const onChipsClick = (event: MouseEvent): void => {
     const target = event.target;
@@ -946,6 +987,26 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
     }
     setView((prev) => ({ ...prev, source: "all" }));
     scheduleNavigate(parseTokens(input.value));
+  };
+
+  const onAiPostsChange = (value: string): void => {
+    const mode = AI_POSTS_OPTIONS.find((entry) => entry.value === value)?.value;
+    if (mode === undefined) {
+      return;
+    }
+    const checkbox = findFilterAiCheckbox();
+    if (checkbox === null) {
+      setAiPosts(null);
+      return;
+    }
+    const wantChecked = mode === "hide";
+    if (checkbox.checked === wantChecked) {
+      setAiPosts(mode);
+      return;
+    }
+    // Site script owns filter_ai cookie / feed filtering — only click.
+    checkbox.click();
+    setAiPosts(readAiPostsMode(checkbox));
   };
 
   const onReset = (): void => {
@@ -1108,6 +1169,21 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
             onChange={onSourceChange}
           />
         </div>
+
+        {aiPosts !== null ? (
+          <div className={FIELD_CLASS}>
+            <SectionLabel>{AI_POSTS_SECTION_LABEL}</SectionLabel>
+            <Segmented
+              label={AI_POSTS_SECTION_LABEL}
+              options={AI_POSTS_OPTIONS.map((entry) => ({
+                value: entry.value,
+                label: entry.label,
+              }))}
+              value={aiPosts}
+              onChange={onAiPostsChange}
+            />
+          </div>
+        ) : null}
 
         <div className={FOOT_CLASS}>
           <span className={HINT_CLASS}>{FOOT_HINT}</span>

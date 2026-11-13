@@ -6,8 +6,21 @@ import {
   RDW_THEME_ATTR,
 } from "../../src/config/constants";
 import { RDW_PAGE_ROOT_ID } from "../../src/pages/constants";
-import { getSiteSkinCss, SITE_SKIN_CSS } from "../../src/skin/site-skin";
+import {
+  CLASS_THUMB_CHECK,
+  CLASS_THUMB_SELECTED,
+} from "../../src/features/favorites-bulk";
+import {
+  getSiteSkinCss,
+  RDW_POST_PANEL_MOUNTED_CLASS,
+  SITE_SKIN_CSS,
+} from "../../src/skin/site-skin";
+import { SITE_SELECTORS } from "../../src/site/selectors";
 import { LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
+
+const FAV_BULK_ROOT_ID = "rdw-favorites-bulk";
+const FAV_BULK_BAR_CLASS = "rdw-favorites-bulk-bar";
+const FAV_BULK_SELECTING_BODY_CLASS = "rdw-f-favorites-bulk-selecting";
 
 const HEX_IN_RULES = /#[0-9a-fA-F]{3,8}\b/;
 const COMMENT_BLOCK = /\/\*[\s\S]*?\*\//g;
@@ -155,6 +168,134 @@ describe("site-skin CSS export", () => {
   it("hides the standalone Tags heading above the tag list card", () => {
     expect(SITE_SKIN_CSS).toMatch(
       /div\.sidebar\s*>\s*h5\s*\{[^}]*display:\s*none/s,
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      /div\.tag-search\s*\+\s*h5\s*\{[^}]*display:\s*none/s,
+    );
+    expect(SITE_SKIN_CSS).toContain(SITE_SELECTORS.tagsHeadingAfterSearchTools);
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `${SITE_SELECTORS.tagsHeadingAfterSearchTools.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\\s*\\{[^}]*display:\\s*none`,
+        "s",
+      ),
+    );
+  });
+
+  it("hides the native Filter AI posts row (D HANDOFF)", () => {
+    expect(SITE_SKIN_CSS).toContain(SITE_SELECTORS.filterAiRow);
+    expect(SITE_SKIN_CSS).toContain("#chkFilterAI");
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `${SITE_SELECTORS.filterAiRow.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\\s*\\{[^}]*display:\\s*none`,
+        "s",
+      ),
+    );
+    const bare = stripComments(SITE_SKIN_CSS);
+    // Old CSS had no Filter AI hide — keep the full :has row selector.
+    expect(bare).not.toMatch(
+      /#chkFilterAI\s*\{[^}]*display:\s*none/s,
+    );
+  });
+
+  it("hides native stats, link-list, and iCame row when post panel is mounted (E HANDOFF)", () => {
+    expect(RDW_POST_PANEL_MOUNTED_CLASS).toBe("rdw-post-panel-mounted");
+    expect(SITE_SKIN_CSS).toContain(`body.${RDW_POST_PANEL_MOUNTED_CLASS}`);
+
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `body\\.${RDW_POST_PANEL_MOUNTED_CLASS}\\s+div#stats\\s*\\{[^}]*display:\\s*none\\s*!important`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `body\\.${RDW_POST_PANEL_MOUNTED_CLASS}\\s+div\\.link-list\\s*\\{[^}]*display:\\s*none\\s*!important`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `body\\.${RDW_POST_PANEL_MOUNTED_CLASS}\\s+li:has\\(a\\[onclick\\^=\"iCame\\(\"\\]\\)\\s*\\{[^}]*display:\\s*none\\s*!important`,
+        "s",
+      ),
+    );
+
+    const bare = stripComments(SITE_SKIN_CSS);
+    // Only body.rdw-post-panel-mounted — no :has(.rdw-post-panel) secondary gate.
+    expect(bare).not.toContain("body:has(.rdw-post-panel)");
+    // Must be gated on mount class — unconditional hide would break post pages
+    // without the panel and would match old CSS that only styles link-list.
+    expect(bare).not.toMatch(
+      /html\.rdw-skin\s+div\.link-list\s*\{[^}]*display:\s*none/s,
+    );
+    expect(bare).not.toMatch(
+      /html\.rdw-skin\s+div#stats\s*\{[^}]*display:\s*none/s,
+    );
+  });
+
+  it("styles favorites bulk-select chrome with theme tokens (F HANDOFF)", () => {
+    expect(CLASS_THUMB_SELECTED).toBe("rdw-fav-bulk-selected");
+    expect(CLASS_THUMB_CHECK).toBe("rdw-fav-bulk-check");
+    expect(SITE_SKIN_CSS).toContain(`span.thumb.${CLASS_THUMB_SELECTED}`);
+    expect(SITE_SKIN_CSS).toContain(`span.thumb > .${CLASS_THUMB_CHECK}`);
+    expect(SITE_SKIN_CSS).toContain(
+      `body.${FAV_BULK_SELECTING_BODY_CLASS} span.thumb`,
+    );
+    expect(SITE_SKIN_CSS).toContain(`#${FAV_BULK_ROOT_ID}`);
+    expect(SITE_SKIN_CSS).toContain(`.${FAV_BULK_BAR_CLASS}`);
+
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `span\\.thumb\\.${CLASS_THUMB_SELECTED}\\s*\\{[^}]*outline:\\s*2px solid var\\(--rdw-accent\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `span\\.thumb\\s*>\\s*\\.${CLASS_THUMB_CHECK}\\s*\\{[^}]*background:\\s*var\\(--rdw-accent\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `span\\.thumb\\s*>\\s*\\.${CLASS_THUMB_CHECK}\\s*\\{[^}]*color:\\s*var\\(--rdw-surface\\)`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `span\\.thumb\\.${CLASS_THUMB_SELECTED}\\s*>\\s*\\.${CLASS_THUMB_CHECK}\\s*\\{[^}]*display:\\s*inline-flex`,
+        "s",
+      ),
+    );
+    expect(SITE_SKIN_CSS).toMatch(
+      new RegExp(
+        `#${FAV_BULK_ROOT_ID}[\\s\\S]*?color:\\s*var\\(--rdw-text\\)`,
+      ),
+    );
+
+    const bare = stripComments(SITE_SKIN_CSS);
+    // Badge must stay a direct child of thumb (sibling of a#p…), never a#p … .check
+    expect(bare).not.toMatch(
+      /a#p[^\{]*\.rdw-fav-bulk-check/,
+    );
+    expect(bare).not.toMatch(
+      new RegExp(
+        `span\\.thumb\\.${CLASS_THUMB_SELECTED}\\s*\\{[^}]*outline:[^;]*#`,
+        "s",
+      ),
+    );
+    expect(bare).not.toMatch(
+      new RegExp(
+        `span\\.thumb\\s*>\\s*\\.${CLASS_THUMB_CHECK}\\s*\\{[^}]*background:\\s*#`,
+        "s",
+      ),
     );
   });
 

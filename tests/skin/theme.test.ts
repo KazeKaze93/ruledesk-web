@@ -93,6 +93,10 @@ describe("contrast helpers", () => {
     expect(siteDark!).toBeGreaterThanOrEqual(CONTRAST_RATIO_MIN);
     expect(SITE_DEFAULT_PALETTE_RESOLVED.text).toBe("#000000");
     expect(SITE_DARK_PALETTE_RESOLVED.text).toBe("#c0c0c0");
+    // Card surface = page bg; border = --c-bg-alt (site light) / site-dark border.
+    expect(SITE_DEFAULT_PALETTE_RESOLVED.surface).toBe("#aae5a4");
+    expect(SITE_DEFAULT_PALETTE_RESOLVED.border).toBe("#89cf81");
+    expect(SITE_DARK_PALETTE_RESOLVED.surface).toBe("#303a30");
   });
 
   it("clamps background dim to 0–0.8", () => {

@@ -1,5 +1,25 @@
-import { CSS_CLASS } from "../config/constants";
+import {
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
+  CSS_CLASS,
+  RDW_THEME_ATTR,
+} from "../config/constants";
+import {
+  SITE_DARK_C_BG,
+  SITE_DARK_C_BORDER,
+  SITE_LIGHT_C_BG,
+  SITE_LIGHT_C_BG_ALT,
+} from "../ui/tokens";
 import { PANEL_UI_CLASS } from "./constants";
+
+/** Matches host.tsx page title class (owned there; styled here for site polish). */
+const PAGE_TITLE_CLASS = "rdw-page-title";
+
+/** Matches kit SectionLabel class. */
+const SECTION_LABEL_CLASS = "rdw-section-label";
+
+const SITE_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+const SITE_DARK_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
 
 /**
  * Shared layout CSS for own-page section content (lists, settings rows, artists).
@@ -39,6 +59,36 @@ export const PAGE_CONTENT_CSS = `
 }
 .${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
   background: var(--rdw-surface-2);
+}
+/* Site default / Site dark: flat rows (no zebra) inside cards. */
+:host-context(${SITE_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even),
+:host-context(${SITE_DARK_THEME_SELECTOR}) .${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
+  background: transparent;
+}
+/*
+ * Card vs page: surface not darker than page; Site default card = --c-bg,
+ * border = --c-bg-alt. Higher specificity than kit .rdw-card so it wins.
+ */
+:host-context(${SITE_THEME_SELECTOR}) .rdw-card.${PANEL_UI_CLASS.pageCard} {
+  background: ${SITE_LIGHT_C_BG};
+  border-color: ${SITE_LIGHT_C_BG_ALT};
+}
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-card.${PANEL_UI_CLASS.pageCard} {
+  background: ${SITE_DARK_C_BG};
+  border-color: ${SITE_DARK_C_BORDER};
+}
+.${PAGE_TITLE_CLASS} {
+  color: var(--rdw-text);
+}
+.${SECTION_LABEL_CLASS} {
+  color: var(--rdw-muted);
+}
+/* Muted fails AA on site greens / site-dark chrome — use text. */
+:host-context(${SITE_THEME_SELECTOR}) .${PAGE_TITLE_CLASS},
+:host-context(${SITE_DARK_THEME_SELECTOR}) .${PAGE_TITLE_CLASS},
+:host-context(${SITE_THEME_SELECTOR}) .${SECTION_LABEL_CLASS},
+:host-context(${SITE_DARK_THEME_SELECTOR}) .${SECTION_LABEL_CLASS} {
+  color: var(--rdw-text);
 }
 .${PANEL_UI_CLASS.settingsRow} .rdw-switch-row {
   width: 100%;
