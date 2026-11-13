@@ -2,10 +2,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "preact/test-utils";
 
 import { DEBUG_KEY } from "../../src/config/constants";
+import {
+  VIDEO_PLAYER_SETTING_CAPTION,
+  videoPlayerFeature,
+} from "../../src/features/video-player";
 import { createSettingsPage } from "../../src/pages/settings-page";
+import {
+  FEATURE_CHECKBOX_ID_PREFIX,
+  FEATURE_CHOICE_ID_PREFIX,
+} from "../../src/pages/constants";
+import {
+  VIDEO_PLAYER_FEATURE_ID,
+  VIDEO_PREVIEW_FEATURE_ID,
+  VIDEO_SIZE_FIT_HEIGHT,
+  VIDEO_SIZE_FIT_WIDTH,
+  VIDEO_SIZE_ORIGINAL,
+} from "../../src/storage/schema";
 import { clearStorageCache } from "../../src/storage/store";
 
 const APPEARANCE_ROW_CLASS = "rdw-appearance__row";
+const WHEEL_COPY_RE = /wheel/i;
+const VIDEO_PREVIEW_CAPTION_TEXT =
+  "Each preview loads the video file itself.";
 
 describe("SettingsPage flat rows", () => {
   beforeEach(() => {
@@ -55,5 +73,59 @@ describe("SettingsPage flat rows", () => {
     );
     expect(appearanceOwn).toBeGreaterThanOrEqual(0);
     expect(flatIndex).toBeGreaterThan(appearanceOwn);
+  });
+
+  it("shows Video player size choice and caption without wheel volume UI", () => {
+    let root: HTMLElement | undefined;
+    act(() => {
+      root = createSettingsPage();
+      document.body.append(root);
+    });
+    if (root === undefined) {
+      throw new Error("expected settings page root");
+    }
+
+    expect(videoPlayerFeature.cssOnly).toBe(true);
+    expect(videoPlayerFeature.settingsCaption).toBe(VIDEO_PLAYER_SETTING_CAPTION);
+
+    const playerToggle = root.querySelector(
+      `#${FEATURE_CHECKBOX_ID_PREFIX}${VIDEO_PLAYER_FEATURE_ID}`,
+    );
+    expect(playerToggle).not.toBeNull();
+
+    const choiceRow = root.querySelector(
+      `#${FEATURE_CHOICE_ID_PREFIX}${VIDEO_PLAYER_FEATURE_ID}`,
+    );
+    expect(choiceRow).not.toBeNull();
+    const choiceText = choiceRow?.textContent ?? "";
+    expect(choiceText).toContain("Video size");
+    expect(choiceText).toContain("Fit height");
+
+    const trigger = choiceRow?.querySelector("button.rdw-select__trigger");
+    expect(trigger).not.toBeNull();
+    act(() => {
+      if (trigger instanceof HTMLButtonElement) {
+        trigger.click();
+      }
+    });
+    const openText = choiceRow?.textContent ?? "";
+    expect(openText).toContain("Fit width");
+    expect(openText).toContain("Original");
+
+    const pageText = root.textContent ?? "";
+    expect(pageText).toContain(VIDEO_PLAYER_SETTING_CAPTION);
+    expect(pageText).toContain(VIDEO_PREVIEW_CAPTION_TEXT);
+    expect(WHEEL_COPY_RE.test(pageText)).toBe(false);
+
+    const previewToggle = root.querySelector(
+      `#${FEATURE_CHECKBOX_ID_PREFIX}${VIDEO_PREVIEW_FEATURE_ID}`,
+    );
+    expect(previewToggle).not.toBeNull();
+
+    expect(videoPlayerFeature.choice?.options.map((o) => o.value)).toEqual([
+      VIDEO_SIZE_FIT_HEIGHT,
+      VIDEO_SIZE_FIT_WIDTH,
+      VIDEO_SIZE_ORIGINAL,
+    ]);
   });
 });

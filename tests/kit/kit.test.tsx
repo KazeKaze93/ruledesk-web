@@ -7,7 +7,13 @@ import {
   Card,
   Chip,
   EmptyState,
+  IconArrowUp,
   IconButton,
+  IconDroplet,
+  IconExternalLink,
+  IconFlag,
+  IconNote,
+  IconPencil,
   IconStar,
   NumberField,
   Popover,
@@ -18,6 +24,8 @@ import {
   Switch,
   Tabs,
   TextField,
+  kitTabId,
+  kitTabPanelId,
 } from "../../src/ui/kit";
 import {
   cleanupKit,
@@ -370,7 +378,7 @@ describe("kit components", () => {
     expect(onNum).toHaveBeenCalledWith(20);
   });
 
-  it("Tabs use tablist semantics", () => {
+  it("Tabs use tablist semantics with aria-controls and arrow keys", () => {
     const onChange = vi.fn();
     const host = mount(
       <Tabs
@@ -384,12 +392,41 @@ describe("kit components", () => {
       />,
     );
     expect(host.querySelector('[role="tablist"]')).toBeTruthy();
-    const artists = host.querySelector("#rdw-tab-artists");
+    const artists = host.querySelector(`#${kitTabId("artists")}`);
+    const settings = host.querySelector(`#${kitTabId("settings")}`);
     expect(artists).toBeTruthy();
+    expect(settings?.getAttribute("aria-controls")).toBe(
+      kitTabPanelId("settings"),
+    );
     if (artists !== null) {
       fireClick(artists);
     }
     expect(onChange).toHaveBeenCalledWith("artists");
+
+    if (settings instanceof HTMLElement) {
+      settings.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          bubbles: true,
+        }),
+      );
+    }
+    expect(onChange).toHaveBeenCalledWith("artists");
+  });
+
+  it("exports stroke icons used by the post panel", () => {
+    const host = mount(
+      <div>
+        <IconArrowUp />
+        <IconDroplet />
+        <IconPencil />
+        <IconFlag />
+        <IconNote />
+        <IconExternalLink />
+        <IconStar />
+      </div>,
+    );
+    expect(host.querySelectorAll("svg")).toHaveLength(7);
   });
 
   it("Card, SectionLabel, EmptyState render", () => {

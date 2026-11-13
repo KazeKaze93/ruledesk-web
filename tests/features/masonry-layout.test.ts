@@ -99,7 +99,13 @@ describe("computeMasonryRowSpan", () => {
 describe("computeMasonryColumnWidthPx", () => {
   it("matches auto-fill minmax column math", () => {
     const listWidth = 500;
-    const columnCount = 2;
+    const columnCount = Math.max(
+      1,
+      Math.floor(
+        (listWidth + MASONRY_COLUMN_GAP_PX) /
+          (MASONRY_COLUMN_MIN_PX + MASONRY_COLUMN_GAP_PX),
+      ),
+    );
     const expected =
       (listWidth - (columnCount - 1) * MASONRY_COLUMN_GAP_PX) / columnCount;
     expect(computeMasonryColumnWidthPx(listWidth)).toBe(expected);
@@ -107,6 +113,14 @@ describe("computeMasonryColumnWidthPx", () => {
 
   it("falls back to min column when list width is 0", () => {
     expect(computeMasonryColumnWidthPx(0)).toBe(MASONRY_COLUMN_MIN_PX);
+  });
+
+  it("keeps computed column width at most 200px for 1600px content width", () => {
+    const contentWidthPx = 1600;
+    const maxColumnWidthPx = 200;
+    expect(computeMasonryColumnWidthPx(contentWidthPx)).toBeLessThanOrEqual(
+      maxColumnWidthPx,
+    );
   });
 });
 

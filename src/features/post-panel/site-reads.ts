@@ -461,3 +461,41 @@ export function findPostComments(): HTMLElement | null {
   const node = document.getElementById(POST_COMMENTS_ID);
   return node instanceof HTMLElement ? node : null;
 }
+
+const COMMENT_COUNT_RE = /^(\d+)\s+comments?\b/i;
+
+/**
+ * Parse leading «N comment(s)» from the first non-empty text node under
+ * div#comment-list (not full textContent — child nodes glue into one word
+ * and break the trailing word-boundary).
+ * Returns null when the list is missing or the prefix is unparseable.
+ */
+export function readCommentCount(): number | null {
+  const list = document.getElementById(COMMENT_LIST_ID);
+  if (list === null) {
+    return null;
+  }
+  for (const child of list.childNodes) {
+    if (child.nodeType !== Node.TEXT_NODE) {
+      continue;
+    }
+    const text = normalizeSpace(child.textContent ?? "");
+    if (text.length === 0) {
+      continue;
+    }
+    const match = COMMENT_COUNT_RE.exec(text);
+    if (match === null) {
+      return null;
+    }
+    const raw = match[1];
+    if (raw === undefined) {
+      return null;
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return Math.trunc(parsed);
+  }
+  return null;
+}

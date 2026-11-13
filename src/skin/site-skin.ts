@@ -5,6 +5,9 @@
  */
 
 import {
+  APPEARANCE_THEME_DARK,
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
   CSS_CLASS,
   RDW_SKIN_CLASS,
   RDW_THEME_ATTR,
@@ -14,7 +17,10 @@ import { SITE_SELECTORS } from "../site/selectors";
 import { TOKEN_VAR } from "../ui/tokens";
 
 const ROOT = `html.${RDW_SKIN_CLASS}`;
-const ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
+const ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
+const ROOT_SITE = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+const ROOT_SITE_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+const ROOT_THEME_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
 
 /** search-tools mount root (id + class in src/features/search-tools.tsx). */
 const SEARCH_TOOLS_ROOT_ID = "rdw-search-tools";
@@ -38,6 +44,35 @@ export const RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 const POST_PANEL_ICAME_ROW = 'li:has(a[onclick^="iCame("])';
 /** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
 const POST_ACTIONS_HOST_ID = "rdw-post-actions";
+
+/** Kit select list — keep in sync with src/ui/kit/select.tsx. */
+const KIT_SELECT_LIST_CLASS = "rdw-select__list";
+/** Kit autocomplete list — keep in sync with src/ui/kit/autocomplete-field.tsx. */
+const KIT_AC_LIST_CLASS = "rdw-ac__list";
+/** Kit dialog panel — keep in sync with src/ui/kit/dialog.tsx. */
+const KIT_DIALOG_CLASS = "rdw-dialog";
+/** Playlist add-to menu — keep in sync with src/features/playlist-menu.ts. */
+const PLAYLIST_MENU_CLASS = "rdw-playlist-menu";
+
+/** Firefox / modern Chromium thin scrollbar (E HANDOFF). */
+const SCROLLBAR_WIDTH = "thin";
+
+/** Post panel Original control — keep in sync with post-actions ORIGINAL_BUTTON_SIZE_PX. */
+const POST_PANEL_ORIGINAL_SIZE_PX = 34;
+/** Active tab underline — keep in sync with kit/tabs.tsx. */
+const POST_PANEL_TAB_UNDERLINE_PX = 2;
+
+/** Post panel classes — keep in sync with src/features/post-panel/post-panel.tsx. */
+const POST_PANEL_ACTIONS_CLASS = "rdw-post-panel-actions";
+const POST_PANEL_ACTIONS_ROW_CLASS = "rdw-post-panel-actions-row";
+const POST_PANEL_FAV_CLASS = "rdw-post-panel-fav";
+const POST_PANEL_ORIGINAL_CLASS = "rdw-post-panel-original";
+const POST_PANEL_TABPANEL_CLASS = "rdw-post-panel-tabpanel";
+const POST_PANEL_POST_ACTION_CLASS = "rdw-post-panel-post-action";
+/** Kit tabs — keep in sync with src/ui/kit/tabs.tsx. */
+const KIT_TABS_CLASS = "rdw-tabs";
+const KIT_TAB_CLASS = "rdw-tabs__tab";
+const KIT_BTN_PRIMARY_CLASS = "rdw-btn--primary";
 
 /**
  * Body class while search-tools «AI posts» row is rendered
@@ -1199,13 +1234,105 @@ ${ROOT_DARK} .pagination span.current,
 ${ROOT_DARK} div.tag-search input[type="submit"],
 ${ROOT_DARK} div.tag-search button[type="submit"],
 ${ROOT_DARK} .manual-page-chooser > input[type="submit"],
-${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS} {
+${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS},
+${ROOT_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
   color: ${v.text};
 }
 
 ${ROOT_DARK} div.has-mail {
   background: ${v.surface2};
   border-color: ${v.tagCharacter};
+}
+
+/*
+ * Post panel actions + tabs (A→E HANDOFF).
+ * Unscoped under #rdw-post-actions so Site default/Site dark (no html.rdw-skin)
+ * still beat native button/link chrome via document --rdw-* tokens.
+ */
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_ROW_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_TABPANEL_CLASS} {
+  color: ${v.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  background: ${v.accent};
+  border-color: ${v.accent};
+  color: ${v.surface};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ORIGINAL_CLASS} {
+  box-sizing: border-box;
+  width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  text-decoration: none;
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TABS_CLASS} {
+  border-bottom: 1px solid ${v.border};
+  color: ${v.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  background: transparent;
+  border: 0;
+  border-bottom: ${String(POST_PANEL_TAB_UNDERLINE_PX)}px solid transparent;
+  color: ${v.muted};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  color: ${v.text};
+  font-weight: 600;
+  border-bottom-color: ${v.accent};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_POST_ACTION_CLASS} {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  justify-content: flex-start;
+}
+
+/* Site themes: muted fails AA on green/dark chrome — tabs use text; keep accent underline. */
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS},
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  color: ${v.text};
+}
+
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"],
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  border-bottom-color: ${v.accent};
+  color: ${v.text};
+}
+
+/* Dark RuleDesk: primary fill uses light label (surface token is dark). */
+${ROOT_THEME_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  color: ${v.text};
+}
+
+/*
+ * Own scrollable UI — tokens for all four themes (site/site-dark have no html.rdw-skin).
+ * Fixes white post-column scrollbar on dark. Kit lists/dialogs + playlist menu.
+ */
+#${POST_ACTIONS_HOST_ID},
+.${KIT_SELECT_LIST_CLASS},
+.${KIT_AC_LIST_CLASS},
+.${KIT_DIALOG_CLASS},
+.${PLAYLIST_MENU_CLASS} {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v.border} ${v.surface};
+}
+
+/* Site autocomplete lists under rdw-skin */
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty),
+${ROOT} div.auto_complete ul {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v.border} ${v.surface};
 }
 
 /*

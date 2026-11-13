@@ -12,6 +12,7 @@ import {
   SITE_DARK_C_BORDER,
   SITE_LIGHT_C_BG,
   SITE_LIGHT_C_BG_ALT,
+  TOKEN_VAR,
 } from "../../src/ui/tokens";
 
 describe("PAGE_CONTENT_CSS site theme polish", () => {
@@ -48,6 +49,50 @@ describe("PAGE_CONTENT_CSS site theme polish", () => {
     );
     expect(PAGE_CONTENT_CSS).toMatch(
       /rdw-section-label[\s\S]*color:\s*var\(--rdw-text\)/,
+    );
+  });
+
+  it("themes shadow-DOM scrollables with thin scrollbar tokens (E HANDOFF)", () => {
+    expect(PAGE_CONTENT_CSS).toContain(`.${PANEL_UI_CLASS.scrollRegion}`);
+    expect(PAGE_CONTENT_CSS).toContain(".rdw-select__list");
+    expect(PAGE_CONTENT_CSS).toContain(".rdw-ac__list");
+    expect(PAGE_CONTENT_CSS).toContain(".rdw-dialog");
+    expect(PAGE_CONTENT_CSS).toMatch(
+      new RegExp(
+        String.raw`\.${PANEL_UI_CLASS.scrollRegion}[\s\S]*?\.rdw-select__list[\s\S]*?\.rdw-ac__list[\s\S]*?\.rdw-dialog\s*\{[^}]*scrollbar-width:\s*thin[^}]*scrollbar-color:\s*var\(${TOKEN_VAR.border.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\)\s+var\(${TOKEN_VAR.surface.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}\)`,
+        "s",
+      ),
+    );
+    // Old page-css had no scrollbar theming.
+    expect(PAGE_CONTENT_CSS).not.toMatch(/scrollbar-color:\s*#/i);
+  });
+
+  it("themes kit tabs with accent underline; Site themes force text (A→E HANDOFF)", () => {
+    expect(PAGE_CONTENT_CSS).toContain(".rdw-tabs");
+    expect(PAGE_CONTENT_CSS).toContain(".rdw-tabs__tab");
+    expect(PAGE_CONTENT_CSS).toMatch(
+      /\.rdw-tabs__tab\[aria-selected="true"\]\s*\{[^}]*border-bottom-color:\s*var\(--rdw-accent\)/s,
+    );
+    const siteSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+    const darkSel = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+    // Site + Site dark share comma-grouped :host-context rules.
+    expect(PAGE_CONTENT_CSS).toMatch(
+      new RegExp(
+        `:host-context\\(${siteSel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)\\s*\\.rdw-tabs__tab[^{]*\\{[^}]*color:\\s*var\\(--rdw-text\\)`,
+        "s",
+      ),
+    );
+    expect(PAGE_CONTENT_CSS).toMatch(
+      new RegExp(
+        `:host-context\\(${darkSel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)\\s*\\.rdw-tabs__tab\\[aria-selected="true"\\][^{]*\\{[^}]*border-bottom-color:\\s*var\\(--rdw-accent\\)`,
+        "s",
+      ),
     );
   });
 });

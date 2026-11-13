@@ -18,10 +18,18 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typically 0/5 vs ~5/5 with UserScripts API; pages also open faster. Prefer Dynamic for RuleDesk Web.
 
+### 0.15.0 notes
+
+- **Post panel tabs:** Info / Comments tabs in the post panel (native `#post-comments` in Comments; reply form stays on the page)
+- **Video size:** Fit height (may upscale; fills under the header, not wider than the media column), Fit width, Original (pixel-perfect); default Fit height. Persist volume/mute/rate (no mouse-wheel volume)
+- **Video preview on hover:** optional grid webm preview (default off; 200 ms hover delay; each preview loads the video file itself)
+- **Masonry grid:** column `minmax` floor 170px
+- **Skin:** stylesheet URL slash-collapse; thinner scrollbars; post panel tab styles
+
 ### 0.14.0 notes
 
 - **Post comments column:** native `#post-comments` moves into the post panel (reply form stays on the page)
-- **Video player tweaks:** persist volume/mute/rate, wheel volume; **Video size** Fit height / Fit width / Original (default Fit height)
+- **Video player tweaks:** persist volume/mute/rate; **Video size** Fit height / Fit width / Original (default Fit height)
 - **Video preview on hover:** optional grid webm preview (default off; each preview loads the video file itself)
 - **Bulk favorites:** confirm remove uses kit Dialog; select bar above the grid
 - **Infinite scroll:** prefetch margin ~2 viewport heights ahead of the sentinel
@@ -118,8 +126,8 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
 | `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS grid + row-span on list; content flex-grows; favorites falls back to default) |
-| `video-player` | Video player tweaks | on | post | Persist volume/mute/rate, wheel volume; **Video size** choice: Fit height / Fit width / Original |
-| `video-preview` | Video preview on hover | off | list, favorites | Hover preview on webm thumbs (loads the video file itself) |
+| `video-player` | Video player tweaks | on | post | Persist volume/mute/rate; **Video size**: Fit height (may upscale; under header, ≤ media column), Fit width, Original (pixel-perfect) |
+| `video-preview` | Video preview on hover | off | list, favorites | Hover preview on webm thumbs after 200 ms (loads the video file itself) |
 
 **Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 

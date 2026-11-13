@@ -133,6 +133,51 @@ export function IconExternalLink(props: IconProps): JSX.Element {
   );
 }
 
+export function IconDroplet(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    </svg>
+  );
+}
+
+export function IconPencil(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+export function IconFlag(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+      <line x1="4" y1="22" x2="4" y2="15" />
+    </svg>
+  );
+}
+
+export function IconNote(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="12" y2="17" />
+    </svg>
+  );
+}
+
 export function IconSettings(props: IconProps): JSX.Element {
   const size = props.size ?? DEFAULT_SIZE;
   return (

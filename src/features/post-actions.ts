@@ -28,12 +28,14 @@ const PANEL_WIDTH_PX = 360;
 const PANEL_MIN_WIDTH_PX = 320;
 const PANEL_MAX_WIDTH_PX = 420;
 const PANEL_FONT_SIZE_PX = 13;
-const PANEL_BUTTON_HEIGHT_PX = 36;
-const PANEL_GAP_PX = 12;
+const PANEL_BUTTON_HEIGHT_PX = 34;
+const PANEL_BLOCK_GAP_PX = 10;
+const PANEL_BUTTON_GAP_PX = 8;
 const PANEL_CARD_PADDING_PX = 12;
 const PANEL_STICKY_GAP_PX = 12;
 const PANEL_Z_INDEX = 100;
-const SCORE_VALUE_FONT_SIZE_PX = 18;
+const STAT_LABEL_WIDTH_PX = 62;
+const ORIGINAL_BUTTON_SIZE_PX = 34;
 const STICKY_TOP_VAR = "--rdw-post-panel-sticky-top";
 
 const CLASS_PANEL = "rdw-post-actions";
@@ -82,13 +84,13 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel {
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
   position: relative;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-card {
   padding: ${String(PANEL_CARD_PADDING_PX)}px;
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-btn {
   min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
@@ -96,55 +98,46 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-btn {
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
-  grid-column: 1 / -1;
-  width: 100%;
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row > .rdw-btn,
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row > .rdw-post-panel-collections {
+  flex: 1 1 0;
+  min-width: 0;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections {
-  min-width: 0;
   position: relative;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-collections .rdw-btn {
   width: 100%;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-original {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
   box-sizing: border-box;
-  width: 100%;
-  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
-  padding: 0 10px;
+  flex: 0 0 ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  width: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  height: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  min-width: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  min-height: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--rdw-border);
   border-radius: var(--rdw-radius-m);
   background: var(--rdw-surface);
   color: var(--rdw-text);
   text-decoration: none;
-  font: inherit;
-  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
-  font-weight: 600;
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${String(PANEL_GAP_PX)}px;
-  background: var(--rdw-surface-2);
-  border-radius: var(--rdw-radius-m);
-  padding: ${String(PANEL_GAP_PX)}px;
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
-  font-size: ${String(SCORE_VALUE_FONT_SIZE_PX)}px;
-  font-variant-numeric: tabular-nums;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
-  grid-template-columns: 62px 1fr;
-  column-gap: ${String(PANEL_GAP_PX)}px;
-  row-gap: ${String(PANEL_GAP_PX)}px;
+  display: grid;
+  grid-template-columns: ${String(STAT_LABEL_WIDTH_PX)}px 1fr;
+  column-gap: ${String(PANEL_BUTTON_GAP_PX)}px;
+  row-gap: ${String(PANEL_BUTTON_GAP_PX)}px;
   font-size: ${String(PANEL_FONT_SIZE_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
@@ -157,21 +150,20 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-source {
   white-space: nowrap;
   color: var(--rdw-accent);
 }
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
-  display: flex;
-  align-items: center;
-  gap: ${String(PANEL_GAP_PX)}px;
-}
-${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-icame .rdw-btn {
-  flex: 1 1 auto;
-  width: 100%;
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-info {
+  display: grid;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-post-actions {
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-post-action {
   width: 100%;
+  justify-content: flex-start;
+}
+${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-tabpanel[hidden] {
+  display: none;
 }
 ${BODY_SELECTOR} #${POST_ACTIONS_ID} .rdw-post-panel-comments-host {
   min-width: 0;

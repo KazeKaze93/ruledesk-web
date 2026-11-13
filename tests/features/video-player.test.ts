@@ -1,13 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  ASPECT_RATIO_CSS_VAR,
-  CHROME_OFFSET_CSS_VAR,
   FLUID_WRAPPER_CLASS,
   FLUID_WRAPPER_ID,
   VIDEO_ELEMENT_ID,
   VIDEO_PLAYER_ID,
-  VOLUME_WHEEL_STEP,
+  VIDEO_PLAYER_SETTING_CAPTION,
+  computeVideoPlayerSize,
   videoPlayerFeature,
 } from "../../src/features/video-player";
 import {
@@ -32,6 +31,14 @@ import {
 } from "../../src/storage/schema";
 
 const BODY_CLASS = featureBodyClass(VIDEO_PLAYER_FEATURE_ID);
+const BODY_SELECTOR_HINT = `body.${BODY_CLASS}`;
+
+const SIZE_FIXTURE_COLUMN_PX = 900;
+const SIZE_FIXTURE_AVAILABLE_HEIGHT_PX = 800;
+const SIZE_FIXTURE_SMALL_WIDTH = 496;
+const SIZE_FIXTURE_SMALL_HEIGHT = 608;
+const SIZE_FIXTURE_WIDE_WIDTH = 2560;
+const SIZE_FIXTURE_WIDE_HEIGHT = 1440;
 
 type StoredState = {
   volume?: number;
@@ -61,9 +68,11 @@ function buildPlayerDom(options?: {
   readonly inlineSize?: boolean;
   readonly videoWidth?: number;
   readonly videoHeight?: number;
+  readonly columnWidthPx?: number;
 }): {
   video: HTMLVideoElement;
   wrapper: HTMLDivElement;
+  column: HTMLDivElement;
 } {
   document.body.innerHTML = "";
   document.body.classList.add(BODY_CLASS);
@@ -88,6 +97,13 @@ function buildPlayerDom(options?: {
       }) satisfies DOMRect,
   });
   document.body.append(header);
+
+  const column = document.createElement("div");
+  const columnWidth = options?.columnWidthPx ?? SIZE_FIXTURE_COLUMN_PX;
+  Object.defineProperty(column, "clientWidth", {
+    configurable: true,
+    get: () => columnWidth,
+  });
 
   const wrapper = document.createElement("div");
   wrapper.id = FLUID_WRAPPER_ID;
@@ -115,8 +131,9 @@ function buildPlayerDom(options?: {
   });
 
   wrapper.append(video);
-  document.body.append(wrapper);
-  return { video, wrapper };
+  column.append(wrapper);
+  document.body.append(column);
+  return { video, wrapper, column };
 }
 
 function flushFirstPaint(): Promise<void> {
@@ -165,6 +182,114 @@ describe("video player schema (Package B + C HANDOFF)", () => {
   });
 });
 
+describe("computeVideoPlayerSize", () => {
+  it("small 496×608: Original is pixel-perfect", () => {
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_ORIGINAL,
+        videoWidth: SIZE_FIXTURE_SMALL_WIDTH,
+        videoHeight: SIZE_FIXTURE_SMALL_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({
+      widthPx: SIZE_FIXTURE_SMALL_WIDTH,
+      heightPx: SIZE_FIXTURE_SMALL_HEIGHT,
+    });
+  });
+
+  it("small 496×608: Fit width uses full column width", () => {
+    const heightPx = Math.round(
+      (SIZE_FIXTURE_COLUMN_PX * SIZE_FIXTURE_SMALL_HEIGHT) /
+        SIZE_FIXTURE_SMALL_WIDTH,
+    );
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_FIT_WIDTH,
+        videoWidth: SIZE_FIXTURE_SMALL_WIDTH,
+        videoHeight: SIZE_FIXTURE_SMALL_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({ widthPx: SIZE_FIXTURE_COLUMN_PX, heightPx });
+    expect(heightPx).toBeGreaterThan(SIZE_FIXTURE_SMALL_HEIGHT);
+  });
+
+  it("small 496×608: Fit height upscales to available height", () => {
+    const widthPx = Math.round(
+      (SIZE_FIXTURE_AVAILABLE_HEIGHT_PX * SIZE_FIXTURE_SMALL_WIDTH) /
+        SIZE_FIXTURE_SMALL_HEIGHT,
+    );
+    expect(widthPx).toBeLessThanOrEqual(SIZE_FIXTURE_COLUMN_PX);
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_FIT_HEIGHT,
+        videoWidth: SIZE_FIXTURE_SMALL_WIDTH,
+        videoHeight: SIZE_FIXTURE_SMALL_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({
+      widthPx,
+      heightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+    });
+    expect(widthPx).toBeGreaterThan(SIZE_FIXTURE_SMALL_WIDTH);
+  });
+
+  it("wide 2560×1440: Original is pixel-perfect", () => {
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_ORIGINAL,
+        videoWidth: SIZE_FIXTURE_WIDE_WIDTH,
+        videoHeight: SIZE_FIXTURE_WIDE_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({
+      widthPx: SIZE_FIXTURE_WIDE_WIDTH,
+      heightPx: SIZE_FIXTURE_WIDE_HEIGHT,
+    });
+  });
+
+  it("wide 2560×1440: Fit width uses full column width", () => {
+    const heightPx = Math.round(
+      (SIZE_FIXTURE_COLUMN_PX * SIZE_FIXTURE_WIDE_HEIGHT) /
+        SIZE_FIXTURE_WIDE_WIDTH,
+    );
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_FIT_WIDTH,
+        videoWidth: SIZE_FIXTURE_WIDE_WIDTH,
+        videoHeight: SIZE_FIXTURE_WIDE_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({ widthPx: SIZE_FIXTURE_COLUMN_PX, heightPx });
+    expect(heightPx).toBeLessThan(SIZE_FIXTURE_WIDE_HEIGHT);
+  });
+
+  it("wide 2560×1440: Fit height clamps to column when too wide", () => {
+    const widthIfFullHeight = Math.round(
+      (SIZE_FIXTURE_AVAILABLE_HEIGHT_PX * SIZE_FIXTURE_WIDE_WIDTH) /
+        SIZE_FIXTURE_WIDE_HEIGHT,
+    );
+    expect(widthIfFullHeight).toBeGreaterThan(SIZE_FIXTURE_COLUMN_PX);
+    const heightPx = Math.round(
+      (SIZE_FIXTURE_COLUMN_PX * SIZE_FIXTURE_WIDE_HEIGHT) /
+        SIZE_FIXTURE_WIDE_WIDTH,
+    );
+    expect(
+      computeVideoPlayerSize({
+        mode: VIDEO_SIZE_FIT_HEIGHT,
+        videoWidth: SIZE_FIXTURE_WIDE_WIDTH,
+        videoHeight: SIZE_FIXTURE_WIDE_HEIGHT,
+        columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+        availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+      }),
+    ).toEqual({ widthPx: SIZE_FIXTURE_COLUMN_PX, heightPx });
+  });
+});
+
 describe("videoPlayerFeature contract", () => {
   it("exports Feature for Phase 2 registry HANDOFF", () => {
     expect(videoPlayerFeature.id).toBe(VIDEO_PLAYER_ID);
@@ -172,6 +297,8 @@ describe("videoPlayerFeature contract", () => {
     expect(videoPlayerFeature.label).toBe("Video player tweaks");
     expect(videoPlayerFeature.pages).toEqual(["post"]);
     expect(videoPlayerFeature.defaultEnabled).toBe(true);
+    expect(videoPlayerFeature.cssOnly).toBe(true);
+    expect(videoPlayerFeature.settingsCaption).toBe(VIDEO_PLAYER_SETTING_CAPTION);
     expect(videoPlayerFeature.choice?.defaultValue).toBe(VIDEO_SIZE_FIT_HEIGHT);
     expect(videoPlayerFeature.choice?.options.map((o) => o.value)).toEqual([
       VIDEO_SIZE_FIT_HEIGHT,
@@ -185,21 +312,10 @@ describe("videoPlayerFeature contract", () => {
     ]);
   });
 
-  it("css targets Fluid wrapper with max-height / aspect-ratio, no !important on width/height", () => {
+  it("css keeps Fluid wrapper box-sizing without !important width/height", () => {
     const css = videoPlayerFeature.css;
-    const fitHeightClass = featureChoiceBodyClass(
-      VIDEO_PLAYER_FEATURE_ID,
-      VIDEO_SIZE_FIT_HEIGHT,
-    );
-    const fitWidthClass = featureChoiceBodyClass(
-      VIDEO_PLAYER_FEATURE_ID,
-      VIDEO_SIZE_FIT_WIDTH,
-    );
-    expect(css).toContain(`body.${fitHeightClass} #${FLUID_WRAPPER_ID}`);
-    expect(css).toContain("max-height: calc(100vh - var(--rdw-vp-chrome-offset");
-    expect(css).toContain(`aspect-ratio: var(${ASPECT_RATIO_CSS_VAR}`);
-    expect(css).toContain(`body.${fitWidthClass} #${FLUID_WRAPPER_ID}`);
-    expect(css).toContain("max-width: 100%");
+    expect(css).toContain(`${BODY_SELECTOR_HINT} #${FLUID_WRAPPER_ID}`);
+    expect(css).toContain("box-sizing: border-box");
     expect(css).not.toMatch(/width\s*:\s*[^;]+!important/);
     expect(css).not.toMatch(/height\s*:\s*[^;]+!important/);
   });
@@ -209,6 +325,10 @@ describe("videoPlayerFeature mount behavior", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     document.body.className = "";
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX + 48 + 12,
+    });
   });
 
   afterEach(() => {
@@ -263,9 +383,9 @@ describe("videoPlayerFeature mount behavior", () => {
     });
   });
 
-  it("wheel over player changes volume by 5% and preventDefaults; Shift skips", async () => {
+  it("does not bind wheel volume handlers", async () => {
     const { video, wrapper } = buildPlayerDom();
-    const { ctx, writes } = makeCtx({
+    const { ctx } = makeCtx({
       volume: 0.5,
       muted: false,
       playbackRate: 1,
@@ -274,57 +394,38 @@ describe("videoPlayerFeature mount behavior", () => {
     videoPlayerFeature.mount(ctx);
     await flushFirstPaint();
 
-    const shiftEvent = new WheelEvent("wheel", {
-      deltaY: -100,
-      shiftKey: true,
-      bubbles: true,
-      cancelable: true,
-    });
-    const shiftPrevented = !wrapper.dispatchEvent(shiftEvent);
-    expect(shiftPrevented).toBe(false);
-    expect(video.volume).toBeCloseTo(0.5);
-
     const upEvent = new WheelEvent("wheel", {
       deltaY: -100,
       shiftKey: false,
       bubbles: true,
       cancelable: true,
     });
-    const upPrevented = !wrapper.dispatchEvent(upEvent);
-    expect(upPrevented).toBe(true);
-    expect(video.volume).toBeCloseTo(0.5 + VOLUME_WHEEL_STEP);
-    expect(writes.length).toBeGreaterThan(0);
-
-    const outside = document.createElement("div");
-    document.body.append(outside);
-    const outsideEvent = new WheelEvent("wheel", {
-      deltaY: -100,
-      bubbles: true,
-      cancelable: true,
-    });
-    const volumeBefore = video.volume;
-    outside.dispatchEvent(outsideEvent);
-    expect(video.volume).toBeCloseTo(volumeBefore);
+    const prevented = !wrapper.dispatchEvent(upEvent);
+    expect(prevented).toBe(false);
+    expect(video.volume).toBeCloseTo(0.5);
   });
 
-  it("sets aspect-ratio and chrome-offset CSS vars on the Fluid wrapper", async () => {
+  it("applies Fit height size that upscales a small clip", async () => {
     const { wrapper } = buildPlayerDom({
-      inlineSize: true,
-      videoWidth: 1920,
-      videoHeight: 1080,
+      videoWidth: SIZE_FIXTURE_SMALL_WIDTH,
+      videoHeight: SIZE_FIXTURE_SMALL_HEIGHT,
+      columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
     });
     const { ctx } = makeCtx();
 
     videoPlayerFeature.mount(ctx);
     await flushFirstPaint();
 
-    expect(wrapper.style.getPropertyValue(ASPECT_RATIO_CSS_VAR).trim()).toBe(
-      "1920 / 1080",
-    );
-    const chrome = wrapper.style.getPropertyValue(CHROME_OFFSET_CSS_VAR).trim();
-    expect(chrome.endsWith("px")).toBe(true);
-    const chromePx = Number.parseFloat(chrome);
-    expect(chromePx).toBeGreaterThanOrEqual(48);
+    const expected = computeVideoPlayerSize({
+      mode: VIDEO_SIZE_FIT_HEIGHT,
+      videoWidth: SIZE_FIXTURE_SMALL_WIDTH,
+      videoHeight: SIZE_FIXTURE_SMALL_HEIGHT,
+      columnWidthPx: SIZE_FIXTURE_COLUMN_PX,
+      availableHeightPx: SIZE_FIXTURE_AVAILABLE_HEIGHT_PX,
+    });
+    expect(wrapper.style.width).toBe(`${String(expected.widthPx)}px`);
+    expect(wrapper.style.height).toBe(`${String(expected.heightPx)}px`);
+    expect(expected.widthPx).toBeGreaterThan(SIZE_FIXTURE_SMALL_WIDTH);
   });
 
   it("does not strip Fluid wrapper class or replace the wrapper element", async () => {

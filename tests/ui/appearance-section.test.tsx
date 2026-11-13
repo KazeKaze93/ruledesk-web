@@ -275,9 +275,10 @@ describe("createAppearanceSection", () => {
     document.body.append(host);
     // First paint: base color only (no image yet).
     expect(document.body.style.backgroundImage).toBe("");
-    await flushEffects();
-    await Promise.resolve();
-    await flushEffects();
+    // Under full-suite load, one macrotask flush can race the async load.
+    for (let i = 0; i < 20 && !loadBackgroundMock.mock.calls.length; i += 1) {
+      await flushEffects();
+    }
 
     expect(loadBackgroundMock).toHaveBeenCalled();
     expect(document.body.style.backgroundImage).toContain(dataUrl);

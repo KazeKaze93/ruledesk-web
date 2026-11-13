@@ -124,6 +124,10 @@ describe("videoPreviewFeature", () => {
     );
   });
 
+  it("uses a 200ms hover delay", () => {
+    expect(HOVER_DELAY_MS).toBe(200);
+  });
+
   it("does not create video before the hover delay", () => {
     const thumb = buildWebmThumb(POST_ID_A, DIR_A, HASH_A);
     document.body.append(thumb);

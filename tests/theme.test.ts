@@ -10,17 +10,18 @@ import { getSiteTheme, setSiteTheme } from "../src/site/theme";
 
 const OTHER_COOKIE = "session=abc123";
 const OTHER_STYLESHEET_HREF = "https://rule34.xxx/css/other.css?v=9";
-const LIGHT_HREF_WITH_QUERY = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_LIGHT}?v=42`;
-const DARK_HREF_WITH_QUERY = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_DARK}?v=42`;
-/** Site root-relative form seen in production. */
+/** Absolute single-slash (canonical host + path). */
+const LIGHT_HREF_ABSOLUTE = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_LIGHT}?v=42`;
+const DARK_HREF_ABSOLUTE = `https://rule34.xxx/css/${SITE_THEME_STYLESHEET_DARK}?v=42`;
+/** Root-relative `/css/...`. */
 const LIGHT_HREF_ROOT_RELATIVE = `/css/${SITE_THEME_STYLESHEET_LIGHT}?46`;
 const DARK_HREF_ROOT_RELATIVE = `/css/${SITE_THEME_STYLESHEET_DARK}?46`;
 /**
- * Protocol-relative `//css/...` — `new URL` treats `css` as host; finder must
- * match the raw attribute instead.
+ * Absolute with doubled path slash — real site markup
+ * (`https://rule34.xxx//css/desktop.css?46`). Pathname collapse required.
  */
-const LIGHT_HREF_DOUBLE_SLASH = `//css/${SITE_THEME_STYLESHEET_LIGHT}?46`;
-const DARK_HREF_DOUBLE_SLASH = `//css/${SITE_THEME_STYLESHEET_DARK}?46`;
+const LIGHT_HREF_DOUBLE_SLASH = `https://rule34.xxx//css/${SITE_THEME_STYLESHEET_LIGHT}?46`;
+const DARK_HREF_DOUBLE_SLASH = `https://rule34.xxx//css/${SITE_THEME_STYLESHEET_DARK}?46`;
 
 function setDocumentCookie(value: string): void {
   Object.defineProperty(document, "cookie", {
@@ -124,17 +125,20 @@ describe("setSiteTheme", () => {
     expect(getSiteTheme()).toBe("light");
   });
 
-  it("swaps stylesheet href both directions and preserves query string", () => {
-    const siteLink = appendStylesheet(LIGHT_HREF_WITH_QUERY);
+  it("finds absolute /css/desktop.css and preserves query when swapping", () => {
+    const siteLink = appendStylesheet(LIGHT_HREF_ABSOLUTE);
     const otherLink = appendStylesheet(OTHER_STYLESHEET_HREF);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     setSiteTheme("dark");
-    expect(siteLink.getAttribute("href")).toBe(DARK_HREF_WITH_QUERY);
+    expect(siteLink.getAttribute("href")).toBe(DARK_HREF_ABSOLUTE);
     expect(otherLink.getAttribute("href")).toBe(OTHER_STYLESHEET_HREF);
+    expect(warnSpy).not.toHaveBeenCalled();
 
     setSiteTheme("light");
-    expect(siteLink.getAttribute("href")).toBe(LIGHT_HREF_WITH_QUERY);
+    expect(siteLink.getAttribute("href")).toBe(LIGHT_HREF_ABSOLUTE);
     expect(otherLink.getAttribute("href")).toBe(OTHER_STYLESHEET_HREF);
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it("finds and swaps root-relative /css/desktop.css?46 without warning", () => {
@@ -150,7 +154,7 @@ describe("setSiteTheme", () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it("finds and swaps protocol-relative //css/desktop.css?46 without warning", () => {
+  it("finds absolute double-slash …xxx//css/desktop.css?46 without warning", () => {
     const siteLink = appendStylesheet(LIGHT_HREF_DOUBLE_SLASH);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

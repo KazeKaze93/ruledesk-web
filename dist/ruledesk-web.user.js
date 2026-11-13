@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.14.0
+// @version      0.15.0
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -14,26 +14,26 @@
 !function(){function e(e,t){return(t||"")+" (SystemJS Error#"+e+" https://github.com/systemjs/systemjs/blob/main/docs/errors.md#"+e+")"}function t(e,t){if(-1!==e.indexOf("\\")&&(e=e.replace(j,"/")),"/"===e[0]&&"/"===e[1])return t.slice(0,t.indexOf(":")+1)+e;if("."===e[0]&&("/"===e[1]||"."===e[1]&&("/"===e[2]||2===e.length&&(e+="/"))||1===e.length&&(e+="/"))||"/"===e[0]){var n,r=t.slice(0,t.indexOf(":")+1);if(n="/"===t[r.length+1]?"file:"!==r?(n=t.slice(r.length+2)).slice(n.indexOf("/")+1):t.slice(8):t.slice(r.length+("/"===t[r.length])),"/"===e[0])return t.slice(0,t.length-n.length-1)+e;for(var i=n.slice(0,n.lastIndexOf("/")+1)+e,o=[],s=-1,u=0;u<i.length;u++)-1!==s?"/"===i[u]&&(o.push(i.slice(s,u+1)),s=-1):"."===i[u]?"."!==i[u+1]||"/"!==i[u+2]&&u+2!==i.length?"/"===i[u+1]||u+1===i.length?u+=1:s=u:(o.pop(),u+=2):s=u;return-1!==s&&o.push(i.slice(s)),t.slice(0,t.length-n.length)+o.join("")}}function n(e,n){return t(e,n)||(-1!==e.indexOf(":")?e:t("./"+e,n))}function r(e,n,r,i,o){for(var s in e){var a=t(s,r)||s,f=e[s];if("string"==typeof f){var l=c(i,t(f,r)||f,o);l?n[a]=l:u("W1",s,f,"bare specifier did not resolve")}}}function i(e,t,i){var o;for(o in e.imports&&r(e.imports,i.imports,t,i,null),e.scopes||{}){var s=n(o,t);r(e.scopes[o],i.scopes[s]||(i.scopes[s]={}),t,i,s)}for(o in e.depcache||{})i.depcache[n(o,t)]=e.depcache[o];for(o in e.integrity||{})i.integrity[n(o,t)]=e.integrity[o]}function o(e,t){if(t[e])return e;var n=e.length;do{var r=e.slice(0,n+1);if(r in t)return r}while(-1!==(n=e.lastIndexOf("/",n-1)))}function s(e,t){var n=o(e,t);if(n){var r=t[n];if(null===r)return;if(!(e.length>n.length&&"/"!==r[r.length-1]))return r+e.slice(n.length);u("W2",n,r,"should have a trailing '/'")}}function u(t,n,r,i){console.warn(e(t,"Package target "+i+", resolving target '"+r+"' for "+n))}function c(e,t,n){for(var r=e.scopes,i=n&&o(n,r);i;){var u=s(t,r[i]);if(u)return u;i=o(i.slice(0,i.lastIndexOf("/")),r)}return s(t,e.imports)||-1!==t.indexOf(":")&&t}function a(){this[M]={}}function f(e){return e.id}function l(e,t,n,r){if(e.onload(n,t.id,t.d&&t.d.map(f),!!r),n)throw n}function d(t,n,r,i){var o=t[M][n];if(o)return o;var s=[],u=Object.create(null);P&&Object.defineProperty(u,P,{value:"Module"});var c=Promise.resolve().then((function(){return t.instantiate(n,r,i)})).then((function(r){if(!r)throw Error(e(2,"Module "+n+" did not instantiate"));var i=r[1]((function(e,t){o.h=!0;var n=!1;if("string"==typeof e)e in u&&u[e]===t||(u[e]=t,n=!0);else{for(var r in e)t=e[r],r in u&&u[r]===t||(u[r]=t,n=!0);e&&e.__esModule&&(u.__esModule=e.__esModule)}if(n)for(var i=0;i<s.length;i++){var c=s[i];c&&c(u)}return t}),2===r[1].length?{import:function(e,r){return t.import(e,n,r)},meta:t.createContext(n)}:void 0);return o.e=i.execute||function(){},[r[0],i.setters||[],r[2]||[]]}),(function(e){throw o.e=null,o.er=e,l(t,o,e,!0),e})),a=c.then((function(e){return Promise.all(e[0].map((function(r,i){var o=e[1][i],s=e[2][i];return Promise.resolve(t.resolve(r,n)).then((function(e){var r=d(t,e,n,s);return Promise.resolve(r.I).then((function(){return o&&(r.i.push(o),!r.h&&r.I||o(r.n)),r}))}))}))).then((function(e){o.d=e}))}));return o=t[M][n]={id:n,i:s,n:u,m:i,I:c,L:a,h:!1,d:void 0,e:void 0,er:void 0,E:void 0,C:void 0,p:void 0}}function h(e,t,n,r){if(!r[t.id])return r[t.id]=!0,Promise.resolve(t.L).then((function(){return t.p&&null!==t.p.e||(t.p=n),Promise.all(t.d.map((function(t){return h(e,t,n,r)})))})).catch((function(n){if(t.er)throw n;throw t.e=null,l(e,t,n,!1),n}))}function p(e,t){return t.C=h(e,t,t,{}).then((function(){return v(e,t,{})})).then((function(){return t.n}))}function v(e,t,n){function r(){try{var n=o.call(L);if(n)return n=n.then((function(){t.C=t.n,t.E=null,l(e,t,null,!0)}),(function(n){throw t.er=n,t.E=null,l(e,t,n,!0),n})),t.E=n;t.C=t.n,t.L=t.I=void 0}catch(r){throw t.er=r,r}finally{l(e,t,t.er,!0)}}if(!n[t.id]){if(n[t.id]=!0,!t.e){if(t.er)throw t.er;return t.E?t.E:void 0}var i,o=t.e;return t.e=null,t.d.forEach((function(r){try{var o=v(e,r,n);o&&(i=i||[]).push(o)}catch(s){throw t.er=s,l(e,t,s,!1),s}})),i?Promise.all(i).then(r):r()}}function m(){[].forEach.call(document.querySelectorAll("script"),(function(t){if(!t.sp)if("systemjs-module"===t.type){if(t.sp=!0,!t.src)return;System.import("import:"===t.src.slice(0,7)?t.src.slice(7):n(t.src,g)).catch((function(e){if(e.message.indexOf("https://github.com/systemjs/systemjs/blob/main/docs/errors.md#3")>-1){var n=document.createEvent("Event");n.initEvent("error",!1,!1),t.dispatchEvent(n)}return Promise.reject(e)}))}else if("systemjs-importmap"===t.type){t.sp=!0;var r=t.src?(System.fetch||fetch)(t.src,{integrity:t.integrity,priority:t.fetchPriority,passThrough:!0}).then((function(e){if(!e.ok)throw Error("Invalid status code: "+e.status);return e.text()})).catch((function(n){return n.message=e("W4","Error fetching systemjs-import map "+t.src)+"\n"+n.message,console.warn(n),"function"==typeof t.onerror&&t.onerror(),"{}"})):t.innerHTML;W=W.then((function(){return r})).then((function(n){!function(t,n,r){var o={};try{o=JSON.parse(n)}catch(s){console.warn(Error(e("W5","systemjs-importmap contains invalid JSON")+"\n\n"+n+"\n"))}i(o,r,t)}(N,n,t.src||g)}))}}))}var g,y="undefined"!=typeof Symbol,b="undefined"!=typeof self,S="undefined"!=typeof document,w=b?self:global;if(S){var O=document.querySelector("base[href]");O&&(g=O.href)}if(!g&&"undefined"!=typeof location){var E=(g=location.href.split("#")[0].split("?")[0]).lastIndexOf("/");-1!==E&&(g=g.slice(0,E+1))}var x,j=/\\/g,P=y&&Symbol.toStringTag,M=y?Symbol():"@",I=a.prototype;I.import=function(e,t,n){var r=this;return t&&"object"==typeof t&&(n=t,t=void 0),Promise.resolve(r.prepareImport()).then((function(){return r.resolve(e,t,n)})).then((function(e){var t=d(r,e,void 0,n);return t.C||p(r,t)}))},I.createContext=function(e){var t=this;return{url:e,resolve:function(n,r){return Promise.resolve(t.resolve(n,r||e))}}},I.onload=function(){},I.register=function(e,t,n){x=[e,t,n]},I.getRegister=function(){var e=x;return x=void 0,e};var L=Object.freeze(Object.create(null));w.System=new a;var C,R,W=Promise.resolve(),N={imports:{},scopes:{},depcache:{},integrity:{}},T=S;if(I.prepareImport=function(e){return(T||e)&&(m(),T=!1),W},I.getImportMap=function(){return JSON.parse(JSON.stringify(N))},S&&(m(),window.addEventListener("DOMContentLoaded",m)),I.addImportMap=function(e,t){i(e,t||g,N)},S){window.addEventListener("error",(function(e){J=e.filename,_=e.error}));var A=location.origin}I.createScript=function(e){var t=document.createElement("script");t.async=!0,e.indexOf(A+"/")&&(t.crossOrigin="anonymous");var n=N.integrity[e];return n&&(t.integrity=n),t.src=e,t};var J,_,k={},U=I.register;I.register=function(e,t){if(S&&"loading"===document.readyState&&"string"!=typeof e){var n=document.querySelectorAll("script[src]"),r=n[n.length-1];if(r){C=e;var i=this;R=setTimeout((function(){k[r.src]=[e,t],i.import(r.src)}))}}else C=void 0;return U.call(this,e,t)},I.instantiate=function(t,n){var r=k[t];if(r)return delete k[t],r;var i=this;return Promise.resolve(I.createScript(t)).then((function(r){return new Promise((function(o,s){r.addEventListener("error",(function(){s(Error(e(3,"Error loading "+t+(n?" from "+n:""))))})),r.addEventListener("load",(function(){if(document.head.removeChild(r),J===t)s(_);else{var e=i.getRegister(t);e&&e[0]===C&&clearTimeout(R),o(e)}})),document.head.appendChild(r)}))}))},I.shouldFetch=function(){return!1},"undefined"!=typeof fetch&&(I.fetch=fetch);var $=I.instantiate,B=/^(text|application)\/(x-)?javascript(;|$)/;I.instantiate=function(t,n,r){var i=this;return this.shouldFetch(t,n,r)?this.fetch(t,{credentials:"same-origin",integrity:N.integrity[t],meta:r}).then((function(r){if(!r.ok)throw Error(e(7,r.status+" "+r.statusText+", loading "+t+(n?" from "+n:"")));var o=r.headers.get("content-type");if(!o||!B.test(o))throw Error(e(4,'Unknown Content-Type "'+o+'", loading '+t+(n?" from "+n:"")));return r.text().then((function(e){return e.indexOf("//# sourceURL=")<0&&(e+="\n//# sourceURL="+t),(0,eval)(e),i.getRegister(t)}))})):$.apply(this,arguments)},I.resolve=function(n,r){return c(N,t(n,r=r||g)||n,r)||function(t,n){throw Error(e(8,"Unable to resolve bare specifier '"+t+(n?"' from "+n:"'")))}(n,r)};var F=I.instantiate;I.instantiate=function(e,t,n){var r=N.depcache[e];if(r)for(var i=0;i<r.length;i++)d(this,this.resolve(r[i],e),e);return F.call(this,e,t,n)},b&&"function"==typeof importScripts&&(I.instantiate=function(e){var t=this;return Promise.resolve().then((function(){return importScripts(e),t.getRegister(e)}))}),function(e){function t(t){return!e.hasOwnProperty(t)||!isNaN(t)&&t<e.length||a&&e[t]&&"undefined"!=typeof window&&e[t].parent===window}var n,r,i,o=e.System.constructor.prototype,s=o.import;o.import=function(o,u,c){return function(){for(var o in n=r=void 0,e)t(o)||(n?r||(r=o):n=o,i=o)}(),s.call(this,o,u,c)};var u=[[],function(){return{}}],c=o.getRegister;o.getRegister=function(){var o=c.call(this);if(o)return o;var s,a=function(o){var s,u,c=0;for(var a in e)if(!t(a)){if(0===c&&a!==n||1===c&&a!==r)return a;s?(i=a,u=o&&u||a):s=a===i,c++}return u}(this.firstGlobalProp);if(!a)return u;try{s=e[a]}catch(f){return u}return[[],function(e){return{execute:function(){e(s),e({default:s,__useDefault:!0})}}}]};var a="undefined"!=typeof navigator&&-1!==navigator.userAgent.indexOf("Trident")}("undefined"!=typeof self?self:global),function(e){var t=e.System.constructor.prototype,r=/^[^#?]+\.(css|html|json|wasm)([?#].*)?$/,i=t.shouldFetch.bind(t);t.shouldFetch=function(e){return i(e)||r.test(e)};var o=/^application\/json(;|$)/,s=/^text\/css(;|$)/,u=/^application\/wasm(;|$)/,c=t.fetch;t.fetch=function(t,r){return c(t,r).then((function(i){if(r.passThrough)return i;if(!i.ok)return i;var c=i.headers.get("content-type");return o.test(c)?i.json().then((function(e){return new Response(new Blob(['System.register([],function(e){return{execute:function(){e("default",'+JSON.stringify(e)+")}}})"],{type:"application/javascript"}))})):s.test(c)?i.text().then((function(e){return e=e.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,(function(e,r,i,o){return["url(",r,n(i||o,t),r,")"].join("")})),new Response(new Blob(["System.register([],function(e){return{execute:function(){var s=new CSSStyleSheet();s.replaceSync("+JSON.stringify(e)+');e("default",s)}}})'],{type:"application/javascript"}))})):u.test(c)?(WebAssembly.compileStreaming?WebAssembly.compileStreaming(i):i.arrayBuffer().then(WebAssembly.compile)).then((function(n){e.System.wasmModules||(e.System.wasmModules=Object.create(null)),e.System.wasmModules[t]=n;var r=[],i=[];return WebAssembly.Module.imports&&WebAssembly.Module.imports(n).forEach((function(e){var t=JSON.stringify(e.module);-1===r.indexOf(t)&&(r.push(t),i.push("function(m){i["+t+"]=m}"))})),new Response(new Blob(["System.register(["+r.join(",")+"],function(e){var i={};return{setters:["+i.join(",")+"],execute:function(){return WebAssembly.instantiate(System.wasmModules["+JSON.stringify(t)+"],i).then(function(m){e(m.exports)})}}})"],{type:"application/javascript"}))})):i}))}}("undefined"!=typeof self?self:global);var q="undefined"!=typeof Symbol&&Symbol.toStringTag;I.get=function(e){var t=this[M][e];if(t&&null===t.e&&!t.E)return t.er?null:t.n},I.set=function(t,n){try{new URL(t)}catch(s){console.warn(Error(e("W3",'"'+t+'" is not a valid URL to set in the module registry')))}var r;q&&"Module"===n[q]?r=n:(r=Object.assign(Object.create(null),n),q&&Object.defineProperty(r,q,{value:"Module"}));var i=Promise.resolve(r),o=this[M][t]||(this[M][t]={id:t,i:[],h:!1,d:[],e:null,er:void 0,E:void 0});return!o.e&&!o.E&&(Object.assign(o,{n:r,I:void 0,L:void 0,C:i}),r)},I.has=function(e){return!!this[M][e]},I.delete=function(e){var t=this[M],n=t[e];if(!n||n.p&&null!==n.p.e||n.E)return!1;var r=n.i;return n.d&&n.d.forEach((function(e){var t=e.i.indexOf(n);-1!==t&&e.i.splice(t,1)})),delete t[e],function(){var n=t[e];if(!n||!r||null!==n.e||n.E)return!1;r.forEach((function(e){n.i.push(e),e(n.n)})),r=null}};var D="undefined"!=typeof Symbol&&Symbol.iterator;I.entries=function(){var e,t,n=this,r=Object.keys(n[M]),i=0,o={next:function(){for(;void 0!==(t=r[i++])&&void 0===(e=n.get(t)););return{done:void 0===t,value:void 0!==t&&[t,e]}}};return o[D]=function(){return this},o}}();
 !function(t){function e(t){t.registerRegistry=Object.create(null),t.namedRegisterAliases=Object.create(null)}var r=t.System;e(r);var i,s,n=r.constructor.prototype,l=r.constructor,a=function(){l.call(this),e(this)};a.prototype=n,r.constructor=a;var o=n.register;n.register=function(t,e,r,n){if("string"!=typeof t)return o.apply(this,arguments);var l=[e,r,n];return this.registerRegistry[t]=l,i||(i=l,s=t),Promise.resolve().then((function(){i=null,s=null})),o.apply(this,[e,r,n])};var u=n.resolve;n.resolve=function(t,e){try{return u.call(this,t,e)}catch(r){if(t in this.registerRegistry)return this.namedRegisterAliases[t]||t;throw r}};var c=n.instantiate;n.instantiate=function(t,e,r){var i=this.registerRegistry[t];return i?(this.registerRegistry[t]=null,i):c.call(this,t,e,r)};var g=n.getRegister;n.getRegister=function(t){var e=g.call(this,t);s&&t&&(this.namedRegisterAliases[s]=t);var r=i||e;return i=null,s=null,r}}("undefined"!=typeof self?self:global);
 ;(typeof System!='undefined')&&(System=new System.constructor());
-System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({E:resolveFavoritesUserId,L:createFavoritesSyncTabId,P:readArtistsMirror,Q:Q,T:listArtistTags,V:writeArtistsMirror,W:reloadFromStorage,X:save,Z:setSyncState,a$:prepareBackgroundImageFile,a2:a,a3:applyTokenProperties,a4:resolveAppearancePalette,a5:getSiteSkinCss,a6:$,aB:Select,aE:Segmented,aH:TextField,aI:Button,aJ:clampBackgroundDim,aL:featurePanelLabel,aN:setFeatureEnabled,aO:applyCssOnlyFeatureEnabled,aP:isFeatureEnabled,aR:setFeatureChoiceValue,aS:applyCssOnlyFeatureChoice,aT:getFeatureChoice,aU:b,aV:Chip,aW:readSiteBlacklist,aX:AutocompleteField,aY:ProgressBar,aZ:createDefaultCustomTheme,ag:d,ah:Card,ai:SectionLabel,aj:Switch,al:setTweaksEnabled,am:NumberField,ao:setUpdatesGroupSize,ap:getUpdatesGroupSize,ar:setPlaylistChunkSize,as:getPlaylistChunkSize,au:setGridFavButtonsEnabled,av:setGridFavButtonsVisible,aw:P,ax:T,ay:A,b0:writeSiteBlacklist,b2:load,b3:createDefaultStorage,b4:clearStorageCache,b5:clearFavsCache,b6:object,b8:optional,b9:string,bA:EmptyState,bB:buildPlaylistQueries,bC:buildUpdatesSearchUrl,bD:isPlaylist,bE:IconButton,bF:IconTrash,bG:getSeenPostId,bQ:IconX,bR:isFollowingArtist,bS:addArtist,bT:removeArtist,bW:array,bX:nullable,bb:literal,bd:stripLegacyPanelWindowSize,be:migrateMarksFavToFavs,bg:createDefaultFavs,bh:parseFavsStrict,bi:setAppearance,bj:loadFavSet,bl:extractFavIdsFromMarks,bo:getTweaksEnabled,bp:getGridFavButtonsEnabled,bq:getFeatureChoiceValue,br:getScreenPixelSize,bs:listPlaylists,bt:readTagsFromLocation,bu:addCollection,bv:serialize,bw:renameCollection,bx:deleteCollection,by:buildSearchUrl,bz:createPlaylist,c:applyAppearanceTheme,d:detectPageKind,e:ensureDocumentStyles,f:featureChoiceBodyClass,g:getAppearance,j:ensureStyleElement,k:buildOwnPageCss,m:mountCards,n:normalizeArtistTag,o:onThumbsAdded,r:runFeaturesYielding,s:syncFavoritesPage,t:parseRdwHash,u:getSyncState,v:readFavoritesSyncMode,w:runFavoritesSync,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
-var STORAGE_BACKUP_KEY = exports("bk","ruledesk-web.storage.backup");
-var FAVS_STORAGE_KEY = exports("bf","ruledesk-web.favs");
+System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({E:resolveFavoritesUserId,L:createFavoritesSyncTabId,P:readArtistsMirror,Q:Q,T:listArtistTags,V:writeArtistsMirror,W:reloadFromStorage,X:save,Z:setSyncState,a2:a,a3:applyTokenProperties,a4:resolveAppearancePalette,a5:getSiteSkinCss,a6:$,aC:Select,aF:Segmented,aI:TextField,aJ:Button,aK:clampBackgroundDim,aM:featurePanelLabel,aO:setFeatureEnabled,aP:applyCssOnlyFeatureEnabled,aQ:isFeatureEnabled,aS:setFeatureChoiceValue,aT:applyCssOnlyFeatureChoice,aU:getFeatureChoice,aV:b,aW:Chip,aX:readSiteBlacklist,aY:AutocompleteField,aZ:ProgressBar,a_:createDefaultCustomTheme,ah:d,ai:Card,aj:SectionLabel,ak:Switch,am:setTweaksEnabled,an:NumberField,ap:setUpdatesGroupSize,aq:getUpdatesGroupSize,as:setPlaylistChunkSize,at:getPlaylistChunkSize,av:setGridFavButtonsEnabled,aw:setGridFavButtonsVisible,ax:P,ay:T,az:A,b0:prepareBackgroundImageFile,b1:writeSiteBlacklist,b3:load,b4:createDefaultStorage,b5:clearStorageCache,b6:clearFavsCache,b7:object,b9:optional,bA:createPlaylist,bB:EmptyState,bC:buildPlaylistQueries,bD:buildUpdatesSearchUrl,bE:isPlaylist,bF:IconButton,bG:IconTrash,bH:getSeenPostId,bR:IconX,bS:isFollowingArtist,bT:addArtist,bU:removeArtist,bX:array,bY:nullable,ba:string,bc:literal,be:stripLegacyPanelWindowSize,bf:migrateMarksFavToFavs,bh:createDefaultFavs,bi:parseFavsStrict,bj:setAppearance,bk:loadFavSet,bm:extractFavIdsFromMarks,bp:getTweaksEnabled,bq:getGridFavButtonsEnabled,br:getFeatureChoiceValue,bs:getScreenPixelSize,bt:listPlaylists,bu:readTagsFromLocation,bv:addCollection,bw:serialize,bx:renameCollection,by:deleteCollection,bz:buildSearchUrl,c:applyAppearanceTheme,d:detectPageKind,e:ensureDocumentStyles,f:featureChoiceBodyClass,g:getAppearance,j:ensureStyleElement,k:buildOwnPageCss,m:mountCards,n:normalizeArtistTag,o:onThumbsAdded,r:runFeaturesYielding,s:syncFavoritesPage,t:parseRdwHash,u:getSyncState,v:readFavoritesSyncMode,w:runFavoritesSync,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
+var STORAGE_BACKUP_KEY = exports("bl","ruledesk-web.storage.backup");
+var FAVS_STORAGE_KEY = exports("bg","ruledesk-web.favs");
 var DEBUG_KEY = "ruledesk-web.debug";
 var APPEARANCE_BACKGROUND_KEY = exports("O","ruledesk-web.appearance.background");
-var APPEARANCE_BACKGROUND_TOO_LARGE = exports("af","Background image is too large (max 1.5 MB).");
+var APPEARANCE_BACKGROUND_TOO_LARGE = exports("ag","Background image is too large (max 1.5 MB).");
 var TOKEN_STYLE_ID = "ruledesk-web-tokens";
 var SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
 var RDW_SKIN_CLASS = "rdw-skin";
-var RDW_THEME_ATTR = exports("a8","data-rdw-theme");
-var APPEARANCE_THEME_SITE = exports("a9","site");
-var APPEARANCE_THEME_SITE_DARK = exports("ac","site-dark");
-var APPEARANCE_THEME_LIGHT = exports("aC","light");
-var APPEARANCE_THEME_DARK = exports("aD","dark");
-var APPEARANCE_THEME_CUSTOM = exports("az","custom");
+var RDW_THEME_ATTR = exports("a9","data-rdw-theme");
+var APPEARANCE_THEME_SITE = exports("aa","site");
+var APPEARANCE_THEME_SITE_DARK = exports("ab","site-dark");
+var APPEARANCE_THEME_LIGHT = exports("aD","light");
+var APPEARANCE_THEME_DARK = exports("aE","dark");
+var APPEARANCE_THEME_CUSTOM = exports("aA","custom");
 var DEFAULT_APPEARANCE_THEME = APPEARANCE_THEME_LIGHT;
 var SITE_ORIGIN = exports("h","https://rule34.xxx");
 var SEARCH_PATH = exports("a1","/index.php");
-var SEARCH_PAGE = exports("bJ","post");
-var SEARCH_SECTION = exports("bK","list");
+var SEARCH_PAGE = exports("bK","post");
+var SEARCH_SECTION = exports("bL","list");
 var SEARCH_PARAM_PAGE = exports("_","page");
 var SEARCH_PARAM_TAGS = exports("i","tags");
 var FAVORITES_PAGE = exports("$","favorites");
@@ -46,11 +46,11 @@ var VOTE_PARAM_PAGE = "page";
 var VOTE_PARAM_TYPE = "type";
 var VOTE_PAGE = "post";
 var VOTE_SECTION = "vote";
-var FETCH_CREDENTIALS = exports("bV","same-origin");
-var TAG_TYPE_INCLUDE = exports("bP","include");
+var FETCH_CREDENTIALS = exports("bW","same-origin");
+var TAG_TYPE_INCLUDE = exports("bQ","include");
 var TAG_TYPE_EXCLUDE = "exclude";
 var UPDATES_ID_PREFIX = "id:>";
-var IMPORT_SCHEMA_ERROR_PREFIX = exports("bc","File is not a RuleDesk Web export");
+var IMPORT_SCHEMA_ERROR_PREFIX = exports("bd","File is not a RuleDesk Web export");
 var COLLECTION_KIND_SEARCH = "search";
 var COLLECTION_KIND_POSTS = "posts";
 var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
@@ -171,19 +171,19 @@ var PANEL_UI_CLASS = exports("a7",{
 	settingsCaption: "rdw-settings-caption",
 	pageCard: "rdw-page-card"
 });
-var UNFOLLOW_UNDO_MS = exports("bU",5e3);
-var ARTISTS_EMPTY_TITLE = exports("bI","No followed artists yet");
-var ARTISTS_EMPTY_HINT = exports("bH","Follow artists with the Follow button next to their name in the tag list.");
-var ARTIST_FILTER_LABEL = exports("bL","Filter artists");
-var UNFOLLOW_UNDO_LABEL = exports("bO","Undo");
-var UNFOLLOWED_PREFIX = exports("bN","Unfollowed ");
-var FEATURE_CHECKBOX_ID_PREFIX = exports("aM","rdw-feature-");
-var FEATURE_CHOICE_ID_PREFIX = exports("aQ","rdw-feature-choice-");
-var UPDATES_GROUP_SIZE_ID = exports("an","rdw-updates-group-size");
-var PLAYLIST_CHUNK_SIZE_ID = exports("aq","rdw-playlist-chunk-size");
-var ARTIST_FILTER_ID = exports("bM","rdw-artist-filter");
-var GRID_FAV_CHECKBOX_ID = exports("at","rdw-grid-fav-buttons");
-var TWEAKS_SWITCH_ID = exports("ak","rdw-tweaks-enabled");
+var UNFOLLOW_UNDO_MS = exports("bV",5e3);
+var ARTISTS_EMPTY_TITLE = exports("bJ","No followed artists yet");
+var ARTISTS_EMPTY_HINT = exports("bI","Follow artists with the Follow button next to their name in the tag list.");
+var ARTIST_FILTER_LABEL = exports("bM","Filter artists");
+var UNFOLLOW_UNDO_LABEL = exports("bP","Undo");
+var UNFOLLOWED_PREFIX = exports("bO","Unfollowed ");
+var FEATURE_CHECKBOX_ID_PREFIX = exports("aN","rdw-feature-");
+var FEATURE_CHOICE_ID_PREFIX = exports("aR","rdw-feature-choice-");
+var UPDATES_GROUP_SIZE_ID = exports("ao","rdw-updates-group-size");
+var PLAYLIST_CHUNK_SIZE_ID = exports("ar","rdw-playlist-chunk-size");
+var ARTIST_FILTER_ID = exports("bN","rdw-artist-filter");
+var GRID_FAV_CHECKBOX_ID = exports("au","rdw-grid-fav-buttons");
+var TWEAKS_SWITCH_ID = exports("al","rdw-tweaks-enabled");
 var TAG_GROUPS_PANEL_LABEL = "Collapse tags";
 function featurePanelLabel(featureId, fallback) {
 	if (featureId === "tag-groups") return TAG_GROUPS_PANEL_LABEL;
@@ -217,7 +217,7 @@ html.${RDW_OWN_PAGE_CLASS} ${HEADER_SELECTOR$1} ~ *:not(#${RDW_PAGE_ROOT_ID}) {
 * Design tokens for RuleDesk Web UI and site skin.
 * Light values match docs/design/mock-components.html.
 */
-var TOKEN_VAR = {
+var TOKEN_VAR = exports("a8",{
 	bg: "--rdw-bg",
 	surface: "--rdw-surface",
 	surface2: "--rdw-surface-2",
@@ -240,7 +240,7 @@ var TOKEN_VAR = {
 	font: "--rdw-font",
 	backgroundImage: "--rdw-background-image",
 	backgroundDim: "--rdw-background-dim"
-};
+});
 /** Light palette — page bg from mock-site-skin.html (.new); surfaces from mock-components. */
 var LIGHT_PALETTE = {
 	bg: "#f3f5f7",
@@ -339,16 +339,16 @@ var CONTRAST_OFFSET$1 = .05;
 * Hex equivalents of `docs/design/site-desktop.css` light `* { --c-* }`.
 * Script-page Site default chrome; keep in sync with skin/theme site palette.
 */
-var SITE_LIGHT_C_BG = exports("aa","#aae5a4");
-var SITE_LIGHT_C_BG_ALT = exports("ab","#89cf81");
+var SITE_LIGHT_C_BG = exports("ac","#aae5a4");
+var SITE_LIGHT_C_BG_ALT = exports("ad","#89cf81");
 var SITE_LIGHT_C_BG_OVERLAY = "#98d491";
 var SITE_LIGHT_C_TEXT = "#000000";
 var SITE_LIGHT_C_TEXT_SOFT = "#666666";
 var SITE_LIGHT_C_LINK = "#000099";
 /** Site dark script-page chrome (theme=site-dark). */
-var SITE_DARK_C_BG = exports("ad","#303a30");
+var SITE_DARK_C_BG = exports("ae","#303a30");
 var SITE_DARK_C_SURFACE2 = "#303030";
-var SITE_DARK_C_BORDER = exports("ae","#505a50");
+var SITE_DARK_C_BORDER = exports("af","#505a50");
 var SITE_DARK_C_TEXT = "#c0c0c0";
 var SITE_DARK_C_MUTED = "#878787";
 var SITE_DARK_C_ACCENT = "#b0e0b0";
@@ -2023,15 +2023,15 @@ var MarkFlagsSchema = /* @__PURE__ */ object({
 	fav: /* @__PURE__ */ optional(/* @__PURE__ */ boolean()),
 	seen: /* @__PURE__ */ optional(/* @__PURE__ */ boolean())
 });
-var AppearanceThemeSchema = exports("a_",/* @__PURE__ */ _enum([
+var AppearanceThemeSchema = exports("a$",/* @__PURE__ */ _enum([
 	APPEARANCE_THEME_SITE,
 	APPEARANCE_THEME_SITE_DARK,
 	APPEARANCE_THEME_LIGHT,
 	APPEARANCE_THEME_DARK,
 	APPEARANCE_THEME_CUSTOM
 ]));
-var APPEARANCE_CUSTOM_BASE_LIGHT = exports("aF","light");
-var APPEARANCE_CUSTOM_BASE_DARK = exports("aG","dark");
+var APPEARANCE_CUSTOM_BASE_LIGHT = exports("aG","light");
+var APPEARANCE_CUSTOM_BASE_DARK = exports("aH","dark");
 var AppearanceCustomBaseSchema = /* @__PURE__ */ _enum([APPEARANCE_CUSTOM_BASE_LIGHT, APPEARANCE_CUSTOM_BASE_DARK]);
 /** Canonical custom theme: Light/Dark base + optional background image/dim. */
 var AppearanceCustomSchema = /* @__PURE__ */ object({
@@ -2070,6 +2070,11 @@ var VIDEO_SIZE_FIT_HEIGHT = "fit-height";
 var VIDEO_SIZE_FIT_WIDTH = "fit-width";
 var VIDEO_SIZE_ORIGINAL = "original";
 var DEFAULT_VIDEO_SIZE = VIDEO_SIZE_FIT_HEIGHT;
+var VideoSizeSchema = /* @__PURE__ */ _enum([
+	VIDEO_SIZE_FIT_HEIGHT,
+	VIDEO_SIZE_FIT_WIDTH,
+	VIDEO_SIZE_ORIGINAL
+]);
 /**
 * Package B: persisted player prefs under
 * `settings.featureState[VIDEO_PLAYER_FEATURE_ID]`.
@@ -2090,7 +2095,7 @@ var SettingsSchema = /* @__PURE__ */ object({
 	appearance: /* @__PURE__ */ optional(AppearanceStoredSchema)
 });
 var UpdatesSchema = /* @__PURE__ */ object({ seenPostId: int().check(/* @__PURE__ */ _nonnegative()) });
-var StorageSchema = exports("b7",/* @__PURE__ */ object({
+var StorageSchema = exports("b8",/* @__PURE__ */ object({
 	version: /* @__PURE__ */ literal(1),
 	collections: /* @__PURE__ */ array(CollectionSchema),
 	artists: /* @__PURE__ */ array(ArtistEntrySchema),
@@ -2120,7 +2125,7 @@ var FavsSyncSchema = /* @__PURE__ */ object({
 	lock: /* @__PURE__ */ optional(FavsSyncLockSchema),
 	mode: /* @__PURE__ */ optional(FavsSyncModeSchema)
 });
-var FavsSchema = exports("ba",/* @__PURE__ */ object({
+var FavsSchema = exports("bb",/* @__PURE__ */ object({
 	version: /* @__PURE__ */ literal(1),
 	ids: /* @__PURE__ */ array(int()),
 	sync: /* @__PURE__ */ optional(FavsSyncSchema)
@@ -2144,6 +2149,11 @@ function parseVideoPlayerState(raw) {
 		muted: muted ?? defaults.muted,
 		playbackRate: playbackRate !== void 0 && Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : defaults.playbackRate
 	};
+}
+function resolveVideoSize(raw) {
+	const parsed = VideoSizeSchema.safeParse(raw);
+	if (!parsed.success) return DEFAULT_VIDEO_SIZE;
+	return parsed.data;
 }
 function isUnknownRecord$1(value) {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -3618,7 +3628,7 @@ function E(n, t) {
 function G(n, t) {
 	return "function" == typeof t ? t(n) : t;
 }
-var KIT_FOCUS_CSS = exports("aA",`
+var KIT_FOCUS_CSS = exports("aB",`
 .rdw-kit-focusable:focus-visible {
   outline: 2px solid var(--rdw-accent);
   outline-offset: 2px;
@@ -4033,6 +4043,21 @@ function IconChevronDown(props) {
 		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polyline", { points: "6 9 12 15 18 9" })]
 	});
 }
+function IconArrowUp(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("line", {
+				x1: "12",
+				y1: "19",
+				x2: "12",
+				y2: "5"
+			}),
+			/* @__PURE__ */ a("polyline", { points: "5 12 12 5 19 12" })
+		]
+	});
+}
 function IconExternalLink(props) {
 	return /* @__PURE__ */ a("svg", {
 		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
@@ -4049,6 +4074,59 @@ function IconExternalLink(props) {
 		]
 	});
 }
+function IconDroplet(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("path", { d: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" })]
+	});
+}
+function IconPencil(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M12 20h9" }),
+			/* @__PURE__ */ a("path", { d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" })
+		]
+	});
+}
+function IconFlag(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" }),
+			/* @__PURE__ */ a("line", {
+				x1: "4",
+				y1: "22",
+				x2: "4",
+				y2: "15"
+			})
+		]
+	});
+}
+function IconNote(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+			/* @__PURE__ */ a("polyline", { points: "14 2 14 8 20 8" }),
+			/* @__PURE__ */ a("line", {
+				x1: "8",
+				y1: "13",
+				x2: "16",
+				y2: "13"
+			}),
+			/* @__PURE__ */ a("line", {
+				x1: "8",
+				y1: "17",
+				x2: "12",
+				y2: "17"
+			})
+		]
+	});
+}
 function IconTrash(props) {
 	return /* @__PURE__ */ a("svg", {
 		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
@@ -4056,6 +4134,28 @@ function IconTrash(props) {
 			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
 			/* @__PURE__ */ a("polyline", { points: "3 6 5 6 21 6" }),
 			/* @__PURE__ */ a("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
+		]
+	});
+}
+function IconImage(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("rect", {
+				x: "3",
+				y: "3",
+				width: "18",
+				height: "18",
+				rx: "2",
+				ry: "2"
+			}),
+			/* @__PURE__ */ a("circle", {
+				cx: "8.5",
+				cy: "8.5",
+				r: "1.5"
+			}),
+			/* @__PURE__ */ a("polyline", { points: "21 15 16 10 5 21" })
 		]
 	});
 }
@@ -4945,6 +5045,79 @@ function Switch(props) {
 		}) : null]
 	})] });
 }
+var TAB_ID_PREFIX = "rdw-tab-";
+var TAB_PANEL_ID_PREFIX = "rdw-tabpanel-";
+var KEY_ARROW_RIGHT = "ArrowRight";
+var KEY_ARROW_LEFT = "ArrowLeft";
+function kitTabId(id) {
+	return `${TAB_ID_PREFIX}${id}`;
+}
+function kitTabPanelId(id) {
+	return `${TAB_PANEL_ID_PREFIX}${id}`;
+}
+var TABS_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rdw-border);
+  padding: 0 8px;
+}
+.rdw-tabs__tab {
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.rdw-tabs__tab[aria-selected="true"] {
+  color: var(--rdw-text);
+  font-weight: 600;
+  border-bottom-color: var(--rdw-accent);
+}
+`;
+function Tabs(props) {
+	const className = ["rdw-tabs", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: TABS_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		role: "tablist",
+		"aria-label": props["aria-label"],
+		children: props.items.map((item) => {
+			const selected = item.id === props.value;
+			return /* @__PURE__ */ a("button", {
+				type: "button",
+				role: "tab",
+				id: kitTabId(item.id),
+				className: "rdw-tabs__tab rdw-kit-focusable",
+				"aria-selected": selected,
+				"aria-controls": kitTabPanelId(item.id),
+				tabIndex: selected ? 0 : -1,
+				onClick: () => {
+					props.onChange(item.id);
+				},
+				onKeyDown: (event) => {
+					if (event.key !== KEY_ARROW_RIGHT && event.key !== KEY_ARROW_LEFT) return;
+					event.preventDefault();
+					const index = props.items.findIndex((entry) => entry.id === props.value);
+					if (index < 0) return;
+					const delta = event.key === KEY_ARROW_RIGHT ? 1 : -1;
+					const next = props.items[(index + delta + props.items.length) % props.items.length];
+					if (next === void 0) return;
+					props.onChange(next.id);
+					const nextTab = event.currentTarget.parentElement?.querySelector(`#${kitTabId(next.id)}`);
+					if (nextTab instanceof HTMLElement) nextTab.focus();
+				},
+				children: item.label
+			}, item.id);
+		})
+	})] });
+}
 var TEXT_FIELD_CSS = `
 ${KIT_FOCUS_CSS}
 .rdw-field {
@@ -5042,7 +5215,10 @@ function extractPostIdFromFavoritesDeleteOnclick(onclick) {
 * Injected via applyAppearanceTheme → injectSiteSkinHook(getSiteSkinCss()).
 */
 var ROOT = `html.${RDW_SKIN_CLASS}`;
-var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
+var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
+var ROOT_SITE = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+var ROOT_SITE_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+var ROOT_THEME_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
 /** search-tools mount root (id + class in src/features/search-tools.tsx). */
 var SEARCH_TOOLS_ROOT_ID$1 = "rdw-search-tools";
 /** Reset control class (src/features/search-tools.tsx). */
@@ -5061,6 +5237,31 @@ var RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
 var POST_PANEL_ICAME_ROW = "li:has(a[onclick^=\"iCame(\"])";
 /** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
 var POST_ACTIONS_HOST_ID = "rdw-post-actions";
+/** Kit select list — keep in sync with src/ui/kit/select.tsx. */
+var KIT_SELECT_LIST_CLASS = "rdw-select__list";
+/** Kit autocomplete list — keep in sync with src/ui/kit/autocomplete-field.tsx. */
+var KIT_AC_LIST_CLASS = "rdw-ac__list";
+/** Kit dialog panel — keep in sync with src/ui/kit/dialog.tsx. */
+var KIT_DIALOG_CLASS = "rdw-dialog";
+/** Playlist add-to menu — keep in sync with src/features/playlist-menu.ts. */
+var PLAYLIST_MENU_CLASS = "rdw-playlist-menu";
+/** Firefox / modern Chromium thin scrollbar (E HANDOFF). */
+var SCROLLBAR_WIDTH = "thin";
+/** Post panel Original control — keep in sync with post-actions ORIGINAL_BUTTON_SIZE_PX. */
+var POST_PANEL_ORIGINAL_SIZE_PX = 34;
+/** Active tab underline — keep in sync with kit/tabs.tsx. */
+var POST_PANEL_TAB_UNDERLINE_PX = 2;
+/** Post panel classes — keep in sync with src/features/post-panel/post-panel.tsx. */
+var POST_PANEL_ACTIONS_CLASS = "rdw-post-panel-actions";
+var POST_PANEL_ACTIONS_ROW_CLASS = "rdw-post-panel-actions-row";
+var POST_PANEL_FAV_CLASS = "rdw-post-panel-fav";
+var POST_PANEL_ORIGINAL_CLASS = "rdw-post-panel-original";
+var POST_PANEL_TABPANEL_CLASS = "rdw-post-panel-tabpanel";
+var POST_PANEL_POST_ACTION_CLASS = "rdw-post-panel-post-action";
+/** Kit tabs — keep in sync with src/ui/kit/tabs.tsx. */
+var KIT_TABS_CLASS = "rdw-tabs";
+var KIT_TAB_CLASS = "rdw-tabs__tab";
+var KIT_BTN_PRIMARY_CLASS = "rdw-btn--primary";
 /**
 * Body class while search-tools «AI posts» row is rendered
 * (`SEARCH_TOOLS_AI_ROW_BODY_CLASS` in search-tools.tsx — F HANDOFF).
@@ -6218,13 +6419,105 @@ ${ROOT_DARK} .pagination span.current,
 ${ROOT_DARK} div.tag-search input[type="submit"],
 ${ROOT_DARK} div.tag-search button[type="submit"],
 ${ROOT_DARK} .manual-page-chooser > input[type="submit"],
-${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS} {
+${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS},
+${ROOT_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
   color: ${v.text};
 }
 
 ${ROOT_DARK} div.has-mail {
   background: ${v.surface2};
   border-color: ${v.tagCharacter};
+}
+
+/*
+ * Post panel actions + tabs (A→E HANDOFF).
+ * Unscoped under #rdw-post-actions so Site default/Site dark (no html.rdw-skin)
+ * still beat native button/link chrome via document --rdw-* tokens.
+ */
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_ROW_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_TABPANEL_CLASS} {
+  color: ${v.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  background: ${v.accent};
+  border-color: ${v.accent};
+  color: ${v.surface};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ORIGINAL_CLASS} {
+  box-sizing: border-box;
+  width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  text-decoration: none;
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TABS_CLASS} {
+  border-bottom: 1px solid ${v.border};
+  color: ${v.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  background: transparent;
+  border: 0;
+  border-bottom: ${String(POST_PANEL_TAB_UNDERLINE_PX)}px solid transparent;
+  color: ${v.muted};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  color: ${v.text};
+  font-weight: 600;
+  border-bottom-color: ${v.accent};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_POST_ACTION_CLASS} {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  color: ${v.text};
+  justify-content: flex-start;
+}
+
+/* Site themes: muted fails AA on green/dark chrome — tabs use text; keep accent underline. */
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS},
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  color: ${v.text};
+}
+
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"],
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  border-bottom-color: ${v.accent};
+  color: ${v.text};
+}
+
+/* Dark RuleDesk: primary fill uses light label (surface token is dark). */
+${ROOT_THEME_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  color: ${v.text};
+}
+
+/*
+ * Own scrollable UI — tokens for all four themes (site/site-dark have no html.rdw-skin).
+ * Fixes white post-column scrollbar on dark. Kit lists/dialogs + playlist menu.
+ */
+#${POST_ACTIONS_HOST_ID},
+.${KIT_SELECT_LIST_CLASS},
+.${KIT_AC_LIST_CLASS},
+.${KIT_DIALOG_CLASS},
+.${PLAYLIST_MENU_CLASS} {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v.border} ${v.surface};
+}
+
+/* Site autocomplete lists under rdw-skin */
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty),
+${ROOT} div.auto_complete ul {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v.border} ${v.surface};
 }
 
 /*
@@ -6259,18 +6552,23 @@ function clearSiteThemeCookie() {
 		`path=/`
 	].join("; ");
 }
-/**
-* Match site desktop CSS hrefs without URL-parsing.
-* `//css/desktop.css` is protocol-relative with host `css`; `new URL` yields
-* pathname `/desktop.css` and misses `/css/desktop.css` suffix checks.
-*/
-function hrefWithoutQuery(href) {
-	const queryIndex = href.indexOf("?");
-	return queryIndex === -1 ? href : href.slice(0, queryIndex);
+/** Collapse `//` (and longer) runs in a pathname so `/css/...` comparisons work. */
+var REPEATED_PATH_SLASHES = /\/{2,}/g;
+function collapsePathSlashes(pathname) {
+	return pathname.replace(REPEATED_PATH_SLASHES, "/");
 }
+/**
+* Match site desktop CSS hrefs via URL pathname (query ignored).
+* Production uses absolute hrefs with a doubled slash (`…xxx//css/desktop.css?46`);
+* collapsing repeated path slashes makes that equal `/css/desktop.css`.
+*/
 function isSiteDesktopStylesheetHref(href) {
-	const path = hrefWithoutQuery(href);
-	return path.endsWith(LIGHT_STYLESHEET_PATH) || path.endsWith(DARK_STYLESHEET_PATH);
+	try {
+		const path = collapsePathSlashes(new URL(href, location.href).pathname);
+		return path === LIGHT_STYLESHEET_PATH || path === DARK_STYLESHEET_PATH;
+	} catch {
+		return false;
+	}
 }
 function stylesheetFilenameForTheme(theme) {
 	return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
@@ -6865,7 +7163,7 @@ var MASONRY_THUMB_WIDTH_PERCENT = 100;
 var MASONRY_PREVIEW_WIDTH_PERCENT = 100;
 var MASONRY_BORDER_RADIUS_PX = 4;
 /** 1:1 placeholder span at min column width before JS runs. */
-var MASONRY_SPAN_FALLBACK = Math.ceil(61);
+var MASONRY_SPAN_FALLBACK = Math.ceil(174 / 4);
 /** Grow into flex row of #post-list so grid tracks can span content width. */
 var MASONRY_CONTENT_FLEX_GROW = 1;
 var MASONRY_CONTENT_FLEX_SHRINK = 1;
@@ -6898,7 +7196,7 @@ function masonryCss() {
 		`${scope} div.image-list {`,
 		`  display: grid !important;`,
 		`  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,
-		`  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;`,
+		`  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;`,
 		`  grid-auto-rows: 4px !important;`,
 		`  column-gap: 4px !important;`,
 		`  row-gap: 0px !important;`,
@@ -6934,13 +7232,13 @@ function mountGridDensity(ctx) {
 	if (ctx.pageKind !== "list") return;
 	requestAnimationFrame(() => {
 		setTimeout(() => {
-			module.import('./masonry-layout-COLMJMFF-Du-uLmyo.js').then((mod) => {
+			module.import('./masonry-layout-BF1C8lGN-wpVMzmir.js').then((mod) => {
 				mod.startMasonryLayout();
 			});
 		}, 0);
 	});
 }
-var gridDensityFeature = exports("bm",{
+var gridDensityFeature = exports("bn",{
 	id: FEATURE_ID$12,
 	label: "Grid size",
 	pages: ["list", "favorites"],
@@ -7442,14 +7740,14 @@ function syncFavoritesPage(root = document, search = window.location.search) {
 	bindRemoveClickCapture();
 }
 /** Minimum pause between sequential favorites page fetches. */
-var FAVORITES_SYNC_PAGE_PAUSE_MS = exports("b1",1500);
+var FAVORITES_SYNC_PAGE_PAUSE_MS = exports("b2",1500);
 /** Pauses before each of the three retries (HTTP error / missing paginator). */
 var FAVORITES_SYNC_RETRY_DELAYS_MS = [
 	1e4,
 	3e4,
 	6e4
 ];
-var FAVORITES_SYNC_MODE_INCREMENTAL = exports("bn",FAVS_SYNC_MODE_INCREMENTAL);
+var FAVORITES_SYNC_MODE_INCREMENTAL = exports("bo",FAVS_SYNC_MODE_INCREMENTAL);
 var FAVORITES_SYNC_MODE_FULL = exports("F",FAVS_SYNC_MODE_FULL);
 var MY_FAVORITES_LINK_SELECTOR$1 = "li#my-favorites-container a[href*=\"page=favorites\"]";
 var THUMB_SELECTOR$1 = "span.thumb";
@@ -7964,10 +8262,10 @@ var CHECK_SIZE = "1.25rem";
 var CHECK_INSET = "0.25rem";
 var CHECK_Z_INDEX = 2;
 var CHECK_FONT_SIZE = "0.75rem";
-var BODY_CLASS$3 = featureBodyClass(FEATURE_ID$9);
-var BODY_SELECTING_CLASS = `${BODY_CLASS$3}-selecting`;
+var BODY_CLASS$4 = featureBodyClass(FEATURE_ID$9);
+var BODY_SELECTING_CLASS = `${BODY_CLASS$4}-selecting`;
 var FEATURE_CSS$9 = `
-body.${BODY_CLASS$3} .${ROOT_CLASS$2} {
+body.${BODY_CLASS$4} .${ROOT_CLASS$2} {
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -7976,7 +8274,7 @@ body.${BODY_CLASS$3} .${ROOT_CLASS$2} {
   flex: 0 0 100%;
   grid-column: 1 / -1;
 }
-body.${BODY_CLASS$3} .${BAR_CLASS} {
+body.${BODY_CLASS$4} .${BAR_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -7984,35 +8282,35 @@ body.${BODY_CLASS$3} .${BAR_CLASS} {
   width: 100%;
   box-sizing: border-box;
 }
-body.${BODY_CLASS$3} .${STATUS_CLASS} {
+body.${BODY_CLASS$4} .${STATUS_CLASS} {
   flex: 1 1 12rem;
   min-width: 0;
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.3;
 }
-body.${BODY_CLASS$3} .${CONFIRM_CLASS} {
+body.${BODY_CLASS$4} .${CONFIRM_CLASS} {
   display: grid;
   gap: 0.75rem;
 }
-body.${BODY_CLASS$3} .${CONFIRM_ROW_CLASS} {
+body.${BODY_CLASS$4} .${CONFIRM_ROW_CLASS} {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 0.5rem;
 }
-body.${BODY_CLASS$3} .${PROGRESS_WRAP_CLASS} {
+body.${BODY_CLASS$4} .${PROGRESS_WRAP_CLASS} {
   flex: 1 1 12rem;
   min-width: 8rem;
   max-width: 24rem;
 }
-body.${BODY_CLASS$3} span.thumb {
+body.${BODY_CLASS$4} span.thumb {
   position: relative;
 }
-body.${BODY_CLASS$3} span.thumb.${CLASS_THUMB_SELECTED} {
+body.${BODY_CLASS$4} span.thumb.${CLASS_THUMB_SELECTED} {
   outline: ${SELECT_OUTLINE_WIDTH} solid var(--rdw-accent, ${ACCENT_FALLBACK});
   outline-offset: ${SELECT_OUTLINE_OFFSET};
 }
-body.${BODY_CLASS$3} span.thumb > .${CLASS_THUMB_CHECK} {
+body.${BODY_CLASS$4} span.thumb > .${CLASS_THUMB_CHECK} {
   position: absolute;
   top: ${CHECK_INSET};
   left: ${CHECK_INSET};
@@ -8030,7 +8328,7 @@ body.${BODY_CLASS$3} span.thumb > .${CLASS_THUMB_CHECK} {
   line-height: 1;
   pointer-events: none;
 }
-body.${BODY_CLASS$3} span.thumb.${CLASS_THUMB_SELECTED} > .${CLASS_THUMB_CHECK} {
+body.${BODY_CLASS$4} span.thumb.${CLASS_THUMB_SELECTED} > .${CLASS_THUMB_CHECK} {
   display: inline-flex;
 }
 `.trim();
@@ -9096,12 +9394,12 @@ var NEW_PLAQUE_TOP_PX = 6;
 var NEW_PLAQUE_ACCENT = "#2f6fed";
 var EVENT_PAGESHOW$1 = "pageshow";
 var EVENT_CLICK$1 = "click";
-var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$8);
+var BODY_CLASS$3 = featureBodyClass(FEATURE_ID$8);
 var FEATURE_CSS$8 = `
-body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS} {
+body.${BODY_CLASS$3} span.thumb.new.${THUMB_CLASS} {
   position: relative;
 }
-body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
+body.${BODY_CLASS$3} span.thumb.new.${THUMB_CLASS}::after {
   content: "NEW";
   position: absolute;
   z-index: 4;
@@ -9116,7 +9414,7 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
   pointer-events: none;
 }
 @supports (anchor-name: --a) {
-  body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
+  body.${BODY_CLASS$3} span.thumb.new.${THUMB_CLASS}::after {
     position-anchor: ${THUMB_ANCHOR_NAME};
     left: calc(anchor(left) + ${String(NEW_PLAQUE_LEFT_PX)}px);
     top: calc(anchor(top) + ${String(NEW_PLAQUE_TOP_PX)}px);
@@ -9671,9 +9969,9 @@ var TEXT_CAPTION = "Posts are ordered by the site (newest first).";
 var TEXT_PREV = "Previous";
 var TEXT_NEXT = "Next";
 var WARN_MISSING_HOST = "playlist-bar: image-list not found; playlist bar not mounted";
-var BODY_CLASS$1 = featureBodyClass(FEATURE_ID$6);
+var BODY_CLASS$2 = featureBodyClass(FEATURE_ID$6);
 var FEATURE_CSS$6 = `
-body.${BODY_CLASS$1} .${ROOT_CLASS$1} {
+body.${BODY_CLASS$2} .${ROOT_CLASS$1} {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -9685,7 +9983,7 @@ body.${BODY_CLASS$1} .${ROOT_CLASS$1} {
   background: #f7f7f7;
   box-sizing: border-box;
 }
-body.${BODY_CLASS$1} .${TITLE_CLASS} {
+body.${BODY_CLASS$2} .${TITLE_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -9694,13 +9992,13 @@ body.${BODY_CLASS$1} .${TITLE_CLASS} {
   font: inherit;
   line-height: 1.3;
 }
-body.${BODY_CLASS$1} .${NAME_CLASS} {
+body.${BODY_CLASS$2} .${NAME_CLASS} {
   font-weight: 600;
 }
-body.${BODY_CLASS$1} .${COUNT_CLASS} {
+body.${BODY_CLASS$2} .${COUNT_CLASS} {
   opacity: 0.85;
 }
-body.${BODY_CLASS$1} .${PARTS_CLASS} {
+body.${BODY_CLASS$2} .${PARTS_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -9709,18 +10007,18 @@ body.${BODY_CLASS$1} .${PARTS_CLASS} {
   font: inherit;
   line-height: 1.3;
 }
-body.${BODY_CLASS$1} .${PART_LABEL_CLASS} {
+body.${BODY_CLASS$2} .${PART_LABEL_CLASS} {
   flex: 0 0 auto;
 }
-body.${BODY_CLASS$1} a.${PART_LINK_CLASS} {
+body.${BODY_CLASS$2} a.${PART_LINK_CLASS} {
   color: inherit;
   text-decoration: underline;
 }
-body.${BODY_CLASS$1} a.${PART_LINK_CLASS}:focus-visible {
+body.${BODY_CLASS$2} a.${PART_LINK_CLASS}:focus-visible {
   outline: 2px solid #4c8bf5;
   outline-offset: 2px;
 }
-body.${BODY_CLASS$1} .${CAPTION_CLASS} {
+body.${BODY_CLASS$2} .${CAPTION_CLASS} {
   margin: 0;
   font: inherit;
   font-size: 0.875rem;
@@ -10468,12 +10766,24 @@ function CollectionsMenu(props) {
 		})]
 	});
 }
-var LABEL_REPORT = "Report";
+var DISPLAY_EDIT = "Edit";
+var DISPLAY_RESIZE = "Resize image";
+var DISPLAY_REPORT = "Report to moderation";
+var DISPLAY_ADD_NOTE = "Add note";
 var CLASS_WRAP = "rdw-post-panel-post-actions";
 var CLASS_ITEM = "rdw-post-panel-post-action";
+var ICON_SIZE$1 = 14;
 function buttonLabel(text) {
-	if (text === "Report to moderation") return LABEL_REPORT;
-	return text;
+	if (text === "Edit") return DISPLAY_EDIT;
+	if (text === "Resize image") return DISPLAY_RESIZE;
+	if (text === "Report to moderation") return DISPLAY_REPORT;
+	return DISPLAY_ADD_NOTE;
+}
+function actionIcon(text) {
+	if (text === "Edit") return /* @__PURE__ */ a(IconPencil, { size: ICON_SIZE$1 });
+	if (text === "Resize image") return /* @__PURE__ */ a(IconImage, { size: ICON_SIZE$1 });
+	if (text === "Report to moderation") return /* @__PURE__ */ a(IconFlag, { size: ICON_SIZE$1 });
+	return /* @__PURE__ */ a(IconNote, { size: ICON_SIZE$1 });
 }
 /** Full-width open buttons that proxy native link-list clicks. No Popover. */
 function PostActionsList(props) {
@@ -10488,7 +10798,7 @@ function PostActionsList(props) {
 			onClick: () => {
 				link.anchor.click();
 			},
-			children: buttonLabel(link.text)
+			children: [actionIcon(link.text), buttonLabel(link.text)]
 		}, link.text))
 	});
 }
@@ -10498,6 +10808,7 @@ var STATS_SELECTOR = "div#stats";
 var FLEXI_SELECTOR = "#fit-to-screen div.flexi, div#right-col div.flexi, div.flexi";
 var HEADER_SELECTOR = "div#header";
 var POST_COMMENTS_ID = "post-comments";
+var COMMENT_LIST_ID = "comment-list";
 var MORE_LINK_TEXTS = [
 	"Edit",
 	"Resize image",
@@ -10784,39 +11095,84 @@ function findPostComments() {
 	const node = document.getElementById(POST_COMMENTS_ID);
 	return node instanceof HTMLElement ? node : null;
 }
+var COMMENT_COUNT_RE = /^(\d+)\s+comments?\b/i;
+/**
+* Parse leading «N comment(s)» from the first non-empty text node under
+* div#comment-list (not full textContent — child nodes glue into one word
+* and break the trailing word-boundary).
+* Returns null when the list is missing or the prefix is unparseable.
+*/
+function readCommentCount() {
+	const list = document.getElementById(COMMENT_LIST_ID);
+	if (list === null) return null;
+	for (const child of list.childNodes) {
+		if (child.nodeType !== Node.TEXT_NODE) continue;
+		const text = normalizeSpace(child.textContent ?? "");
+		if (text.length === 0) continue;
+		const match = COMMENT_COUNT_RE.exec(text);
+		if (match === null) return null;
+		const raw = match[1];
+		if (raw === void 0) return null;
+		const parsed = Number(raw);
+		if (!Number.isFinite(parsed)) return null;
+		return Math.trunc(parsed);
+	}
+	return null;
+}
+/** `settings.featureChoice[POST_PANEL_TAB_CHOICE_ID]` values. */
+var POST_PANEL_TAB_CHOICE_ID = "post-actions";
+var POST_PANEL_TAB_INFO = "info";
+var POST_PANEL_TAB_COMMENTS = "comments";
 var TEXT_FAVORITE = "Favorite";
 var TEXT_IN_FAVORITES = "In favorites";
-var TEXT_ORIGINAL = "Original";
-var TEXT_SCORE = "Score";
-var TEXT_VOTE_UP = "Vote up";
+var TEXT_VOTE_PREFIX = "Vote";
 var TEXT_ICAME = "I came";
 var TEXT_COMMENTS = "Comments";
-var LABEL_ORIGINAL = "Open original image";
-var LABEL_VOTE_UP = "Vote up";
+var TEXT_INFO = "Info";
+var TEXT_POST = "Post";
+var TEXT_COMMENTS_COUNTED_SEP = " · ";
+var LABEL_ORIGINAL = "Original";
+var LABEL_VOTE = "Vote";
 var LABEL_ICAME = "I came";
+var ARIA_PANEL_TABS = "Post details";
 var WARN_ICAME_COUNT = "post-actions: I came counter — нужна разметка";
+var ICON_SIZE = 14;
+var ORIGINAL_ICON_SIZE = 14;
 var CLASS_ROOT = "rdw-post-panel";
 var CLASS_CARD = "rdw-post-panel-card";
 var CLASS_ACTIONS = "rdw-post-panel-actions";
+var CLASS_ACTIONS_ROW = "rdw-post-panel-actions-row";
 var CLASS_FAV = "rdw-post-panel-fav";
 var CLASS_ORIGINAL = "rdw-post-panel-original";
-var CLASS_SCORE = "rdw-post-panel-score";
-var CLASS_SCORE_VALUE = "rdw-post-panel-score-value";
 var CLASS_VOTE = "rdw-post-panel-vote";
 var CLASS_STATS = "rdw-post-panel-stats";
 var CLASS_STAT_LABEL = "rdw-post-panel-stat-label";
 var CLASS_STAT_VALUE = "rdw-post-panel-stat-value";
 var CLASS_SOURCE = "rdw-post-panel-source";
 var CLASS_ICAME = "rdw-post-panel-icame";
-var CLASS_ICAME_COUNT = "rdw-post-panel-icame-count";
 var CLASS_COMMENTS = "rdw-post-panel-comments";
 var CLASS_COMMENTS_HOST = "rdw-post-panel-comments-host";
+var CLASS_INFO = "rdw-post-panel-info";
+var CLASS_TABS = "rdw-post-panel-tabs";
+var CLASS_TAB_PANEL = "rdw-post-panel-tabpanel";
 function parseNumericPostId(postId) {
 	if (postId === null || postId.length === 0) return null;
 	const parsed = Number(postId);
 	if (!Number.isFinite(parsed)) return null;
 	const truncated = Math.trunc(parsed);
 	return truncated < 0 ? null : truncated;
+}
+function voteLabel(scoreText) {
+	return `${TEXT_VOTE_PREFIX} ${scoreText}`;
+}
+function commentsTabLabel(count) {
+	if (count === null) return TEXT_COMMENTS;
+	return `${TEXT_COMMENTS}${TEXT_COMMENTS_COUNTED_SEP}${String(count)}`;
+}
+function readStoredTab() {
+	const stored = getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID);
+	if (stored === "info" || stored === "comments") return stored;
+	return POST_PANEL_TAB_INFO;
 }
 function PostPanel(props) {
 	const numericId = parseNumericPostId(props.postId);
@@ -10834,6 +11190,12 @@ function PostPanel(props) {
 	});
 	const [iCame] = d(() => findICameTarget());
 	const [hasComments] = d(() => findPostComments() !== null);
+	const [commentCount] = d(() => hasComments ? readCommentCount() : null);
+	const [activeTab, setActiveTab] = d(() => {
+		const stored = readStoredTab();
+		if (stored === "comments" && !hasComments) return POST_PANEL_TAB_INFO;
+		return stored;
+	});
 	A(() => {
 		if (props.postId === null) return;
 		return observeScoreSpan(props.postId, (text) => {
@@ -10896,87 +11258,117 @@ function PostPanel(props) {
 	const onICameClick = b(() => {
 		iCame?.anchor.click();
 	}, [iCame]);
-	const showScoreCard = props.postId !== null || iCame !== null;
+	const onTabChange = b((id) => {
+		setActiveTab(id);
+		setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, id);
+	}, []);
+	const tabItems = w(() => {
+		const items = [{
+			id: POST_PANEL_TAB_INFO,
+			label: TEXT_INFO
+		}];
+		if (hasComments) items.push({
+			id: POST_PANEL_TAB_COMMENTS,
+			label: commentsTabLabel(commentCount)
+		});
+		return items;
+	}, [commentCount, hasComments]);
+	const showInfoCard = stats.length > 0 || moreLinks.length > 0 || hasComments;
+	const showActionsRow2 = props.postId !== null || iCame !== null || originalHref !== null;
 	return /* @__PURE__ */ a("div", {
 		className: CLASS_ROOT,
-		children: [
-			/* @__PURE__ */ a(Card, {
-				className: CLASS_CARD,
-				as: "section",
-				children: /* @__PURE__ */ a("div", {
-					className: CLASS_ACTIONS,
-					children: [
-						props.postId !== null ? /* @__PURE__ */ a(Button, {
-							variant: favorited ? "primary" : "secondary",
-							size: "m",
-							className: CLASS_FAV,
-							loading: favPending,
-							"aria-label": favorited ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}` : `${UI_TEXT.cardFavAddLabel} ${props.postId}`,
-							onClick: () => {
-								onFavClick();
-							},
-							children: [favorited ? /* @__PURE__ */ a(IconStarFilled, { size: 14 }) : /* @__PURE__ */ a(IconStar, { size: 14 }), favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE]
-						}) : null,
-						numericId !== null ? /* @__PURE__ */ a(CollectionsMenu, { postId: numericId }) : null,
-						originalHref !== null ? /* @__PURE__ */ a("a", {
-							className: CLASS_ORIGINAL,
-							href: originalHref,
-							target: "_blank",
-							rel: "noopener",
-							"aria-label": LABEL_ORIGINAL,
-							children: [TEXT_ORIGINAL, /* @__PURE__ */ a(IconExternalLink, { size: 12 })]
-						}) : null
-					]
-				})
-			}),
-			showScoreCard ? /* @__PURE__ */ a(Card, {
-				className: CLASS_CARD,
-				as: "section",
-				children: [props.postId !== null ? /* @__PURE__ */ a("div", {
-					className: CLASS_SCORE,
-					children: [/* @__PURE__ */ a("div", { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_SCORE }), /* @__PURE__ */ a("b", {
-						className: CLASS_SCORE_VALUE,
-						children: scoreText
-					})] }), /* @__PURE__ */ a(Button, {
+		children: [/* @__PURE__ */ a("div", {
+			className: CLASS_ACTIONS,
+			children: [props.postId !== null || numericId !== null ? /* @__PURE__ */ a("div", {
+				className: CLASS_ACTIONS_ROW,
+				children: [props.postId !== null ? /* @__PURE__ */ a(Button, {
+					variant: "primary",
+					size: "m",
+					className: CLASS_FAV,
+					loading: favPending,
+					"aria-label": favorited ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}` : `${UI_TEXT.cardFavAddLabel} ${props.postId}`,
+					onClick: () => {
+						onFavClick();
+					},
+					children: [favorited ? /* @__PURE__ */ a(IconStarFilled, { size: ICON_SIZE }) : /* @__PURE__ */ a(IconStar, { size: ICON_SIZE }), favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE]
+				}) : null, numericId !== null ? /* @__PURE__ */ a(CollectionsMenu, { postId: numericId }) : null]
+			}) : null, showActionsRow2 ? /* @__PURE__ */ a("div", {
+				className: CLASS_ACTIONS_ROW,
+				children: [
+					props.postId !== null ? /* @__PURE__ */ a(Button, {
 						variant: "secondary",
 						size: "m",
 						className: CLASS_VOTE,
 						loading: votePending,
-						"aria-label": LABEL_VOTE_UP,
+						"aria-label": LABEL_VOTE,
 						onClick: () => {
 							onVoteClick();
 						},
-						children: TEXT_VOTE_UP
-					})]
-				}) : null, iCame !== null ? /* @__PURE__ */ a("div", {
-					className: CLASS_ICAME,
-					children: [/* @__PURE__ */ a(Button, {
+						children: [/* @__PURE__ */ a(IconArrowUp, { size: ICON_SIZE }), voteLabel(scoreText)]
+					}) : null,
+					iCame !== null ? /* @__PURE__ */ a(Button, {
 						variant: "secondary",
 						size: "m",
+						className: CLASS_ICAME,
 						"aria-label": LABEL_ICAME,
 						onClick: onICameClick,
-						children: TEXT_ICAME
-					}), iCame.count !== null ? /* @__PURE__ */ a("span", {
-						className: CLASS_ICAME_COUNT,
-						children: iCame.count
-					}) : null]
-				}) : null]
-			}) : null,
-			moreLinks.length > 0 ? /* @__PURE__ */ a(Card, {
-				className: CLASS_CARD,
-				as: "section",
-				children: /* @__PURE__ */ a(PostActionsList, { links: moreLinks })
-			}) : null,
-			stats.length > 0 ? /* @__PURE__ */ a(Card, {
-				className: `${CLASS_CARD} ${CLASS_STATS}`,
-				as: "section",
-				children: stats.map((row) => /* @__PURE__ */ a(StatRowView, { row }, row.label))
-			}) : null,
-			hasComments ? /* @__PURE__ */ a(CommentsCard, {}) : null
-		]
+						children: [/* @__PURE__ */ a(IconDroplet, { size: ICON_SIZE }), TEXT_ICAME]
+					}) : null,
+					originalHref !== null ? /* @__PURE__ */ a("a", {
+						className: CLASS_ORIGINAL,
+						href: originalHref,
+						target: "_blank",
+						rel: "noopener",
+						"aria-label": LABEL_ORIGINAL,
+						title: LABEL_ORIGINAL,
+						children: /* @__PURE__ */ a(IconExternalLink, { size: ORIGINAL_ICON_SIZE })
+					}) : null
+				]
+			}) : null]
+		}), showInfoCard ? /* @__PURE__ */ a(Card, {
+			className: CLASS_CARD,
+			as: "section",
+			children: [
+				hasComments ? /* @__PURE__ */ a(Tabs, {
+					className: CLASS_TABS,
+					"aria-label": ARIA_PANEL_TABS,
+					items: tabItems,
+					value: activeTab,
+					onChange: onTabChange
+				}) : null,
+				/* @__PURE__ */ a("div", {
+					className: CLASS_TAB_PANEL,
+					role: "tabpanel",
+					id: kitTabPanelId(POST_PANEL_TAB_INFO),
+					"aria-labelledby": kitTabId(POST_PANEL_TAB_INFO),
+					hidden: hasComments && activeTab !== "info",
+					children: /* @__PURE__ */ a(InfoPanel, {
+						stats,
+						moreLinks
+					})
+				}),
+				hasComments ? /* @__PURE__ */ a("div", {
+					className: `${CLASS_TAB_PANEL} ${CLASS_COMMENTS}`,
+					role: "tabpanel",
+					id: kitTabPanelId(POST_PANEL_TAB_COMMENTS),
+					"aria-labelledby": kitTabId(POST_PANEL_TAB_COMMENTS),
+					hidden: activeTab !== POST_PANEL_TAB_COMMENTS,
+					children: /* @__PURE__ */ a(CommentsHost, {})
+				}) : null
+			]
+		}) : null]
 	});
 }
-function CommentsCard() {
+function InfoPanel(props) {
+	return /* @__PURE__ */ a("div", {
+		className: CLASS_INFO,
+		children: [props.stats.length > 0 ? /* @__PURE__ */ a("div", {
+			className: CLASS_STATS,
+			children: props.stats.map((row) => /* @__PURE__ */ a(StatRowView, { row }, row.label))
+		}) : null, props.moreLinks.length > 0 ? /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_POST }), /* @__PURE__ */ a(PostActionsList, { links: props.moreLinks })] }) : null]
+	});
+}
+function CommentsHost() {
 	const hostRef = T(null);
 	F(() => {
 		const host = hostRef.current;
@@ -10991,13 +11383,9 @@ function CommentsCard() {
 			if (comments.parentElement === host || comments.parentNode === null) originParent.insertBefore(comments, originNext);
 		};
 	}, []);
-	return /* @__PURE__ */ a(Card, {
-		className: `${CLASS_CARD} ${CLASS_COMMENTS}`,
-		as: "section",
-		children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_COMMENTS }), /* @__PURE__ */ a("div", {
-			className: CLASS_COMMENTS_HOST,
-			ref: hostRef
-		})]
+	return /* @__PURE__ */ a("div", {
+		className: CLASS_COMMENTS_HOST,
+		ref: hostRef
 	});
 }
 function StatRowView(props) {
@@ -11031,12 +11419,14 @@ var PANEL_WIDTH_PX = 360;
 var PANEL_MIN_WIDTH_PX = 320;
 var PANEL_MAX_WIDTH_PX = 420;
 var PANEL_FONT_SIZE_PX = 13;
-var PANEL_BUTTON_HEIGHT_PX = 36;
-var PANEL_GAP_PX = 12;
+var PANEL_BUTTON_HEIGHT_PX = 34;
+var PANEL_BLOCK_GAP_PX = 10;
+var PANEL_BUTTON_GAP_PX = 8;
 var PANEL_CARD_PADDING_PX = 12;
 var PANEL_STICKY_GAP_PX = 12;
 var PANEL_Z_INDEX = 100;
-var SCORE_VALUE_FONT_SIZE_PX = 18;
+var STAT_LABEL_WIDTH_PX = 62;
+var ORIGINAL_BUTTON_SIZE_PX = 34;
 var STICKY_TOP_VAR = "--rdw-post-panel-sticky-top";
 var CLASS_PANEL = "rdw-post-actions";
 var CLASS_MODE_WIDE = "rdw-post-actions--wide";
@@ -11079,13 +11469,13 @@ ${BODY_SELECTOR$2} #${POST_ACTIONS_ID}.${CLASS_MODE_NARROW} {
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel {
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
   position: relative;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-card {
   padding: ${String(PANEL_CARD_PADDING_PX)}px;
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-btn {
   min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
@@ -11093,55 +11483,46 @@ ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-btn {
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
 }
-${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-fav {
-  grid-column: 1 / -1;
-  width: 100%;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row > .rdw-btn,
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-actions-row > .rdw-post-panel-collections {
+  flex: 1 1 0;
+  min-width: 0;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collections {
-  min-width: 0;
   position: relative;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-collections .rdw-btn {
   width: 100%;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-original {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
   box-sizing: border-box;
-  width: 100%;
-  min-height: ${String(PANEL_BUTTON_HEIGHT_PX)}px;
-  padding: 0 10px;
+  flex: 0 0 ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  width: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  height: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  min-width: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  min-height: ${String(ORIGINAL_BUTTON_SIZE_PX)}px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--rdw-border);
   border-radius: var(--rdw-radius-m);
   background: var(--rdw-surface);
   color: var(--rdw-text);
   text-decoration: none;
-  font: inherit;
-  font-size: ${String(PANEL_FONT_SIZE_PX)}px;
-  font-weight: 600;
-}
-${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-score {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${String(PANEL_GAP_PX)}px;
-  background: var(--rdw-surface-2);
-  border-radius: var(--rdw-radius-m);
-  padding: ${String(PANEL_GAP_PX)}px;
-}
-${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-score-value {
-  font-size: ${String(SCORE_VALUE_FONT_SIZE_PX)}px;
-  font-variant-numeric: tabular-nums;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-stats {
-  grid-template-columns: 62px 1fr;
-  column-gap: ${String(PANEL_GAP_PX)}px;
-  row-gap: ${String(PANEL_GAP_PX)}px;
+  display: grid;
+  grid-template-columns: ${String(STAT_LABEL_WIDTH_PX)}px 1fr;
+  column-gap: ${String(PANEL_BUTTON_GAP_PX)}px;
+  row-gap: ${String(PANEL_BUTTON_GAP_PX)}px;
   font-size: ${String(PANEL_FONT_SIZE_PX)}px;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-stat-label {
@@ -11154,21 +11535,20 @@ ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-source {
   white-space: nowrap;
   color: var(--rdw-accent);
 }
-${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-icame {
-  display: flex;
-  align-items: center;
-  gap: ${String(PANEL_GAP_PX)}px;
-}
-${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-icame .rdw-btn {
-  flex: 1 1 auto;
-  width: 100%;
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-info {
+  display: grid;
+  gap: ${String(PANEL_BLOCK_GAP_PX)}px;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-post-actions {
   display: grid;
-  gap: ${String(PANEL_GAP_PX)}px;
+  gap: ${String(PANEL_BUTTON_GAP_PX)}px;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-post-action {
   width: 100%;
+  justify-content: flex-start;
+}
+${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-tabpanel[hidden] {
+  display: none;
 }
 ${BODY_SELECTOR$2} #${POST_ACTIONS_ID} .rdw-post-panel-comments-host {
   min-width: 0;
@@ -11368,7 +11748,7 @@ var EVENT_CHANGE = "change";
 var EVENT_CLICK = "click";
 var EVENT_AWESOMPLETE_SELECT = "awesomplete-selectcomplete";
 var WARN_NO_FORM = "search-tools: search form not found; not mounted";
-var BODY_CLASS = featureBodyClass(FEATURE_ID$3);
+var BODY_CLASS$1 = featureBodyClass(FEATURE_ID$3);
 /**
 * Set on document.body while the panel's «AI posts» row is rendered.
 * Site-skin (HANDOFF G) must hide native Filter AI only under this class.
@@ -11456,50 +11836,50 @@ var SOURCE_OPTIONS = [
 var SORT_TOKEN_TO_MODE = /* @__PURE__ */ new Map();
 for (const option of SORT_OPTIONS) if (option.token !== null) SORT_TOKEN_TO_MODE.set(option.token, option.value);
 var FEATURE_CSS$3 = [
-	`body.${BODY_CLASS} .${ROOT_CLASS} {`,
+	`body.${BODY_CLASS$1} .${ROOT_CLASS} {`,
 	"  margin-top: 8px;",
 	"  max-width: 100%;",
 	"  box-sizing: border-box;",
 	"}",
-	`body.${BODY_CLASS} .${CARD_CLASS} {`,
+	`body.${BODY_CLASS$1} .${CARD_CLASS} {`,
 	"  padding: 10px;",
 	"  display: grid;",
 	"  gap: 10px;",
 	"}",
-	`body.${BODY_CLASS} .${CHIPS_CLASS} {`,
+	`body.${BODY_CLASS$1} .${CHIPS_CLASS} {`,
 	"  display: flex;",
 	"  flex-wrap: wrap;",
 	"  gap: 5px;",
 	"}",
-	`body.${BODY_CLASS} .${CHIP_CLASS} {`,
+	`body.${BODY_CLASS$1} .${CHIP_CLASS} {`,
 	"  cursor: default;",
 	"}",
-	`body.${BODY_CLASS} .${CHIP_CLASS}[${CHIP_ATTR_TOGGLE}="1"] {`,
+	`body.${BODY_CLASS$1} .${CHIP_CLASS}[${CHIP_ATTR_TOGGLE}="1"] {`,
 	"  cursor: pointer;",
 	"}",
-	`body.${BODY_CLASS} .${FIELD_CLASS} {`,
+	`body.${BODY_CLASS$1} .${FIELD_CLASS} {`,
 	"  display: grid;",
 	"  gap: 0;",
 	"  min-width: 0;",
 	"}",
-	`body.${BODY_CLASS} .${ROW_SORT_CLASS} {`,
+	`body.${BODY_CLASS$1} .${ROW_SORT_CLASS} {`,
 	"  display: grid;",
 	"  grid-template-columns: 1fr 72px;",
 	"  gap: 8px;",
 	"  align-items: start;",
 	"}",
-	`body.${BODY_CLASS} .${FOOT_CLASS} {`,
+	`body.${BODY_CLASS$1} .${FOOT_CLASS} {`,
 	"  display: flex;",
 	"  justify-content: space-between;",
 	"  align-items: center;",
 	"  border-top: 1px solid var(--rdw-border);",
 	"  padding-top: 8px;",
 	"}",
-	`body.${BODY_CLASS} .${HINT_CLASS} {`,
+	`body.${BODY_CLASS$1} .${HINT_CLASS} {`,
 	"  font-size: 12px;",
 	"  color: var(--rdw-muted);",
 	"}",
-	`body.${BODY_CLASS} .${RESET_CLASS} {`,
+	`body.${BODY_CLASS$1} .${RESET_CLASS} {`,
 	"  padding: 0;",
 	"  min-height: auto;",
 	"  height: auto;",
@@ -12380,11 +12760,11 @@ function scheduleAfterFirstPaint(callback) {
 	});
 }
 /**
-* Post-page Fluid Player tweaks: persist volume/mute/rate, wheel volume,
-* and CSS size modes (Fit height / Fit width / Original).
+* Post-page Fluid Player tweaks: persist volume/mute/rate, and CSS/JS size
+* modes (Fit height / Fit width / Original).
 *
 * Does not replace the Fluid wrapper or rename its classes — only the
-* video element and wrapper size via CSS variables / max-* rules.
+* wrapper size via explicit width/height (overrides Fluid's intrinsic px).
 */
 var FEATURE_ID$1 = VIDEO_PLAYER_FEATURE_ID;
 var FEATURE_LABEL$1 = "Video player tweaks";
@@ -12392,43 +12772,57 @@ var FEATURE_PAGES$1 = ["post"];
 var VIDEO_ELEMENT_ID = "gelcomVideoPlayer";
 var FLUID_WRAPPER_ID = "fluid_video_wrapper_gelcomVideoPlayer";
 var FLUID_WRAPPER_CLASS = "fluid_video_wrapper";
-var VOLUME_WHEEL_STEP = .05;
 var VOLUME_MIN = 0;
 var VOLUME_MAX = 1;
 var CHROME_GAP_PX = 12;
-var ASPECT_RATIO_CSS_VAR = "--rdw-vp-aspect-ratio";
-var CHROME_OFFSET_CSS_VAR = "--rdw-vp-chrome-offset";
-var ASPECT_RATIO_FALLBACK = "16 / 9";
 var WARN_NO_VIDEO = "video-player: #gelcomVideoPlayer missing; tweaks not mounted";
-var BODY_SELECTOR$1 = `body.${featureBodyClass(FEATURE_ID$1)}`;
+var BODY_CLASS = featureBodyClass(FEATURE_ID$1);
+var BODY_SELECTOR$1 = `body.${BODY_CLASS}`;
 var WRAPPER_SELECTOR = `#${FLUID_WRAPPER_ID}.${FLUID_WRAPPER_CLASS}`;
 var SIZE_LABEL_FIT_HEIGHT = "Fit height";
 var SIZE_LABEL_FIT_WIDTH = "Fit width";
 var SIZE_LABEL_ORIGINAL = "Original";
-function sizeModeCss(value) {
-	const scope = `body.${featureChoiceBodyClass(FEATURE_ID$1, value)} ${WRAPPER_SELECTOR}`;
-	if (value === "original") return "";
-	if (value === "fit-width") return [
-		`${scope} {`,
-		`  max-width: 100%;`,
-		`  aspect-ratio: var(${ASPECT_RATIO_CSS_VAR}, ${ASPECT_RATIO_FALLBACK});`,
-		`}`
-	].join("\n");
-	return [
-		`${scope} {`,
-		`  max-height: calc(100vh - var(${CHROME_OFFSET_CSS_VAR}, 0px));`,
-		`  max-width: 100%;`,
-		`  aspect-ratio: var(${ASPECT_RATIO_CSS_VAR}, ${ASPECT_RATIO_FALLBACK});`,
-		`}`
-	].join("\n");
-}
+var SIZE_MODE_VALUES = [
+	VIDEO_SIZE_FIT_HEIGHT,
+	VIDEO_SIZE_FIT_WIDTH,
+	VIDEO_SIZE_ORIGINAL
+];
+/** Settings caption under the Video player tweaks switch. */
+var VIDEO_PLAYER_SETTING_CAPTION = "Fit height fills under the header (may upscale). Fit width uses the media column. Original is native pixels.";
 var FEATURE_CSS$1 = [
 	`${BODY_SELECTOR$1} ${WRAPPER_SELECTOR} {`,
 	`  box-sizing: border-box;`,
-	`}`,
-	sizeModeCss(VIDEO_SIZE_FIT_HEIGHT),
-	sizeModeCss(VIDEO_SIZE_FIT_WIDTH)
+	`}`
 ].join("\n");
+/**
+* Pure size calculator for the three Video size modes.
+* Fit height may upscale; Fit width always uses full column width;
+* Original is videoWidth × videoHeight with no scaling.
+*/
+function computeVideoPlayerSize(input) {
+	const { mode, videoWidth, videoHeight, columnWidthPx, availableHeightPx } = input;
+	if (videoWidth <= 0 || videoHeight <= 0 || columnWidthPx <= 0 || availableHeightPx <= 0) return {
+		widthPx: 0,
+		heightPx: 0
+	};
+	if (mode === "original") return {
+		widthPx: videoWidth,
+		heightPx: videoHeight
+	};
+	if (mode === "fit-width") return sizeForColumnWidth(videoWidth, videoHeight, columnWidthPx);
+	const widthIfFullHeight = Math.round(availableHeightPx * videoWidth / videoHeight);
+	if (widthIfFullHeight <= columnWidthPx) return {
+		widthPx: widthIfFullHeight,
+		heightPx: availableHeightPx
+	};
+	return sizeForColumnWidth(videoWidth, videoHeight, columnWidthPx);
+}
+function sizeForColumnWidth(videoWidth, videoHeight, columnWidthPx) {
+	return {
+		widthPx: columnWidthPx,
+		heightPx: Math.round(columnWidthPx * videoHeight / videoWidth)
+	};
+}
 function clampVolume(value) {
 	if (!Number.isFinite(value)) return VOLUME_MIN;
 	return Math.min(VOLUME_MAX, Math.max(VOLUME_MIN, value));
@@ -12453,15 +12847,41 @@ function findWrapper() {
 	if (!node.classList.contains("fluid_video_wrapper")) return null;
 	return node;
 }
-function updateChromeOffsetVar(wrapper) {
-	const offsetPx = measureHeaderOffsetPx(CHROME_GAP_PX);
-	wrapper.style.setProperty(CHROME_OFFSET_CSS_VAR, `${String(offsetPx)}px`);
+function readSizeModeFromBody() {
+	for (const value of SIZE_MODE_VALUES) if (document.body.classList.contains(featureChoiceBodyClass(FEATURE_ID$1, value))) return value;
+	return resolveVideoSize(DEFAULT_VIDEO_SIZE);
 }
-function updateAspectRatioVar(wrapper, video) {
-	const width = video.videoWidth;
-	const height = video.videoHeight;
-	if (width <= 0 || height <= 0) return;
-	wrapper.style.setProperty(ASPECT_RATIO_CSS_VAR, `${String(width)} / ${String(height)}`);
+function measureMediaColumnWidthPx(wrapper) {
+	const parent = wrapper.parentElement;
+	if (parent !== null && parent.clientWidth > 0) return parent.clientWidth;
+	return wrapper.clientWidth;
+}
+function measureAvailableHeightPx() {
+	const chromeOffsetPx = measureHeaderOffsetPx(CHROME_GAP_PX);
+	return Math.max(0, window.innerHeight - chromeOffsetPx);
+}
+function clearWrapperSize(wrapper) {
+	wrapper.style.removeProperty("width");
+	wrapper.style.removeProperty("height");
+}
+function applyWrapperSize(wrapper, video) {
+	if (!document.body.classList.contains(BODY_CLASS)) {
+		clearWrapperSize(wrapper);
+		return;
+	}
+	const videoWidth = video.videoWidth;
+	const videoHeight = video.videoHeight;
+	if (videoWidth <= 0 || videoHeight <= 0) return;
+	const size = computeVideoPlayerSize({
+		mode: readSizeModeFromBody(),
+		videoWidth,
+		videoHeight,
+		columnWidthPx: measureMediaColumnWidthPx(wrapper),
+		availableHeightPx: measureAvailableHeightPx()
+	});
+	if (size.widthPx <= 0 || size.heightPx <= 0) return;
+	wrapper.style.width = `${String(size.widthPx)}px`;
+	wrapper.style.height = `${String(size.heightPx)}px`;
 }
 /**
 * Apply persisted volume/mute/rate. Fluid's own volume UI may not mirror
@@ -12482,29 +12902,11 @@ function persistFromVideo(ctx, video) {
 		playbackRate: video.playbackRate
 	});
 }
-function isEventOverPlayer(target, video, wrapper) {
-	if (!(target instanceof Node)) return false;
-	if (wrapper !== null && wrapper.contains(target)) return true;
-	return video === target || video.contains(target);
-}
-function onWheelVolume(event, video, wrapper, ctx) {
-	if (event.shiftKey) return;
-	if (!isEventOverPlayer(event.target, video, wrapper)) return;
-	event.preventDefault();
-	const direction = event.deltaY < 0 ? 1 : -1;
-	const next = clampVolume(video.volume + direction * VOLUME_WHEEL_STEP);
-	video.volume = next;
-	if (next > VOLUME_MIN && video.muted) video.muted = false;
-	persistFromVideo(ctx, video);
-}
 function bindPlayer(ctx, video) {
 	const wrapper = findWrapper();
 	const state = readStoredState(ctx);
 	const applyLayout = () => {
-		if (wrapper !== null) {
-			updateChromeOffsetVar(wrapper);
-			updateAspectRatioVar(wrapper, video);
-		}
+		if (wrapper !== null) applyWrapperSize(wrapper, video);
 	};
 	const onLoadedMetadata = () => {
 		applyPersistedPlayback(video, readStoredState(ctx));
@@ -12521,14 +12923,16 @@ function bindPlayer(ctx, video) {
 	video.addEventListener("ratechange", () => {
 		persistFromVideo(ctx, video);
 	});
-	const onWheel = (event) => {
-		onWheelVolume(event, video, wrapper, ctx);
-	};
-	(wrapper ?? video).addEventListener("wheel", onWheel, { passive: false });
 	const onResize = () => {
 		applyLayout();
 	};
 	window.addEventListener("resize", onResize);
+	new MutationObserver(() => {
+		applyLayout();
+	}).observe(document.body, {
+		attributes: true,
+		attributeFilter: ["class"]
+	});
 }
 function mountVideoPlayer(ctx) {
 	scheduleAfterFirstPaint(() => {
@@ -12545,6 +12949,8 @@ var videoPlayerFeature = {
 	label: FEATURE_LABEL$1,
 	pages: [...FEATURE_PAGES$1],
 	defaultEnabled: true,
+	cssOnly: true,
+	settingsCaption: VIDEO_PLAYER_SETTING_CAPTION,
 	choice: {
 		label: "Video size",
 		options: [
@@ -12688,7 +13094,7 @@ function onThumbPointerEnter(event) {
 		hoverTimerId = null;
 		if (hoverThumb !== thumb) return;
 		startPreview(thumb);
-	}, 400);
+	}, 200);
 }
 function onThumbPointerLeave(event) {
 	const thumb = event.currentTarget;
@@ -12722,7 +13128,7 @@ function mountVideoPreview(ctx) {
 		startBindings();
 	});
 }
-var FEATURES = exports("aK",[
+var FEATURES = exports("aL",[
 	feedFeature,
 	menuCleanupFeature,
 	tagGroupsFeature,
@@ -12967,12 +13373,12 @@ bootEarly();
 whenDomReady(() => {
 	applyLayoutBeforePaint();
 	scheduleAfterFirstPaint(() => {
-		module.import('./app-B7njDvjb-DD3sd0Ht.js').then(({ startApp }) => {
+		module.import('./app-Bgw8MjqR-BT__KS5T.js').then(({ startApp }) => {
 			startApp();
 		});
 	});
 });})}}));
-System.register("./masonry-layout-COLMJMFF-Du-uLmyo.js", ['./___monkey.entry.js'],(function(exports){'use strict';var onThumbsAdded,featureChoiceBodyClass,MASONRY_VALUE,GRID_DENSITY_FEATURE_ID,MASONRY_LIST_SCOPE,SITE_SELECTORS,MASONRY_SPAN_CSS_VAR;return{setters:[function(module){onThumbsAdded=module.o;featureChoiceBodyClass=module.f;MASONRY_VALUE=module.M;GRID_DENSITY_FEATURE_ID=module.G;MASONRY_LIST_SCOPE=module.a;SITE_SELECTORS=module.S;MASONRY_SPAN_CSS_VAR=module.b;}],execute:(function(){exports("startMasonryLayout",startMasonryLayout);/**
+System.register("./masonry-layout-BF1C8lGN-wpVMzmir.js", ['./___monkey.entry.js'],(function(exports){'use strict';var onThumbsAdded,featureChoiceBodyClass,MASONRY_VALUE,GRID_DENSITY_FEATURE_ID,MASONRY_LIST_SCOPE,SITE_SELECTORS,MASONRY_SPAN_CSS_VAR;return{setters:[function(module){onThumbsAdded=module.o;featureChoiceBodyClass=module.f;MASONRY_VALUE=module.M;GRID_DENSITY_FEATURE_ID=module.G;MASONRY_LIST_SCOPE=module.a;SITE_SELECTORS=module.S;MASONRY_SPAN_CSS_VAR=module.b;}],execute:(function(){exports("startMasonryLayout",startMasonryLayout);/**
 * CSS-grid masonry spans for list thumbs. Loaded after first paint from
 * grid-density mount (dynamic import) so the 0.12 CSS-first boot stays intact.
 */
@@ -12985,7 +13391,7 @@ var BODY_CLASS_OBSERVER_OPTIONS = {
 	attributes: true,
 	attributeFilter: ["class"]
 };
-var columnWidthPx = 240;
+var columnWidthPx = 170;
 var resizeObserver;
 var bodyClassObserver;
 var unsubscribeThumbsAdded;
@@ -13007,8 +13413,8 @@ function computeMasonryRowSpan(columnWidth, naturalWidth, naturalHeight) {
 * Column width for `repeat(auto-fill, minmax(min, 1fr))` with a fixed column-gap.
 */
 function computeMasonryColumnWidthPx(listWidthPx) {
-	if (listWidthPx <= 0) return 240;
-	const columnCount = Math.max(MIN_COLUMN_COUNT, Math.floor((listWidthPx + 4) / 244));
+	if (listWidthPx <= 0) return 170;
+	const columnCount = Math.max(MIN_COLUMN_COUNT, Math.floor((listWidthPx + 4) / 174));
 	return (listWidthPx - (columnCount - 1) * 4) / columnCount;
 }
 function isMasonryChoiceActive() {
@@ -13147,10 +13553,23 @@ function startMasonryLayout() {
 	}
 	syncLayoutToBodyClass();
 }})}}));
-System.register("./app-B7njDvjb-DD3sd0Ht.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$,PANEL_UI_CLASS,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,APPEARANCE_THEME_SITE_DARK,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.c;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.h;SEARCH_PARAM_TAGS=module.i;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.j;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.k;HEADER_SELECTOR=module.H;RDW_OWN_PAGE_CLASS=module.p;MENU_ITEM_ID=module.q;parseRdwHash=module.t;getSyncState=module.u;readFavoritesSyncMode=module.v;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.w;UI_TEXT=module.U;Q=module.Q;RDW_PAGE_ROOT_ID=module.x;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.z;RDW_HASH_COLLECTIONS=module.A;MENU_LABEL=module.B;RDW_HASH_FOLLOWING=module.D;resolveFavoritesUserId=module.E;MY_FAVORITES_CONTAINER_ID=module.I;RDW_HASH_SETTINGS=module.J;RDW_HASH_PREFIX=module.K;createFavoritesSyncTabId=module.L;APPEARANCE_BACKGROUND_KEY=module.O;readArtistsMirror=module.P;listArtistTags=module.T;writeArtistsMirror=module.V;reloadFromStorage=module.W;save=module.X;CURRENT_PAGE_CLASS=module.Y;setSyncState=module.Z;SEARCH_PARAM_PAGE=module._;FAVORITES_PAGE=module.$;FAVORITES_SECTION_VIEW=module.a0;SEARCH_PATH=module.a1;a=module.a2;applyTokenProperties=module.a3;resolveAppearancePalette=module.a4;getSiteSkinCss=module.a5;$=module.a6;PANEL_UI_CLASS=module.a7;RDW_THEME_ATTR=module.a8;APPEARANCE_THEME_SITE=module.a9;SITE_LIGHT_C_BG=module.aa;SITE_LIGHT_C_BG_ALT=module.ab;APPEARANCE_THEME_SITE_DARK=module.ac;SITE_DARK_C_BG=module.ad;SITE_DARK_C_BORDER=module.ae;APPEARANCE_BACKGROUND_TOO_LARGE=module.af;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
+System.register("./app-Bgw8MjqR-BT__KS5T.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$,PANEL_UI_CLASS,TOKEN_VAR,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.c;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.h;SEARCH_PARAM_TAGS=module.i;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.j;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.k;HEADER_SELECTOR=module.H;RDW_OWN_PAGE_CLASS=module.p;MENU_ITEM_ID=module.q;parseRdwHash=module.t;getSyncState=module.u;readFavoritesSyncMode=module.v;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.w;UI_TEXT=module.U;Q=module.Q;RDW_PAGE_ROOT_ID=module.x;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.z;RDW_HASH_COLLECTIONS=module.A;MENU_LABEL=module.B;RDW_HASH_FOLLOWING=module.D;resolveFavoritesUserId=module.E;MY_FAVORITES_CONTAINER_ID=module.I;RDW_HASH_SETTINGS=module.J;RDW_HASH_PREFIX=module.K;createFavoritesSyncTabId=module.L;APPEARANCE_BACKGROUND_KEY=module.O;readArtistsMirror=module.P;listArtistTags=module.T;writeArtistsMirror=module.V;reloadFromStorage=module.W;save=module.X;CURRENT_PAGE_CLASS=module.Y;setSyncState=module.Z;SEARCH_PARAM_PAGE=module._;FAVORITES_PAGE=module.$;FAVORITES_SECTION_VIEW=module.a0;SEARCH_PATH=module.a1;a=module.a2;applyTokenProperties=module.a3;resolveAppearancePalette=module.a4;getSiteSkinCss=module.a5;$=module.a6;PANEL_UI_CLASS=module.a7;TOKEN_VAR=module.a8;RDW_THEME_ATTR=module.a9;APPEARANCE_THEME_SITE=module.aa;APPEARANCE_THEME_SITE_DARK=module.ab;SITE_LIGHT_C_BG=module.ac;SITE_LIGHT_C_BG_ALT=module.ad;SITE_DARK_C_BG=module.ae;SITE_DARK_C_BORDER=module.af;APPEARANCE_BACKGROUND_TOO_LARGE=module.ag;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
 var PAGE_TITLE_CLASS$1 = "rdw-page-title";
 /** Matches kit SectionLabel class. */
 var SECTION_LABEL_CLASS = "rdw-section-label";
+/** Kit select list — keep in sync with src/ui/kit/select.tsx. */
+var KIT_SELECT_LIST_CLASS = "rdw-select__list";
+/** Kit autocomplete list — keep in sync with src/ui/kit/autocomplete-field.tsx. */
+var KIT_AC_LIST_CLASS = "rdw-ac__list";
+/** Kit dialog panel — keep in sync with src/ui/kit/dialog.tsx. */
+var KIT_DIALOG_CLASS = "rdw-dialog";
+/** Firefox / modern Chromium thin scrollbar (E HANDOFF). */
+var SCROLLBAR_WIDTH = "thin";
+/** Kit tabs — keep in sync with src/ui/kit/tabs.tsx (A→E HANDOFF). */
+var KIT_TABS_CLASS = "rdw-tabs";
+var KIT_TAB_CLASS = "rdw-tabs__tab";
+/** Active tab underline width — keep in sync with kit/tabs.tsx. */
+var TAB_UNDERLINE_PX = 2;
 var SITE_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
 var SITE_DARK_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
 /**
@@ -13169,6 +13588,39 @@ var PAGE_CONTENT_CSS = `
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+/* Shadow-DOM scrollables — tokens (site-skin cannot pierce :host). */
+.${PANEL_UI_CLASS.scrollRegion},
+.${KIT_SELECT_LIST_CLASS},
+.${KIT_AC_LIST_CLASS},
+.${KIT_DIALOG_CLASS} {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: var(${TOKEN_VAR.border}) var(${TOKEN_VAR.surface});
+}
+/* Kit tabs in page shadow — tokens for all themes; Site muted→text. */
+.${KIT_TABS_CLASS} {
+  border-bottom: 1px solid var(${TOKEN_VAR.border});
+  color: var(${TOKEN_VAR.text});
+}
+.${KIT_TAB_CLASS} {
+  background: transparent;
+  border: 0;
+  border-bottom: ${String(TAB_UNDERLINE_PX)}px solid transparent;
+  color: var(${TOKEN_VAR.muted});
+}
+.${KIT_TAB_CLASS}[aria-selected="true"] {
+  color: var(${TOKEN_VAR.text});
+  font-weight: 600;
+  border-bottom-color: var(${TOKEN_VAR.accent});
+}
+:host-context(${SITE_THEME_SELECTOR}) .${KIT_TAB_CLASS},
+:host-context(${SITE_DARK_THEME_SELECTOR}) .${KIT_TAB_CLASS} {
+  color: var(${TOKEN_VAR.text});
+}
+:host-context(${SITE_THEME_SELECTOR}) .${KIT_TAB_CLASS}[aria-selected="true"],
+:host-context(${SITE_DARK_THEME_SELECTOR}) .${KIT_TAB_CLASS}[aria-selected="true"] {
+  border-bottom-color: var(${TOKEN_VAR.accent});
+  color: var(${TOKEN_VAR.text});
 }
 .${CSS_CLASS.section} {
   display: flex;
@@ -13390,21 +13842,21 @@ var collectionsFactory = null;
 var followingFactory = null;
 function getSettingsFactory() {
 	if (settingsFactory === null) settingsFactory = async () => {
-		const mod = await module.import('./settings-page-hbv0vCg1-DEOFxiyw.js');
+		const mod = await module.import('./settings-page-CyOa0Slg-C5mWZPWm.js');
 		return /* @__PURE__ */ a(mod.SettingsPage, {});
 	};
 	return settingsFactory;
 }
 function getCollectionsFactory() {
 	if (collectionsFactory === null) collectionsFactory = async () => {
-		const mod = await module.import('./collections-page-CxgkltcO-DsoYi2t2.js');
+		const mod = await module.import('./collections-page-D63diUPv-CrlxDMuM.js');
 		return /* @__PURE__ */ a(mod.CollectionsPage, {});
 	};
 	return collectionsFactory;
 }
 function getFollowingFactory() {
 	if (followingFactory === null) followingFactory = async () => {
-		const mod = await module.import('./following-page-DdL5SnRY-_FiQaA7g.js');
+		const mod = await module.import('./following-page-CtG_KQU1-DECxbkpG.js');
 		return /* @__PURE__ */ a(mod.FollowingPage, {});
 	};
 	return followingFactory;
@@ -14105,7 +14557,7 @@ async function startApp() {
 	await yieldToMain();
 	maybeResumeFavoritesSync();
 }})}}));
-System.register("./settings-page-hbv0vCg1-DEOFxiyw.js", ['./___monkey.entry.js','./app-B7njDvjb-DD3sd0Ht.js','./autocomplete-DLd-F3P0-CaNhSgM3.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,getFeatureChoice,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ag;a=module.a2;PANEL_UI_CLASS=module.a7;Card=module.ah;SectionLabel=module.ai;Switch=module.aj;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.ak;setTweaksEnabled=module.al;NumberField=module.am;UPDATES_GROUP_SIZE_ID=module.an;setUpdatesGroupSize=module.ao;getUpdatesGroupSize=module.ap;PLAYLIST_CHUNK_SIZE_ID=module.aq;setPlaylistChunkSize=module.ar;getPlaylistChunkSize=module.as;GRID_FAV_CHECKBOX_ID=module.at;setGridFavButtonsEnabled=module.au;setGridFavButtonsVisible=module.av;P=module.aw;T=module.ax;A=module.ay;APPEARANCE_THEME_CUSTOM=module.az;KIT_FOCUS_CSS=module.aA;Select=module.aB;APPEARANCE_THEME_SITE=module.a9;APPEARANCE_THEME_SITE_DARK=module.ac;APPEARANCE_THEME_LIGHT=module.aC;APPEARANCE_THEME_DARK=module.aD;$=module.a6;Segmented=module.aE;APPEARANCE_CUSTOM_BASE_LIGHT=module.aF;APPEARANCE_CUSTOM_BASE_DARK=module.aG;TextField=module.aH;Button=module.aI;clampBackgroundDim=module.aJ;FEATURES=module.aK;featurePanelLabel=module.aL;FEATURE_CHECKBOX_ID_PREFIX=module.aM;setFeatureEnabled=module.aN;applyCssOnlyFeatureEnabled=module.aO;isFeatureEnabled=module.aP;FEATURE_CHOICE_ID_PREFIX=module.aQ;setFeatureChoiceValue=module.aR;applyCssOnlyFeatureChoice=module.aS;getFeatureChoice=module.aT;b=module.aU;Chip=module.aV;readSiteBlacklist=module.aW;AutocompleteField=module.aX;ProgressBar=module.aY;createDefaultCustomTheme=module.aZ;AppearanceThemeSchema=module.a_;getAppearance=module.g;prepareBackgroundImageFile=module.a$;writeSiteBlacklist=module.b0;runFavoritesSync=module.w;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.b1;load=module.b2;createDefaultStorage=module.b3;clearStorageCache=module.b4;clearFavsCache=module.b5;getSyncState=module.u;object=module.b6;StorageSchema=module.b7;optional=module.b8;string=module.b9;FavsSchema=module.ba;literal=module.bb;IMPORT_SCHEMA_ERROR_PREFIX=module.bc;stripLegacyPanelWindowSize=module.bd;save=module.X;migrateMarksFavToFavs=module.be;FAVS_STORAGE_KEY=module.bf;createDefaultFavs=module.bg;parseFavsStrict=module.bh;setAppearance=module.bi;applyAppearanceTheme=module.c;getSiteSkinCss=module.a5;loadFavSet=module.bj;STORAGE_BACKUP_KEY=module.bk;extractFavIdsFromMarks=module.bl;gridDensityFeature=module.bm;FAVORITES_SYNC_MODE_INCREMENTAL=module.bn;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bo;getGridFavButtonsEnabled=module.bp;getFeatureChoiceValue=module.bq;getScreenPixelSize=module.br;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
+System.register("./settings-page-CyOa0Slg-C5mWZPWm.js", ['./___monkey.entry.js','./app-Bgw8MjqR-BT__KS5T.js','./autocomplete-DSgnS6yZ-CTyQokkI.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,getFeatureChoice,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ah;a=module.a2;PANEL_UI_CLASS=module.a7;Card=module.ai;SectionLabel=module.aj;Switch=module.ak;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.al;setTweaksEnabled=module.am;NumberField=module.an;UPDATES_GROUP_SIZE_ID=module.ao;setUpdatesGroupSize=module.ap;getUpdatesGroupSize=module.aq;PLAYLIST_CHUNK_SIZE_ID=module.ar;setPlaylistChunkSize=module.as;getPlaylistChunkSize=module.at;GRID_FAV_CHECKBOX_ID=module.au;setGridFavButtonsEnabled=module.av;setGridFavButtonsVisible=module.aw;P=module.ax;T=module.ay;A=module.az;APPEARANCE_THEME_CUSTOM=module.aA;KIT_FOCUS_CSS=module.aB;Select=module.aC;APPEARANCE_THEME_SITE=module.aa;APPEARANCE_THEME_SITE_DARK=module.ab;APPEARANCE_THEME_LIGHT=module.aD;APPEARANCE_THEME_DARK=module.aE;$=module.a6;Segmented=module.aF;APPEARANCE_CUSTOM_BASE_LIGHT=module.aG;APPEARANCE_CUSTOM_BASE_DARK=module.aH;TextField=module.aI;Button=module.aJ;clampBackgroundDim=module.aK;FEATURES=module.aL;featurePanelLabel=module.aM;FEATURE_CHECKBOX_ID_PREFIX=module.aN;setFeatureEnabled=module.aO;applyCssOnlyFeatureEnabled=module.aP;isFeatureEnabled=module.aQ;FEATURE_CHOICE_ID_PREFIX=module.aR;setFeatureChoiceValue=module.aS;applyCssOnlyFeatureChoice=module.aT;getFeatureChoice=module.aU;b=module.aV;Chip=module.aW;readSiteBlacklist=module.aX;AutocompleteField=module.aY;ProgressBar=module.aZ;createDefaultCustomTheme=module.a_;AppearanceThemeSchema=module.a$;getAppearance=module.g;prepareBackgroundImageFile=module.b0;writeSiteBlacklist=module.b1;runFavoritesSync=module.w;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.b2;load=module.b3;createDefaultStorage=module.b4;clearStorageCache=module.b5;clearFavsCache=module.b6;getSyncState=module.u;object=module.b7;StorageSchema=module.b8;optional=module.b9;string=module.ba;FavsSchema=module.bb;literal=module.bc;IMPORT_SCHEMA_ERROR_PREFIX=module.bd;stripLegacyPanelWindowSize=module.be;save=module.X;migrateMarksFavToFavs=module.bf;FAVS_STORAGE_KEY=module.bg;createDefaultFavs=module.bh;parseFavsStrict=module.bi;setAppearance=module.bj;applyAppearanceTheme=module.c;getSiteSkinCss=module.a5;loadFavSet=module.bk;STORAGE_BACKUP_KEY=module.bl;extractFavIdsFromMarks=module.bm;gridDensityFeature=module.bn;FAVORITES_SYNC_MODE_INCREMENTAL=module.bo;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bp;getGridFavButtonsEnabled=module.bq;getFeatureChoiceValue=module.br;getScreenPixelSize=module.bs;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
 var THEME_OPTIONS = [
 	{
 		value: APPEARANCE_THEME_SITE,
@@ -15502,7 +15954,7 @@ function SettingsPage() {
 		]
 	});
 }})}}));
-System.register("./collections-page-CxgkltcO-DsoYi2t2.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ag;listPlaylists=module.bs;readTagsFromLocation=module.bt;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;SectionLabel=module.ai;addCollection=module.bu;$=module.a6;Button=module.aI;UI_TEXT=module.U;serialize=module.bv;renameCollection=module.bw;deleteCollection=module.bx;buildSearchUrl=module.by;createPlaylist=module.bz;EmptyState=module.bA;buildPlaylistQueries=module.bB;getPlaylistChunkSize=module.as;buildUpdatesSearchUrl=module.bC;load=module.b2;isPlaylist=module.bD;A=module.ay;TextField=module.aH;IconButton=module.bE;IconTrash=module.bF;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
+System.register("./collections-page-D63diUPv-CrlxDMuM.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ah;listPlaylists=module.bt;readTagsFromLocation=module.bu;a=module.a2;Card=module.ai;PANEL_UI_CLASS=module.a7;SectionLabel=module.aj;addCollection=module.bv;$=module.a6;Button=module.aJ;UI_TEXT=module.U;serialize=module.bw;renameCollection=module.bx;deleteCollection=module.by;buildSearchUrl=module.bz;createPlaylist=module.bA;EmptyState=module.bB;buildPlaylistQueries=module.bC;getPlaylistChunkSize=module.at;buildUpdatesSearchUrl=module.bD;load=module.b3;isPlaylist=module.bE;A=module.az;TextField=module.aI;IconButton=module.bF;IconTrash=module.bG;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
 var PLAYLIST_META_CLASS = "rdw-playlist-meta";
 var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
 var PLAYLIST_PART_CLASS = "rdw-playlist-part";
@@ -15875,7 +16327,7 @@ function CollectionsPage() {
 		})]
 	})] });
 }})}}));
-System.register("./following-page-DdL5SnRY-_FiQaA7g.js", ['./___monkey.entry.js','./autocomplete-DLd-F3P0-CaNhSgM3.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ag;T=module.ax;A=module.ay;getSeenPostId=module.bG;a=module.a2;Card=module.ah;PANEL_UI_CLASS=module.a7;UI_TEXT=module.U;$=module.a6;EmptyState=module.bA;ARTISTS_EMPTY_HINT=module.bH;ARTISTS_EMPTY_TITLE=module.bI;Button=module.aI;SEARCH_PATH=module.a1;SEARCH_PARAM_PAGE=module._;SEARCH_PAGE=module.bJ;SEARCH_SECTION=module.bK;TextField=module.aH;ARTIST_FILTER_LABEL=module.bL;ARTIST_FILTER_ID=module.bM;UNFOLLOWED_PREFIX=module.bN;UNFOLLOW_UNDO_LABEL=module.bO;buildSearchUrl=module.by;TAG_TYPE_INCLUDE=module.bP;IconButton=module.bE;IconX=module.bQ;AutocompleteField=module.aX;normalizeArtistTag=module.n;isFollowingArtist=module.bR;addArtist=module.bS;log=module.l;removeArtist=module.bT;UNFOLLOW_UNDO_MS=module.bU;load=module.b2;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
+System.register("./following-page-CtG_KQU1-DECxbkpG.js", ['./___monkey.entry.js','./autocomplete-DSgnS6yZ-CTyQokkI.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ah;T=module.ay;A=module.az;getSeenPostId=module.bH;a=module.a2;Card=module.ai;PANEL_UI_CLASS=module.a7;UI_TEXT=module.U;$=module.a6;EmptyState=module.bB;ARTISTS_EMPTY_HINT=module.bI;ARTISTS_EMPTY_TITLE=module.bJ;Button=module.aJ;SEARCH_PATH=module.a1;SEARCH_PARAM_PAGE=module._;SEARCH_PAGE=module.bK;SEARCH_SECTION=module.bL;TextField=module.aI;ARTIST_FILTER_LABEL=module.bM;ARTIST_FILTER_ID=module.bN;UNFOLLOWED_PREFIX=module.bO;UNFOLLOW_UNDO_LABEL=module.bP;buildSearchUrl=module.bz;TAG_TYPE_INCLUDE=module.bQ;IconButton=module.bF;IconX=module.bR;AutocompleteField=module.aY;normalizeArtistTag=module.n;isFollowingArtist=module.bS;addArtist=module.bT;log=module.l;removeArtist=module.bU;UNFOLLOW_UNDO_MS=module.bV;load=module.b3;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
 var ADD_INPUT_ID = "rdw-following-add-tag";
 var OPEN_POSTS_LABEL = "Open Posts";
 var OPEN_POSTS_HREF = `${SEARCH_PATH}?${SEARCH_PARAM_PAGE}=${SEARCH_PAGE}&s=${SEARCH_SECTION}`;
@@ -16110,7 +16562,7 @@ function FollowingPage() {
 		})
 	})] });
 }})}}));
-System.register("./autocomplete-DLd-F3P0-CaNhSgM3.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bV;log=module.l;SITE_ORIGIN=module.h;array=module.bW;object=module.b6;optional=module.b8;nullable=module.bX;string=module.b9;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
+System.register("./autocomplete-DSgnS6yZ-CTyQokkI.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bW;log=module.l;SITE_ORIGIN=module.h;array=module.bX;object=module.b7;optional=module.b9;nullable=module.bY;string=module.ba;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
 var AUTOCOMPLETE_TAG_TYPE_ARTIST = exports("A","artist");
 var HTTP_TOO_MANY_REQUESTS = 429;
 var ABORT_ERROR_NAME = "AbortError";

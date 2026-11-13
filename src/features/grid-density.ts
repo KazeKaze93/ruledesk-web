@@ -9,7 +9,7 @@ export const MASONRY_VALUE = "masonry";
 /** List-page host for masonry; favorites has no #post-list so rules do not apply. */
 export const MASONRY_LIST_SCOPE = "#post-list";
 /** minmax() track minimum — keep in sync with masonry-layout column math. */
-export const MASONRY_COLUMN_MIN_PX = 240;
+export const MASONRY_COLUMN_MIN_PX = 170;
 export const MASONRY_COLUMN_GAP_PX = 4;
 export const MASONRY_ROW_UNIT_PX = 4;
 export const MASONRY_ROW_GAP_PX = 0;

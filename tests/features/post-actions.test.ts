@@ -12,27 +12,35 @@ import {
 import { CLASS_COLLECTIONS_BTN } from "../../src/features/post-panel/collections-menu";
 import {
   CLASS_POST_ACTION_BTN,
+  DISPLAY_ADD_NOTE,
+  DISPLAY_EDIT,
+  DISPLAY_RESIZE,
   LABEL_REPORT,
 } from "../../src/features/post-panel/post-actions-list";
 import {
+  CLASS_ACTIONS,
   CLASS_CARD,
-  CLASS_COMMENTS,
   CLASS_COMMENTS_HOST,
   CLASS_FAV,
   CLASS_ICAME,
-  CLASS_ICAME_COUNT,
   CLASS_ORIGINAL,
-  CLASS_SCORE_VALUE,
   CLASS_SOURCE,
   CLASS_STATS,
+  CLASS_TAB_PANEL,
+  CLASS_TABS,
   CLASS_VOTE,
+  POST_PANEL_TAB_CHOICE_ID,
+  POST_PANEL_TAB_COMMENTS,
+  POST_PANEL_TAB_INFO,
   TEXT_COMMENTS,
   TEXT_FAVORITE,
   TEXT_ICAME,
+  TEXT_INFO,
   TEXT_IN_FAVORITES,
   TEXT_ORIGINAL,
+  TEXT_POST,
   TEXT_SCORE_UNKNOWN,
-  TEXT_VOTE_UP,
+  TEXT_VOTE_PREFIX,
 } from "../../src/features/post-panel/post-panel";
 import { POST_COMMENTS_ID } from "../../src/features/post-panel/site-reads";
 import {
@@ -41,7 +49,13 @@ import {
   type FeatureContext,
 } from "../../src/features/types";
 import { addFav, clearFavsCache, isFav } from "../../src/storage/favs";
-import { clearStorageCache, createPlaylist } from "../../src/storage/store";
+import {
+  clearStorageCache,
+  createPlaylist,
+  getFeatureChoiceValue,
+  setFeatureChoiceValue,
+} from "../../src/storage/store";
+import { kitTabId, kitTabPanelId } from "../../src/ui/kit";
 
 const CLASS_PANEL = "rdw-post-actions";
 const CLASS_MODE_WIDE = "rdw-post-actions--wide";
@@ -58,8 +72,10 @@ const PANEL_WIDTH_TOKEN = "360px";
 const PANEL_MIN_WIDTH_TOKEN = "320px";
 const PANEL_MAX_WIDTH_TOKEN = "420px";
 const PANEL_FONT_TOKEN = "13px";
-const PANEL_BUTTON_HEIGHT_TOKEN = "36px";
-const PANEL_GAP_TOKEN = "12px";
+const PANEL_BUTTON_HEIGHT_TOKEN = "34px";
+const PANEL_BUTTON_GAP_TOKEN = "8px";
+const PANEL_BLOCK_GAP_TOKEN = "10px";
+const ORIGINAL_SIZE_TOKEN = "34px";
 
 const memory = new Map<string, unknown>();
 
@@ -462,8 +478,11 @@ describe("postActionsFeature", () => {
     expect(postActionsFeature.css).toContain(PANEL_MAX_WIDTH_TOKEN);
     expect(postActionsFeature.css).toContain(PANEL_FONT_TOKEN);
     expect(postActionsFeature.css).toContain(PANEL_BUTTON_HEIGHT_TOKEN);
-    expect(postActionsFeature.css).toContain(PANEL_GAP_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_BUTTON_GAP_TOKEN);
+    expect(postActionsFeature.css).toContain(PANEL_BLOCK_GAP_TOKEN);
+    expect(postActionsFeature.css).toContain(ORIGINAL_SIZE_TOKEN);
     expect(postActionsFeature.css).not.toContain("220px");
+    expect(postActionsFeature.css).not.toContain("36px");
   });
 
   it("uses sticky max-height and overflow only in wide mode", () => {
@@ -602,12 +621,15 @@ describe("postActionsFeature", () => {
     ).toBe(true);
   });
 
-  it("renders Original from Original image href", () => {
+  it("renders icon-only Original with aria-label and title", () => {
     buildPostDom({ originalHref: "https://example.com/full.png" });
     postActionsFeature.mount(makeCtx());
     const link = document.querySelector(`a.${CLASS_ORIGINAL}`);
     expect(link).not.toBeNull();
-    expect(link?.textContent).toContain(TEXT_ORIGINAL);
+    expect(link?.getAttribute("aria-label")).toBe(TEXT_ORIGINAL);
+    expect(link?.getAttribute("title")).toBe(TEXT_ORIGINAL);
+    expect(link?.textContent?.trim().length ?? 0).toBe(0);
+    expect(link?.querySelector("svg")).not.toBeNull();
     expect(link?.getAttribute("href")).toBe("https://example.com/full.png");
   });
 
@@ -617,16 +639,13 @@ describe("postActionsFeature", () => {
     expect(document.querySelector(`a.${CLASS_ORIGINAL}`)).toBeNull();
   });
 
-  it("shows Score from span#psc{ID} and syncs via MutationObserver", async () => {
+  it("shows Vote N from span#psc{ID} and syncs via MutationObserver", async () => {
     buildPostDom({ score: "14" });
     act(() => {
       postActionsFeature.mount(makeCtx());
     });
-    expect(document.querySelector(`.${CLASS_SCORE_VALUE}`)?.textContent).toBe(
-      "14",
-    );
     expect(document.querySelector(`.${CLASS_VOTE}`)?.textContent).toContain(
-      TEXT_VOTE_UP,
+      `${TEXT_VOTE_PREFIX} 14`,
     );
 
     await act(async () => {
@@ -645,12 +664,12 @@ describe("postActionsFeature", () => {
         setTimeout(resolve, 0);
       });
     });
-    expect(document.querySelector(`.${CLASS_SCORE_VALUE}`)?.textContent).toBe(
-      "99",
+    expect(document.querySelector(`.${CLASS_VOTE}`)?.textContent).toContain(
+      `${TEXT_VOTE_PREFIX} 99`,
     );
   });
 
-  it("vote up updates panel score and #psc{ID}", async () => {
+  it("vote up updates Vote N label and #psc{ID}", async () => {
     buildPostDom({ score: "14" });
     let resolveVote:
       | ((value: {
@@ -685,14 +704,14 @@ describe("postActionsFeature", () => {
     });
 
     await vi.waitFor(() => {
-      expect(
-        document.querySelector(`.${CLASS_SCORE_VALUE}`)?.textContent,
-      ).toBe("21");
+      expect(document.querySelector(`.${CLASS_VOTE}`)?.textContent).toContain(
+        `${TEXT_VOTE_PREFIX} 21`,
+      );
     });
     expect(document.getElementById(`psc${POST_ID}`)?.textContent).toBe("21");
   });
 
-  it("updates Score after successful favorite add with score", async () => {
+  it("updates Vote N after successful favorite add with score", async () => {
     buildPostDom({ score: "14" });
     mockFetchSequence([{ body: ADDFAV_RESPONSE_ADDED }, { body: "21" }]);
     postActionsFeature.mount(makeCtx());
@@ -709,8 +728,8 @@ describe("postActionsFeature", () => {
     expect(document.querySelector(`.${CLASS_FAV}`)?.textContent).toContain(
       TEXT_IN_FAVORITES,
     );
-    expect(document.querySelector(`.${CLASS_SCORE_VALUE}`)?.textContent).toBe(
-      "21",
+    expect(document.querySelector(`.${CLASS_VOTE}`)?.textContent).toContain(
+      `${TEXT_VOTE_PREFIX} 21`,
     );
   });
 
@@ -744,13 +763,14 @@ describe("postActionsFeature", () => {
     ).not.toContain("Source");
   });
 
-  it("renders separate cards and open post-action buttons without More popover", () => {
+  it("uses frameless actions plus one Info card with left-aligned site actions", () => {
     buildPostDom();
     postActionsFeature.mount(makeCtx());
     const panel = actionsPanel();
-    expect(panel?.querySelectorAll(`.${CLASS_CARD}`).length).toBeGreaterThanOrEqual(
-      3,
-    );
+    expect(panel?.querySelector(`.${CLASS_ACTIONS}`)).not.toBeNull();
+    expect(panel?.querySelector(`.${CLASS_ACTIONS}`)?.closest(`.${CLASS_CARD}`)).toBeNull();
+    expect(panel?.querySelectorAll(`.${CLASS_CARD}`)).toHaveLength(1);
+    expect(panel?.textContent).toContain(TEXT_POST);
     expect(document.querySelector(`.${CLASS_MORE_BTN}`)).toBeNull();
     expect(
       document.querySelector('[role="dialog"][aria-label="More post actions"]'),
@@ -758,13 +778,18 @@ describe("postActionsFeature", () => {
 
     const labels = [
       ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
-    ].map((node) => node.textContent);
+    ].map((node) => node.textContent?.replace(/\s+/g, " ").trim());
     expect(labels).toEqual([
-      "Edit",
-      "Resize image",
+      DISPLAY_EDIT,
+      DISPLAY_RESIZE,
       LABEL_REPORT,
-      "Add Note",
+      DISPLAY_ADD_NOTE,
     ]);
+    for (const btn of document.querySelectorAll(
+      `button.${CLASS_POST_ACTION_BTN}`,
+    )) {
+      expect(btn.querySelector("svg")).not.toBeNull();
+    }
   });
 
   it("proxies open post-action buttons via native click", () => {
@@ -781,7 +806,7 @@ describe("postActionsFeature", () => {
     const clickSpy = vi.spyOn(editNative, "click");
     const editButton = [
       ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
-    ].find((node) => node.textContent === "Edit");
+    ].find((node) => node.textContent?.includes(DISPLAY_EDIT));
     editButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(clickSpy).toHaveBeenCalledTimes(1);
   });
@@ -794,30 +819,31 @@ describe("postActionsFeature", () => {
     postActionsFeature.mount(makeCtx());
     const labels = [
       ...document.querySelectorAll(`button.${CLASS_POST_ACTION_BTN}`),
-    ].map((node) => node.textContent);
-    expect(labels).toEqual(["Edit", LABEL_REPORT, "Add Note"]);
-    expect(labels).not.toContain("Resize image");
+    ].map((node) => node.textContent?.replace(/\s+/g, " ").trim());
+    expect(labels).toEqual([DISPLAY_EDIT, LABEL_REPORT, DISPLAY_ADD_NOTE]);
+    expect(labels).not.toContain(DISPLAY_RESIZE);
   });
 
-  it("places I came under Score in the same card", () => {
+  it("places Vote and I came in the frameless actions block", () => {
     buildPostDom({ includeICame: true, iCameCount: "7" });
     postActionsFeature.mount(makeCtx());
-    const scoreValue = document.querySelector(`.${CLASS_SCORE_VALUE}`);
+    const vote = document.querySelector(`.${CLASS_VOTE}`);
     const icame = document.querySelector(`.${CLASS_ICAME}`);
-    expect(scoreValue).not.toBeNull();
+    const actions = document.querySelector(`.${CLASS_ACTIONS}`);
+    expect(vote).not.toBeNull();
     expect(icame).not.toBeNull();
-    expect(scoreValue?.closest(`.${CLASS_CARD}`)).toBe(
-      icame?.closest(`.${CLASS_CARD}`),
-    );
+    expect(actions?.contains(vote)).toBe(true);
+    expect(actions?.contains(icame)).toBe(true);
+    expect(vote?.closest(`.${CLASS_CARD}`)).toBeNull();
   });
 
-  it("renders I came button without count when counter markup is missing", async () => {
+  it("renders I came without a count badge and warns when counter markup is missing", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     buildPostDom({ includeICame: true });
     postActionsFeature.mount(makeCtx());
-    const wrap = document.querySelector(`.${CLASS_ICAME}`);
-    expect(wrap?.textContent).toContain(TEXT_ICAME);
-    expect(document.querySelector(`.${CLASS_ICAME_COUNT}`)).toBeNull();
+    const button = document.querySelector(`.${CLASS_ICAME}`);
+    expect(button?.textContent).toContain(TEXT_ICAME);
+    expect(button?.querySelector("svg")).not.toBeNull();
     await vi.waitFor(() => {
       expect(
         warnSpy.mock.calls.some((call) =>
@@ -826,14 +852,6 @@ describe("postActionsFeature", () => {
       ).toBe(true);
     });
     warnSpy.mockRestore();
-  });
-
-  it("shows I came count when a numeric sibling is present", () => {
-    buildPostDom({ includeICame: true, iCameCount: "7" });
-    postActionsFeature.mount(makeCtx());
-    expect(document.querySelector(`.${CLASS_ICAME_COUNT}`)?.textContent).toBe(
-      "7",
-    );
   });
 
   it("proxies I came click to native a[onclick^=iCame(]", () => {
@@ -847,12 +865,12 @@ describe("postActionsFeature", () => {
     // Avoid invoking the site inline handler (iCame is not defined in jsdom).
     const spy = vi.spyOn(native, "click").mockImplementation(() => {});
     document
-      .querySelector(`.${CLASS_ICAME} button`)
+      .querySelector(`.${CLASS_ICAME}`)
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it("moves native #post-comments into Comments card without cloning", () => {
+  it("moves native #post-comments into Comments tabpanel without cloning", () => {
     const { comments } = buildPostDom({ includeComments: true });
     expect(comments).not.toBeNull();
     if (comments === null) {
@@ -862,8 +880,11 @@ describe("postActionsFeature", () => {
     postActionsFeature.mount(makeCtx());
 
     const host = document.querySelector(`.${CLASS_COMMENTS_HOST}`);
-    const card = document.querySelector(`.${CLASS_COMMENTS}`);
-    expect(card?.textContent).toContain(TEXT_COMMENTS);
+    const commentsTab = document.getElementById(
+      kitTabId(POST_PANEL_TAB_COMMENTS),
+    );
+    expect(commentsTab?.textContent).toBe(`${TEXT_COMMENTS} · 1`);
+    expect(document.querySelector(`.${CLASS_TABS}`)).not.toBeNull();
     expect(host?.contains(comments)).toBe(true);
     expect(document.querySelectorAll(`#${POST_COMMENTS_ID}`)).toHaveLength(1);
     expect(comments.querySelector("#comment-list")).toBe(list);
@@ -921,11 +942,105 @@ describe("postActionsFeature", () => {
     const panel = actionsPanel();
     expect(panel).not.toBeNull();
     expect(panel?.querySelector(`.${CLASS_FAV}`)).not.toBeNull();
-    expect(panel?.querySelector(`.${CLASS_VOTE}`)).not.toBeNull();
-    expect(panel?.querySelector(`a.${CLASS_ORIGINAL}`)).toBeNull();
-    expect(panel?.querySelector(`.${CLASS_SCORE_VALUE}`)?.textContent).toBe(
-      TEXT_SCORE_UNKNOWN,
+    expect(panel?.querySelector(`.${CLASS_VOTE}`)?.textContent).toContain(
+      `${TEXT_VOTE_PREFIX} ${TEXT_SCORE_UNKNOWN}`,
     );
+    expect(panel?.querySelector(`a.${CLASS_ORIGINAL}`)).toBeNull();
+    expect(panel?.querySelector(`.${CLASS_CARD}`)).toBeNull();
+  });
+
+  it("Favorite stays primary with accent fill in both states", () => {
+    buildPostDom();
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document.querySelector(`.${CLASS_FAV}`)?.classList.contains("rdw-btn--primary"),
+    ).toBe(true);
+
+    document.body.replaceChildren();
+    addFav(POST_ID);
+    buildPostDom();
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document.querySelector(`.${CLASS_FAV}`)?.classList.contains("rdw-btn--primary"),
+    ).toBe(true);
+    expect(document.querySelector(`.${CLASS_FAV}`)?.textContent).toContain(
+      TEXT_IN_FAVORITES,
+    );
+  });
+
+  it("labels Comments tab with count from #comment-list and falls back without it", () => {
+    buildPostDom({ includeComments: true });
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document.getElementById(kitTabId(POST_PANEL_TAB_COMMENTS))?.textContent,
+    ).toBe(`${TEXT_COMMENTS} · 1`);
+
+    document.body.replaceChildren();
+    const { comments } = buildPostDom({ includeComments: true });
+    const list = comments?.querySelector("#comment-list");
+    if (list !== null && list !== undefined) {
+      list.replaceChildren();
+      list.append("No count here");
+    }
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document.getElementById(kitTabId(POST_PANEL_TAB_COMMENTS))?.textContent,
+    ).toBe(TEXT_COMMENTS);
+  });
+
+  it("remembers selected Info/Comments tab in featureChoice", async () => {
+    buildPostDom({ includeComments: true });
+    postActionsFeature.mount(makeCtx());
+
+    const infoPanel = document.getElementById(
+      kitTabPanelId(POST_PANEL_TAB_INFO),
+    );
+    const commentsPanel = document.getElementById(
+      kitTabPanelId(POST_PANEL_TAB_COMMENTS),
+    );
+    expect(infoPanel?.hasAttribute("hidden")).toBe(false);
+    expect(commentsPanel?.hasAttribute("hidden")).toBe(true);
+    expect(document.querySelector(`.${CLASS_TAB_PANEL}`)).not.toBeNull();
+    expect(document.querySelector(`[role="tablist"].${CLASS_TABS}`)).not.toBeNull();
+    expect(
+      document.getElementById(kitTabId(POST_PANEL_TAB_INFO))?.textContent,
+    ).toBe(TEXT_INFO);
+
+    document
+      .getElementById(kitTabId(POST_PANEL_TAB_COMMENTS))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(() => {
+      expect(getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID)).toBe(
+        POST_PANEL_TAB_COMMENTS,
+      );
+    });
+    expect(commentsPanel?.hasAttribute("hidden")).toBe(false);
+    expect(infoPanel?.hasAttribute("hidden")).toBe(true);
+
+    document.body.replaceChildren();
+    buildPostDom({ includeComments: true });
+    postActionsFeature.mount(makeCtx());
+    expect(
+      document
+        .getElementById(kitTabPanelId(POST_PANEL_TAB_COMMENTS))
+        ?.hasAttribute("hidden"),
+    ).toBe(false);
+    expect(
+      document
+        .getElementById(kitTabId(POST_PANEL_TAB_COMMENTS))
+        ?.getAttribute("aria-selected"),
+    ).toBe("true");
+  });
+
+  it("falls back to Info when stored Comments tab has no comments block", () => {
+    setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, POST_PANEL_TAB_COMMENTS);
+    buildPostDom();
+    postActionsFeature.mount(makeCtx());
+    expect(document.querySelector(`.${CLASS_TABS}`)).toBeNull();
+    expect(
+      document.getElementById(kitTabPanelId(POST_PANEL_TAB_INFO)),
+    ).not.toBeNull();
   });
 
   it("replaces an existing panel on remount", () => {

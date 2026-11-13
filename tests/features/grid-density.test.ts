@@ -54,12 +54,15 @@ describe("gridDensityFeature", () => {
     const masonryThumb = `body.${masonryClass} #post-list span.thumb`;
     const masonryPreview = `body.${masonryClass} #post-list span.thumb img.preview`;
 
+    const expectedColumnMinPx = 170;
+    expect(MASONRY_COLUMN_MIN_PX).toBe(expectedColumnMinPx);
     expect(css).toContain(masonryList);
     expect(css).toContain("display: grid !important");
     expect(css).toContain("width: 100% !important");
     expect(css).toContain(
       `grid-template-columns: repeat(auto-fill, minmax(${MASONRY_COLUMN_MIN_PX}px, 1fr)) !important`,
     );
+    expect(css).toContain(`minmax(${expectedColumnMinPx}px, 1fr)`);
     expect(css).toContain(
       `grid-auto-rows: ${MASONRY_ROW_UNIT_PX}px !important`,
     );

@@ -15,6 +15,19 @@ export type TabsProps = {
   readonly "aria-label"?: string;
 };
 
+const TAB_ID_PREFIX = "rdw-tab-";
+const TAB_PANEL_ID_PREFIX = "rdw-tabpanel-";
+const KEY_ARROW_RIGHT = "ArrowRight";
+const KEY_ARROW_LEFT = "ArrowLeft";
+
+export function kitTabId(id: string): string {
+  return `${TAB_ID_PREFIX}${id}`;
+}
+
+export function kitTabPanelId(id: string): string {
+  return `${TAB_PANEL_ID_PREFIX}${id}`;
+}
+
 export const TABS_CSS = `
 ${KIT_FOCUS_CSS}
 .rdw-tabs {
@@ -63,15 +76,19 @@ export function Tabs(props: TabsProps): JSX.Element {
               key={item.id}
               type="button"
               role="tab"
-              id={`rdw-tab-${item.id}`}
+              id={kitTabId(item.id)}
               className="rdw-tabs__tab rdw-kit-focusable"
               aria-selected={selected}
+              aria-controls={kitTabPanelId(item.id)}
               tabIndex={selected ? 0 : -1}
               onClick={() => {
                 props.onChange(item.id);
               }}
               onKeyDown={(event) => {
-                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                if (
+                  event.key !== KEY_ARROW_RIGHT &&
+                  event.key !== KEY_ARROW_LEFT
+                ) {
                   return;
                 }
                 event.preventDefault();
@@ -81,13 +98,19 @@ export function Tabs(props: TabsProps): JSX.Element {
                 if (index < 0) {
                   return;
                 }
-                const delta = event.key === "ArrowRight" ? 1 : -1;
+                const delta = event.key === KEY_ARROW_RIGHT ? 1 : -1;
                 const next =
                   props.items[
                     (index + delta + props.items.length) % props.items.length
                   ];
-                if (next !== undefined) {
-                  props.onChange(next.id);
+                if (next === undefined) {
+                  return;
+                }
+                props.onChange(next.id);
+                const list = event.currentTarget.parentElement;
+                const nextTab = list?.querySelector(`#${kitTabId(next.id)}`);
+                if (nextTab instanceof HTMLElement) {
+                  nextTab.focus();
                 }
               }}
             >

@@ -50,7 +50,14 @@ export {
   type SelectProps,
 } from "./select";
 export { Switch, SWITCH_CSS, type SwitchProps } from "./switch";
-export { Tabs, TABS_CSS, type TabItem, type TabsProps } from "./tabs";
+export {
+  Tabs,
+  TABS_CSS,
+  kitTabId,
+  kitTabPanelId,
+  type TabItem,
+  type TabsProps,
+} from "./tabs";
 export {
   TextField,
   TEXT_FIELD_CSS,

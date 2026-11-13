@@ -1,17 +1,33 @@
 import type { JSX } from "preact";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 
 import { UI_TEXT } from "../../config/constants";
 import { log } from "../../log";
 import { addFavorite, removeFavorite, voteUp } from "../../site/favorites";
 import { addFav, isFav, removeFav } from "../../storage/favs";
 import {
+  getFeatureChoiceValue,
+  setFeatureChoiceValue,
+} from "../../storage/store";
+import {
   Button,
   Card,
+  IconArrowUp,
+  IconDroplet,
   IconExternalLink,
   IconStar,
   IconStarFilled,
   SectionLabel,
+  Tabs,
+  kitTabId,
+  kitTabPanelId,
 } from "../../ui/kit";
 import { CollectionsMenu } from "./collections-menu";
 import { PostActionsList } from "./post-actions-list";
@@ -22,6 +38,7 @@ import {
   findOriginalAnchor,
   findPostComments,
   observeScoreSpan,
+  readCommentCount,
   readScoreText,
   readStatRows,
   writeScoreText,
@@ -30,36 +47,48 @@ import {
   type StatRow,
 } from "./site-reads";
 
+/** `settings.featureChoice[POST_PANEL_TAB_CHOICE_ID]` values. */
+export const POST_PANEL_TAB_CHOICE_ID = "post-actions";
+export const POST_PANEL_TAB_INFO = "info";
+export const POST_PANEL_TAB_COMMENTS = "comments";
+
 const TEXT_FAVORITE = "Favorite";
 const TEXT_IN_FAVORITES = "In favorites";
 const TEXT_ORIGINAL = "Original";
-const TEXT_SCORE = "Score";
-const TEXT_VOTE_UP = "Vote up";
+const TEXT_VOTE_PREFIX = "Vote";
 const TEXT_SCORE_UNKNOWN = "—";
 const TEXT_ICAME = "I came";
 const TEXT_COMMENTS = "Comments";
-const LABEL_ORIGINAL = "Open original image";
-const LABEL_VOTE_UP = "Vote up";
+const TEXT_INFO = "Info";
+const TEXT_POST = "Post";
+const TEXT_COMMENTS_COUNTED_SEP = " · ";
+const LABEL_ORIGINAL = "Original";
+const LABEL_VOTE = "Vote";
 const LABEL_ICAME = "I came";
+const ARIA_PANEL_TABS = "Post details";
 const WARN_ICAME_COUNT =
   "post-actions: I came counter — нужна разметка";
+
+const ICON_SIZE = 14;
+const ORIGINAL_ICON_SIZE = 14;
 
 const CLASS_ROOT = "rdw-post-panel";
 const CLASS_CARD = "rdw-post-panel-card";
 const CLASS_ACTIONS = "rdw-post-panel-actions";
+const CLASS_ACTIONS_ROW = "rdw-post-panel-actions-row";
 const CLASS_FAV = "rdw-post-panel-fav";
 const CLASS_ORIGINAL = "rdw-post-panel-original";
-const CLASS_SCORE = "rdw-post-panel-score";
-const CLASS_SCORE_VALUE = "rdw-post-panel-score-value";
 const CLASS_VOTE = "rdw-post-panel-vote";
 const CLASS_STATS = "rdw-post-panel-stats";
 const CLASS_STAT_LABEL = "rdw-post-panel-stat-label";
 const CLASS_STAT_VALUE = "rdw-post-panel-stat-value";
 const CLASS_SOURCE = "rdw-post-panel-source";
 const CLASS_ICAME = "rdw-post-panel-icame";
-const CLASS_ICAME_COUNT = "rdw-post-panel-icame-count";
 const CLASS_COMMENTS = "rdw-post-panel-comments";
 const CLASS_COMMENTS_HOST = "rdw-post-panel-comments-host";
+const CLASS_INFO = "rdw-post-panel-info";
+const CLASS_TABS = "rdw-post-panel-tabs";
+const CLASS_TAB_PANEL = "rdw-post-panel-tabpanel";
 
 export type PostPanelProps = {
   readonly postId: string | null;
@@ -75,6 +104,28 @@ function parseNumericPostId(postId: string | null): number | null {
   }
   const truncated = Math.trunc(parsed);
   return truncated < 0 ? null : truncated;
+}
+
+function voteLabel(scoreText: string): string {
+  return `${TEXT_VOTE_PREFIX} ${scoreText}`;
+}
+
+function commentsTabLabel(count: number | null): string {
+  if (count === null) {
+    return TEXT_COMMENTS;
+  }
+  return `${TEXT_COMMENTS}${TEXT_COMMENTS_COUNTED_SEP}${String(count)}`;
+}
+
+function readStoredTab(): string {
+  const stored = getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID);
+  if (
+    stored === POST_PANEL_TAB_INFO ||
+    stored === POST_PANEL_TAB_COMMENTS
+  ) {
+    return stored;
+  }
+  return POST_PANEL_TAB_INFO;
 }
 
 export function PostPanel(props: PostPanelProps): JSX.Element {
@@ -98,6 +149,16 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
   });
   const [iCame] = useState<ICameTarget | null>(() => findICameTarget());
   const [hasComments] = useState(() => findPostComments() !== null);
+  const [commentCount] = useState<number | null>(() =>
+    hasComments ? readCommentCount() : null,
+  );
+  const [activeTab, setActiveTab] = useState(() => {
+    const stored = readStoredTab();
+    if (stored === POST_PANEL_TAB_COMMENTS && !hasComments) {
+      return POST_PANEL_TAB_INFO;
+    }
+    return stored;
+  });
 
   useEffect(() => {
     if (props.postId === null) {
@@ -170,114 +231,172 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
     iCame?.anchor.click();
   }, [iCame]);
 
-  const showScoreCard = props.postId !== null || iCame !== null;
+  const onTabChange = useCallback((id: string): void => {
+    setActiveTab(id);
+    setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, id);
+  }, []);
+
+  const tabItems = useMemo(() => {
+    const items = [{ id: POST_PANEL_TAB_INFO, label: TEXT_INFO }];
+    if (hasComments) {
+      items.push({
+        id: POST_PANEL_TAB_COMMENTS,
+        label: commentsTabLabel(commentCount),
+      });
+    }
+    return items;
+  }, [commentCount, hasComments]);
+
+  const showInfoCard =
+    stats.length > 0 || moreLinks.length > 0 || hasComments;
+  const showActionsRow2 =
+    props.postId !== null || iCame !== null || originalHref !== null;
 
   return (
     <div className={CLASS_ROOT}>
-      <Card className={CLASS_CARD} as="section">
-        <div className={CLASS_ACTIONS}>
-          {props.postId !== null ? (
-            <Button
-              variant={favorited ? "primary" : "secondary"}
-              size="m"
-              className={CLASS_FAV}
-              loading={favPending}
-              aria-label={
-                favorited
-                  ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}`
-                  : `${UI_TEXT.cardFavAddLabel} ${props.postId}`
-              }
-              onClick={() => {
-                void onFavClick();
-              }}
-            >
-              {favorited ? (
-                <IconStarFilled size={14} />
-              ) : (
-                <IconStar size={14} />
-              )}
-              {favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE}
-            </Button>
-          ) : null}
+      <div className={CLASS_ACTIONS}>
+        {props.postId !== null || numericId !== null ? (
+          <div className={CLASS_ACTIONS_ROW}>
+            {props.postId !== null ? (
+              <Button
+                variant="primary"
+                size="m"
+                className={CLASS_FAV}
+                loading={favPending}
+                aria-label={
+                  favorited
+                    ? `${UI_TEXT.cardFavRemoveLabel} ${props.postId}`
+                    : `${UI_TEXT.cardFavAddLabel} ${props.postId}`
+                }
+                onClick={() => {
+                  void onFavClick();
+                }}
+              >
+                {favorited ? (
+                  <IconStarFilled size={ICON_SIZE} />
+                ) : (
+                  <IconStar size={ICON_SIZE} />
+                )}
+                {favorited ? TEXT_IN_FAVORITES : TEXT_FAVORITE}
+              </Button>
+            ) : null}
+            {numericId !== null ? (
+              <CollectionsMenu postId={numericId} />
+            ) : null}
+          </div>
+        ) : null}
 
-          {numericId !== null ? <CollectionsMenu postId={numericId} /> : null}
-
-          {originalHref !== null ? (
-            <a
-              className={CLASS_ORIGINAL}
-              href={originalHref}
-              target="_blank"
-              rel="noopener"
-              aria-label={LABEL_ORIGINAL}
-            >
-              {TEXT_ORIGINAL}
-              <IconExternalLink size={12} />
-            </a>
-          ) : null}
-        </div>
-      </Card>
-
-      {showScoreCard ? (
-        <Card className={CLASS_CARD} as="section">
-          {props.postId !== null ? (
-            <div className={CLASS_SCORE}>
-              <div>
-                <SectionLabel>{TEXT_SCORE}</SectionLabel>
-                <b className={CLASS_SCORE_VALUE}>{scoreText}</b>
-              </div>
+        {showActionsRow2 ? (
+          <div className={CLASS_ACTIONS_ROW}>
+            {props.postId !== null ? (
               <Button
                 variant="secondary"
                 size="m"
                 className={CLASS_VOTE}
                 loading={votePending}
-                aria-label={LABEL_VOTE_UP}
+                aria-label={LABEL_VOTE}
                 onClick={() => {
                   void onVoteClick();
                 }}
               >
-                {TEXT_VOTE_UP}
+                <IconArrowUp size={ICON_SIZE} />
+                {voteLabel(scoreText)}
               </Button>
-            </div>
-          ) : null}
+            ) : null}
 
-          {iCame !== null ? (
-            <div className={CLASS_ICAME}>
+            {iCame !== null ? (
               <Button
                 variant="secondary"
                 size="m"
+                className={CLASS_ICAME}
                 aria-label={LABEL_ICAME}
                 onClick={onICameClick}
               >
+                <IconDroplet size={ICON_SIZE} />
                 {TEXT_ICAME}
               </Button>
-              {iCame.count !== null ? (
-                <span className={CLASS_ICAME_COUNT}>{iCame.count}</span>
-              ) : null}
+            ) : null}
+
+            {originalHref !== null ? (
+              <a
+                className={CLASS_ORIGINAL}
+                href={originalHref}
+                target="_blank"
+                rel="noopener"
+                aria-label={LABEL_ORIGINAL}
+                title={LABEL_ORIGINAL}
+              >
+                <IconExternalLink size={ORIGINAL_ICON_SIZE} />
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {showInfoCard ? (
+        <Card className={CLASS_CARD} as="section">
+          {hasComments ? (
+            <Tabs
+              className={CLASS_TABS}
+              aria-label={ARIA_PANEL_TABS}
+              items={tabItems}
+              value={activeTab}
+              onChange={onTabChange}
+            />
+          ) : null}
+
+          <div
+            className={CLASS_TAB_PANEL}
+            role="tabpanel"
+            id={kitTabPanelId(POST_PANEL_TAB_INFO)}
+            aria-labelledby={kitTabId(POST_PANEL_TAB_INFO)}
+            hidden={hasComments && activeTab !== POST_PANEL_TAB_INFO}
+          >
+            <InfoPanel stats={stats} moreLinks={moreLinks} />
+          </div>
+
+          {hasComments ? (
+            <div
+              className={`${CLASS_TAB_PANEL} ${CLASS_COMMENTS}`}
+              role="tabpanel"
+              id={kitTabPanelId(POST_PANEL_TAB_COMMENTS)}
+              aria-labelledby={kitTabId(POST_PANEL_TAB_COMMENTS)}
+              hidden={activeTab !== POST_PANEL_TAB_COMMENTS}
+            >
+              <CommentsHost />
             </div>
           ) : null}
         </Card>
       ) : null}
-
-      {moreLinks.length > 0 ? (
-        <Card className={CLASS_CARD} as="section">
-          <PostActionsList links={moreLinks} />
-        </Card>
-      ) : null}
-
-      {stats.length > 0 ? (
-        <Card className={`${CLASS_CARD} ${CLASS_STATS}`} as="section">
-          {stats.map((row) => (
-            <StatRowView key={row.label} row={row} />
-          ))}
-        </Card>
-      ) : null}
-
-      {hasComments ? <CommentsCard /> : null}
     </div>
   );
 }
 
-function CommentsCard(): JSX.Element {
+function InfoPanel(props: {
+  readonly stats: readonly StatRow[];
+  readonly moreLinks: readonly MoreLink[];
+}): JSX.Element {
+  return (
+    <div className={CLASS_INFO}>
+      {props.stats.length > 0 ? (
+        <div className={CLASS_STATS}>
+          {props.stats.map((row) => (
+            <StatRowView key={row.label} row={row} />
+          ))}
+        </div>
+      ) : null}
+
+      {props.moreLinks.length > 0 ? (
+        <>
+          <SectionLabel>{TEXT_POST}</SectionLabel>
+          <PostActionsList links={props.moreLinks} />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function CommentsHost(): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -302,12 +421,7 @@ function CommentsCard(): JSX.Element {
     };
   }, []);
 
-  return (
-    <Card className={`${CLASS_CARD} ${CLASS_COMMENTS}`} as="section">
-      <SectionLabel>{TEXT_COMMENTS}</SectionLabel>
-      <div className={CLASS_COMMENTS_HOST} ref={hostRef} />
-    </Card>
-  );
+  return <div className={CLASS_COMMENTS_HOST} ref={hostRef} />;
 }
 
 function StatRowView(props: { readonly row: StatRow }): JSX.Element {
@@ -338,21 +452,26 @@ function StatRowView(props: { readonly row: StatRow }): JSX.Element {
 export {
   CLASS_ROOT,
   CLASS_CARD,
+  CLASS_ACTIONS,
+  CLASS_ACTIONS_ROW,
   CLASS_FAV,
   CLASS_ORIGINAL,
-  CLASS_SCORE_VALUE,
   CLASS_VOTE,
   CLASS_STATS,
   CLASS_ICAME,
-  CLASS_ICAME_COUNT,
   CLASS_SOURCE,
   CLASS_COMMENTS,
   CLASS_COMMENTS_HOST,
+  CLASS_INFO,
+  CLASS_TABS,
+  CLASS_TAB_PANEL,
   TEXT_FAVORITE,
   TEXT_IN_FAVORITES,
   TEXT_ORIGINAL,
-  TEXT_VOTE_UP,
+  TEXT_VOTE_PREFIX,
   TEXT_ICAME,
   TEXT_COMMENTS,
+  TEXT_INFO,
+  TEXT_POST,
   TEXT_SCORE_UNKNOWN,
 };

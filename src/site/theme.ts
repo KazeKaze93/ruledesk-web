@@ -48,21 +48,26 @@ export function clearSiteThemeCookie(): void {
   ].join("; ");
 }
 
-/**
- * Match site desktop CSS hrefs without URL-parsing.
- * `//css/desktop.css` is protocol-relative with host `css`; `new URL` yields
- * pathname `/desktop.css` and misses `/css/desktop.css` suffix checks.
- */
-function hrefWithoutQuery(href: string): string {
-  const queryIndex = href.indexOf("?");
-  return queryIndex === -1 ? href : href.slice(0, queryIndex);
+/** Collapse `//` (and longer) runs in a pathname so `/css/...` comparisons work. */
+const REPEATED_PATH_SLASHES = /\/{2,}/g;
+
+function collapsePathSlashes(pathname: string): string {
+  return pathname.replace(REPEATED_PATH_SLASHES, "/");
 }
 
+/**
+ * Match site desktop CSS hrefs via URL pathname (query ignored).
+ * Production uses absolute hrefs with a doubled slash (`…xxx//css/desktop.css?46`);
+ * collapsing repeated path slashes makes that equal `/css/desktop.css`.
+ */
 function isSiteDesktopStylesheetHref(href: string): boolean {
-  const path = hrefWithoutQuery(href);
-  return (
-    path.endsWith(LIGHT_STYLESHEET_PATH) || path.endsWith(DARK_STYLESHEET_PATH)
-  );
+  try {
+    const url = new URL(href, location.href);
+    const path = collapsePathSlashes(url.pathname);
+    return path === LIGHT_STYLESHEET_PATH || path === DARK_STYLESHEET_PATH;
+  } catch {
+    return false;
+  }
 }
 
 function stylesheetFilenameForTheme(theme: SiteTheme): string {

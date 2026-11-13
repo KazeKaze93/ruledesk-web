@@ -28,7 +28,7 @@ export const VIDEO_PREVIEW_SETTING_CAPTION =
   "Each preview loads the video file itself.";
 
 const FEATURE_PAGES = ["list", "favorites"] as const;
-const HOVER_DELAY_MS = 400;
+const HOVER_DELAY_MS = 200;
 const VIDEO_CLASS = "rdw-video-preview";
 const WEBM_PREVIEW_SELECTOR = "img.preview.webm-thumb";
 const VIDEO_Z_INDEX = 3;
