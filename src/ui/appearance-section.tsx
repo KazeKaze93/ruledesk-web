@@ -60,7 +60,6 @@ const GRID_OPTIONS: readonly SelectOption[] = [
   { value: "default", label: "Default" },
   { value: "compact", label: "Compact" },
   { value: "large", label: "Large" },
-  { value: "masonry", label: "Masonry" },
 ];
 
 const BASE_OPTIONS: readonly SegmentedOption[] = [

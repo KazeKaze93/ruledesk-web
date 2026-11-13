@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.15.0
+// @version      0.15.1
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -14,30 +14,30 @@
 !function(){function e(e,t){return(t||"")+" (SystemJS Error#"+e+" https://github.com/systemjs/systemjs/blob/main/docs/errors.md#"+e+")"}function t(e,t){if(-1!==e.indexOf("\\")&&(e=e.replace(j,"/")),"/"===e[0]&&"/"===e[1])return t.slice(0,t.indexOf(":")+1)+e;if("."===e[0]&&("/"===e[1]||"."===e[1]&&("/"===e[2]||2===e.length&&(e+="/"))||1===e.length&&(e+="/"))||"/"===e[0]){var n,r=t.slice(0,t.indexOf(":")+1);if(n="/"===t[r.length+1]?"file:"!==r?(n=t.slice(r.length+2)).slice(n.indexOf("/")+1):t.slice(8):t.slice(r.length+("/"===t[r.length])),"/"===e[0])return t.slice(0,t.length-n.length-1)+e;for(var i=n.slice(0,n.lastIndexOf("/")+1)+e,o=[],s=-1,u=0;u<i.length;u++)-1!==s?"/"===i[u]&&(o.push(i.slice(s,u+1)),s=-1):"."===i[u]?"."!==i[u+1]||"/"!==i[u+2]&&u+2!==i.length?"/"===i[u+1]||u+1===i.length?u+=1:s=u:(o.pop(),u+=2):s=u;return-1!==s&&o.push(i.slice(s)),t.slice(0,t.length-n.length)+o.join("")}}function n(e,n){return t(e,n)||(-1!==e.indexOf(":")?e:t("./"+e,n))}function r(e,n,r,i,o){for(var s in e){var a=t(s,r)||s,f=e[s];if("string"==typeof f){var l=c(i,t(f,r)||f,o);l?n[a]=l:u("W1",s,f,"bare specifier did not resolve")}}}function i(e,t,i){var o;for(o in e.imports&&r(e.imports,i.imports,t,i,null),e.scopes||{}){var s=n(o,t);r(e.scopes[o],i.scopes[s]||(i.scopes[s]={}),t,i,s)}for(o in e.depcache||{})i.depcache[n(o,t)]=e.depcache[o];for(o in e.integrity||{})i.integrity[n(o,t)]=e.integrity[o]}function o(e,t){if(t[e])return e;var n=e.length;do{var r=e.slice(0,n+1);if(r in t)return r}while(-1!==(n=e.lastIndexOf("/",n-1)))}function s(e,t){var n=o(e,t);if(n){var r=t[n];if(null===r)return;if(!(e.length>n.length&&"/"!==r[r.length-1]))return r+e.slice(n.length);u("W2",n,r,"should have a trailing '/'")}}function u(t,n,r,i){console.warn(e(t,"Package target "+i+", resolving target '"+r+"' for "+n))}function c(e,t,n){for(var r=e.scopes,i=n&&o(n,r);i;){var u=s(t,r[i]);if(u)return u;i=o(i.slice(0,i.lastIndexOf("/")),r)}return s(t,e.imports)||-1!==t.indexOf(":")&&t}function a(){this[M]={}}function f(e){return e.id}function l(e,t,n,r){if(e.onload(n,t.id,t.d&&t.d.map(f),!!r),n)throw n}function d(t,n,r,i){var o=t[M][n];if(o)return o;var s=[],u=Object.create(null);P&&Object.defineProperty(u,P,{value:"Module"});var c=Promise.resolve().then((function(){return t.instantiate(n,r,i)})).then((function(r){if(!r)throw Error(e(2,"Module "+n+" did not instantiate"));var i=r[1]((function(e,t){o.h=!0;var n=!1;if("string"==typeof e)e in u&&u[e]===t||(u[e]=t,n=!0);else{for(var r in e)t=e[r],r in u&&u[r]===t||(u[r]=t,n=!0);e&&e.__esModule&&(u.__esModule=e.__esModule)}if(n)for(var i=0;i<s.length;i++){var c=s[i];c&&c(u)}return t}),2===r[1].length?{import:function(e,r){return t.import(e,n,r)},meta:t.createContext(n)}:void 0);return o.e=i.execute||function(){},[r[0],i.setters||[],r[2]||[]]}),(function(e){throw o.e=null,o.er=e,l(t,o,e,!0),e})),a=c.then((function(e){return Promise.all(e[0].map((function(r,i){var o=e[1][i],s=e[2][i];return Promise.resolve(t.resolve(r,n)).then((function(e){var r=d(t,e,n,s);return Promise.resolve(r.I).then((function(){return o&&(r.i.push(o),!r.h&&r.I||o(r.n)),r}))}))}))).then((function(e){o.d=e}))}));return o=t[M][n]={id:n,i:s,n:u,m:i,I:c,L:a,h:!1,d:void 0,e:void 0,er:void 0,E:void 0,C:void 0,p:void 0}}function h(e,t,n,r){if(!r[t.id])return r[t.id]=!0,Promise.resolve(t.L).then((function(){return t.p&&null!==t.p.e||(t.p=n),Promise.all(t.d.map((function(t){return h(e,t,n,r)})))})).catch((function(n){if(t.er)throw n;throw t.e=null,l(e,t,n,!1),n}))}function p(e,t){return t.C=h(e,t,t,{}).then((function(){return v(e,t,{})})).then((function(){return t.n}))}function v(e,t,n){function r(){try{var n=o.call(L);if(n)return n=n.then((function(){t.C=t.n,t.E=null,l(e,t,null,!0)}),(function(n){throw t.er=n,t.E=null,l(e,t,n,!0),n})),t.E=n;t.C=t.n,t.L=t.I=void 0}catch(r){throw t.er=r,r}finally{l(e,t,t.er,!0)}}if(!n[t.id]){if(n[t.id]=!0,!t.e){if(t.er)throw t.er;return t.E?t.E:void 0}var i,o=t.e;return t.e=null,t.d.forEach((function(r){try{var o=v(e,r,n);o&&(i=i||[]).push(o)}catch(s){throw t.er=s,l(e,t,s,!1),s}})),i?Promise.all(i).then(r):r()}}function m(){[].forEach.call(document.querySelectorAll("script"),(function(t){if(!t.sp)if("systemjs-module"===t.type){if(t.sp=!0,!t.src)return;System.import("import:"===t.src.slice(0,7)?t.src.slice(7):n(t.src,g)).catch((function(e){if(e.message.indexOf("https://github.com/systemjs/systemjs/blob/main/docs/errors.md#3")>-1){var n=document.createEvent("Event");n.initEvent("error",!1,!1),t.dispatchEvent(n)}return Promise.reject(e)}))}else if("systemjs-importmap"===t.type){t.sp=!0;var r=t.src?(System.fetch||fetch)(t.src,{integrity:t.integrity,priority:t.fetchPriority,passThrough:!0}).then((function(e){if(!e.ok)throw Error("Invalid status code: "+e.status);return e.text()})).catch((function(n){return n.message=e("W4","Error fetching systemjs-import map "+t.src)+"\n"+n.message,console.warn(n),"function"==typeof t.onerror&&t.onerror(),"{}"})):t.innerHTML;W=W.then((function(){return r})).then((function(n){!function(t,n,r){var o={};try{o=JSON.parse(n)}catch(s){console.warn(Error(e("W5","systemjs-importmap contains invalid JSON")+"\n\n"+n+"\n"))}i(o,r,t)}(N,n,t.src||g)}))}}))}var g,y="undefined"!=typeof Symbol,b="undefined"!=typeof self,S="undefined"!=typeof document,w=b?self:global;if(S){var O=document.querySelector("base[href]");O&&(g=O.href)}if(!g&&"undefined"!=typeof location){var E=(g=location.href.split("#")[0].split("?")[0]).lastIndexOf("/");-1!==E&&(g=g.slice(0,E+1))}var x,j=/\\/g,P=y&&Symbol.toStringTag,M=y?Symbol():"@",I=a.prototype;I.import=function(e,t,n){var r=this;return t&&"object"==typeof t&&(n=t,t=void 0),Promise.resolve(r.prepareImport()).then((function(){return r.resolve(e,t,n)})).then((function(e){var t=d(r,e,void 0,n);return t.C||p(r,t)}))},I.createContext=function(e){var t=this;return{url:e,resolve:function(n,r){return Promise.resolve(t.resolve(n,r||e))}}},I.onload=function(){},I.register=function(e,t,n){x=[e,t,n]},I.getRegister=function(){var e=x;return x=void 0,e};var L=Object.freeze(Object.create(null));w.System=new a;var C,R,W=Promise.resolve(),N={imports:{},scopes:{},depcache:{},integrity:{}},T=S;if(I.prepareImport=function(e){return(T||e)&&(m(),T=!1),W},I.getImportMap=function(){return JSON.parse(JSON.stringify(N))},S&&(m(),window.addEventListener("DOMContentLoaded",m)),I.addImportMap=function(e,t){i(e,t||g,N)},S){window.addEventListener("error",(function(e){J=e.filename,_=e.error}));var A=location.origin}I.createScript=function(e){var t=document.createElement("script");t.async=!0,e.indexOf(A+"/")&&(t.crossOrigin="anonymous");var n=N.integrity[e];return n&&(t.integrity=n),t.src=e,t};var J,_,k={},U=I.register;I.register=function(e,t){if(S&&"loading"===document.readyState&&"string"!=typeof e){var n=document.querySelectorAll("script[src]"),r=n[n.length-1];if(r){C=e;var i=this;R=setTimeout((function(){k[r.src]=[e,t],i.import(r.src)}))}}else C=void 0;return U.call(this,e,t)},I.instantiate=function(t,n){var r=k[t];if(r)return delete k[t],r;var i=this;return Promise.resolve(I.createScript(t)).then((function(r){return new Promise((function(o,s){r.addEventListener("error",(function(){s(Error(e(3,"Error loading "+t+(n?" from "+n:""))))})),r.addEventListener("load",(function(){if(document.head.removeChild(r),J===t)s(_);else{var e=i.getRegister(t);e&&e[0]===C&&clearTimeout(R),o(e)}})),document.head.appendChild(r)}))}))},I.shouldFetch=function(){return!1},"undefined"!=typeof fetch&&(I.fetch=fetch);var $=I.instantiate,B=/^(text|application)\/(x-)?javascript(;|$)/;I.instantiate=function(t,n,r){var i=this;return this.shouldFetch(t,n,r)?this.fetch(t,{credentials:"same-origin",integrity:N.integrity[t],meta:r}).then((function(r){if(!r.ok)throw Error(e(7,r.status+" "+r.statusText+", loading "+t+(n?" from "+n:"")));var o=r.headers.get("content-type");if(!o||!B.test(o))throw Error(e(4,'Unknown Content-Type "'+o+'", loading '+t+(n?" from "+n:"")));return r.text().then((function(e){return e.indexOf("//# sourceURL=")<0&&(e+="\n//# sourceURL="+t),(0,eval)(e),i.getRegister(t)}))})):$.apply(this,arguments)},I.resolve=function(n,r){return c(N,t(n,r=r||g)||n,r)||function(t,n){throw Error(e(8,"Unable to resolve bare specifier '"+t+(n?"' from "+n:"'")))}(n,r)};var F=I.instantiate;I.instantiate=function(e,t,n){var r=N.depcache[e];if(r)for(var i=0;i<r.length;i++)d(this,this.resolve(r[i],e),e);return F.call(this,e,t,n)},b&&"function"==typeof importScripts&&(I.instantiate=function(e){var t=this;return Promise.resolve().then((function(){return importScripts(e),t.getRegister(e)}))}),function(e){function t(t){return!e.hasOwnProperty(t)||!isNaN(t)&&t<e.length||a&&e[t]&&"undefined"!=typeof window&&e[t].parent===window}var n,r,i,o=e.System.constructor.prototype,s=o.import;o.import=function(o,u,c){return function(){for(var o in n=r=void 0,e)t(o)||(n?r||(r=o):n=o,i=o)}(),s.call(this,o,u,c)};var u=[[],function(){return{}}],c=o.getRegister;o.getRegister=function(){var o=c.call(this);if(o)return o;var s,a=function(o){var s,u,c=0;for(var a in e)if(!t(a)){if(0===c&&a!==n||1===c&&a!==r)return a;s?(i=a,u=o&&u||a):s=a===i,c++}return u}(this.firstGlobalProp);if(!a)return u;try{s=e[a]}catch(f){return u}return[[],function(e){return{execute:function(){e(s),e({default:s,__useDefault:!0})}}}]};var a="undefined"!=typeof navigator&&-1!==navigator.userAgent.indexOf("Trident")}("undefined"!=typeof self?self:global),function(e){var t=e.System.constructor.prototype,r=/^[^#?]+\.(css|html|json|wasm)([?#].*)?$/,i=t.shouldFetch.bind(t);t.shouldFetch=function(e){return i(e)||r.test(e)};var o=/^application\/json(;|$)/,s=/^text\/css(;|$)/,u=/^application\/wasm(;|$)/,c=t.fetch;t.fetch=function(t,r){return c(t,r).then((function(i){if(r.passThrough)return i;if(!i.ok)return i;var c=i.headers.get("content-type");return o.test(c)?i.json().then((function(e){return new Response(new Blob(['System.register([],function(e){return{execute:function(){e("default",'+JSON.stringify(e)+")}}})"],{type:"application/javascript"}))})):s.test(c)?i.text().then((function(e){return e=e.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,(function(e,r,i,o){return["url(",r,n(i||o,t),r,")"].join("")})),new Response(new Blob(["System.register([],function(e){return{execute:function(){var s=new CSSStyleSheet();s.replaceSync("+JSON.stringify(e)+');e("default",s)}}})'],{type:"application/javascript"}))})):u.test(c)?(WebAssembly.compileStreaming?WebAssembly.compileStreaming(i):i.arrayBuffer().then(WebAssembly.compile)).then((function(n){e.System.wasmModules||(e.System.wasmModules=Object.create(null)),e.System.wasmModules[t]=n;var r=[],i=[];return WebAssembly.Module.imports&&WebAssembly.Module.imports(n).forEach((function(e){var t=JSON.stringify(e.module);-1===r.indexOf(t)&&(r.push(t),i.push("function(m){i["+t+"]=m}"))})),new Response(new Blob(["System.register(["+r.join(",")+"],function(e){var i={};return{setters:["+i.join(",")+"],execute:function(){return WebAssembly.instantiate(System.wasmModules["+JSON.stringify(t)+"],i).then(function(m){e(m.exports)})}}})"],{type:"application/javascript"}))})):i}))}}("undefined"!=typeof self?self:global);var q="undefined"!=typeof Symbol&&Symbol.toStringTag;I.get=function(e){var t=this[M][e];if(t&&null===t.e&&!t.E)return t.er?null:t.n},I.set=function(t,n){try{new URL(t)}catch(s){console.warn(Error(e("W3",'"'+t+'" is not a valid URL to set in the module registry')))}var r;q&&"Module"===n[q]?r=n:(r=Object.assign(Object.create(null),n),q&&Object.defineProperty(r,q,{value:"Module"}));var i=Promise.resolve(r),o=this[M][t]||(this[M][t]={id:t,i:[],h:!1,d:[],e:null,er:void 0,E:void 0});return!o.e&&!o.E&&(Object.assign(o,{n:r,I:void 0,L:void 0,C:i}),r)},I.has=function(e){return!!this[M][e]},I.delete=function(e){var t=this[M],n=t[e];if(!n||n.p&&null!==n.p.e||n.E)return!1;var r=n.i;return n.d&&n.d.forEach((function(e){var t=e.i.indexOf(n);-1!==t&&e.i.splice(t,1)})),delete t[e],function(){var n=t[e];if(!n||!r||null!==n.e||n.E)return!1;r.forEach((function(e){n.i.push(e),e(n.n)})),r=null}};var D="undefined"!=typeof Symbol&&Symbol.iterator;I.entries=function(){var e,t,n=this,r=Object.keys(n[M]),i=0,o={next:function(){for(;void 0!==(t=r[i++])&&void 0===(e=n.get(t)););return{done:void 0===t,value:void 0!==t&&[t,e]}}};return o[D]=function(){return this},o}}();
 !function(t){function e(t){t.registerRegistry=Object.create(null),t.namedRegisterAliases=Object.create(null)}var r=t.System;e(r);var i,s,n=r.constructor.prototype,l=r.constructor,a=function(){l.call(this),e(this)};a.prototype=n,r.constructor=a;var o=n.register;n.register=function(t,e,r,n){if("string"!=typeof t)return o.apply(this,arguments);var l=[e,r,n];return this.registerRegistry[t]=l,i||(i=l,s=t),Promise.resolve().then((function(){i=null,s=null})),o.apply(this,[e,r,n])};var u=n.resolve;n.resolve=function(t,e){try{return u.call(this,t,e)}catch(r){if(t in this.registerRegistry)return this.namedRegisterAliases[t]||t;throw r}};var c=n.instantiate;n.instantiate=function(t,e,r){var i=this.registerRegistry[t];return i?(this.registerRegistry[t]=null,i):c.call(this,t,e,r)};var g=n.getRegister;n.getRegister=function(t){var e=g.call(this,t);s&&t&&(this.namedRegisterAliases[s]=t);var r=i||e;return i=null,s=null,r}}("undefined"!=typeof self?self:global);
 ;(typeof System!='undefined')&&(System=new System.constructor());
-System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({E:resolveFavoritesUserId,L:createFavoritesSyncTabId,P:readArtistsMirror,Q:Q,T:listArtistTags,V:writeArtistsMirror,W:reloadFromStorage,X:save,Z:setSyncState,a2:a,a3:applyTokenProperties,a4:resolveAppearancePalette,a5:getSiteSkinCss,a6:$,aC:Select,aF:Segmented,aI:TextField,aJ:Button,aK:clampBackgroundDim,aM:featurePanelLabel,aO:setFeatureEnabled,aP:applyCssOnlyFeatureEnabled,aQ:isFeatureEnabled,aS:setFeatureChoiceValue,aT:applyCssOnlyFeatureChoice,aU:getFeatureChoice,aV:b,aW:Chip,aX:readSiteBlacklist,aY:AutocompleteField,aZ:ProgressBar,a_:createDefaultCustomTheme,ah:d,ai:Card,aj:SectionLabel,ak:Switch,am:setTweaksEnabled,an:NumberField,ap:setUpdatesGroupSize,aq:getUpdatesGroupSize,as:setPlaylistChunkSize,at:getPlaylistChunkSize,av:setGridFavButtonsEnabled,aw:setGridFavButtonsVisible,ax:P,ay:T,az:A,b0:prepareBackgroundImageFile,b1:writeSiteBlacklist,b3:load,b4:createDefaultStorage,b5:clearStorageCache,b6:clearFavsCache,b7:object,b9:optional,bA:createPlaylist,bB:EmptyState,bC:buildPlaylistQueries,bD:buildUpdatesSearchUrl,bE:isPlaylist,bF:IconButton,bG:IconTrash,bH:getSeenPostId,bR:IconX,bS:isFollowingArtist,bT:addArtist,bU:removeArtist,bX:array,bY:nullable,ba:string,bc:literal,be:stripLegacyPanelWindowSize,bf:migrateMarksFavToFavs,bh:createDefaultFavs,bi:parseFavsStrict,bj:setAppearance,bk:loadFavSet,bm:extractFavIdsFromMarks,bp:getTweaksEnabled,bq:getGridFavButtonsEnabled,br:getFeatureChoiceValue,bs:getScreenPixelSize,bt:listPlaylists,bu:readTagsFromLocation,bv:addCollection,bw:serialize,bx:renameCollection,by:deleteCollection,bz:buildSearchUrl,c:applyAppearanceTheme,d:detectPageKind,e:ensureDocumentStyles,f:featureChoiceBodyClass,g:getAppearance,j:ensureStyleElement,k:buildOwnPageCss,m:mountCards,n:normalizeArtistTag,o:onThumbsAdded,r:runFeaturesYielding,s:syncFavoritesPage,t:parseRdwHash,u:getSyncState,v:readFavoritesSyncMode,w:runFavoritesSync,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
-var STORAGE_BACKUP_KEY = exports("bl","ruledesk-web.storage.backup");
-var FAVS_STORAGE_KEY = exports("bg","ruledesk-web.favs");
+System.register("./___monkey.entry.js", [],(function(exports,module){'use strict';return{execute:(function(){exports({$:getSiteSkinCss,D:createFavoritesSyncTabId,G:readArtistsMirror,I:listArtistTags,J:writeArtistsMirror,K:reloadFromStorage,L:save,P:setSyncState,Q:Q$1,Y:a,Z:applyTokenProperties,_:resolveAppearancePalette,a:applyAppearanceTheme,a$:clearStorageCache,a0:$$1,aC:TextField,aD:Button,aE:clampBackgroundDim,aG:featurePanelLabel,aI:setFeatureEnabled,aJ:applyCssOnlyFeatureEnabled,aK:isFeatureEnabled,aM:setFeatureChoiceValue,aN:applyCssOnlyFeatureChoice,aO:getFeatureChoice,aP:b,aQ:Chip,aR:readSiteBlacklist,aS:AutocompleteField,aT:ProgressBar,aU:createDefaultCustomTheme,aW:prepareBackgroundImageFile,aX:writeSiteBlacklist,aZ:load,a_:createDefaultStorage,ab:d,ac:Card,ad:SectionLabel,ae:Switch,ag:setTweaksEnabled,ah:NumberField,aj:setUpdatesGroupSize,ak:getUpdatesGroupSize,am:setPlaylistChunkSize,an:getPlaylistChunkSize,ap:setGridFavButtonsEnabled,aq:setGridFavButtonsVisible,ar:P$1,as:T,at:A,aw:Select,az:Segmented,b0:clearFavsCache,b1:object,b3:optional,b4:string,b6:literal,b8:stripLegacyPanelWindowSize,b9:migrateMarksFavToFavs,bA:IconTrash,bB:getSeenPostId,bL:IconX,bM:isFollowingArtist,bN:addArtist,bO:removeArtist,bR:array,bS:nullable,bb:createDefaultFavs,bc:parseFavsStrict,bd:setAppearance,be:loadFavSet,bg:extractFavIdsFromMarks,bj:getTweaksEnabled,bk:getGridFavButtonsEnabled,bl:getFeatureChoiceValue,bm:getScreenPixelSize,bn:listPlaylists,bo:readTagsFromLocation,bp:addCollection,bq:serialize,br:renameCollection,bs:deleteCollection,bt:buildSearchUrl,bu:createPlaylist,bv:EmptyState,bw:buildPlaylistQueries,bx:buildUpdatesSearchUrl,by:isPlaylist,bz:IconButton,d:detectPageKind,e:ensureDocumentStyles,f:ensureStyleElement,g:getAppearance,h:buildOwnPageCss,j:getSyncState,k:readFavoritesSyncMode,m:mountCards,n:normalizeArtistTag,o:runFavoritesSync,p:parseRdwHash,r:runFeaturesYielding,s:syncFavoritesPage,x:resolveFavoritesUserId,y:yieldToMain});var STORAGE_KEY = "ruledesk-web.storage";
+var STORAGE_BACKUP_KEY = exports("bf","ruledesk-web.storage.backup");
+var FAVS_STORAGE_KEY = exports("ba","ruledesk-web.favs");
 var DEBUG_KEY = "ruledesk-web.debug";
-var APPEARANCE_BACKGROUND_KEY = exports("O","ruledesk-web.appearance.background");
-var APPEARANCE_BACKGROUND_TOO_LARGE = exports("ag","Background image is too large (max 1.5 MB).");
+var APPEARANCE_BACKGROUND_KEY = exports("E","ruledesk-web.appearance.background");
+var APPEARANCE_BACKGROUND_TOO_LARGE = exports("aa","Background image is too large (max 1.5 MB).");
 var TOKEN_STYLE_ID = "ruledesk-web-tokens";
 var SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
 var RDW_SKIN_CLASS = "rdw-skin";
-var RDW_THEME_ATTR = exports("a9","data-rdw-theme");
-var APPEARANCE_THEME_SITE = exports("aa","site");
-var APPEARANCE_THEME_SITE_DARK = exports("ab","site-dark");
-var APPEARANCE_THEME_LIGHT = exports("aD","light");
-var APPEARANCE_THEME_DARK = exports("aE","dark");
-var APPEARANCE_THEME_CUSTOM = exports("aA","custom");
+var RDW_THEME_ATTR = exports("a3","data-rdw-theme");
+var APPEARANCE_THEME_SITE = exports("a4","site");
+var APPEARANCE_THEME_SITE_DARK = exports("a5","site-dark");
+var APPEARANCE_THEME_LIGHT = exports("ax","light");
+var APPEARANCE_THEME_DARK = exports("ay","dark");
+var APPEARANCE_THEME_CUSTOM = exports("au","custom");
 var DEFAULT_APPEARANCE_THEME = APPEARANCE_THEME_LIGHT;
-var SITE_ORIGIN = exports("h","https://rule34.xxx");
-var SEARCH_PATH = exports("a1","/index.php");
-var SEARCH_PAGE = exports("bK","post");
-var SEARCH_SECTION = exports("bL","list");
-var SEARCH_PARAM_PAGE = exports("_","page");
-var SEARCH_PARAM_TAGS = exports("i","tags");
-var FAVORITES_PAGE = exports("$","favorites");
-var FAVORITES_SECTION_VIEW = exports("a0","view");
+var SITE_ORIGIN = exports("b","https://rule34.xxx");
+var SEARCH_PATH = exports("X","/index.php");
+var SEARCH_PAGE = exports("bE","post");
+var SEARCH_SECTION = exports("bF","list");
+var SEARCH_PARAM_PAGE = exports("T","page");
+var SEARCH_PARAM_TAGS = exports("c","tags");
+var FAVORITES_PAGE = exports("V","favorites");
+var FAVORITES_SECTION_VIEW = exports("W","view");
 var FAVORITES_SECTION_DELETE = "delete";
 var FAVORITES_PARAM_RETURN_PID = "return_pid";
 var ADDFAV_PATH = "/public/addfav.php";
@@ -46,11 +46,11 @@ var VOTE_PARAM_PAGE = "page";
 var VOTE_PARAM_TYPE = "type";
 var VOTE_PAGE = "post";
 var VOTE_SECTION = "vote";
-var FETCH_CREDENTIALS = exports("bW","same-origin");
-var TAG_TYPE_INCLUDE = exports("bQ","include");
+var FETCH_CREDENTIALS = exports("bQ","same-origin");
+var TAG_TYPE_INCLUDE = exports("bK","include");
 var TAG_TYPE_EXCLUDE = "exclude";
 var UPDATES_ID_PREFIX = "id:>";
-var IMPORT_SCHEMA_ERROR_PREFIX = exports("bd","File is not a RuleDesk Web export");
+var IMPORT_SCHEMA_ERROR_PREFIX = exports("b7","File is not a RuleDesk Web export");
 var COLLECTION_KIND_SEARCH = "search";
 var COLLECTION_KIND_POSTS = "posts";
 var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
@@ -124,7 +124,7 @@ var CSS_CLASS = exports("C",{
 	updatesBarActions: "rdw-updates-bar-actions"
 });
 /** Hash routes and DOM ids for RuleDesk own pages (replaces floating panel). */
-var RDW_HASH_PREFIX = exports("K","#rdw/");
+var RDW_HASH_PREFIX = exports("B","#rdw/");
 var RDW_ROUTE_COLLECTIONS = "collections";
 var RDW_ROUTE_FOLLOWING = "following";
 var RDW_ROUTE_SETTINGS = "settings";
@@ -133,32 +133,32 @@ var RDW_ROUTES = [
 	RDW_ROUTE_FOLLOWING,
 	RDW_ROUTE_SETTINGS
 ];
-var RDW_HASH_COLLECTIONS = exports("A",`${RDW_HASH_PREFIX}${RDW_ROUTE_COLLECTIONS}`);
-var RDW_HASH_FOLLOWING = exports("D",`${RDW_HASH_PREFIX}${RDW_ROUTE_FOLLOWING}`);
-var RDW_HASH_SETTINGS = exports("J",`${RDW_HASH_PREFIX}${RDW_ROUTE_SETTINGS}`);
-var RDW_OWN_PAGE_CLASS = exports("p","rdw-own-page");
-var RDW_PAGE_ROOT_ID = exports("x","rdw-page-root");
+var RDW_HASH_COLLECTIONS = exports("u",`${RDW_HASH_PREFIX}${RDW_ROUTE_COLLECTIONS}`);
+var RDW_HASH_FOLLOWING = exports("w",`${RDW_HASH_PREFIX}${RDW_ROUTE_FOLLOWING}`);
+var RDW_HASH_SETTINGS = exports("A",`${RDW_HASH_PREFIX}${RDW_ROUTE_SETTINGS}`);
+var RDW_OWN_PAGE_CLASS = exports("i","rdw-own-page");
+var RDW_PAGE_ROOT_ID = exports("q","rdw-page-root");
 var RDW_OWN_PAGE_STYLE_ID = exports("R","rdw-own-page-style");
 var HEADER_SELECTOR$1 = exports("H","div#header");
 var NAVBAR_SELECTOR = exports("N","div#header ul#navbar");
-var CURRENT_PAGE_CLASS$1 = exports("Y","current-page");
-var MENU_ITEM_ID = exports("q",{
+var CURRENT_PAGE_CLASS$1 = exports("O","current-page");
+var MENU_ITEM_ID = exports("M",{
 	collections: "rdw-nav-collections",
 	following: "rdw-nav-following",
 	favorites: "rdw-nav-favorites",
 	settings: "rdw-nav-settings"
 });
-var MENU_LABEL = exports("B",{
+var MENU_LABEL = exports("v",{
 	collections: "Collections",
 	following: "Following",
 	favorites: "Favorites",
 	settings: "RuleDesk"
 });
 /** Site native favorites entry (submenu); hidden when our Favorites item is shown. */
-var MY_FAVORITES_CONTAINER_ID = exports("I","my-favorites-container");
-var FEED_MENU_ITEM_ID = exports("z","rdw-feed-menu");
+var MY_FAVORITES_CONTAINER_ID = exports("z","my-favorites-container");
+var FEED_MENU_ITEM_ID = exports("t","rdw-feed-menu");
 /** Shared class names for own-page section layouts (relocated from ui/panel). */
-var PANEL_UI_CLASS = exports("a7",{
+var PANEL_UI_CLASS = exports("a1",{
 	artistMeta: "rdw-artist-meta",
 	artistFilter: "rdw-artist-filter",
 	artistList: "rdw-artist-list",
@@ -171,19 +171,19 @@ var PANEL_UI_CLASS = exports("a7",{
 	settingsCaption: "rdw-settings-caption",
 	pageCard: "rdw-page-card"
 });
-var UNFOLLOW_UNDO_MS = exports("bV",5e3);
-var ARTISTS_EMPTY_TITLE = exports("bJ","No followed artists yet");
-var ARTISTS_EMPTY_HINT = exports("bI","Follow artists with the Follow button next to their name in the tag list.");
-var ARTIST_FILTER_LABEL = exports("bM","Filter artists");
-var UNFOLLOW_UNDO_LABEL = exports("bP","Undo");
-var UNFOLLOWED_PREFIX = exports("bO","Unfollowed ");
-var FEATURE_CHECKBOX_ID_PREFIX = exports("aN","rdw-feature-");
-var FEATURE_CHOICE_ID_PREFIX = exports("aR","rdw-feature-choice-");
-var UPDATES_GROUP_SIZE_ID = exports("ao","rdw-updates-group-size");
-var PLAYLIST_CHUNK_SIZE_ID = exports("ar","rdw-playlist-chunk-size");
-var ARTIST_FILTER_ID = exports("bN","rdw-artist-filter");
-var GRID_FAV_CHECKBOX_ID = exports("au","rdw-grid-fav-buttons");
-var TWEAKS_SWITCH_ID = exports("al","rdw-tweaks-enabled");
+var UNFOLLOW_UNDO_MS = exports("bP",5e3);
+var ARTISTS_EMPTY_TITLE = exports("bD","No followed artists yet");
+var ARTISTS_EMPTY_HINT = exports("bC","Follow artists with the Follow button next to their name in the tag list.");
+var ARTIST_FILTER_LABEL = exports("bG","Filter artists");
+var UNFOLLOW_UNDO_LABEL = exports("bJ","Undo");
+var UNFOLLOWED_PREFIX = exports("bI","Unfollowed ");
+var FEATURE_CHECKBOX_ID_PREFIX = exports("aH","rdw-feature-");
+var FEATURE_CHOICE_ID_PREFIX = exports("aL","rdw-feature-choice-");
+var UPDATES_GROUP_SIZE_ID = exports("ai","rdw-updates-group-size");
+var PLAYLIST_CHUNK_SIZE_ID = exports("al","rdw-playlist-chunk-size");
+var ARTIST_FILTER_ID = exports("bH","rdw-artist-filter");
+var GRID_FAV_CHECKBOX_ID = exports("ao","rdw-grid-fav-buttons");
+var TWEAKS_SWITCH_ID = exports("af","rdw-tweaks-enabled");
 var TAG_GROUPS_PANEL_LABEL = "Collapse tags";
 function featurePanelLabel(featureId, fallback) {
 	if (featureId === "tag-groups") return TAG_GROUPS_PANEL_LABEL;
@@ -213,11 +213,44 @@ html.${RDW_OWN_PAGE_CLASS} ${HEADER_SELECTOR$1} ~ *:not(#${RDW_PAGE_ROOT_ID}) {
 }
 `;
 }
+var SITE_SELECTORS = exports("S",{
+	thumb: "span.thumb",
+	thumbLink: "a[href*=\"s=view\"]",
+	previewImage: "img.preview",
+	cardFavButton: `button.${CSS_CLASS.cardFav}`,
+	favoritesDeleteLink: "a[onclick]",
+	tagSidebar: "ul#tag-sidebar",
+	tagTypeArtist: "li.tag-type-artist",
+	imageList: "div.image-list",
+	postListContent: "#post-list div.content",
+	contentRoot: "#content",
+	artistFollowButton: `button.${CSS_CLASS.artistFollow}`,
+	/** Native AI filter checkbox (site owns click/cookie logic). */
+	filterAiCheckbox: "input.toggleSwitch#chkFilterAI",
+	/** Row wrapping the native AI filter control — hide when search-tools mirrors it. */
+	filterAiRow: "li:has(> label > span.switch > input.toggleSwitch#chkFilterAI)",
+	/** Stray Tags heading between #rdw-search-tools and the tag list. */
+	tagsHeadingAfterSearchTools: "#rdw-search-tools + h5"
+});
+var THUMB_ID_PATTERN = /^s(\d+)$/;
+var FAVORITES_DELETE_ID_PATTERN = /s=delete&id=(\d+)/;
+function extractPostIdFromThumb(thumb) {
+	const match = THUMB_ID_PATTERN.exec(thumb.id);
+	if (match === null) return null;
+	const postId = match[1];
+	return postId === void 0 ? null : postId;
+}
+function extractPostIdFromFavoritesDeleteOnclick(onclick) {
+	const match = FAVORITES_DELETE_ID_PATTERN.exec(onclick);
+	if (match === null) return null;
+	const postId = match[1];
+	return postId === void 0 ? null : postId;
+}
 /**
 * Design tokens for RuleDesk Web UI and site skin.
 * Light values match docs/design/mock-components.html.
 */
-var TOKEN_VAR = exports("a8",{
+var TOKEN_VAR = exports("a2",{
 	bg: "--rdw-bg",
 	surface: "--rdw-surface",
 	surface2: "--rdw-surface-2",
@@ -339,16 +372,16 @@ var CONTRAST_OFFSET$1 = .05;
 * Hex equivalents of `docs/design/site-desktop.css` light `* { --c-* }`.
 * Script-page Site default chrome; keep in sync with skin/theme site palette.
 */
-var SITE_LIGHT_C_BG = exports("ac","#aae5a4");
-var SITE_LIGHT_C_BG_ALT = exports("ad","#89cf81");
+var SITE_LIGHT_C_BG = exports("a6","#aae5a4");
+var SITE_LIGHT_C_BG_ALT = exports("a7","#89cf81");
 var SITE_LIGHT_C_BG_OVERLAY = "#98d491";
 var SITE_LIGHT_C_TEXT = "#000000";
 var SITE_LIGHT_C_TEXT_SOFT = "#666666";
 var SITE_LIGHT_C_LINK = "#000099";
 /** Site dark script-page chrome (theme=site-dark). */
-var SITE_DARK_C_BG = exports("ae","#303a30");
+var SITE_DARK_C_BG = exports("a8","#303a30");
 var SITE_DARK_C_SURFACE2 = "#303030";
-var SITE_DARK_C_BORDER = exports("af","#505a50");
+var SITE_DARK_C_BORDER = exports("a9","#505a50");
 var SITE_DARK_C_TEXT = "#c0c0c0";
 var SITE_DARK_C_MUTED = "#878787";
 var SITE_DARK_C_ACCENT = "#b0e0b0";
@@ -465,6 +498,1330 @@ function clearCustomThemeProperties(target) {
 	target.style.removeProperty(TOKEN_VAR.backgroundImage);
 	target.style.removeProperty(TOKEN_VAR.backgroundDim);
 }
+/**
+* Site chrome CSS for html.rdw-skin (light / dark / custom themes).
+* Colors only via --rdw-* tokens. Does not change .thumb 200×200 cell size.
+* Injected via applyAppearanceTheme → injectSiteSkinHook(getSiteSkinCss()).
+*/
+var ROOT = `html.${RDW_SKIN_CLASS}`;
+var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
+var ROOT_SITE = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+var ROOT_SITE_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+var ROOT_THEME_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
+/** search-tools mount root (id + class in src/features/search-tools.tsx). */
+var SEARCH_TOOLS_ROOT_ID$1 = "rdw-search-tools";
+/** Reset control class (src/features/search-tools.tsx). */
+var SEARCH_TOOLS_RESET_CLASS = "rdw-search-tools-reset";
+/**
+* Same exclusions as :not…:not…, but :where() zeros their specificity so an
+* ID-bearing :not cannot outrank accent rules like div.tag-search submit.
+*/
+var WHERE_NOT_OUR_CONTROL = `:where(:not([class*="rdw-"])${`:not(#${SEARCH_TOOLS_ROOT_ID$1} *)`})`;
+/**
+* Body class Package E sets only while the post panel host is mounted
+* (`POST_PANEL_MOUNTED_CLASS` in post-actions.ts).
+*/
+var RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
+/** Native "I came" counter row — hide with panel chrome (E HANDOFF). */
+var POST_PANEL_ICAME_ROW = "li:has(a[onclick^=\"iCame(\"])";
+/** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
+var POST_ACTIONS_HOST_ID = "rdw-post-actions";
+/** Kit select list — keep in sync with src/ui/kit/select.tsx. */
+var KIT_SELECT_LIST_CLASS = "rdw-select__list";
+/** Kit autocomplete list — keep in sync with src/ui/kit/autocomplete-field.tsx. */
+var KIT_AC_LIST_CLASS = "rdw-ac__list";
+/** Kit dialog panel — keep in sync with src/ui/kit/dialog.tsx. */
+var KIT_DIALOG_CLASS = "rdw-dialog";
+/** Playlist add-to menu — keep in sync with src/features/playlist-menu.ts. */
+var PLAYLIST_MENU_CLASS = "rdw-playlist-menu";
+/** Firefox / modern Chromium thin scrollbar (E HANDOFF). */
+var SCROLLBAR_WIDTH = "thin";
+/** Post panel Original control — keep in sync with post-actions ORIGINAL_BUTTON_SIZE_PX. */
+var POST_PANEL_ORIGINAL_SIZE_PX = 34;
+/** Active tab underline — keep in sync with kit/tabs.tsx. */
+var POST_PANEL_TAB_UNDERLINE_PX = 2;
+/** Post panel classes — keep in sync with src/features/post-panel/post-panel.tsx. */
+var POST_PANEL_ACTIONS_CLASS = "rdw-post-panel-actions";
+var POST_PANEL_ACTIONS_ROW_CLASS = "rdw-post-panel-actions-row";
+var POST_PANEL_FAV_CLASS = "rdw-post-panel-fav";
+var POST_PANEL_ORIGINAL_CLASS = "rdw-post-panel-original";
+var POST_PANEL_TABPANEL_CLASS = "rdw-post-panel-tabpanel";
+var POST_PANEL_POST_ACTION_CLASS = "rdw-post-panel-post-action";
+/** Kit tabs — keep in sync with src/ui/kit/tabs.tsx. */
+var KIT_TABS_CLASS = "rdw-tabs";
+var KIT_TAB_CLASS = "rdw-tabs__tab";
+var KIT_BTN_PRIMARY_CLASS = "rdw-btn--primary";
+/**
+* Body class while search-tools «AI posts» row is rendered
+* (`SEARCH_TOOLS_AI_ROW_BODY_CLASS` in search-tools.tsx — F HANDOFF).
+*/
+var SEARCH_TOOLS_AI_ROW_BODY_CLASS$1 = "rdw-search-tools-ai-posts";
+/** F bulk-select chrome — keep in sync with src/features/favorites-bulk.tsx. */
+var FAV_BULK_SELECTED_CLASS = "rdw-fav-bulk-selected";
+var FAV_BULK_CHECK_CLASS = "rdw-fav-bulk-check";
+var FAV_BULK_ROOT_ID = "rdw-favorites-bulk";
+var FAV_BULK_BAR_CLASS = "rdw-favorites-bulk-bar";
+var FAV_BULK_STATUS_CLASS = "rdw-favorites-bulk-status";
+/** Body class while selection mode is active (featureBodyClass + "-selecting"). */
+var FAV_BULK_SELECTING_BODY_CLASS = "rdw-f-favorites-bulk-selecting";
+var FAV_BULK_OUTLINE_WIDTH = "2px";
+var FAV_BULK_OUTLINE_OFFSET = "2px";
+var FAV_BULK_CHECK_SIZE = "1.25rem";
+var FAV_BULK_CHECK_INSET = "0.25rem";
+var FAV_BULK_CHECK_Z_INDEX = 2;
+var FAV_BULK_CHECK_FONT_SIZE = "0.75rem";
+var v$2 = {
+	bg: `var(${TOKEN_VAR.bg})`,
+	surface: `var(${TOKEN_VAR.surface})`,
+	surface2: `var(${TOKEN_VAR.surface2})`,
+	border: `var(${TOKEN_VAR.border})`,
+	text: `var(${TOKEN_VAR.text})`,
+	muted: `var(${TOKEN_VAR.muted})`,
+	accent: `var(${TOKEN_VAR.accent})`,
+	accentSoft: `var(${TOKEN_VAR.accentSoft})`,
+	danger: `var(${TOKEN_VAR.danger})`,
+	dangerSoft: `var(${TOKEN_VAR.dangerSoft})`,
+	tagArtist: `var(${TOKEN_VAR.tagArtist})`,
+	tagCharacter: `var(${TOKEN_VAR.tagCharacter})`,
+	tagCopyright: `var(${TOKEN_VAR.tagCopyright})`,
+	tagMetadata: `var(${TOKEN_VAR.tagMetadata})`,
+	radiusS: `var(${TOKEN_VAR.radiusS})`,
+	radiusM: `var(${TOKEN_VAR.radiusM})`,
+	radiusL: `var(${TOKEN_VAR.radiusL})`,
+	shadow1: `var(${TOKEN_VAR.shadow1})`,
+	shadow2: `var(${TOKEN_VAR.shadow2})`,
+	font: `var(${TOKEN_VAR.font})`
+};
+/** Full site-skin stylesheet (empty until injected by boot). */
+var SITE_SKIN_CSS = `
+/* —— base —— */
+${ROOT} body {
+  font-family: ${v$2.font};
+  font-size: 13px;
+  line-height: 1.4;
+  background: ${v$2.bg};
+  color: ${v$2.text};
+}
+
+${ROOT} body,
+${ROOT} body div,
+${ROOT} body h1,
+${ROOT} body h2,
+${ROOT} body h3,
+${ROOT} body h4,
+${ROOT} body h5,
+${ROOT} body h6,
+${ROOT} body p,
+${ROOT} body ul,
+${ROOT} body li,
+${ROOT} body dd,
+${ROOT} body dt,
+${ROOT} body input,
+${ROOT} body select,
+${ROOT} body button,
+${ROOT} body textarea {
+  font-family: ${v$2.font};
+}
+
+${ROOT} a:link {
+  color: ${v$2.accent};
+  text-decoration: none;
+}
+
+${ROOT} a:visited {
+  color: ${v$2.muted};
+  text-decoration: none;
+}
+
+${ROOT} a:hover,
+${ROOT} a:active {
+  color: ${v$2.text};
+  text-decoration: none;
+}
+
+${ROOT} a.last-page {
+  color: ${v$2.muted};
+}
+
+${ROOT} a.spoiler,
+${ROOT} span.spoiler {
+  color: ${v$2.text};
+  background: ${v$2.text};
+}
+
+${ROOT} a.spoiler:hover,
+${ROOT} span.spoiler:hover {
+  color: ${v$2.bg};
+  background: ${v$2.text};
+}
+
+${ROOT} hr {
+  border-color: ${v$2.border};
+}
+
+${ROOT} code {
+  font-family: ui-monospace, monospace;
+}
+
+/* —— header —— */
+${ROOT} div#header {
+  background: ${v$2.surface};
+  border-bottom: 1px solid ${v$2.border};
+  margin-bottom: 0.75em;
+}
+
+${ROOT} div#header #site-title {
+  background-image: none;
+  background-color: transparent;
+  padding: 12px 18px 4px 18px;
+  font: 800 17px ${v$2.font};
+  letter-spacing: -0.02em;
+  color: ${v$2.text};
+}
+
+${ROOT} div#header #site-title a {
+  color: ${v$2.text};
+  font-weight: 800;
+  background: none;
+  text-shadow: none;
+}
+
+${ROOT} div#header ul#navbar {
+  background: transparent;
+  padding: 4px 18px 8px 10px;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+${ROOT} div#header ul#navbar li {
+  font-size: 13px;
+  font-weight: normal;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  background-image: none;
+  list-style: none;
+  display: inline;
+}
+
+${ROOT} div#header ul#navbar li a {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: ${v$2.radiusM};
+  color: ${v$2.muted};
+  font-weight: normal;
+}
+
+${ROOT} div#header ul#navbar li.current-page {
+  background: transparent;
+  background-image: none;
+}
+
+${ROOT} div#header ul#navbar li.current-page a,
+${ROOT} #navbar li.current-page a {
+  background: ${v$2.accentSoft};
+  color: ${v$2.accent};
+  font-weight: 600;
+}
+
+${ROOT} div#header ul#subnavbar {
+  background: ${v$2.surface};
+  border-top: 1px solid ${v$2.border};
+  border-bottom: none;
+  padding: 6px 18px;
+  margin: 0;
+}
+
+${ROOT} div#header ul#subnavbar li {
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+
+${ROOT} div#header ul#subnavbar li a {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#header ul#subnavbar li a:hover {
+  color: ${v$2.accent};
+}
+
+${ROOT} div.tips {
+  background: ${v$2.accentSoft};
+  background-image: none;
+  border-bottom: 1px solid ${v$2.border};
+  color: ${v$2.text};
+}
+
+/* —— sidebar —— */
+${ROOT} div.sidebar {
+  width: 228px;
+  min-width: 228px;
+  max-width: 228px;
+  margin-right: 1em;
+}
+
+${ROOT} div.sidebar h5,
+${ROOT} div.sidebar h6,
+${ROOT} ul#tag-sidebar h5,
+${ROOT} ul#tag-sidebar h6 {
+  font: 600 10.5px ${v$2.font};
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: ${v$2.muted};
+  margin: 0 0 6px;
+}
+
+/* Standalone "Tags"/"Search" (and similar) headings above the list card */
+${ROOT} div.sidebar > h5 {
+  display: none;
+}
+
+/* Tags between search panel card and tag list (typical site markup) */
+${ROOT} div.tag-search + h5 {
+  display: none;
+}
+
+/* D: Tags heading immediately after search-tools when they are siblings */
+${ROOT} ${SITE_SELECTORS.tagsHeadingAfterSearchTools} {
+  display: none;
+}
+
+/* F: native AI filter row — only while search-tools AI posts row is rendered */
+${ROOT} body.${SEARCH_TOOLS_AI_ROW_BODY_CLASS$1} ${SITE_SELECTORS.filterAiRow} {
+  display: none;
+}
+
+${ROOT} div.tag-search,
+${ROOT} ul#tag-sidebar {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusL};
+  padding: 12px;
+  box-shadow: ${v$2.shadow1};
+  box-sizing: border-box;
+}
+
+${ROOT} div.tag-search {
+  margin-bottom: 12px;
+}
+
+${ROOT} ul#tag-sidebar {
+  margin: 0;
+  padding: 12px;
+  list-style: none;
+}
+
+/*
+ * Tag rows: ?/+/- /name (list) or ?/name (post) wrap as inline text;
+ * count stays top-right on the first line (artists-sidebar.test markup).
+ */
+${ROOT} ul#tag-sidebar > li {
+  display: block;
+  position: relative;
+  margin: 0 0 5px;
+  padding-right: 4.5em;
+  font-size: 12.5px;
+  line-height: 1.35;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+${ROOT} ul#tag-sidebar > li > a {
+  display: inline;
+}
+
+${ROOT} ul#tag-sidebar > li > h5,
+${ROOT} ul#tag-sidebar > li > h6 {
+  display: block;
+  margin-top: 8px;
+}
+
+${ROOT} ul#tag-sidebar > li:first-child > h5,
+${ROOT} ul#tag-sidebar > li:first-child > h6 {
+  margin-top: 0;
+}
+
+${ROOT} .tag-count,
+${ROOT} span.post-count,
+${ROOT} span.tag-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin-left: 0;
+  color: ${v$2.muted};
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/*
+ * Tag type color on the LAST link of the row (tag name).
+ * List rows: ? + − name — name is 4th. Post rows: ? name — name is 2nd.
+ * Operators / wiki stay muted on every page.
+ */
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:not(:last-of-type) {
+  color: ${v$2.muted};
+  font-size: 11px;
+  font-weight: normal;
+}
+
+${ROOT} .tag-type-artist > a,
+${ROOT} .tag-type-artist {
+  color: ${v$2.tagArtist};
+}
+
+${ROOT} .tag-type-character > a,
+${ROOT} .tag-type-character {
+  color: ${v$2.tagCharacter};
+}
+
+${ROOT} .tag-type-copyright > a,
+${ROOT} .tag-type-copyright {
+  color: ${v$2.tagCopyright};
+}
+
+${ROOT} .tag-type-metadata > a,
+${ROOT} .tag-type-metadata {
+  color: ${v$2.tagMetadata};
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-artist > a:last-of-type {
+  color: ${v$2.tagArtist};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-character > a:last-of-type {
+  color: ${v$2.tagCharacter};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-copyright > a:last-of-type {
+  color: ${v$2.tagCopyright};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-metadata > a:last-of-type {
+  color: ${v$2.tagMetadata};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} .tag-type-artist > a:hover,
+${ROOT} .tag-type-artist:hover,
+${ROOT} .tag-type-character > a:hover,
+${ROOT} .tag-type-character:hover,
+${ROOT} .tag-type-copyright > a:hover,
+${ROOT} .tag-type-copyright:hover,
+${ROOT} .tag-type-metadata > a:hover,
+${ROOT} .tag-type-metadata:hover,
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:last-of-type:hover {
+  color: ${v$2.accent};
+}
+
+/* Artist Follow: kit secondary on theme tokens (beats document-chrome #fff) */
+${ROOT} button.${CSS_CLASS.artistFollow} {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  color: ${v$2.text};
+  border-radius: ${v$2.radiusS};
+}
+
+${ROOT} button.${CSS_CLASS.artistFollow}:hover {
+  background: ${v$2.accentSoft};
+  border-color: ${v$2.accent};
+  color: ${v$2.accent};
+}
+
+${ROOT} button.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked} {
+  background: ${v$2.accentSoft};
+  border-color: ${v$2.accent};
+  color: ${v$2.accent};
+}
+
+/* —— search field —— */
+${ROOT} div.tag-search input[type="text"],
+${ROOT} div.tag-search input[type="search"] {
+  width: 100%;
+  height: 34px;
+  box-sizing: border-box;
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusM};
+  padding: 0 10px;
+  background: ${v$2.surface};
+  color: ${v$2.text};
+  font-size: 13px;
+}
+
+${ROOT} div.tag-search input[type="submit"],
+${ROOT} div.tag-search button[type="submit"] {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: ${v$2.radiusS};
+  background: ${v$2.accent};
+  color: ${v$2.surface};
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+${ROOT} div.tag-search input[type="submit"]:hover,
+${ROOT} div.tag-search button[type="submit"]:hover {
+  filter: brightness(1.05);
+}
+
+/* Kit ghost / link-button: single line in the search-tools foot row */
+${ROOT} #${SEARCH_TOOLS_ROOT_ID$1} .${SEARCH_TOOLS_RESET_CLASS} {
+  flex-shrink: 0;
+  white-space: nowrap;
+  background: transparent;
+  border-color: transparent;
+  color: ${v$2.accent};
+  font-weight: 600;
+  padding: 0;
+  min-height: auto;
+  height: auto;
+}
+
+${ROOT} #${SEARCH_TOOLS_ROOT_ID$1} .${SEARCH_TOOLS_RESET_CLASS}:hover {
+  color: ${v$2.text};
+  background: transparent;
+  border-color: transparent;
+}
+
+${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL}:focus,
+${ROOT} select${WHERE_NOT_OUR_CONTROL}:focus {
+  background: ${v$2.surface};
+  outline: 2px solid ${v$2.accent};
+  outline-offset: 1px;
+  border-color: ${v$2.accent};
+}
+
+/* —— awesomplete —— */
+/* Site hides closed lists with opacity/scale + display:block; do not undo that. */
+${ROOT} .awesomplete > ul[hidden],
+${ROOT} .awesomplete > ul:empty {
+  display: none !important;
+  pointer-events: none;
+}
+
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty) {
+  background: ${v$2.surface};
+  background-image: none;
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusL};
+  box-shadow: ${v$2.shadow2};
+  margin: 0.35em 0 0;
+  padding: 4px 0;
+  text-shadow: none;
+  transform: none;
+}
+
+${ROOT} .awesomplete > ul:before {
+  display: none;
+  content: none;
+}
+
+${ROOT} .awesomplete > ul > li {
+  padding: 6px 10px;
+  color: ${v$2.text};
+  cursor: pointer;
+}
+
+${ROOT} .awesomplete > ul > li:hover,
+${ROOT} .awesomplete > ul > li[aria-selected="true"] {
+  background: ${v$2.accentSoft};
+  color: ${v$2.accent};
+}
+
+${ROOT} .awesomplete mark {
+  background: ${v$2.accentSoft};
+  color: ${v$2.text};
+}
+
+${ROOT} div.auto_complete {
+  background: ${v$2.surface};
+}
+
+${ROOT} div.auto_complete ul {
+  border-color: ${v$2.border};
+  background: ${v$2.surface};
+}
+
+${ROOT} div.auto_complete ul li.selected {
+  background-color: ${v$2.accentSoft};
+}
+
+${ROOT} div.auto_complete ul strong.highlight {
+  color: ${v$2.accent};
+}
+
+/* —— grid / thumbs (cell size unchanged) —— */
+${ROOT} div.image-list {
+  column-gap: ${String(4)}px;
+  row-gap: ${String(4)}px;
+  align-items: flex-start;
+  align-content: flex-start;
+}
+
+${ROOT} img.preview {
+  border-radius: ${v$2.radiusL};
+}
+
+/* Favorites: Remove stays subtle; hover must not paint the thumb cell */
+${ROOT} span.thumb,
+${ROOT} span.thumb:hover,
+${ROOT} span.thumb > a,
+${ROOT} span.thumb > a:hover {
+  background-color: transparent;
+}
+
+${ROOT} span.thumb > a[onclick] {
+  color: ${v$2.muted};
+  font-size: 12px;
+  font-weight: normal;
+  padding: 2px 8px;
+  border-radius: ${v$2.radiusS};
+  background: transparent;
+  border: none;
+}
+
+${ROOT} span.thumb > a[onclick]:hover {
+  color: ${v$2.danger};
+  background: transparent;
+}
+
+${ROOT} span.thumb > a[onclick] b {
+  font-weight: normal;
+  color: inherit;
+}
+
+/* —— favorites bulk select (F HANDOFF; tokens for Light/Dark/Site) —— */
+${ROOT} body.${FAV_BULK_SELECTING_BODY_CLASS} span.thumb {
+  position: relative;
+  cursor: pointer;
+}
+
+${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} {
+  outline: ${FAV_BULK_OUTLINE_WIDTH} solid ${v$2.accent};
+  outline-offset: ${FAV_BULK_OUTLINE_OFFSET};
+  border-radius: ${v$2.radiusL};
+}
+
+/*
+ * Check badge is a sibling of a#p{ID}, never inside the link.
+ * Hidden until the thumb is selected.
+ */
+${ROOT} span.thumb > .${FAV_BULK_CHECK_CLASS} {
+  position: absolute;
+  top: ${FAV_BULK_CHECK_INSET};
+  left: ${FAV_BULK_CHECK_INSET};
+  z-index: ${String(FAV_BULK_CHECK_Z_INDEX)};
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: ${FAV_BULK_CHECK_SIZE};
+  height: ${FAV_BULK_CHECK_SIZE};
+  border-radius: 50%;
+  background: ${v$2.accent};
+  color: ${v$2.surface};
+  font-size: ${FAV_BULK_CHECK_FONT_SIZE};
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+
+${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} > .${FAV_BULK_CHECK_CLASS} {
+  display: inline-flex;
+}
+
+${ROOT} #${FAV_BULK_ROOT_ID},
+${ROOT} .${FAV_BULK_BAR_CLASS} {
+  color: ${v$2.text};
+}
+
+${ROOT} #${FAV_BULK_ROOT_ID} .${FAV_BULK_STATUS_CLASS} {
+  color: ${v$2.muted};
+}
+
+${ROOT} .webm-thumb {
+  border: 1px solid ${v$2.accent};
+  box-sizing: border-box;
+}
+
+${ROOT} img.flagged,
+${ROOT} img.has-children,
+${ROOT} img.has-parent,
+${ROOT} img.pending,
+${ROOT} img.video {
+  border-width: 1px;
+  border-style: solid;
+  box-sizing: border-box;
+}
+
+${ROOT} img.flagged {
+  border-color: ${v$2.danger};
+}
+
+${ROOT} img.has-children {
+  border-color: ${v$2.tagCharacter};
+}
+
+${ROOT} img.has-parent {
+  border-color: ${v$2.tagMetadata};
+}
+
+${ROOT} img.pending,
+${ROOT} img.video {
+  border-color: ${v$2.accent};
+}
+
+/* —— pagination —— */
+${ROOT} div#paginator,
+${ROOT} .pagination {
+  display: block;
+  padding: 1.5em 0 1em;
+  text-align: center;
+  clear: both;
+}
+
+${ROOT} div#paginator a,
+${ROOT} .pagination a {
+  display: inline-block;
+  margin: 0 3px;
+  padding: 4px 10px;
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusM};
+  background: ${v$2.surface};
+  color: ${v$2.text};
+  text-decoration: none;
+}
+
+${ROOT} div#paginator a:hover,
+${ROOT} .pagination a:hover {
+  background: ${v$2.accentSoft};
+  color: ${v$2.accent};
+  border-color: ${v$2.accent};
+}
+
+${ROOT} div#paginator a.current,
+${ROOT} div#paginator span.current,
+${ROOT} .pagination a.current,
+${ROOT} .pagination span.current {
+  background: ${v$2.accent};
+  border-color: ${v$2.accent};
+  color: ${v$2.surface};
+  font-weight: 600;
+}
+
+${ROOT} div#paginator span {
+  margin: 0 3px;
+  padding: 4px 8px;
+}
+
+${ROOT} .manual-page-chooser > input[type="text"] {
+  width: 4em;
+  height: 28px;
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusS};
+  background: ${v$2.surface};
+  color: ${v$2.text};
+  padding: 0 6px;
+}
+
+${ROOT} .manual-page-chooser > input[type="submit"] {
+  height: 28px;
+  margin-left: 4px;
+  padding: 0 10px;
+  border: none;
+  border-radius: ${v$2.radiusS};
+  background: ${v$2.accent};
+  color: ${v$2.surface};
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* —— forms / tables (site chrome; skip search-tools + any .rdw-* control) —— */
+${ROOT} input${WHERE_NOT_OUR_CONTROL},
+${ROOT} select${WHERE_NOT_OUR_CONTROL},
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL},
+${ROOT} button${WHERE_NOT_OUR_CONTROL} {
+  color: ${v$2.text};
+  font-family: ${v$2.font};
+}
+
+${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="number"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} select${WHERE_NOT_OUR_CONTROL},
+${ROOT} textarea${WHERE_NOT_OUR_CONTROL} {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusS};
+  color: ${v$2.text};
+}
+
+${ROOT} button${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL},
+${ROOT} .gdprbutton button {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusS};
+  color: ${v$2.text};
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+${ROOT} button${WHERE_NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL}:hover,
+${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL}:hover,
+${ROOT} .gdprbutton button:hover {
+  background: ${v$2.accentSoft};
+  border-color: ${v$2.accent};
+  color: ${v$2.accent};
+}
+
+/* Keep search submit as primary accent (overrides generic button chrome) */
+${ROOT} div.tag-search input[type="submit"],
+${ROOT} div.tag-search button[type="submit"],
+${ROOT} .manual-page-chooser > input[type="submit"] {
+  background: ${v$2.accent};
+  border: none;
+  color: ${v$2.surface};
+  font-weight: 600;
+}
+
+${ROOT} div.tag-search input[type="submit"]:hover,
+${ROOT} div.tag-search button[type="submit"]:hover,
+${ROOT} .manual-page-chooser > input[type="submit"]:hover {
+  background: ${v$2.accent};
+  border: none;
+  color: ${v$2.surface};
+  filter: brightness(1.05);
+}
+
+${ROOT} table {
+  color: ${v$2.text};
+}
+
+${ROOT} tr.tableheader,
+${ROOT} thead tr {
+  background: ${v$2.surface2} !important;
+  background-image: none !important;
+  color: ${v$2.text};
+}
+
+${ROOT} table.highlightable th {
+  color: ${v$2.text};
+  background: ${v$2.surface2};
+}
+
+${ROOT} table.highlightable td {
+  border-color: ${v$2.border};
+}
+
+${ROOT} table.highlightable > tbody > tr:hover {
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} table tr.good {
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} table tr.selected {
+  background: ${v$2.accentSoft} !important;
+}
+
+${ROOT} table tr.highlight {
+  background: ${v$2.surface2};
+}
+
+${ROOT} table tr.pending-tag {
+  background: ${v$2.surface2};
+}
+
+/* Zebra without native green tint */
+${ROOT} table tr:nth-child(odd) {
+  background: ${v$2.surface2};
+}
+
+${ROOT} table.form th {
+  color: ${v$2.muted};
+}
+
+/* Forum tables */
+${ROOT} div#forum > table {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusL};
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  box-shadow: ${v$2.shadow1};
+}
+
+${ROOT} div#forum > table th,
+${ROOT} div#forum > table td {
+  border-color: ${v$2.border};
+  color: ${v$2.text};
+}
+
+${ROOT} div#forum > table th:first-child,
+${ROOT} div#forum > table td:first-child {
+  text-align: left;
+}
+
+${ROOT} div#forum > table tr:nth-child(odd) {
+  background: ${v$2.surface2};
+}
+
+${ROOT} div#forum > table tr:nth-child(even) {
+  background: ${v$2.surface};
+}
+
+${ROOT} div#forum > table.highlightable > tbody > tr:hover {
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} .added-tags {
+  color: ${v$2.tagCharacter};
+}
+
+${ROOT} .removed-tags {
+  color: ${v$2.danger};
+}
+
+${ROOT} .obsolete-tag-change {
+  color: ${v$2.text};
+}
+
+/* —— notices / cards —— */
+${ROOT} div.status-notice,
+${ROOT} div.notice,
+${ROOT} div.has-mail,
+${ROOT} div.blocked,
+${ROOT} div.quote,
+${ROOT} div.help div.code,
+${ROOT} div#post-comments div#comment-list > div,
+${ROOT} div#comments div#comment-list > div.post > div.col2,
+${ROOT} div.response-list > div.post > div.content {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusL};
+  box-shadow: ${v$2.shadow1};
+}
+
+${ROOT} div.status-notice {
+  border-color: ${v$2.border};
+  padding: 1em;
+  margin: 1em;
+  color: ${v$2.text};
+}
+
+${ROOT} div.notice {
+  color: ${v$2.danger};
+  padding: 0.75em 1em;
+  margin-bottom: 1em;
+}
+
+${ROOT} div.has-mail {
+  border-color: ${v$2.tagCharacter};
+  background: ${v$2.accentSoft};
+  padding: 1em;
+  margin: 1em;
+  color: ${v$2.text};
+}
+
+${ROOT} div.blocked {
+  border-color: ${v$2.danger};
+  background: ${v$2.dangerSoft};
+  color: ${v$2.danger};
+  padding: 1em;
+  margin: 1em;
+}
+
+${ROOT} div.quote {
+  border-color: ${v$2.border};
+  background: ${v$2.surface2};
+  background-image: none;
+  color: ${v$2.text};
+  padding: 12px;
+  margin-top: 10px;
+}
+
+${ROOT} div.help div.code {
+  border: 1px dashed ${v$2.border};
+  background: ${v$2.surface2};
+  color: ${v$2.text};
+}
+
+${ROOT} div.help h4 {
+  color: ${v$2.tagCharacter};
+}
+
+${ROOT} div#post-comments div#comment-list > div,
+${ROOT} div#comments div#comment-list > div.post > div.col2 {
+  padding: 12px;
+  margin-bottom: 1em;
+}
+
+${ROOT} div.response-list > div.post > div.content {
+  padding: 10px 12px;
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer {
+  color: ${v$2.muted};
+  margin-top: 0.75em;
+}
+
+/* Edit | Respond (and similar) on comments / forum posts */
+${ROOT} div.response-list > div.post > div.content > div.footer a,
+${ROOT} ul.flat-list li a {
+  color: ${v$2.muted};
+  font-weight: normal;
+  padding: 2px 6px;
+  border-radius: ${v$2.radiusS};
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer a:hover,
+${ROOT} ul.flat-list li a:hover {
+  color: ${v$2.accent};
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} ul.flat-list li a.forum-update {
+  font-style: italic;
+  color: ${v$2.muted};
+}
+
+${ROOT} div.link-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+${ROOT} div.link-list li {
+  margin: 0 0 4px;
+}
+
+${ROOT} div.link-list a {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: ${v$2.radiusS};
+  color: ${v$2.muted};
+}
+
+${ROOT} div.link-list a:hover {
+  color: ${v$2.accent};
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} span.author,
+${ROOT} span.date {
+  color: ${v$2.muted};
+}
+
+${ROOT} span.locked-topic {
+  color: ${v$2.muted};
+}
+
+${ROOT} strong.divider {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#footer {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#footer > .footer-disabled,
+${ROOT} div#footer > #label {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#user-record > table > tbody > tr.positive-record {
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} div#user-record > table > tbody > tr.negative-record {
+  background: ${v$2.dangerSoft};
+}
+
+${ROOT} div.mailbody {
+  background-color: ${v$2.surface};
+  border-color: ${v$2.border};
+}
+
+${ROOT} div.mail .received {
+  color: ${v$2.tagCharacter};
+}
+
+${ROOT} div.mail .sent {
+  color: ${v$2.danger};
+}
+
+${ROOT} .gdprinner {
+  background-color: ${v$2.surface};
+  border-color: ${v$2.border};
+  color: ${v$2.text};
+}
+
+/* —— post page —— */
+/* E: hide native left-column chrome only while body.rdw-post-panel-mounted */
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div#stats {
+  display: none !important;
+}
+
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div.link-list {
+  display: none !important;
+}
+
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} ${POST_PANEL_ICAME_ROW} {
+  display: none !important;
+}
+
+/*
+ * A: comments moved into the panel column — lift site max-width: 680px
+ * so #post-comments fills the narrow column.
+ */
+${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} #${POST_ACTIONS_HOST_ID} #post-comments {
+  max-width: none;
+}
+
+${ROOT} img#image {
+  border-radius: ${v$2.radiusL};
+}
+
+${ROOT} div#post-view > div#right-col > div#edit,
+${ROOT} div#edit-box {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  border-radius: ${v$2.radiusL};
+  color: ${v$2.text};
+}
+
+${ROOT} div#note-container > div.note-body {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  color: ${v$2.text};
+  border-radius: ${v$2.radiusS};
+}
+
+${ROOT} div#note-container > div.note-body > p.tn,
+${ROOT} tn {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#note-container > div.note-box {
+  border-color: ${v$2.accent};
+  background: ${v$2.accentSoft};
+}
+
+${ROOT} div#note-container > div.note-box > div.note-corner {
+  background: ${v$2.accent};
+}
+
+${ROOT} div#note-container > div.unsaved {
+  background: ${v$2.surface};
+  border-color: ${v$2.danger};
+}
+
+${ROOT} div#note-container > div.unsaved > div.note-corner {
+  background: ${v$2.danger};
+}
+
+${ROOT} a.original-file-changed#highres {
+  color: ${v$2.accent};
+}
+
+${ROOT} div#post-add p#scale {
+  color: ${v$2.muted};
+}
+
+${ROOT} h2.wiki-title {
+  color: ${v$2.accent};
+}
+
+${ROOT} div.wiki > h2.title {
+  color: ${v$2.accent};
+}
+
+${ROOT} div#wiki-show > div#body > div#byline {
+  color: ${v$2.muted};
+}
+
+${ROOT} div#wiki-diff del {
+  background-color: ${v$2.dangerSoft};
+  color: ${v$2.danger};
+}
+
+${ROOT} div#wiki-diff ins {
+  background-color: ${v$2.accentSoft};
+  color: ${v$2.text};
+}
+
+${ROOT} dt.bad {
+  color: ${v$2.danger};
+}
+
+${ROOT} .blacklisted-tags-disabled {
+  color: ${v$2.muted} !important;
+}
+
+/* —— dark theme contrast (tokens already dark; keep chrome readable) —— */
+${ROOT_DARK} a:visited {
+  color: ${v$2.muted};
+}
+
+${ROOT_DARK} a:hover,
+${ROOT_DARK} a:active {
+  color: ${v$2.text};
+}
+
+${ROOT_DARK} a.spoiler,
+${ROOT_DARK} span.spoiler {
+  color: ${v$2.bg};
+  background: ${v$2.text};
+}
+
+${ROOT_DARK} a.spoiler:hover,
+${ROOT_DARK} span.spoiler:hover {
+  color: ${v$2.text};
+  background: ${v$2.muted};
+}
+
+${ROOT_DARK} div#paginator a.current,
+${ROOT_DARK} div#paginator span.current,
+${ROOT_DARK} .pagination a.current,
+${ROOT_DARK} .pagination span.current,
+${ROOT_DARK} div.tag-search input[type="submit"],
+${ROOT_DARK} div.tag-search button[type="submit"],
+${ROOT_DARK} .manual-page-chooser > input[type="submit"],
+${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS},
+${ROOT_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  color: ${v$2.text};
+}
+
+${ROOT_DARK} div.has-mail {
+  background: ${v$2.surface2};
+  border-color: ${v$2.tagCharacter};
+}
+
+/*
+ * Post panel actions + tabs (A→E HANDOFF).
+ * Unscoped under #rdw-post-actions so Site default/Site dark (no html.rdw-skin)
+ * still beat native button/link chrome via document --rdw-* tokens.
+ */
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_ROW_CLASS},
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_TABPANEL_CLASS} {
+  color: ${v$2.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  background: ${v$2.accent};
+  border-color: ${v$2.accent};
+  color: ${v$2.surface};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ORIGINAL_CLASS} {
+  box-sizing: border-box;
+  width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  min-height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  color: ${v$2.text};
+  text-decoration: none;
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TABS_CLASS} {
+  border-bottom: 1px solid ${v$2.border};
+  color: ${v$2.text};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  background: transparent;
+  border: 0;
+  border-bottom: ${String(POST_PANEL_TAB_UNDERLINE_PX)}px solid transparent;
+  color: ${v$2.muted};
+}
+
+#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  color: ${v$2.text};
+  font-weight: 600;
+  border-bottom-color: ${v$2.accent};
+}
+
+#${POST_ACTIONS_HOST_ID} .${POST_PANEL_POST_ACTION_CLASS} {
+  background: ${v$2.surface};
+  border: 1px solid ${v$2.border};
+  color: ${v$2.text};
+  justify-content: flex-start;
+}
+
+/* Site themes: muted fails AA on green/dark chrome — tabs use text; keep accent underline. */
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS},
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
+  color: ${v$2.text};
+}
+
+${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"],
+${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
+  border-bottom-color: ${v$2.accent};
+  color: ${v$2.text};
+}
+
+/* Dark RuleDesk: primary fill uses light label (surface token is dark). */
+${ROOT_THEME_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
+  color: ${v$2.text};
+}
+
+/*
+ * Own scrollable UI — tokens for all four themes (site/site-dark have no html.rdw-skin).
+ * Fixes white post-column scrollbar on dark. Kit lists/dialogs + playlist menu.
+ */
+#${POST_ACTIONS_HOST_ID},
+.${KIT_SELECT_LIST_CLASS},
+.${KIT_AC_LIST_CLASS},
+.${KIT_DIALOG_CLASS},
+.${PLAYLIST_MENU_CLASS} {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v$2.border} ${v$2.surface};
+}
+
+/* Site autocomplete lists under rdw-skin */
+${ROOT} .awesomplete > ul:not([hidden]):not(:empty),
+${ROOT} div.auto_complete ul {
+  scrollbar-width: ${SCROLLBAR_WIDTH};
+  scrollbar-color: ${v$2.border} ${v$2.surface};
+}
+
+/*
+ * Script page host sits on site bg for Site default / Site dark (no html.rdw-skin).
+ * Color uses document tokens; Shadow title inherits from the host once tokens sync.
+ */
+#${RDW_PAGE_ROOT_ID} {
+  color: ${v$2.text};
+}
+`.trim();
+/** Returns the site-skin CSS string for injection. */
+function getSiteSkinCss() {
+	return SITE_SKIN_CSS;
+}
 function isDebugEnabled() {
 	try {
 		return GM_getValue(DEBUG_KEY, void 0) === true;
@@ -488,6 +1845,160 @@ var log = exports("l",{
 		console.error(`[ruledesk-web] ${message}`, ...details);
 	}
 });
+var MS_PER_DAY$1 = 864e5;
+var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
+var STYLESHEET_REL = "stylesheet";
+var LIGHT_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_LIGHT}`;
+var DARK_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_DARK}`;
+function writeThemeCookie(value, expires) {
+	document.cookie = [
+		`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
+		`expires=${expires.toUTCString()}`,
+		`path=/`
+	].join("; ");
+}
+/** Deletes the site `theme` cookie (light / default). */
+function clearSiteThemeCookie() {
+	document.cookie = [
+		`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}`,
+		`expires=${(/* @__PURE__ */ new Date(0)).toUTCString()}`,
+		`path=/`
+	].join("; ");
+}
+/** Collapse `//` (and longer) runs in a pathname so `/css/...` comparisons work. */
+var REPEATED_PATH_SLASHES = /\/{2,}/g;
+function collapsePathSlashes(pathname) {
+	return pathname.replace(REPEATED_PATH_SLASHES, "/");
+}
+/**
+* Match site desktop CSS hrefs via URL pathname (query ignored).
+* Production uses absolute hrefs with a doubled slash (`…xxx//css/desktop.css?46`);
+* collapsing repeated path slashes makes that equal `/css/desktop.css`.
+*/
+function isSiteDesktopStylesheetHref(href) {
+	try {
+		const path = collapsePathSlashes(new URL(href, location.href).pathname);
+		return path === LIGHT_STYLESHEET_PATH || path === DARK_STYLESHEET_PATH;
+	} catch {
+		return false;
+	}
+}
+function stylesheetFilenameForTheme(theme) {
+	return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
+}
+/** Swap filename in the raw href so `//css/` and `/css/` forms stay intact. */
+function replaceStylesheetFilename(href, filename) {
+	if (href.includes("desktop-dark.css")) return href.replace(SITE_THEME_STYLESHEET_DARK, filename);
+	if (href.includes("desktop.css")) return href.replace(SITE_THEME_STYLESHEET_LIGHT, filename);
+	return href;
+}
+function findSiteDesktopStylesheetLink() {
+	const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
+	for (const link of links) {
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) continue;
+		if (isSiteDesktopStylesheetHref(href)) return link;
+	}
+	return null;
+}
+var WARN_STYLESHEET_MISSING = "Site desktop stylesheet link not found; theme cookie updated only";
+var READY_STATE_LOADING = "loading";
+var EVENT_DOM_CONTENT_LOADED = "DOMContentLoaded";
+var STYLESHEET_OBSERVER_OPTIONS = {
+	childList: true,
+	subtree: true
+};
+var pendingStylesheetTheme = null;
+var stylesheetObserver = null;
+var domContentLoadedBound = false;
+function swapStylesheetLink(link, theme) {
+	const href = link.getAttribute("href");
+	if (href === null || href.length === 0) return false;
+	link.setAttribute("href", replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)));
+	return true;
+}
+function disconnectStylesheetWatch() {
+	if (stylesheetObserver !== null) {
+		stylesheetObserver.disconnect();
+		stylesheetObserver = null;
+	}
+	if (domContentLoadedBound) {
+		document.removeEventListener(EVENT_DOM_CONTENT_LOADED, onStylesheetDomReady);
+		domContentLoadedBound = false;
+	}
+}
+function tryApplyPendingStylesheet() {
+	if (pendingStylesheetTheme === null) return false;
+	const link = findSiteDesktopStylesheetLink();
+	if (link === null) return false;
+	if (!swapStylesheetLink(link, pendingStylesheetTheme)) return false;
+	pendingStylesheetTheme = null;
+	disconnectStylesheetWatch();
+	return true;
+}
+function onStylesheetDomReady() {
+	domContentLoadedBound = false;
+	if (tryApplyPendingStylesheet()) return;
+	if (pendingStylesheetTheme !== null) {
+		log.warn(WARN_STYLESHEET_MISSING);
+		pendingStylesheetTheme = null;
+		disconnectStylesheetWatch();
+	}
+}
+function warnStylesheetMissing() {
+	log.warn(WARN_STYLESHEET_MISSING);
+	pendingStylesheetTheme = null;
+	disconnectStylesheetWatch();
+}
+/**
+* Swap desktop.css ↔ desktop-dark.css once the link exists.
+* At document-start the link is not parsed yet: watch documentElement and
+* fall back to DOMContentLoaded. Warn only if it is still missing after that.
+*/
+function scheduleSiteDesktopStylesheet(theme) {
+	const link = findSiteDesktopStylesheetLink();
+	if (link !== null && swapStylesheetLink(link, theme)) {
+		pendingStylesheetTheme = null;
+		disconnectStylesheetWatch();
+		return;
+	}
+	pendingStylesheetTheme = theme;
+	if (document.readyState !== READY_STATE_LOADING) {
+		warnStylesheetMissing();
+		return;
+	}
+	const root = document.documentElement;
+	if (stylesheetObserver === null && root !== null) {
+		stylesheetObserver = new MutationObserver(() => {
+			tryApplyPendingStylesheet();
+		});
+		stylesheetObserver.observe(root, STYLESHEET_OBSERVER_OPTIONS);
+	}
+	if (!domContentLoadedBound) {
+		document.addEventListener(EVENT_DOM_CONTENT_LOADED, onStylesheetDomReady);
+		domContentLoadedBound = true;
+	}
+}
+/** Cookie only. Stylesheet swap is {@link scheduleSiteDesktopStylesheet}. */
+function writeSiteThemeCookie(theme) {
+	if (theme === "dark") {
+		writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, new Date(Date.now() + 365 * MS_PER_DAY$1));
+		return;
+	}
+	clearSiteThemeCookie();
+}
+/**
+* RuleDesk skin modes need a predictable site base: no theme cookie + light CSS.
+* Does not touch html.rdw-skin (that is owned by src/skin/theme.ts).
+*/
+function forceLightSiteBase() {
+	writeSiteThemeCookie("light");
+	scheduleSiteDesktopStylesheet("light");
+}
+function setSiteTheme(theme) {
+	writeSiteThemeCookie(theme);
+	scheduleSiteDesktopStylesheet(theme);
+}
 function getEnumValues(entries) {
 	const numericValues = Object.values(entries).filter((v) => typeof v === "number");
 	return Object.entries(entries).filter(([k, _]) => numericValues.indexOf(+k) === -1).map(([_, v]) => v);
@@ -2023,15 +3534,15 @@ var MarkFlagsSchema = /* @__PURE__ */ object({
 	fav: /* @__PURE__ */ optional(/* @__PURE__ */ boolean()),
 	seen: /* @__PURE__ */ optional(/* @__PURE__ */ boolean())
 });
-var AppearanceThemeSchema = exports("a$",/* @__PURE__ */ _enum([
+var AppearanceThemeSchema = exports("aV",/* @__PURE__ */ _enum([
 	APPEARANCE_THEME_SITE,
 	APPEARANCE_THEME_SITE_DARK,
 	APPEARANCE_THEME_LIGHT,
 	APPEARANCE_THEME_DARK,
 	APPEARANCE_THEME_CUSTOM
 ]));
-var APPEARANCE_CUSTOM_BASE_LIGHT = exports("aG","light");
-var APPEARANCE_CUSTOM_BASE_DARK = exports("aH","dark");
+var APPEARANCE_CUSTOM_BASE_LIGHT = exports("aA","light");
+var APPEARANCE_CUSTOM_BASE_DARK = exports("aB","dark");
 var AppearanceCustomBaseSchema = /* @__PURE__ */ _enum([APPEARANCE_CUSTOM_BASE_LIGHT, APPEARANCE_CUSTOM_BASE_DARK]);
 /** Canonical custom theme: Light/Dark base + optional background image/dim. */
 var AppearanceCustomSchema = /* @__PURE__ */ object({
@@ -2095,7 +3606,7 @@ var SettingsSchema = /* @__PURE__ */ object({
 	appearance: /* @__PURE__ */ optional(AppearanceStoredSchema)
 });
 var UpdatesSchema = /* @__PURE__ */ object({ seenPostId: int().check(/* @__PURE__ */ _nonnegative()) });
-var StorageSchema = exports("b8",/* @__PURE__ */ object({
+var StorageSchema = exports("b2",/* @__PURE__ */ object({
 	version: /* @__PURE__ */ literal(1),
 	collections: /* @__PURE__ */ array(CollectionSchema),
 	artists: /* @__PURE__ */ array(ArtistEntrySchema),
@@ -2107,6 +3618,11 @@ var StorageSchema = exports("b8",/* @__PURE__ */ object({
 var LEGACY_PANEL_FEATURE_STATE_ID = "panel";
 var LEGACY_PANEL_WIDTH_KEY = "width";
 var LEGACY_PANEL_HEIGHT_KEY = "height";
+var GRID_DENSITY_CHOICE_ID = "grid-density";
+var GRID_DENSITY_DEFAULT_VALUE = "default";
+var LEGACY_MASONRY_CHOICE_VALUE = "masonry";
+/** Post panel Info/Comments tab used to live here. Always Info as of 0.15.1. */
+var POST_PANEL_TAB_CHOICE_ID = "post-actions";
 var FavsSyncLockSchema = /* @__PURE__ */ object({
 	tabId: (/* @__PURE__ */ string()).check(/* @__PURE__ */ _minLength(1)),
 	beatAt: /* @__PURE__ */ number()
@@ -2125,7 +3641,7 @@ var FavsSyncSchema = /* @__PURE__ */ object({
 	lock: /* @__PURE__ */ optional(FavsSyncLockSchema),
 	mode: /* @__PURE__ */ optional(FavsSyncModeSchema)
 });
-var FavsSchema = exports("bb",/* @__PURE__ */ object({
+var FavsSchema = exports("b5",/* @__PURE__ */ object({
 	version: /* @__PURE__ */ literal(1),
 	ids: /* @__PURE__ */ array(int()),
 	sync: /* @__PURE__ */ optional(FavsSyncSchema)
@@ -2198,6 +3714,41 @@ function stripLegacyPanelWindowSize(data) {
 		changed: true
 	};
 }
+/**
+* Saved masonry grid becomes default. Post-panel tab choice is removed.
+* No SCHEMA_VERSION bump.
+*/
+function migrateRetiredFeatureChoices(data) {
+	const featureChoice = data.settings?.featureChoice;
+	if (featureChoice === void 0) return {
+		data,
+		changed: false
+	};
+	const nextChoice = { ...featureChoice };
+	let changed = false;
+	if (nextChoice[GRID_DENSITY_CHOICE_ID] === LEGACY_MASONRY_CHOICE_VALUE) {
+		nextChoice[GRID_DENSITY_CHOICE_ID] = GRID_DENSITY_DEFAULT_VALUE;
+		changed = true;
+	}
+	if (Object.prototype.hasOwnProperty.call(nextChoice, POST_PANEL_TAB_CHOICE_ID)) {
+		delete nextChoice[POST_PANEL_TAB_CHOICE_ID];
+		changed = true;
+	}
+	if (!changed) return {
+		data,
+		changed: false
+	};
+	const nextSettings = data.settings === void 0 ? { gridFavButtons: true } : { ...data.settings };
+	if (Object.keys(nextChoice).length === 0) delete nextSettings.featureChoice;
+	else nextSettings.featureChoice = nextChoice;
+	return {
+		data: {
+			...data,
+			settings: nextSettings
+		},
+		changed: true
+	};
+}
 function isPlaylist(collection) {
 	return collection.kind === COLLECTION_KIND_POSTS;
 }
@@ -2261,6 +3812,669 @@ function resolvePlaylistChunkSize(data) {
 }
 function resolveSeenPostId(data) {
 	return data.updates?.seenPostId ?? 0;
+}
+var BACKGROUND_DIM_MAX = .8;
+/** JPEG quality when downscaling a custom background to screen size. */
+var APPEARANCE_BACKGROUND_JPEG_QUALITY = .85;
+var CONTRAST_OFFSET = .05;
+var JPEG_MIME = "image/jpeg";
+var BODY_BG_IMAGE = "background-image";
+var BODY_BG_SIZE = "background-size";
+var BODY_BG_POSITION = "background-position";
+var BODY_BG_REPEAT = "background-repeat";
+var BODY_BG_ATTACHMENT = "background-attachment";
+/** Site light tag/link colors (not exported from tokens). */
+var SITE_C_LINK_ARTIST = "#cc0000";
+var SITE_C_LINK_CHARACTER = "#00aa00";
+var SITE_C_LINK_COPYRIGHT = "#aa00aa";
+var SITE_C_LINK_METADATA = "#ff8800";
+/** Site dark accent-soft / tag colors (not exported from tokens). */
+var SITE_DARK_ACCENT_SOFT = SITE_DARK_C_BORDER;
+var SITE_DARK_TAG_ARTIST = "#f0a0a0";
+var SITE_DARK_TAG_CHARACTER = "#f0f0a0";
+var SITE_DARK_TAG_COPYRIGHT = "#f0a0f0";
+var SITE_DARK_TAG_METADATA = "#90d9ed";
+/**
+* Script-page / token palette for Appearance theme "Site default".
+* Card surface = --c-bg; border = --c-bg-alt (aligned with page-css host cards).
+* Danger/radius/shadow/font from Light.
+*/
+var SITE_DEFAULT_PALETTE = {
+	bg: SITE_LIGHT_C_BG,
+	surface: SITE_LIGHT_C_BG,
+	surface2: SITE_LIGHT_C_BG_OVERLAY,
+	border: SITE_LIGHT_C_BG_ALT,
+	text: SITE_LIGHT_C_TEXT,
+	muted: SITE_LIGHT_C_TEXT_SOFT,
+	accent: SITE_LIGHT_C_LINK,
+	accentSoft: SITE_LIGHT_C_BG_ALT,
+	danger: LIGHT_PALETTE.danger,
+	dangerSoft: LIGHT_PALETTE.dangerSoft,
+	tagArtist: SITE_C_LINK_ARTIST,
+	tagCharacter: SITE_C_LINK_CHARACTER,
+	tagCopyright: SITE_C_LINK_COPYRIGHT,
+	tagMetadata: SITE_C_LINK_METADATA,
+	radiusS: LIGHT_PALETTE.radiusS,
+	radiusM: LIGHT_PALETTE.radiusM,
+	radiusL: LIGHT_PALETTE.radiusL,
+	shadow1: LIGHT_PALETTE.shadow1,
+	shadow2: LIGHT_PALETTE.shadow2,
+	font: LIGHT_PALETTE.font
+};
+/**
+* Script-page / token palette for Appearance theme "Site dark".
+* Surface = page bg (not darker chrome); danger/radius/shadow/font from Dark.
+*/
+var SITE_DARK_PALETTE = {
+	bg: SITE_DARK_C_BG,
+	surface: SITE_DARK_C_BG,
+	surface2: SITE_DARK_C_SURFACE2,
+	border: SITE_DARK_C_BORDER,
+	text: SITE_DARK_C_TEXT,
+	muted: SITE_DARK_C_MUTED,
+	accent: SITE_DARK_C_ACCENT,
+	accentSoft: SITE_DARK_ACCENT_SOFT,
+	danger: DARK_PALETTE.danger,
+	dangerSoft: DARK_PALETTE.dangerSoft,
+	tagArtist: SITE_DARK_TAG_ARTIST,
+	tagCharacter: SITE_DARK_TAG_CHARACTER,
+	tagCopyright: SITE_DARK_TAG_COPYRIGHT,
+	tagMetadata: SITE_DARK_TAG_METADATA,
+	radiusS: DARK_PALETTE.radiusS,
+	radiusM: DARK_PALETTE.radiusM,
+	radiusL: DARK_PALETTE.radiusL,
+	shadow1: DARK_PALETTE.shadow1,
+	shadow2: DARK_PALETTE.shadow2,
+	font: DARK_PALETTE.font
+};
+/**
+* Pick text color for a surface: prefer `preferred`, else the first
+* neighboring candidate that meets {@link CONTRAST_RATIO_MIN}.
+*/
+function pickContrastingText(surface, preferred, neighbors) {
+	const preferredRatio = contrastRatio(preferred, surface);
+	if (preferredRatio !== null && preferredRatio >= 4.5) return {
+		text: preferred,
+		ratio: preferredRatio,
+		swapped: false
+	};
+	for (const candidate of neighbors) {
+		const ratio = contrastRatio(candidate, surface);
+		if (ratio !== null && ratio >= 4.5) return {
+			text: candidate,
+			ratio,
+			swapped: true
+		};
+	}
+	return {
+		text: preferred,
+		ratio: preferredRatio,
+		swapped: false
+	};
+}
+function finalizeSitePaletteText(palette) {
+	const picked = pickContrastingText(palette.surface, palette.text, [
+		palette.bg,
+		palette.muted,
+		palette.accent,
+		LIGHT_PALETTE.text,
+		DARK_PALETTE.text
+	]);
+	if (!picked.swapped) return palette;
+	return {
+		...palette,
+		text: picked.text
+	};
+}
+/** Site default after contrast gate (text-on-surface). */
+var SITE_DEFAULT_PALETTE_RESOLVED = finalizeSitePaletteText(SITE_DEFAULT_PALETTE);
+/** Site dark after contrast gate (text-on-surface). */
+var SITE_DARK_PALETTE_RESOLVED = finalizeSitePaletteText(SITE_DARK_PALETTE);
+function createDefaultCustomTheme() {
+	return {
+		base: APPEARANCE_CUSTOM_BASE_LIGHT,
+		backgroundDim: 0
+	};
+}
+function clampBackgroundDim(value) {
+	if (!Number.isFinite(value)) return 0;
+	return Math.min(BACKGROUND_DIM_MAX, Math.max(0, value));
+}
+/** WCAG contrast ratio of two hex colors; null if either is unparseable. */
+function contrastRatio(foreground, background) {
+	const l1 = relativeLuminance(foreground);
+	const l2 = relativeLuminance(background);
+	if (l1 === null || l2 === null) return null;
+	const lighter = Math.max(l1, l2);
+	const darker = Math.min(l1, l2);
+	return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET);
+}
+/**
+* Canonical token palette for an Appearance value.
+* Site themes use site chrome colors — not RuleDesk Light/Dark.
+* Callers (boot/host) should use this instead of light/dark-only resolvers.
+*/
+function resolveAppearancePalette(appearance) {
+	const theme = appearance.theme;
+	if (theme === "site-dark") return SITE_DARK_PALETTE_RESOLVED;
+	if (theme === "site") return SITE_DEFAULT_PALETTE_RESOLVED;
+	if (theme === "dark") return DARK_PALETTE;
+	if (theme === "custom") return appearance.custom?.base === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+	return LIGHT_PALETTE;
+}
+function escapeUrlForCss(url) {
+	return url.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+function clearBodyBackground() {
+	const body = document.body;
+	if (body === null) return;
+	body.style.removeProperty(BODY_BG_IMAGE);
+	body.style.removeProperty(BODY_BG_SIZE);
+	body.style.removeProperty(BODY_BG_POSITION);
+	body.style.removeProperty(BODY_BG_REPEAT);
+	body.style.removeProperty(BODY_BG_ATTACHMENT);
+}
+/**
+* Apply custom background image on <body> with a dim overlay (0–0.8).
+* Cleared when image is empty.
+*/
+function applyBodyBackgroundImage(imageUrl, dim) {
+	const body = document.body;
+	if (body === null) return;
+	if (imageUrl === void 0 || imageUrl.length === 0) {
+		clearBodyBackground();
+		return;
+	}
+	const clamped = clampBackgroundDim(dim);
+	const escaped = escapeUrlForCss(imageUrl);
+	body.style.setProperty(BODY_BG_IMAGE, `linear-gradient(rgba(0, 0, 0, ${String(clamped)}), rgba(0, 0, 0, ${String(clamped)})), url("${escaped}")`);
+	body.style.setProperty(BODY_BG_SIZE, "cover");
+	body.style.setProperty(BODY_BG_POSITION, "center");
+	body.style.setProperty(BODY_BG_REPEAT, "no-repeat");
+	body.style.setProperty(BODY_BG_ATTACHMENT, "fixed");
+}
+function syncSiteCookieAndStylesheet(appearance) {
+	if (appearance.theme === "site-dark") {
+		setSiteTheme("dark");
+		return;
+	}
+	if (appearance.theme === "site") {
+		setSiteTheme("light");
+		return;
+	}
+	forceLightSiteBase();
+}
+/** CSS pixel screen size × devicePixelRatio (for background hints/resize). */
+function getScreenPixelSize() {
+	const dpr = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+	return {
+		width: Math.round(window.screen.width * dpr),
+		height: Math.round(window.screen.height * dpr)
+	};
+}
+/**
+* Fit source inside max box without upscaling. Pure sizing helper (testable).
+*/
+function computeDownscaleSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+	if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) return {
+		width: 0,
+		height: 0
+	};
+	if (sourceWidth <= maxWidth && sourceHeight <= maxHeight) return {
+		width: Math.round(sourceWidth),
+		height: Math.round(sourceHeight)
+	};
+	const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+	return {
+		width: Math.max(1, Math.round(sourceWidth * scale)),
+		height: Math.max(1, Math.round(sourceHeight * scale))
+	};
+}
+function loadImageElement(src) {
+	return new Promise((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => {
+			resolve(image);
+		};
+		image.onerror = () => {
+			reject(/* @__PURE__ */ new Error("Could not decode image"));
+		};
+		image.src = src;
+	});
+}
+function readFileAsDataUrl(file) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			if (typeof reader.result === "string") {
+				resolve(reader.result);
+				return;
+			}
+			reject(/* @__PURE__ */ new Error("Could not read image file"));
+		};
+		reader.onerror = () => {
+			reject(reader.error ?? /* @__PURE__ */ new Error("Could not read image file"));
+		};
+		reader.readAsDataURL(file);
+	});
+}
+/**
+* Decode file, downscale to screen pixels (never upscale), encode JPEG.
+*/
+async function prepareBackgroundImageFile(file) {
+	const image = await loadImageElement(await readFileAsDataUrl(file));
+	const sourceWidth = image.naturalWidth;
+	const sourceHeight = image.naturalHeight;
+	const screen = getScreenPixelSize();
+	const sized = computeDownscaleSize(sourceWidth, sourceHeight, screen.width, screen.height);
+	const canvas = document.createElement("canvas");
+	canvas.width = sized.width;
+	canvas.height = sized.height;
+	const context = canvas.getContext("2d");
+	if (context === null) throw new Error("Could not prepare background image");
+	context.drawImage(image, 0, 0, sized.width, sized.height);
+	return {
+		dataUrl: canvas.toDataURL(JPEG_MIME, APPEARANCE_BACKGROUND_JPEG_QUALITY),
+		sourceWidth,
+		sourceHeight,
+		outputWidth: sized.width,
+		outputHeight: sized.height,
+		belowScreen: sourceWidth < screen.width || sourceHeight < screen.height
+	};
+}
+/**
+* Full theme apply for boot and settings UI:
+* site cookie/stylesheet + html.rdw-skin / tokens / site-skin / custom props + body image.
+* Token palette comes from {@link resolveAppearancePalette} and is written once via
+* injectTokenStyles + syncPageRootTokens (same tick as applyAppearanceToDocument).
+*/
+function applyAppearanceTheme(options) {
+	const { appearance } = options;
+	syncSiteCookieAndStylesheet(appearance);
+	applyAppearanceToDocument({
+		appearance,
+		siteSkinCss: options.siteSkinCss ?? getSiteSkinCss(),
+		...options.backgroundDataUrl !== void 0 ? { backgroundDataUrl: options.backgroundDataUrl } : {}
+	});
+	const palette = resolveAppearancePalette(appearance);
+	injectTokenStyles(palette);
+	syncPageRootTokens(palette);
+	if (!themeEnablesSkin(appearance.theme)) document.documentElement.classList.remove(RDW_SKIN_CLASS);
+	if (appearance.theme === "custom" && appearance.custom !== void 0) {
+		const custom = appearance.custom;
+		applyBodyBackgroundImage(options.backgroundDataUrl ?? custom.backgroundImage, custom.backgroundDim ?? 0);
+		if (custom.backgroundDim !== void 0) document.documentElement.style.setProperty(TOKEN_VAR.backgroundDim, String(clampBackgroundDim(custom.backgroundDim)));
+	} else clearBodyBackground();
+	const textOnSurface = contrastRatio(palette.text, palette.surface);
+	return {
+		contrastWarning: textOnSurface !== null && textOnSurface < 4.5,
+		contrastRatio: textOnSurface
+	};
+}
+/**
+* Whether RuleDesk site-skin class is active.
+* site / site-dark keep native page chrome; light / dark / custom enable rdw-skin.
+*/
+function themeEnablesSkin(theme) {
+	return theme === "light" || theme === "dark" || theme === "custom";
+}
+/**
+* Ensures a <style id=...> exists under documentElement (works before <head>).
+* Safe at document-start. B1/B2 should reuse these helpers.
+*/
+function ensureStyleElement(id) {
+	const existing = document.getElementById(id);
+	if (existing instanceof HTMLStyleElement) return existing;
+	if (existing !== null) existing.remove();
+	const style = document.createElement("style");
+	style.id = id;
+	(document.head ?? document.documentElement).append(style);
+	return style;
+}
+/** Inject or replace the design-token stylesheet. */
+function injectTokenStyles(palette) {
+	const style = ensureStyleElement(TOKEN_STYLE_ID);
+	style.textContent = buildTokensCss(palette, ":root");
+	return style;
+}
+/**
+* Copy the same palette onto #rdw-page-root when present.
+* Shadow DOM uses :host { all: initial }, so document :root tokens do not inherit.
+*/
+function syncPageRootTokens(palette) {
+	const host = document.getElementById(RDW_PAGE_ROOT_ID);
+	if (!(host instanceof HTMLElement)) return;
+	applyTokenProperties(host, palette);
+}
+/**
+* Inject or replace the site-skin stylesheet (rules scoped under html.rdw-skin).
+*/
+function injectSiteSkinHook(cssText = "") {
+	const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
+	style.textContent = cssText;
+	return style;
+}
+function applyHtmlThemeAttributes(theme) {
+	const root = document.documentElement;
+	root.setAttribute(RDW_THEME_ATTR, theme);
+	if (themeEnablesSkin(theme)) root.classList.add(RDW_SKIN_CLASS);
+	else root.classList.remove(RDW_SKIN_CLASS);
+}
+/**
+* Document-start-safe appearance apply:
+* html class/attr + token CSS (+ site-skin) + optional custom props.
+* Palette from {@link resolveAppearancePalette} (site ≠ Light/Dark).
+* Also syncs live #rdw-page-root Shadow host to the same palette.
+*/
+function applyAppearanceToDocument(options) {
+	const { appearance } = options;
+	applyHtmlThemeAttributes(appearance.theme);
+	const palette = resolveAppearancePalette(appearance);
+	injectTokenStyles(palette);
+	syncPageRootTokens(palette);
+	injectSiteSkinHook(options.siteSkinCss ?? "");
+	const root = document.documentElement;
+	clearCustomThemeProperties(root);
+	const omitImage = options.omitBackgroundImage === true;
+	const backgroundImage = omitImage ? void 0 : options.backgroundDataUrl ?? appearance.custom?.backgroundImage;
+	if (appearance.theme === "custom" && appearance.custom !== void 0) applyCustomThemeProperties(root, backgroundImage !== void 0 && backgroundImage.length > 0 ? {
+		backgroundImage,
+		...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
+	} : { ...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {} });
+	else if (!omitImage && options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
+}
+/**
+* Pre-paint appearance read: one GM_getValue + shape checks only (no zod).
+* Full AppearanceSchema validation stays on the post-paint store path.
+*/
+var CUSTOM_BASE_LIGHT = "light";
+var CUSTOM_BASE_DARK = "dark";
+/** Cached raw STORAGE_KEY payload from the single pre-paint GM read. */
+var rawStorageCache;
+var rawStorageRead = false;
+function isRecord(value) {
+	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function getGmGetValue$2() {
+	return GM_getValue;
+}
+/**
+* Single GM read for the pre-paint path. Subsequent calls reuse the cache
+* so layout peek does not hit GM again before first paint.
+*/
+function readRawStorageOnce() {
+	if (!rawStorageRead) {
+		rawStorageCache = getGmGetValue$2()(STORAGE_KEY, void 0);
+		rawStorageRead = true;
+	}
+	return rawStorageCache;
+}
+function cheapParseTheme(value) {
+	if (value === "site") return APPEARANCE_THEME_SITE;
+	if (value === "site-dark") return APPEARANCE_THEME_SITE_DARK;
+	if (value === "light") return APPEARANCE_THEME_LIGHT;
+	if (value === "dark") return APPEARANCE_THEME_DARK;
+	if (value === "custom") return APPEARANCE_THEME_CUSTOM;
+	return DEFAULT_APPEARANCE_THEME;
+}
+function cheapParseCustom(raw) {
+	if (!isRecord(raw)) return;
+	const baseRaw = raw.base;
+	const custom = { base: baseRaw === CUSTOM_BASE_DARK || baseRaw === CUSTOM_BASE_LIGHT ? baseRaw : CUSTOM_BASE_LIGHT };
+	if (typeof raw.backgroundImage === "string") custom.backgroundImage = raw.backgroundImage;
+	if (typeof raw.backgroundDim === "number" && Number.isFinite(raw.backgroundDim)) custom.backgroundDim = raw.backgroundDim;
+	return custom;
+}
+/**
+* Cheap appearance extract from a raw GM storage blob (or undefined).
+* Does not validate marks / collections / artists / favs.
+*/
+function cheapParseAppearance(raw) {
+	if (!isRecord(raw)) return { theme: DEFAULT_APPEARANCE_THEME };
+	const settings = raw.settings;
+	if (!isRecord(settings)) return { theme: DEFAULT_APPEARANCE_THEME };
+	const appearanceRaw = settings.appearance;
+	if (!isRecord(appearanceRaw)) return { theme: DEFAULT_APPEARANCE_THEME };
+	const theme = cheapParseTheme(appearanceRaw.theme);
+	if (theme !== "custom") return { theme };
+	const custom = cheapParseCustom(appearanceRaw.custom);
+	if (custom === void 0) return { theme };
+	return {
+		theme,
+		custom
+	};
+}
+/** Pre-paint appearance: one GM read + cheap shape check. */
+function peekAppearanceForPaint() {
+	return cheapParseAppearance(readRawStorageOnce());
+}
+/**
+* Cheap layout flags from the same cached GM blob (no second GM read, no zod).
+* Used after CSS injection for grid-density / menu-cleanup / search reserve.
+*/
+function peekLayoutSettings() {
+	const raw = readRawStorageOnce();
+	if (!isRecord(raw) || !isRecord(raw.settings)) return {
+		tweaksEnabled: true,
+		features: {},
+		featureChoice: {}
+	};
+	const settings = raw.settings;
+	const tweaksEnabled = typeof settings.tweaksEnabled === "boolean" ? settings.tweaksEnabled : true;
+	const features = {};
+	if (isRecord(settings.features)) {
+		for (const [key, value] of Object.entries(settings.features)) if (typeof value === "boolean") features[key] = value;
+	}
+	const featureChoice = {};
+	if (isRecord(settings.featureChoice)) {
+		for (const [key, value] of Object.entries(settings.featureChoice)) if (typeof value === "string") featureChoice[key] = value;
+	}
+	return {
+		tweaksEnabled,
+		features,
+		featureChoice
+	};
+}
+function resolveFeatureEnabled(layout, id, defaultEnabled) {
+	if (!layout.tweaksEnabled) return false;
+	const stored = layout.features[id];
+	if (stored === void 0) return defaultEnabled;
+	return stored;
+}
+function resolveFeatureChoice(layout, id, defaultValue, allowed) {
+	const stored = layout.featureChoice[id];
+	if (stored !== void 0 && allowed.includes(stored)) return stored;
+	return defaultValue;
+}
+/**
+* Pre-CSS operations on document-start (must stay minimal — A1 counts these):
+* 1. GM_getValue(STORAGE_KEY) via {@link peekAppearanceForPaint}
+* 2. cheap shape parse of settings.appearance (no zod)
+* Then immediately inject theme + skin CSS (base color only, no background image).
+*/
+function syncSiteCookieAfterCss(appearance) {
+	const theme = appearance.theme === "site-dark" ? "dark" : "light";
+	writeSiteThemeCookie(theme);
+	scheduleSiteDesktopStylesheet(theme);
+}
+/**
+* If the URL already has #rdw/…, stamp html.rdw-own-page after CSS inject.
+* Kept here (not in pages/router) so document-start does not import Preact host.
+*/
+function applyOwnPageClassEarly() {
+	if (parseRdwHash(window.location.hash) === null) return;
+	const root = document.documentElement;
+	if (root === null) return;
+	const style = ensureStyleElement(RDW_OWN_PAGE_STYLE_ID);
+	style.textContent = buildOwnPageCss();
+	root.classList.add(RDW_OWN_PAGE_CLASS);
+}
+/**
+* Runs at userscript document-start, before DOMContentLoaded.
+* Hot path: cheap appearance GM read → inject token + site-skin CSS (no bg image).
+* Cookie sync / rdw-own-page run only after styles are in the DOM.
+*/
+function bootEarly() {
+	const appearance = peekAppearanceForPaint();
+	applyAppearanceToDocument({
+		appearance,
+		siteSkinCss: getSiteSkinCss(),
+		omitBackgroundImage: true
+	});
+	syncSiteCookieAfterCss(appearance);
+	applyOwnPageClassEarly();
+}
+var THUMB_CLASS = "rdw-thumb";
+var THUMB_ANCHOR_NAME = "--rdw-img";
+var FEATURE_STYLE_ID_PREFIX = "rdw-feature-style-";
+var POST_ACTIONS_ID = "rdw-post-actions";
+function featureBodyClass(id) {
+	return `rdw-f-${id}`;
+}
+function featureChoiceBodyClass(id, value) {
+	return `rdw-f-${id}-${value}`;
+}
+var FEATURE_ID$12 = "grid-density";
+var COMPACT_PX = 150;
+var LARGE_PX = 250;
+var CHOICE_DEFAULT = "default";
+var CHOICE_COMPACT = "compact";
+var CHOICE_LARGE = "large";
+function sizeCss(choiceValue, px) {
+	const bodyClass = featureChoiceBodyClass(FEATURE_ID$12, choiceValue);
+	return [
+		`body.${bodyClass} span.thumb,`,
+		`body.${bodyClass} span.thumb > a {`,
+		`  width: ${String(px)}px !important;`,
+		`  height: ${String(px)}px !important;`,
+		`}`,
+		`body.${bodyClass} img.preview {`,
+		`  max-width: ${String(px)}px !important;`,
+		`  max-height: ${String(px)}px !important;`,
+		`}`
+	].join("\n");
+}
+/** Same gap on both axes for Default, Compact, and Large. Does not set cell size. */
+function gapCss() {
+	return [
+		`body.${featureBodyClass(FEATURE_ID$12)} div.image-list {`,
+		`  column-gap: ${String(4)}px !important;`,
+		`  row-gap: ${String(4)}px !important;`,
+		`}`
+	].join("\n");
+}
+var gridDensityFeature = exports("bh",{
+	id: FEATURE_ID$12,
+	label: "Grid size",
+	pages: ["list", "favorites"],
+	defaultEnabled: true,
+	cssOnly: true,
+	choice: {
+		options: [
+			{
+				value: CHOICE_DEFAULT,
+				label: "Default"
+			},
+			{
+				value: CHOICE_COMPACT,
+				label: "Compact (150)"
+			},
+			{
+				value: CHOICE_LARGE,
+				label: "Large (250)"
+			}
+		],
+		defaultValue: CHOICE_DEFAULT
+	},
+	css: [
+		sizeCss(CHOICE_COMPACT, COMPACT_PX),
+		sizeCss(CHOICE_LARGE, LARGE_PX),
+		gapCss()
+	].join("\n"),
+	mount: () => void 0
+});
+var FEATURE_ID$11 = "menu-cleanup";
+var FEATURE_LABEL$11 = "Clean header menu";
+var CONTENT_ID$1 = "content";
+var HIDDEN_CLASS = "rdw-menu-hidden";
+var BODY_FEATURE_CLASS$3 = featureBodyClass(FEATURE_ID$11);
+var MISSING_MENU_WARN = "Header menu not found";
+var HIDE_LINK_TEXT_SET = /* @__PURE__ */ new Set([
+	"iCame Top 100",
+	"Discord",
+	"X",
+	"Other Sites",
+	"Contact Us",
+	"DMCA",
+	"About",
+	"TOS",
+	"My Favorites"
+]);
+var FEATURE_PAGES$11 = [
+	"list",
+	"post",
+	"favorites",
+	"other"
+];
+var FEATURE_CSS$11 = `body.${BODY_FEATURE_CLASS$3} li.${HIDDEN_CLASS} { display:none !important; }`;
+function isHeaderMenuLink(anchor, content) {
+	const listItem = anchor.closest("li");
+	if (listItem === null) return false;
+	if (content !== null && content.contains(listItem)) return false;
+	return true;
+}
+function collectHeaderMenuLinks() {
+	const content = document.getElementById(CONTENT_ID$1);
+	const anchors = document.querySelectorAll("a");
+	const headerLinks = [];
+	for (const node of anchors) {
+		if (!(node instanceof HTMLAnchorElement)) continue;
+		if (!isHeaderMenuLink(node, content)) continue;
+		headerLinks.push(node);
+	}
+	return headerLinks;
+}
+function mountMenuCleanup(_ctx) {
+	const headerLinks = collectHeaderMenuLinks();
+	if (headerLinks.length === 0) {
+		log.warn(MISSING_MENU_WARN);
+		return;
+	}
+	for (const anchor of headerLinks) {
+		const text = anchor.textContent?.trim() ?? "";
+		if (!HIDE_LINK_TEXT_SET.has(text)) continue;
+		const listItem = anchor.closest("li");
+		if (listItem === null) continue;
+		listItem.classList.add(HIDDEN_CLASS);
+	}
+}
+var menuCleanupFeature = {
+	id: FEATURE_ID$11,
+	label: FEATURE_LABEL$11,
+	pages: [...FEATURE_PAGES$11],
+	defaultEnabled: true,
+	cssOnly: true,
+	css: FEATURE_CSS$11,
+	mount: mountMenuCleanup
+};
+function detectPageKind(search) {
+	const params = new URLSearchParams(search);
+	const page = params.get(SEARCH_PARAM_PAGE);
+	const section = params.get("s");
+	if (page === "post" && section === "list") return "list";
+	if (page === "post" && section === "view") return "post";
+	if (page === "favorites" && section === "view") return "favorites";
+	return "other";
+}
+function readPostIdFromSearch(search) {
+	const params = new URLSearchParams(search);
+	const page = params.get(SEARCH_PARAM_PAGE);
+	const section = params.get("s");
+	const id = params.get("id");
+	if (page !== "post" || section !== "view") return null;
+	if (id === null || id.trim().length === 0) return null;
+	if (!/^\d+$/.test(id)) return null;
+	return id;
 }
 var UPDATES_ID_TOKEN_PATTERN = /^id:>(\d+)$/;
 var PLAYLIST_ID_TOKEN_PATTERN = /^id:(\d+)$/;
@@ -2681,7 +4895,8 @@ function migrateMarksFavToFavs() {
 			marks: nextMarks
 		};
 		const stripped = stripLegacyPanelWindowSize(nextMain);
-		if (marksChanged || stripped.changed) mainToWrite = stripped.data;
+		const choices = migrateRetiredFeatureChoices(stripped.data);
+		if (marksChanged || stripped.changed || choices.changed) mainToWrite = choices.data;
 	}
 	if (mainToWrite !== null) writeMainStorage(mainToWrite);
 	const nextFavs = {
@@ -2808,14 +5023,14 @@ function extractFavIdsFromMarks(marks) {
 }
 var cachedStorage = null;
 var storageCacheHydrated = false;
-function getGmGetValue$2() {
+function getGmGetValue() {
 	return GM_getValue;
 }
 function getGmSetValue() {
 	return GM_setValue;
 }
 function readRaw() {
-	return getGmGetValue$2()(STORAGE_KEY, void 0);
+	return getGmGetValue()(STORAGE_KEY, void 0);
 }
 function writeData(data) {
 	getGmSetValue()(STORAGE_KEY, data);
@@ -3180,4181 +5395,6 @@ function removeArtist(tag) {
 	save(data);
 	return true;
 }
-var n;
-var t$1;
-var u$2;
-var i$1;
-var f$2;
-var o$2;
-var e$1;
-var l$1;
-var c$1;
-var a$2;
-var h$1 = Symbol.for("pv");
-var p$1 = {};
-var y$1 = [];
-var v$1 = /^m(i|n|o|s|text|space)$/;
-var w$1 = Array.isArray;
-var d$1 = y$1.slice;
-var _$1 = Object.assign;
-function g$1(n) {
-	n && n.parentNode && n.remove();
-}
-function k$1(n, t, r) {
-	var u, i, f, o = {}, e = arguments.length;
-	for (f in t) "key" == f ? u = t[f] : "ref" == f && "function" != typeof n ? i = t[f] : o[f] = t[f];
-	return e > 2 && (o.children = e > 3 ? d$1.call(arguments, 2) : r), m$1(n, o, u, i, null);
-}
-function m$1(r, u, i, f, o) {
-	var e = {
-		type: r,
-		props: u,
-		key: i,
-		ref: f,
-		__k: null,
-		__: null,
-		__b: 0,
-		__e: null,
-		__c: null,
-		constructor: h$1,
-		__v: o || ++t$1,
-		__i: -1,
-		__u: 0
-	};
-	return !o && n.vnode && n.vnode(e), e;
-}
-function $(n) {
-	return n.children;
-}
-function x(n, t) {
-	this.props = n, this.context = t, this.__g = 0;
-}
-function S(n, t) {
-	if (null == t) return n.__ && S(n.__, n.__i + 1);
-	for (var r; t < n.__k.length; t++) if ((r = n.__k[t]) && r.__e) return r.__e;
-	return "function" != typeof n.type || n.props.__P ? null : S(n);
-}
-function C$1(t) {
-	var r, u = t.__v, i = u.__e, f = [], o = [], e = t.__P;
-	e && ((r = _$1({ constructor: h$1 }, u)).__v = u.__v + 1, n.vnode && n.vnode(r), z$1(e, r, u, t.__n, e.namespaceURI, 32 & u.__u ? [i] : null, f, i || S(u), 32 & u.__u, o), r.__v = u.__v, r.__.__k[r.__i] = r, E$1(f, r, o), u.__ = u.__e = null, r.__e != i && j(r));
-}
-function j(n) {
-	if ((n = n.__) && n.__c && !n.props.__P) return n.__e = null, n.__k.some(function(t) {
-		return t && (n.__e = t.__e);
-	}), j(n);
-}
-function L(t) {
-	(8 & t.__g || (t.__g |= 8, u$2.push(t), f$2++)) && i$1 == n.debounceRendering || ((i$1 = n.debounceRendering) || queueMicrotask)(H);
-}
-function H() {
-	try {
-		for (var n, t = 1; u$2.length;) u$2.length > t && u$2.sort(o$2), n = u$2.shift(), t = u$2.length, 8 & n.__g && C$1(n);
-	} finally {
-		(f$2 = u$2.length) && (i$1 || queueMicrotask)(H);
-	}
-}
-function I(n, t, r, u, i, f, o, e, l, c, a) {
-	var s, h, v, w, d, _, g = u.__k || y$1, k = t.length;
-	for (l = q(r, t, g, l, k), s = 0; s < k; s++) null != (v = r.__k[s]) && (h = ~v.__i && g[v.__i] || p$1, v.__i = s, _ = z$1(n, v, h, i, f, o, e, l, c, a), w = v.__e, (h.ref != v.ref || 8 & h.__u) && (h.ref && G$1(h.ref, null, v, h), v.ref && a.push(v.ref, v.__c || w, v)), d = d || w, 4 & v.__u ? (l = A$1(v, l, n, !h.__v), h.__e && (h.__e = null)) : "function" == typeof v.type && void 0 !== _ ? l = _ : w && (l = w.nextSibling), v.__u &= -21);
-	return r.__e = d, l;
-}
-function q(n, t, r, u, i) {
-	var f, o, e, l, c, a, s, p, y, v = r.length, d = v, _ = 0, g = 0, k = n.__k = Array(i);
-	for (f = 0; f < i; f++) null != (o = t[f]) && "boolean" != typeof o && "function" != typeof o ? ("object" != typeof o || o.constructor === String ? o = k[f] = m$1(null, o) : w$1(o) ? o = k[f] = m$1($, { children: o }) : o.constructor === h$1 && o.__b ? o = k[f] = m$1(o.type, o.props, o.key, o.ref, o.__v) : k[f] = o, l = f + _, o.__ = n, o.__b = n.__b + 1, e = null, ~(c = o.__i = P$1(o, r, l, d)) && (d--, (e = r[c]) && (e.__u |= 2)), e && e.__v ? (o.__u |= 16, c == l - 1 ? _-- : c == l + 1 ? _++ : c != l && (c > l ? _-- : _++, g = 1)) : (~c || (i > v ? _-- : i < v && _++), "function" != typeof o.type && (o.__u |= 4))) : k[f] = null;
-	if (g) {
-		for (a = [], s = [], f = 0; f < i; f++) if ((o = k[f]) && 16 & o.__u) {
-			for (_ = 0, p = a.length; _ < p;) a[y = _ + p >> 1] < o.__i ? _ = y + 1 : p = y;
-			a[_] = o.__i, s[f] = _ + 1;
-		}
-		for (_ = a.length; f--;) s[f] && (s[f] == _ ? _-- : k[f].__u |= 4);
-	}
-	if (d) for (f = 0; f < v; f++) !(e = r[f]) || 2 & e.__u || (e.__e == u && (u = S(e)), J(e, e));
-	return u;
-}
-function A$1(n, t, r, u) {
-	var i, f, o, e;
-	if ("function" == typeof n.type) {
-		if (n.props.__P) return t;
-		if (i = n.__k) for (f = 0; f < i.length; f++) i[f] && (i[f].__ = n, t = A$1(i[f], t, r, false));
-		return t;
-	}
-	for (t && !t.parentNode && (t = S(n)) && !t.parentNode && (t = null), o = n.__e, e = t; e && 8 == e.nodeType;) e = e.nextSibling;
-	for (o != e && (!u && r.moveBefore && o.parentNode ? r.moveBefore(o, t) : r.insertBefore(o, t || null)), t = o; (t = t && t.nextSibling) && 8 == t.nodeType && !t.data.startsWith("$s"););
-	return t;
-}
-function P$1(n, t, r, u) {
-	var i, f = n.key, o = n.type, e = t[r], l = e && !(2 & e.__u);
-	if (null === e && null == f || l && f == e.key && o == e.type) return r;
-	if (u > (l ? 1 : 0)) {
-		for (i = r - 1; i >= 0; i--) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
-		for (i = r + 1; i < t.length; i++) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
-	}
-	return -1;
-}
-function T$1(n, t, r) {
-	r ??= "", "-" == t[0] ? n.setProperty(t, r) : n[t] = r;
-}
-function N(n, t, r, u, i) {
-	var f, o;
-	if ("style" == t) if ("string" == typeof r) n.style.cssText = r;
-	else {
-		if ("string" == typeof u && (n.style.cssText = u = ""), u) for (t in u) r && t in r || T$1(n.style, t);
-		if (r) for (t in r) u && r[t] == u[t] || T$1(n.style, t, r[t]);
-	}
-	else if ("o" == t[0] && "n" == t[1]) "function" != typeof r && (r = null), "function" != typeof u && (u = null), (n.__e || (n.__e = {}))[t] = r, r && u || (o = a$2[t] || (a$2[t] = V(t)), (n.__a || (n.__a = {}))[t] = c$1, f = t != (t = t.replace(l$1, "$1")), (t = t.slice(2))[0] < "a" && (t = t.toLowerCase()), r ? n.addEventListener(t, o, f) : n.removeEventListener(t, o, f));
-	else {
-		if ("http://www.w3.org/2000/svg" == i) t = t.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
-		else if ("width" != t && "height" != t && "href" != t && "list" != t && "form" != t && "tabIndex" != t && "download" != t && "rowSpan" != t && "colSpan" != t && "role" != t && "popover" != t && t in n) try {
-			n[t] = null == r ? "" : r;
-			return;
-		} catch (n) {}
-		if ("function" == typeof r) return;
-		null == r || false === r && "-" != t[4] ? n.removeAttribute(t) : n.setAttribute(t, "popover" == t && 1 == r ? "" : r);
-	}
-}
-function V(t) {
-	return function(r) {
-		var u = this.__e;
-		if (u) {
-			if (u = u[t], null == r[e$1]) r[e$1] = c$1++;
-			else if (r[e$1] < this.__a[t]) return;
-			return u(n.event ? n.event(r) : r);
-		}
-	};
-}
-function z$1(t, r, u, i, f, o, e, l, c, a) {
-	var s, p, v, d, k, b, m, M, C, j, L, H, q, A, O, P, T, N, V = r.type;
-	if (r.constructor !== h$1) return null;
-	128 & u.__u && (c = 32 & u.__u, s = u.__c.__z) && (r.__u |= c, p = o = [], 8 == s.nodeType ? l = B$1(s, o) : o.push(s), l = o[0] || l), (s = n.__b) && s(r);
-	n: if ("function" == typeof V) {
-		v = e.length;
-		try {
-			if (M = r.props, C = (s = V.prototype) && s.render, j = (s = V.contextType) && i[s.__c], L = s ? j ? j.props.value : s.__ : i, (d = u.__c) ? (r.__c = d, 2 & d.__g && (d.__g |= 1)) : (C ? r.__c = d = new V(M, L) : (r.__c = d = new x(M, L), d.constructor = V, d.render = K), j && j.sub(d), d.state || (d.state = {}), d.__n = i, d.__g |= 8, d.__h = [], d.__k = []), C && (d.__s || (d.__s = d.state), V.getDerivedStateFromProps && (d.__s == d.state && (d.__s = _$1({}, d.__s)), _$1(d.__s, V.getDerivedStateFromProps(M, d.__s)))), k = d.props, b = d.state, d.__v = r, u.__c) {
-				if (M !== k && C && !V.getDerivedStateFromProps && d.componentWillReceiveProps && d.componentWillReceiveProps(M, L), r.__v == u.__v && !(8 & d.__g) || !(4 & d.__g) && d.shouldComponentUpdate && !1 === d.shouldComponentUpdate(M, d.__s, L)) {
-					r.__v != u.__v && (d.props = M, d.state = d.__s, d.__g &= -9), r.__e = u.__e, r.__k = u.__k, r.__k.some(function(n) {
-						n && (n.__ = r);
-					}), y$1.push.apply(d.__h, d.__k), d.__k = [], d.__h.length && e.push(d), l = S(u);
-					break n;
-				}
-				d.componentWillUpdate && d.componentWillUpdate(M, d.__s, L), C && d.componentDidUpdate && d.__h.push(function() {
-					d.componentDidUpdate(k, b, m);
-				});
-			} else C && !V.getDerivedStateFromProps && d.componentWillMount && d.componentWillMount(), C && d.componentDidMount && d.__h.push(d.componentDidMount);
-			d.context = L, d.props = M, d.__P = t, d.__g &= -5, H = n.__r, q = C ? 25 : 0;
-			do
-				d.__g &= -9, H && H(r), s = d.render(d.props, d.state = d.__s, d.context);
-			while (8 & d.__g && ++q < 25);
-			C && (y$1.push.apply(d.__h, d.__k), d.__k = []), d.state = d.__s, d.getChildContext && (i = _$1({}, i, d.getChildContext())), C && u.__c && d.getSnapshotBeforeUpdate && (m = d.getSnapshotBeforeUpdate(k, b)), A = s && s.type === $ && null == s.key ? s.props.children : s, M.__P && (s = l, f = (t = M.__P).namespaceURI, c = o = null, u.props && u.props.__P != t && (u.__k.some(function(n) {
-				n && J(n, n);
-			}), u.__k = null), l = u.__k ? S(u, 0) : null), l = I(t, w$1(A) ? A : [A], r, u, i, f, o, e, l, c, a), M.__P && (r.__e = null, l = s), r.__u &= -161, p && p.some(g$1), d.__h.length && e.push(d), 1 & d.__g && (d.__g &= -4);
-		} catch (t) {
-			if (e.length = v, r.__v = null, c || o) if (t && t.then) {
-				if (r.__u |= 128 | c, o) {
-					for (~(T = o.indexOf(l || void 0)) || (T = o.length); (N = o[T - 1]) && 8 == N.nodeType;) T--;
-					for (; T < o.length; T++) if (N = o[T]) if (o[T] = null, O) {
-						if (N == P) break;
-					} else {
-						if (8 != N.nodeType) break;
-						N.data.startsWith("$s") && (P = B$1(O = N));
-					}
-				}
-				if (!O) {
-					for (; l && 8 == l.nodeType && l.nextSibling;) l = l.nextSibling;
-					O = l;
-				}
-				(s = B$1(O = r.__c.__z || (r.__c.__z = O))) ? (r.__e = O, l = s) : r.__e = l, l = l && l.nextSibling;
-			} else o && o.some(g$1);
-			else r.__e = u.__e;
-			r.__k || (r.__k = u.__k || []), t && t.then || D$1(r), n.__e(t, r, u);
-		}
-	} else l = r.__e = F$1(u.__e, r, u, i, f, o, e, c, a, t);
-	return (s = n.diffed) && s(r), l;
-}
-function B$1(n, t) {
-	if (n && 8 == n.nodeType && n.data.startsWith("$s")) for (var r = 1; n = n.nextSibling;) {
-		if (8 == n.nodeType) {
-			if (n.data.startsWith("$s")) r++;
-			else if (n.data.startsWith("/$s") && !--r) return n;
-		}
-		t && t.push(n);
-	}
-}
-function D$1(n) {
-	n && (n.__c && (n.__c.__g |= 4), n.__k && n.__k.some(D$1));
-}
-function E$1(t, r, u) {
-	for (var i = 0; i < u.length;) G$1(u[i++], u[i++], u[i++]);
-	n.__c && n.__c(r, t), t.some(function(r) {
-		try {
-			t = r.__h, r.__h = [], t.some(function(n) {
-				n.call(r);
-			});
-		} catch (t) {
-			n.__e(t, r.__v);
-		}
-	});
-}
-function F$1(t, r, u, i, f, o, e, l, c, a) {
-	var s, h, y, _, k, b, m, M, $ = u.props || p$1, x = r.props, C = r.type;
-	if ("svg" == C ? f = "http://www.w3.org/2000/svg" : "math" == C ? f = "http://www.w3.org/1998/Math/MathML" : f || (f = "http://www.w3.org/1999/xhtml"), o) {
-		for (s = 0; s < o.length; s++) if ((k = o[s]) && (C ? k.localName == C : 3 == k.nodeType)) {
-			t = k, o[s] = null;
-			break;
-		}
-	}
-	if (!t) {
-		if (M = a.ownerDocument || document, !C) return M.createTextNode(x);
-		t = M.createElementNS(f, C, x.is ? x : a), l && (n.__m && n.__m(r, o), l = false), o = null;
-	}
-	if (C) {
-		if (a = "template" == C && t.content || t, o = "textarea" == C && null != x.defaultValue ? null : o && d$1.call(a.childNodes), !l && o) for ($ = {}, s = 0; s < t.attributes.length; s++) $[(k = t.attributes[s]).name] = k.value;
-		for (s in $) k = $[s], "dangerouslySetInnerHTML" == s ? y = k : "children" == s || s in x || "value" == s && "defaultValue" in x || "checked" == s && "defaultChecked" in x || N(t, s, null, k, f);
-		for (s in x) k = x[s], "children" == s ? _ = k : "dangerouslySetInnerHTML" == s ? h = k : "value" == s ? b = k : "checked" == s ? m = k : l && "function" != typeof k || $[s] === k || N(t, s, k, $[s], f);
-		h ? (l || y && (h.__html == y.__html || h.__html == t.innerHTML) || (t.innerHTML = h.__html), r.__k = []) : (y && (t.textContent = ""), ("foreignObject" == C || "http://www.w3.org/1998/Math/MathML" == f && v$1.test(C)) && (f = "http://www.w3.org/1999/xhtml"), I(a, w$1(_) ? _ : [_], r, u, i, f, o, e, o ? o[0] : u.__k && S(u, 0), l, c), o && o.some(g$1)), l && "textarea" != C || (s = "value", "progress" == C && null == b ? t.removeAttribute(s) : null == b || b === t[s] && ("progress" != C || b) || N(t, s, b, $[s], f), s = "checked", null != m && m != t[s] && N(t, s, m, $[s], f));
-	} else $ === x || l && t.data == x || (t.data = x);
-	return t;
-}
-function G$1(t, r, u, i) {
-	try {
-		"function" == typeof t ? r ? r.__x = t(r) || 1 : i && (i = i.__c || i.__e) && (r = i.__x) && (i.__x = null, "function" == typeof r ? r() : t(null)) : t.current = r;
-	} catch (t) {
-		n.__e(t, u);
-	}
-}
-function J(t, r, u) {
-	var i, f, o, e;
-	if (n.unmount && n.unmount(t), !(i = t.ref) || i.current && i.current != t.__e || G$1(i, null, r, t), i = t.__c) {
-		if (i.componentWillUnmount) try {
-			i.componentWillUnmount();
-		} catch (t) {
-			n.__e(t, r);
-		}
-		i.__P = i.__n = null;
-	}
-	if (i = t.__k) for (e = 0; e < i.length; e++) i[e] && J(i[e], r, "function" != typeof t.type || u && !t.props.__P);
-	!u && (i = t.__c) && (i = i.__z) && (f = B$1(i, o = [])) && (i == t.__e && o.some(g$1), g$1(f), g$1(i)), u || g$1(t.__e), t.__e = t.__c = t.__ = null;
-}
-function K(n, t, r) {
-	return this.constructor(n, r);
-}
-function Q(t, r) {
-	var u, i, f, o;
-	n.__ && n.__(t, r), 9 == r.nodeType && (r = r.documentElement), i = (u = t && 32 & t.__u) ? null : r.__k, r.__k = m$1($, { children: [t] }), f = [], o = [], z$1(r, r.__k, i || p$1, p$1, r.namespaceURI, i ? null : r.firstChild ? d$1.call(r.childNodes) : null, f, i ? i.__e : r.firstChild, u, o), E$1(f, r.__k, o), r.__k.props.children = null;
-}
-n = { __e: function(n, t, r, u) {
-	for (var i, o, e; t = t.__;) if ((i = t.__c) && !(1 & i.__g)) {
-		i.__g |= 4;
-		try {
-			if ((e = (o = i.constructor) && o.getDerivedStateFromError) && i.setState(o.getDerivedStateFromError(n)), i.componentDidCatch && (i.componentDidCatch(n, u || {}), e = 1), e && 8 & i.__g) return void (i.__g |= 2);
-		} catch (t) {
-			n = t;
-		}
-	}
-	throw f$2 = 0, n;
-} }, t$1 = 0, x.prototype.setState = function(n, t) {
-	var r = this.__s;
-	r && r != this.state || (r = this.__s = _$1({}, this.state)), "function" == typeof n && (n = n(_$1({}, r), this.props)), n && (_$1(r, n), this.__v && (t && this.__k.push(t), L(this)));
-}, x.prototype.forceUpdate = function(n) {
-	this.__v && (this.__g |= 4, n && this.__h.push(n), L(this));
-}, x.prototype.render = $, u$2 = [], f$2 = 0, o$2 = function(n, t) {
-	return n.__v.__b - t.__v.__b;
-}, e$1 = Symbol(), l$1 = /(PointerCapture)$|Capture$/i, c$1 = 0, a$2 = {};
-var t;
-var r;
-var u$1;
-var i;
-var o$1 = Object.is;
-var f$1 = 0;
-var c = [];
-var e = [];
-var a$1 = n;
-var v$2 = a$1.__b;
-var l = a$1.__r;
-var m = a$1.diffed;
-var h = a$1.__c;
-var s = a$1.unmount;
-var p = a$1.__;
-function y(n, t) {
-	a$1.__h && a$1.__h(r, n, f$1 || t), f$1 = 0;
-	var u = r.__H || (r.__H = {
-		__: [],
-		__h: []
-	});
-	return n >= u.__.length && u.__.push({}), u.__[n];
-}
-function d(n) {
-	return f$1 = 1, _(G, n);
-}
-function _(n, u, i) {
-	var f = y(t++, 2);
-	if (f.t = n, !f.__c && (f.__ = [G(void 0, u), function(n) {
-		var t = (f.__N || f.__)[0], r = f.t(t, n);
-		o$1(t, r) || (f.__N = [r, f.__[1]], f.__c.setState({}));
-	}], f.__c = r, !r.__f)) {
-		r.__f = true;
-		var c = r.shouldComponentUpdate;
-		r.shouldComponentUpdate = function(n, t, r) {
-			var u = this.__H;
-			if (!u) return true;
-			var i = false, f = this.props != n;
-			if (u.__.some(function(n) {
-				n.__N && (i = true, o$1(n.__[0], n.__N[0]) || (f = true));
-			}), c) {
-				var e = c.call(this, n, t, r);
-				return i ? e || f : e;
-			}
-			return !i || f;
-		};
-	}
-	return f.__;
-}
-function A(n, u) {
-	var i = y(t++, 3);
-	!a$1.__s && E(i.__H, u) && (i.__P = true, i.__ = n, i.u = u, r.__H.__h.push(i));
-}
-function F(n, u) {
-	var i = y(t++, 4);
-	!a$1.__s && E(i.__H, u) && (i.__P = false, i.__ = n, i.u = u, r.__h.push(i));
-}
-function T(n) {
-	return f$1 = 5, w(function() {
-		return { current: n };
-	}, []);
-}
-function w(n, r) {
-	var u = y(t++, 7);
-	return E(u.__H, r) && (u.__ = n(), u.__H = r), u.__;
-}
-function b(n, t) {
-	return f$1 = 8, w(function() {
-		return n;
-	}, t);
-}
-function P() {
-	var n = y(t++, 11);
-	if (!n.__) {
-		for (var u = r.__v; !u.__m && u.__;) u = u.__;
-		var i = u.__m || (u.__m = [0, 0]);
-		n.__ = "P" + i[0] + "-" + i[1]++;
-	}
-	return n.__;
-}
-function g() {
-	var n;
-	do {
-		for (; n = e.shift();) try {
-			C(n);
-		} catch (t) {
-			a$1.__e(t, { __: (n = n.__P) && n.__v });
-		}
-		for (; n = c.shift();) {
-			var t = n.__H;
-			if (n.__P && t) try {
-				t.__h.some(C), t.__h.some(D), t.__h = [];
-			} catch (r) {
-				t.__h = [], a$1.__e(r, n.__v);
-			}
-		}
-	} while (e.length);
-}
-a$1.__b = function(n) {
-	r = null, v$2 && v$2(n);
-}, a$1.__ = function(n, t) {
-	n && t.__k && t.__k.__m && (n.__m = t.__k.__m), p && p(n, t);
-}, a$1.__r = function(n) {
-	l && l(n), t = 0;
-	var i = (r = n.__c).__H;
-	i && (u$1 == r ? r.__h = [] : (i.__h.some(C), i.__h.some(D), t = 0), i.__h = [], i.__.some(function(n) {
-		n.__N && (n.__ = n.__N), n.u = n.__N = void 0;
-	})), u$1 = r;
-}, a$1.diffed = function(n) {
-	m && m(n);
-	var t = n.__c;
-	t && t.__H && (t.__H.__h.length && B(c.push(t)), t.__H.__.some(function(n) {
-		n.u && (n.__H = n.u);
-	})), u$1 = r = null;
-}, a$1.__c = function(n, t) {
-	t.some(function(n) {
-		try {
-			n.__h.some(C), n.__h = n.__h.filter(function(n) {
-				return !n.__ || D(n);
-			});
-		} catch (t) {
-			n.__h = [function() {
-				throw t;
-			}];
-		}
-	}), h && h(n, t);
-}, a$1.unmount = function(n) {
-	s && s(n);
-	var t, r, u = n.__c;
-	u && u.__H && (u.__H.__.some(function(u) {
-		try {
-			if (u.__P && u.__c) {
-				if (void 0 === r) {
-					for (r = n.__; r && (!r.__c || !r.__c.__P);) r = r.__;
-					r = r && r.__c;
-				}
-				u.__P = r, B(e.push(u));
-			} else C(u);
-		} catch (n) {
-			t = n;
-		}
-	}), u.__H = void 0, t && a$1.__e(t, u.__v));
-};
-var k = "function" == typeof requestAnimationFrame;
-function z(n) {
-	var t, r = function() {
-		clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
-	}, u = setTimeout(r, 35);
-	k && (t = requestAnimationFrame(r));
-}
-function B(n) {
-	1 != n && i == a$1.requestAnimationFrame || ((i = a$1.requestAnimationFrame) || z)(g);
-}
-function C(n) {
-	var t = r, u = n.__c;
-	"function" == typeof u && (n.__c = void 0, u()), r = t;
-}
-function D(n) {
-	var t = r;
-	n.__c = n.__(), r = t;
-}
-function E(n, t) {
-	return !n || n.length != t.length || t.some(function(t, r) {
-		return !o$1(t, n[r]);
-	});
-}
-function G(n, t) {
-	return "function" == typeof t ? t(n) : t;
-}
-var KIT_FOCUS_CSS = exports("aB",`
-.rdw-kit-focusable:focus-visible {
-  outline: 2px solid var(--rdw-accent);
-  outline-offset: 2px;
-}
-`);
-var f = Symbol.for("pv");
-var o = 0;
-function a(t, e, n$1, u, a, i) {
-	e || (e = {});
-	var c, l, p = e;
-	if ("ref" in p && "function" != typeof t) for (l in p = {}, e) "ref" == l ? c = e[l] : p[l] = e[l];
-	var s = {
-		type: t,
-		props: p,
-		key: n$1,
-		ref: c,
-		__k: null,
-		__: null,
-		__b: 0,
-		__e: null,
-		__c: null,
-		constructor: f,
-		__v: --o,
-		__i: -1,
-		__u: 0
-	};
-	return n.vnode && n.vnode(s), s;
-}
-var KEY_ARROW_DOWN = "ArrowDown";
-var KEY_ARROW_UP = "ArrowUp";
-var KEY_ENTER$3 = "Enter";
-var KEY_ESCAPE$2 = "Escape";
-var NO_ACTIVE_INDEX = -1;
-var AUTOCOMPLETE_FIELD_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-ac {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.rdw-ac__label {
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-}
-.rdw-ac__input {
-  box-sizing: border-box;
-  min-height: 28px;
-  height: 28px;
-  width: 100%;
-  padding: 0 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  font: inherit;
-  font-size: 12px;
-}
-.rdw-ac__input::placeholder {
-  color: var(--rdw-muted);
-}
-.rdw-ac__input:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.rdw-ac__list {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  margin: 0;
-  padding: 4px;
-  list-style: none;
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  box-shadow: var(--rdw-shadow-2);
-  max-height: 220px;
-  overflow: auto;
-}
-.rdw-ac__option {
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border-radius: var(--rdw-radius-s);
-  font-size: 12px;
-  color: var(--rdw-text);
-  cursor: pointer;
-}
-.rdw-ac__option[aria-selected="true"],
-.rdw-ac__option:hover {
-  background: var(--rdw-surface-2);
-}
-`;
-function AutocompleteField(props) {
-	const autoId = P();
-	const listId = P();
-	const inputId = props.id ?? autoId;
-	const rootRef = T(null);
-	const [open, setOpen] = d(false);
-	const [activeIndex, setActiveIndex] = d(NO_ACTIVE_INDEX);
-	const suggestions = props.suggestions;
-	const hasSuggestions = suggestions.length > 0;
-	const listOpen = open && hasSuggestions && props.disabled !== true;
-	A(() => {
-		setActiveIndex(NO_ACTIVE_INDEX);
-		if (hasSuggestions) setOpen(true);
-		else setOpen(false);
-	}, [suggestions, hasSuggestions]);
-	A(() => {
-		if (!listOpen) return;
-		const onPointerDown = (event) => {
-			const root = rootRef.current;
-			if (root === null) return;
-			if (!event.composedPath().includes(root)) {
-				setOpen(false);
-				setActiveIndex(NO_ACTIVE_INDEX);
-			}
-		};
-		document.addEventListener("mousedown", onPointerDown);
-		return () => {
-			document.removeEventListener("mousedown", onPointerDown);
-		};
-	}, [listOpen]);
-	const selectOption = (option) => {
-		props.onChange(option.value);
-		props.onSelect?.(option);
-		setOpen(false);
-		setActiveIndex(NO_ACTIVE_INDEX);
-	};
-	const className = ["rdw-ac", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	const activeOption = activeIndex >= 0 && activeIndex < suggestions.length ? suggestions[activeIndex] : void 0;
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: AUTOCOMPLETE_FIELD_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		ref: rootRef,
-		children: [
-			props.label !== void 0 ? /* @__PURE__ */ a("label", {
-				className: "rdw-ac__label",
-				htmlFor: inputId,
-				children: props.label
-			}) : null,
-			/* @__PURE__ */ a("input", {
-				id: inputId,
-				className: "rdw-ac__input rdw-kit-focusable",
-				type: "text",
-				role: "combobox",
-				"aria-autocomplete": "list",
-				"aria-expanded": listOpen,
-				"aria-controls": listId,
-				"aria-activedescendant": activeOption !== void 0 ? `${listId}-opt-${String(activeIndex)}` : void 0,
-				value: props.value,
-				placeholder: props.placeholder,
-				disabled: props.disabled,
-				"aria-label": props["aria-label"] ?? props.label,
-				autoComplete: "off",
-				onInput: (event) => {
-					props.onChange(event.currentTarget.value);
-				},
-				onFocus: () => {
-					if (hasSuggestions) setOpen(true);
-				},
-				onKeyDown: (event) => {
-					if (event.key === KEY_ESCAPE$2) {
-						if (listOpen) {
-							event.preventDefault();
-							setOpen(false);
-							setActiveIndex(NO_ACTIVE_INDEX);
-						}
-						return;
-					}
-					if (event.key === KEY_ARROW_DOWN) {
-						if (!hasSuggestions) return;
-						event.preventDefault();
-						setOpen(true);
-						setActiveIndex((current) => {
-							if (current < 0) return 0;
-							return Math.min(current + 1, suggestions.length - 1);
-						});
-						return;
-					}
-					if (event.key === KEY_ARROW_UP) {
-						if (!listOpen) return;
-						event.preventDefault();
-						setActiveIndex((current) => {
-							if (current <= 0) return NO_ACTIVE_INDEX;
-							return current - 1;
-						});
-						return;
-					}
-					if (event.key === KEY_ENTER$3) {
-						if (listOpen && activeOption !== void 0) {
-							event.preventDefault();
-							selectOption(activeOption);
-						}
-					}
-				}
-			}),
-			listOpen ? /* @__PURE__ */ a("ul", {
-				className: "rdw-ac__list",
-				role: "listbox",
-				id: listId,
-				tabIndex: -1,
-				children: suggestions.map((option, index) => /* @__PURE__ */ a("li", {
-					id: `${listId}-opt-${String(index)}`,
-					role: "option",
-					className: "rdw-ac__option rdw-kit-focusable",
-					"aria-selected": index === activeIndex,
-					onMouseDown: (event) => {
-						event.preventDefault();
-					},
-					onClick: () => {
-						selectOption(option);
-					},
-					children: option.label
-				}, `${option.value}:${option.type ?? ""}:${option.label}`))
-			}) : null
-		]
-	})] });
-}
-var BUTTON_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-sizing: border-box;
-  min-height: 28px;
-  border-radius: var(--rdw-radius-m);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid transparent;
-  padding: 0 12px;
-  color: var(--rdw-text);
-  background: var(--rdw-surface);
-}
-.rdw-btn--s {
-  min-height: 28px;
-  padding: 0 10px;
-  font-size: 12px;
-}
-.rdw-btn--m {
-  min-height: 28px;
-  padding: 0 12px;
-}
-.rdw-btn--primary {
-  background: var(--rdw-accent);
-  border-color: var(--rdw-accent);
-  color: var(--rdw-surface);
-}
-.rdw-btn--secondary {
-  background: var(--rdw-surface);
-  border-color: var(--rdw-border);
-  color: var(--rdw-text);
-}
-.rdw-btn--ghost {
-  background: transparent;
-  border-color: transparent;
-  color: var(--rdw-accent);
-}
-.rdw-btn--danger {
-  background: var(--rdw-danger);
-  border-color: var(--rdw-danger);
-  color: var(--rdw-surface);
-}
-.rdw-btn:disabled,
-.rdw-btn[aria-busy="true"] {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.rdw-btn__spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: rdw-btn-spin 0.7s linear infinite;
-}
-@keyframes rdw-btn-spin {
-  to { transform: rotate(360deg); }
-}
-`;
-function Button(props) {
-	const variant = props.variant ?? "secondary";
-	const size = props.size ?? "m";
-	const loading = props.loading === true;
-	const disabled = props.disabled === true || loading;
-	const className = [
-		"rdw-btn",
-		"rdw-kit-focusable",
-		`rdw-btn--${variant}`,
-		`rdw-btn--${size}`,
-		props.className
-	].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: BUTTON_CSS }), /* @__PURE__ */ a("button", {
-		type: props.type ?? "button",
-		className,
-		disabled,
-		"aria-busy": loading ? true : void 0,
-		"aria-label": props["aria-label"],
-		onClick: props.onClick,
-		children: [loading ? /* @__PURE__ */ a("span", {
-			className: "rdw-btn__spinner",
-			"aria-hidden": "true"
-		}) : null, props.children]
-	})] });
-}
-var CARD_CSS$1 = `
-.rdw-card {
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-l);
-  box-shadow: var(--rdw-shadow-1);
-}
-`;
-function Card(props) {
-	const Tag = props.as ?? "div";
-	const className = ["rdw-card", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: CARD_CSS$1 }), /* @__PURE__ */ a(Tag, {
-		className,
-		children: props.children
-	})] });
-}
-var DEFAULT_SIZE = 16;
-function baseProps(size, className, title) {
-	const props = {
-		width: size,
-		height: size,
-		viewBox: "0 0 24 24",
-		fill: "none",
-		stroke: "currentColor",
-		"stroke-width": 2,
-		"stroke-linecap": "round",
-		"stroke-linejoin": "round",
-		"aria-hidden": title === void 0 ? true : void 0,
-		role: title === void 0 ? void 0 : "img"
-	};
-	if (className !== void 0) props.className = className;
-	if (title !== void 0) props["aria-label"] = title;
-	return props;
-}
-function IconStar(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })]
-	});
-}
-function IconStarFilled(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		fill: "currentColor",
-		stroke: "none",
-		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })]
-	});
-}
-function IconPlus(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("line", {
-				x1: "12",
-				y1: "5",
-				x2: "12",
-				y2: "19"
-			}),
-			/* @__PURE__ */ a("line", {
-				x1: "5",
-				y1: "12",
-				x2: "19",
-				y2: "12"
-			})
-		]
-	});
-}
-function IconCheck(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polyline", { points: "20 6 9 17 4 12" })]
-	});
-}
-function IconX(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("line", {
-				x1: "18",
-				y1: "6",
-				x2: "6",
-				y2: "18"
-			}),
-			/* @__PURE__ */ a("line", {
-				x1: "6",
-				y1: "6",
-				x2: "18",
-				y2: "18"
-			})
-		]
-	});
-}
-function IconChevronDown(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polyline", { points: "6 9 12 15 18 9" })]
-	});
-}
-function IconArrowUp(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("line", {
-				x1: "12",
-				y1: "19",
-				x2: "12",
-				y2: "5"
-			}),
-			/* @__PURE__ */ a("polyline", { points: "5 12 12 5 19 12" })
-		]
-	});
-}
-function IconExternalLink(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }),
-			/* @__PURE__ */ a("polyline", { points: "15 3 21 3 21 9" }),
-			/* @__PURE__ */ a("line", {
-				x1: "10",
-				y1: "14",
-				x2: "21",
-				y2: "3"
-			})
-		]
-	});
-}
-function IconDroplet(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("path", { d: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" })]
-	});
-}
-function IconPencil(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("path", { d: "M12 20h9" }),
-			/* @__PURE__ */ a("path", { d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" })
-		]
-	});
-}
-function IconFlag(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("path", { d: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" }),
-			/* @__PURE__ */ a("line", {
-				x1: "4",
-				y1: "22",
-				x2: "4",
-				y2: "15"
-			})
-		]
-	});
-}
-function IconNote(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
-			/* @__PURE__ */ a("polyline", { points: "14 2 14 8 20 8" }),
-			/* @__PURE__ */ a("line", {
-				x1: "8",
-				y1: "13",
-				x2: "16",
-				y2: "13"
-			}),
-			/* @__PURE__ */ a("line", {
-				x1: "8",
-				y1: "17",
-				x2: "12",
-				y2: "17"
-			})
-		]
-	});
-}
-function IconTrash(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("polyline", { points: "3 6 5 6 21 6" }),
-			/* @__PURE__ */ a("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
-		]
-	});
-}
-function IconImage(props) {
-	return /* @__PURE__ */ a("svg", {
-		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
-		children: [
-			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
-			/* @__PURE__ */ a("rect", {
-				x: "3",
-				y: "3",
-				width: "18",
-				height: "18",
-				rx: "2",
-				ry: "2"
-			}),
-			/* @__PURE__ */ a("circle", {
-				cx: "8.5",
-				cy: "8.5",
-				r: "1.5"
-			}),
-			/* @__PURE__ */ a("polyline", { points: "21 15 16 10 5 21" })
-		]
-	});
-}
-var CHIP_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 24px;
-  height: 24px;
-  padding: 0 4px 0 8px;
-  border-radius: 12px;
-  background: var(--rdw-surface-2);
-  border: 1px solid var(--rdw-border);
-  font-size: 12px;
-  color: var(--rdw-text);
-  max-width: 100%;
-  white-space: nowrap;
-}
-.rdw-chip__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--rdw-muted);
-  flex: none;
-}
-.rdw-chip--artist .rdw-chip__dot { background: var(--rdw-tag-artist); }
-.rdw-chip--character .rdw-chip__dot { background: var(--rdw-tag-character); }
-.rdw-chip--copyright .rdw-chip__dot { background: var(--rdw-tag-copyright); }
-.rdw-chip--metadata .rdw-chip__dot { background: var(--rdw-tag-metadata); }
-.rdw-chip--exclude {
-  background: var(--rdw-danger-soft);
-  border-color: var(--rdw-danger);
-  color: var(--rdw-danger);
-  text-decoration: line-through;
-}
-.rdw-chip--group {
-  background: var(--rdw-accent-soft);
-  border-color: var(--rdw-accent);
-  color: var(--rdw-accent);
-  font-weight: 600;
-}
-.rdw-chip__remove {
-  box-sizing: border-box;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  margin: -2px -2px -2px 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--rdw-muted);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  padding: 0;
-}
-.rdw-chip__remove:hover {
-  background: var(--rdw-surface);
-}
-`;
-function Chip(props) {
-	const variant = props.variant ?? "dot";
-	const kind = props.kind ?? "default";
-	const className = [
-		"rdw-chip",
-		`rdw-chip--${variant}`,
-		kind !== "default" ? `rdw-chip--${kind}` : void 0,
-		props.className
-	].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: CHIP_CSS }), /* @__PURE__ */ a("span", {
-		className,
-		children: [
-			variant === "dot" ? /* @__PURE__ */ a("i", {
-				className: "rdw-chip__dot",
-				"aria-hidden": "true"
-			}) : null,
-			/* @__PURE__ */ a("span", { children: props.label }),
-			props.onRemove !== void 0 ? /* @__PURE__ */ a("button", {
-				type: "button",
-				className: "rdw-chip__remove rdw-kit-focusable",
-				"aria-label": `Remove ${props.label}`,
-				onClick: props.onRemove,
-				children: /* @__PURE__ */ a(IconX, { size: 12 })
-			}) : null
-		]
-	})] });
-}
-var KEY_ESCAPE$1 = "Escape";
-var KEY_TAB = "Tab";
-var EVENT_KEYDOWN$1 = "keydown";
-var EVENT_MOUSEDOWN$1 = "mousedown";
-var DIALOG_Z_INDEX = 40;
-var DIALOG_MAX_WIDTH_PX = 360;
-var DIALOG_BACKDROP_PADDING_PX = 16;
-var DIALOG_BACKDROP_ALPHA = .45;
-var DIALOG_PANEL_PADDING_PX = 16;
-var DIALOG_PANEL_GAP_PX = 12;
-var FOCUSABLE_SELECTOR = [
-	"a[href]",
-	"button:not([disabled])",
-	"textarea:not([disabled])",
-	"input:not([disabled])",
-	"select:not([disabled])",
-	"[tabindex]:not([tabindex=\"-1\"])"
-].join(", ");
-var DIALOG_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: ${String(DIALOG_Z_INDEX)};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  padding: ${String(DIALOG_BACKDROP_PADDING_PX)}px;
-  background: rgba(0, 0, 0, ${String(DIALOG_BACKDROP_ALPHA)});
-}
-.rdw-dialog {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: ${String(DIALOG_MAX_WIDTH_PX)}px;
-  display: grid;
-  gap: ${String(DIALOG_PANEL_GAP_PX)}px;
-  padding: ${String(DIALOG_PANEL_PADDING_PX)}px;
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-l);
-  box-shadow: var(--rdw-shadow-2);
-  color: var(--rdw-text);
-  font: 12.5px/1.4 var(--rdw-font);
-}
-.rdw-dialog__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--rdw-text);
-}
-`;
-function listFocusable(root) {
-	const nodes = root.querySelectorAll(FOCUSABLE_SELECTOR);
-	const result = [];
-	for (const node of nodes) {
-		if (!(node instanceof HTMLElement)) continue;
-		if (node.closest("[hidden]") !== null) continue;
-		result.push(node);
-	}
-	return result;
-}
-function pathIncludesNode$1(path, node) {
-	if (node === null) return false;
-	for (const entry of path) if (entry === node) return true;
-	return false;
-}
-function Dialog(props) {
-	const panelRef = T(null);
-	const wasOpenRef = T(false);
-	const restoreFocusRef = T(null);
-	const titleId = P();
-	const hasTitle = props.title !== void 0 && props.title.length > 0;
-	A(() => {
-		if (!props.open) {
-			if (wasOpenRef.current) {
-				wasOpenRef.current = false;
-				const restore = restoreFocusRef.current;
-				restoreFocusRef.current = null;
-				if (restore !== null && typeof restore.focus === "function") restore.focus();
-			}
-			return;
-		}
-		if (!wasOpenRef.current) {
-			const active = document.activeElement;
-			restoreFocusRef.current = active instanceof HTMLElement ? active : null;
-			wasOpenRef.current = true;
-		}
-		const panel = panelRef.current;
-		if (panel !== null) {
-			const initial = props.initialFocusRef?.current ?? null;
-			if (initial !== null && typeof initial.focus === "function") initial.focus();
-			else {
-				const first = listFocusable(panel)[0];
-				if (first !== void 0) first.focus();
-				else panel.focus();
-			}
-		}
-		const onKeyDown = (event) => {
-			if (event.key === KEY_ESCAPE$1) {
-				event.preventDefault();
-				event.stopPropagation();
-				props.onClose();
-				return;
-			}
-			if (event.key !== KEY_TAB) return;
-			const currentPanel = panelRef.current;
-			if (currentPanel === null) return;
-			const focusable = listFocusable(currentPanel);
-			if (focusable.length === 0) {
-				event.preventDefault();
-				currentPanel.focus();
-				return;
-			}
-			const first = focusable[0];
-			const last = focusable[focusable.length - 1];
-			if (first === void 0 || last === void 0) return;
-			const active = document.activeElement;
-			if (event.shiftKey) {
-				if (active === first || !currentPanel.contains(active)) {
-					event.preventDefault();
-					last.focus();
-				}
-				return;
-			}
-			if (active === last) {
-				event.preventDefault();
-				first.focus();
-			}
-		};
-		const onPointerDown = (event) => {
-			const currentPanel = panelRef.current;
-			if (currentPanel === null) return;
-			if (pathIncludesNode$1(event.composedPath(), currentPanel)) return;
-			props.onClose();
-		};
-		document.addEventListener(EVENT_KEYDOWN$1, onKeyDown, true);
-		document.addEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
-		return () => {
-			document.removeEventListener(EVENT_KEYDOWN$1, onKeyDown, true);
-			document.removeEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
-		};
-	}, [
-		props.open,
-		props.onClose,
-		props.initialFocusRef
-	]);
-	if (!props.open) return null;
-	const className = ["rdw-dialog", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: DIALOG_CSS }), /* @__PURE__ */ a("div", {
-		className: "rdw-dialog-backdrop",
-		children: /* @__PURE__ */ a("div", {
-			ref: panelRef,
-			className,
-			role: "dialog",
-			"aria-modal": "true",
-			"aria-label": hasTitle ? void 0 : props["aria-label"],
-			"aria-labelledby": hasTitle ? titleId : void 0,
-			tabIndex: -1,
-			children: [hasTitle ? /* @__PURE__ */ a("h2", {
-				id: titleId,
-				className: "rdw-dialog__title",
-				children: props.title
-			}) : null, props.children]
-		})
-	})] });
-}
-var EMPTY_STATE_CSS = `
-.rdw-empty {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  padding: 16px 8px;
-  color: var(--rdw-muted);
-  font: 12.5px/1.4 var(--rdw-font);
-}
-.rdw-empty__title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--rdw-text);
-}
-.rdw-empty__desc {
-  margin: 0;
-}
-`;
-function EmptyState(props) {
-	const className = ["rdw-empty", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: EMPTY_STATE_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		role: "status",
-		children: [
-			/* @__PURE__ */ a("p", {
-				className: "rdw-empty__title",
-				children: props.title
-			}),
-			props.description !== void 0 ? /* @__PURE__ */ a("p", {
-				className: "rdw-empty__desc",
-				children: props.description
-			}) : null,
-			props.action
-		]
-	})] });
-}
-var ICON_BUTTON_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-icon-btn {
-  box-sizing: border-box;
-  display: inline-grid;
-  place-items: center;
-  min-width: 28px;
-  min-height: 28px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: var(--rdw-radius-m);
-  border: 1px solid var(--rdw-border);
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  cursor: pointer;
-}
-.rdw-icon-btn[aria-pressed="true"] {
-  background: var(--rdw-accent-soft);
-  border-color: var(--rdw-accent);
-  color: var(--rdw-accent);
-}
-.rdw-icon-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-`;
-function IconButton(props) {
-	const className = [
-		"rdw-icon-btn",
-		"rdw-kit-focusable",
-		props.className
-	].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: ICON_BUTTON_CSS }), /* @__PURE__ */ a("button", {
-		type: "button",
-		className,
-		"aria-label": props.label,
-		"aria-pressed": props.pressed,
-		disabled: props.disabled,
-		onClick: props.onClick,
-		children: props.children
-	})] });
-}
-var NUMBER_FIELD_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-num {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.rdw-num__label {
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-}
-.rdw-num__input {
-  box-sizing: border-box;
-  min-height: 28px;
-  height: 28px;
-  width: 100%;
-  padding: 0 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  font: inherit;
-  font-size: 12px;
-}
-.rdw-num__input:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-`;
-function NumberField(props) {
-	const autoId = P();
-	const inputId = props.id ?? autoId;
-	const className = ["rdw-num", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: NUMBER_FIELD_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		children: [props.label !== void 0 ? /* @__PURE__ */ a("label", {
-			className: "rdw-num__label",
-			htmlFor: inputId,
-			children: props.label
-		}) : null, /* @__PURE__ */ a("input", {
-			id: inputId,
-			className: "rdw-num__input rdw-kit-focusable",
-			type: "number",
-			value: props.value ?? "",
-			min: props.min,
-			max: props.max,
-			step: props.step,
-			placeholder: props.placeholder,
-			disabled: props.disabled,
-			"aria-label": props.label,
-			onInput: (event) => {
-				const raw = event.currentTarget.value;
-				if (raw.trim() === "") {
-					props.onChange(null);
-					return;
-				}
-				const next = Number(raw);
-				props.onChange(Number.isFinite(next) ? next : null);
-			}
-		})]
-	})] });
-}
-var KEY_ESCAPE$3 = "Escape";
-var EVENT_KEYDOWN$2 = "keydown";
-var EVENT_MOUSEDOWN = "mousedown";
-var POPOVER_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-popover {
-  position: absolute;
-  z-index: 30;
-  min-width: 180px;
-  padding: 8px;
-  display: grid;
-  gap: 4px;
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-l);
-  box-shadow: var(--rdw-shadow-2);
-  color: var(--rdw-text);
-  font: 12px/1.35 var(--rdw-font);
-}
-`;
-function pathIncludesNode(path, node) {
-	if (node === null) return false;
-	for (const entry of path) if (entry === node) return true;
-	return false;
-}
-function Popover(props) {
-	const rootRef = T(null);
-	const wasOpenRef = T(false);
-	A(() => {
-		if (!props.open) {
-			if (wasOpenRef.current) {
-				wasOpenRef.current = false;
-				const anchor = props.anchorRef?.current ?? null;
-				if (anchor !== null && typeof anchor.focus === "function") anchor.focus();
-			}
-			return;
-		}
-		wasOpenRef.current = true;
-		const onKeyDown = (event) => {
-			if (event.key === KEY_ESCAPE$3) {
-				event.preventDefault();
-				props.onClose();
-			}
-		};
-		const onPointerDown = (event) => {
-			const root = rootRef.current;
-			if (root === null) return;
-			const path = event.composedPath();
-			if (pathIncludesNode(path, root)) return;
-			if (pathIncludesNode(path, props.anchorRef?.current ?? null)) return;
-			props.onClose();
-		};
-		document.addEventListener(EVENT_KEYDOWN$2, onKeyDown);
-		document.addEventListener(EVENT_MOUSEDOWN, onPointerDown);
-		return () => {
-			document.removeEventListener(EVENT_KEYDOWN$2, onKeyDown);
-			document.removeEventListener(EVENT_MOUSEDOWN, onPointerDown);
-		};
-	}, [
-		props.open,
-		props.onClose,
-		props.anchorRef
-	]);
-	if (!props.open) return null;
-	const className = ["rdw-popover", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: POPOVER_CSS }), /* @__PURE__ */ a("div", {
-		ref: rootRef,
-		className,
-		role: "dialog",
-		"aria-label": props["aria-label"],
-		children: props.children
-	})] });
-}
-var PROGRESS_WIDTH_VAR = "--rdw-progress-width";
-var PROGRESS_BAR_CSS = `
-.rdw-progress {
-  display: grid;
-  gap: 4px;
-  width: 100%;
-}
-.rdw-progress__label {
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-}
-.rdw-progress__track {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--rdw-surface-2);
-  border: 1px solid var(--rdw-border);
-  overflow: hidden;
-}
-.rdw-progress__fill {
-  height: 100%;
-  width: var(${PROGRESS_WIDTH_VAR}, 0%);
-  background: var(--rdw-accent);
-  border-radius: inherit;
-  transition: width 0.2s ease;
-}
-.rdw-progress__fill--indeterminate {
-  width: 40%;
-  animation: rdw-progress-indeterminate 1.1s ease-in-out infinite;
-}
-@keyframes rdw-progress-indeterminate {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(280%); }
-}
-`;
-function clampUnit(value) {
-	if (!Number.isFinite(value)) return 0;
-	if (value < 0) return 0;
-	if (value > 1) return 1;
-	return value;
-}
-function ProgressBar(props) {
-	const fillRef = T(null);
-	const waiting = props.waiting === true;
-	const hasValue = props.value !== void 0 && props.value !== null;
-	const ratio = hasValue ? clampUnit(props.value) : 0;
-	const className = ["rdw-progress", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	A(() => {
-		const fill = fillRef.current;
-		if (fill === null) return;
-		if (waiting || !hasValue) {
-			fill.style.removeProperty(PROGRESS_WIDTH_VAR);
-			return;
-		}
-		fill.style.setProperty(PROGRESS_WIDTH_VAR, `${Math.round(ratio * 100)}%`);
-	}, [
-		waiting,
-		hasValue,
-		ratio
-	]);
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: PROGRESS_BAR_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		children: [props.label !== void 0 ? /* @__PURE__ */ a("div", {
-			className: "rdw-progress__label",
-			children: props.label
-		}) : null, /* @__PURE__ */ a("div", {
-			className: "rdw-progress__track",
-			role: "progressbar",
-			"aria-label": props.label,
-			"aria-valuemin": 0,
-			"aria-valuemax": 100,
-			"aria-valuenow": hasValue && !waiting ? Math.round(ratio * 100) : void 0,
-			children: /* @__PURE__ */ a("div", {
-				ref: fillRef,
-				className: waiting ? "rdw-progress__fill rdw-progress__fill--indeterminate" : "rdw-progress__fill"
-			})
-		})]
-	})] });
-}
-var SECTION_LABEL_CSS = `
-.rdw-section-label {
-  display: block;
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-  margin: 0 0 4px;
-}
-`;
-function SectionLabel(props) {
-	const className = ["rdw-section-label", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	if (props.htmlFor !== void 0) return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: SECTION_LABEL_CSS }), /* @__PURE__ */ a("label", {
-		className,
-		htmlFor: props.htmlFor,
-		children: props.children
-	})] });
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: SECTION_LABEL_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		children: props.children
-	})] });
-}
-var SEGMENTED_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-seg {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  background: var(--rdw-surface-2);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  padding: 2px;
-  gap: 2px;
-}
-.rdw-seg__btn {
-  min-height: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: var(--rdw-radius-s);
-  background: transparent;
-  color: var(--rdw-muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0 8px;
-}
-.rdw-seg__btn[aria-checked="true"] {
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  font-weight: 600;
-  box-shadow: var(--rdw-shadow-1);
-}
-`;
-function Segmented(props) {
-	const className = ["rdw-seg", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: SEGMENTED_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		role: "radiogroup",
-		"aria-label": props.label,
-		children: props.options.map((option) => {
-			const selected = option.value === props.value;
-			return /* @__PURE__ */ a("button", {
-				type: "button",
-				role: "radio",
-				className: "rdw-seg__btn rdw-kit-focusable",
-				"aria-checked": selected,
-				tabIndex: selected ? 0 : -1,
-				onClick: () => {
-					props.onChange(option.value);
-				},
-				onKeyDown: (event) => {
-					if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-					event.preventDefault();
-					const index = props.options.findIndex((item) => item.value === props.value);
-					if (index < 0) return;
-					const delta = event.key === "ArrowRight" ? 1 : -1;
-					const next = props.options[(index + delta + props.options.length) % props.options.length];
-					if (next !== void 0) props.onChange(next.value);
-				},
-				children: option.label
-			}, option.value);
-		})
-	})] });
-}
-var SELECT_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-select {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.rdw-select__label {
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-}
-.rdw-select__trigger {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 28px;
-  height: 28px;
-  width: 100%;
-  padding: 0 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.rdw-select__trigger:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.rdw-select__list {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  margin: 0;
-  padding: 4px;
-  list-style: none;
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  box-shadow: var(--rdw-shadow-2);
-  max-height: 220px;
-  overflow: auto;
-}
-.rdw-select__option {
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  border-radius: var(--rdw-radius-s);
-  font-size: 12px;
-  color: var(--rdw-text);
-  cursor: pointer;
-}
-.rdw-select__option[aria-selected="true"],
-.rdw-select__option:hover {
-  background: var(--rdw-surface-2);
-}
-`;
-function Select(props) {
-	const listId = P();
-	const rootRef = T(null);
-	const [open, setOpen] = d(false);
-	const selected = props.options.find((option) => option.value === props.value) ?? props.options[0];
-	const className = ["rdw-select", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	A(() => {
-		if (!open) return;
-		const onKeyDown = (event) => {
-			if (event.key === "Escape") setOpen(false);
-		};
-		const onPointerDown = (event) => {
-			const root = rootRef.current;
-			if (root === null) return;
-			if (!event.composedPath().includes(root)) setOpen(false);
-		};
-		document.addEventListener("keydown", onKeyDown);
-		document.addEventListener("mousedown", onPointerDown);
-		return () => {
-			document.removeEventListener("keydown", onKeyDown);
-			document.removeEventListener("mousedown", onPointerDown);
-		};
-	}, [open]);
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: SELECT_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		ref: rootRef,
-		children: [
-			props.label !== void 0 ? /* @__PURE__ */ a("span", {
-				className: "rdw-select__label",
-				id: `${listId}-label`,
-				children: props.label
-			}) : null,
-			/* @__PURE__ */ a("button", {
-				type: "button",
-				className: "rdw-select__trigger rdw-kit-focusable",
-				"aria-haspopup": "listbox",
-				"aria-expanded": open,
-				"aria-controls": listId,
-				"aria-labelledby": props.label !== void 0 ? `${listId}-label` : void 0,
-				disabled: props.disabled,
-				onClick: () => {
-					setOpen((prev) => !prev);
-				},
-				children: [/* @__PURE__ */ a("span", { children: selected?.label ?? props.value }), /* @__PURE__ */ a(IconChevronDown, { size: 14 })]
-			}),
-			open ? /* @__PURE__ */ a("ul", {
-				className: "rdw-select__list",
-				role: "listbox",
-				id: listId,
-				tabIndex: -1,
-				children: props.options.map((option) => /* @__PURE__ */ a("li", {
-					role: "option",
-					className: "rdw-select__option rdw-kit-focusable",
-					"aria-selected": option.value === props.value,
-					tabIndex: 0,
-					onClick: () => {
-						props.onChange(option.value);
-						setOpen(false);
-					},
-					onKeyDown: (event) => {
-						if (event.key === "Enter" || event.key === " ") {
-							event.preventDefault();
-							props.onChange(option.value);
-							setOpen(false);
-						}
-					},
-					children: option.label
-				}, option.value))
-			}) : null
-		]
-	})] });
-}
-var SITE_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
-var SITE_DARK_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
-var SWITCH_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-switch-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-}
-.rdw-switch {
-  position: relative;
-  box-sizing: border-box;
-  width: 36px;
-  height: 28px;
-  min-width: 36px;
-  min-height: 28px;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-}
-.rdw-switch__track {
-  display: block;
-  width: 30px;
-  height: 17px;
-  margin: 0 auto;
-  border-radius: 9px;
-  background: var(--rdw-border);
-  position: relative;
-  transition: background 0.15s ease;
-}
-.rdw-switch__thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--rdw-surface);
-  transition: left 0.15s ease;
-}
-.rdw-switch[aria-checked="true"] .rdw-switch__track {
-  background: var(--rdw-accent);
-}
-.rdw-switch[aria-checked="true"] .rdw-switch__thumb {
-  left: 15px;
-}
-.rdw-switch:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.rdw-switch__label {
-  font-size: 12.5px;
-  color: var(--rdw-text);
-}
-/* Site default: green ON (not link blue); OFF stays border; thumb contrast-checked. */
-html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
-:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
-  background: ${SITE_DEFAULT_SWITCH_ON};
-}
-html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
-:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
-  background: ${resolveSwitchThumbOn(SITE_DEFAULT_SWITCH_ON, SITE_DEFAULT_SWITCH_THUMB_ON, [SITE_LIGHT_C_BG_ALT, "#ffffff"])};
-}
-html${SITE_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
-:host-context(${SITE_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
-  background: var(--rdw-border);
-}
-/* Site dark: ON = accent; OFF = border; thumb contrast-checked vs accent. */
-html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
-:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
-  background: ${SITE_DARK_C_ACCENT};
-}
-html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
-:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
-  background: ${resolveSwitchThumbOn(SITE_DARK_C_ACCENT, SITE_DARK_C_BG, ["#16181c", "#ffffff"])};
-}
-html${SITE_DARK_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
-:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
-  background: ${SITE_DARK_C_BORDER};
-}
-`;
-function Switch(props) {
-	const className = ["rdw-switch-row", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: SWITCH_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		children: [/* @__PURE__ */ a("button", {
-			type: "button",
-			id: props.id,
-			className: "rdw-switch rdw-kit-focusable",
-			role: "switch",
-			"aria-checked": props.checked,
-			"aria-label": props.label,
-			disabled: props.disabled,
-			onClick: () => {
-				props.onChange(!props.checked);
-			},
-			children: /* @__PURE__ */ a("span", {
-				className: "rdw-switch__track",
-				children: /* @__PURE__ */ a("span", { className: "rdw-switch__thumb" })
-			})
-		}), props.label !== void 0 ? /* @__PURE__ */ a("span", {
-			className: "rdw-switch__label",
-			children: props.label
-		}) : null]
-	})] });
-}
-var TAB_ID_PREFIX = "rdw-tab-";
-var TAB_PANEL_ID_PREFIX = "rdw-tabpanel-";
-var KEY_ARROW_RIGHT = "ArrowRight";
-var KEY_ARROW_LEFT = "ArrowLeft";
-function kitTabId(id) {
-	return `${TAB_ID_PREFIX}${id}`;
-}
-function kitTabPanelId(id) {
-	return `${TAB_PANEL_ID_PREFIX}${id}`;
-}
-var TABS_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--rdw-border);
-  padding: 0 8px;
-}
-.rdw-tabs__tab {
-  box-sizing: border-box;
-  min-height: 28px;
-  padding: 7px 10px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--rdw-muted);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-  margin-bottom: -1px;
-}
-.rdw-tabs__tab[aria-selected="true"] {
-  color: var(--rdw-text);
-  font-weight: 600;
-  border-bottom-color: var(--rdw-accent);
-}
-`;
-function Tabs(props) {
-	const className = ["rdw-tabs", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: TABS_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		role: "tablist",
-		"aria-label": props["aria-label"],
-		children: props.items.map((item) => {
-			const selected = item.id === props.value;
-			return /* @__PURE__ */ a("button", {
-				type: "button",
-				role: "tab",
-				id: kitTabId(item.id),
-				className: "rdw-tabs__tab rdw-kit-focusable",
-				"aria-selected": selected,
-				"aria-controls": kitTabPanelId(item.id),
-				tabIndex: selected ? 0 : -1,
-				onClick: () => {
-					props.onChange(item.id);
-				},
-				onKeyDown: (event) => {
-					if (event.key !== KEY_ARROW_RIGHT && event.key !== KEY_ARROW_LEFT) return;
-					event.preventDefault();
-					const index = props.items.findIndex((entry) => entry.id === props.value);
-					if (index < 0) return;
-					const delta = event.key === KEY_ARROW_RIGHT ? 1 : -1;
-					const next = props.items[(index + delta + props.items.length) % props.items.length];
-					if (next === void 0) return;
-					props.onChange(next.id);
-					const nextTab = event.currentTarget.parentElement?.querySelector(`#${kitTabId(next.id)}`);
-					if (nextTab instanceof HTMLElement) nextTab.focus();
-				},
-				children: item.label
-			}, item.id);
-		})
-	})] });
-}
-var TEXT_FIELD_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.rdw-field__label {
-  font: 600 10.5px var(--rdw-font);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rdw-muted);
-}
-.rdw-field__input {
-  box-sizing: border-box;
-  min-height: 28px;
-  height: 28px;
-  width: 100%;
-  padding: 0 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  background: var(--rdw-surface);
-  color: var(--rdw-text);
-  font: inherit;
-  font-size: 12px;
-}
-.rdw-field__input::placeholder {
-  color: var(--rdw-muted);
-}
-.rdw-field__input:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-`;
-function TextField(props) {
-	const autoId = P();
-	const inputId = props.id ?? autoId;
-	const className = ["rdw-field", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: TEXT_FIELD_CSS }), /* @__PURE__ */ a("div", {
-		className,
-		children: [props.label !== void 0 ? /* @__PURE__ */ a("label", {
-			className: "rdw-field__label",
-			htmlFor: inputId,
-			children: props.label
-		}) : null, /* @__PURE__ */ a("input", {
-			id: inputId,
-			className: "rdw-field__input rdw-kit-focusable",
-			type: "text",
-			value: props.value,
-			placeholder: props.placeholder,
-			disabled: props.disabled,
-			"aria-label": props["aria-label"] ?? props.label,
-			onInput: (event) => {
-				props.onChange(event.currentTarget.value);
-			}
-		})]
-	})] });
-}var SITE_SELECTORS = exports("S",{
-	thumb: "span.thumb",
-	thumbLink: "a[href*=\"s=view\"]",
-	previewImage: "img.preview",
-	cardFavButton: `button.${CSS_CLASS.cardFav}`,
-	favoritesDeleteLink: "a[onclick]",
-	tagSidebar: "ul#tag-sidebar",
-	tagTypeArtist: "li.tag-type-artist",
-	imageList: "div.image-list",
-	postListContent: "#post-list div.content",
-	contentRoot: "#content",
-	artistFollowButton: `button.${CSS_CLASS.artistFollow}`,
-	/** Native AI filter checkbox (site owns click/cookie logic). */
-	filterAiCheckbox: "input.toggleSwitch#chkFilterAI",
-	/** Row wrapping the native AI filter control — hide when search-tools mirrors it. */
-	filterAiRow: "li:has(> label > span.switch > input.toggleSwitch#chkFilterAI)",
-	/** Stray Tags heading between #rdw-search-tools and the tag list. */
-	tagsHeadingAfterSearchTools: "#rdw-search-tools + h5"
-});
-var THUMB_ID_PATTERN = /^s(\d+)$/;
-var FAVORITES_DELETE_ID_PATTERN = /s=delete&id=(\d+)/;
-function extractPostIdFromThumb(thumb) {
-	const match = THUMB_ID_PATTERN.exec(thumb.id);
-	if (match === null) return null;
-	const postId = match[1];
-	return postId === void 0 ? null : postId;
-}
-function extractPostIdFromFavoritesDeleteOnclick(onclick) {
-	const match = FAVORITES_DELETE_ID_PATTERN.exec(onclick);
-	if (match === null) return null;
-	const postId = match[1];
-	return postId === void 0 ? null : postId;
-}
-/**
-* Site chrome CSS for html.rdw-skin (light / dark / custom themes).
-* Colors only via --rdw-* tokens. Does not change .thumb 200×200 cell size.
-* Injected via applyAppearanceTheme → injectSiteSkinHook(getSiteSkinCss()).
-*/
-var ROOT = `html.${RDW_SKIN_CLASS}`;
-var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
-var ROOT_SITE = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
-var ROOT_SITE_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
-var ROOT_THEME_DARK = `html[${RDW_THEME_ATTR}="${APPEARANCE_THEME_DARK}"]`;
-/** search-tools mount root (id + class in src/features/search-tools.tsx). */
-var SEARCH_TOOLS_ROOT_ID$1 = "rdw-search-tools";
-/** Reset control class (src/features/search-tools.tsx). */
-var SEARCH_TOOLS_RESET_CLASS = "rdw-search-tools-reset";
-/**
-* Same exclusions as :not…:not…, but :where() zeros their specificity so an
-* ID-bearing :not cannot outrank accent rules like div.tag-search submit.
-*/
-var WHERE_NOT_OUR_CONTROL = `:where(:not([class*="rdw-"])${`:not(#${SEARCH_TOOLS_ROOT_ID$1} *)`})`;
-/**
-* Body class Package E sets only while the post panel host is mounted
-* (`POST_PANEL_MOUNTED_CLASS` in post-actions.ts).
-*/
-var RDW_POST_PANEL_MOUNTED_CLASS = "rdw-post-panel-mounted";
-/** Native "I came" counter row — hide with panel chrome (E HANDOFF). */
-var POST_PANEL_ICAME_ROW = "li:has(a[onclick^=\"iCame(\"])";
-/** Post panel host id — keep in sync with POST_ACTIONS_ID in features/types.ts. */
-var POST_ACTIONS_HOST_ID = "rdw-post-actions";
-/** Kit select list — keep in sync with src/ui/kit/select.tsx. */
-var KIT_SELECT_LIST_CLASS = "rdw-select__list";
-/** Kit autocomplete list — keep in sync with src/ui/kit/autocomplete-field.tsx. */
-var KIT_AC_LIST_CLASS = "rdw-ac__list";
-/** Kit dialog panel — keep in sync with src/ui/kit/dialog.tsx. */
-var KIT_DIALOG_CLASS = "rdw-dialog";
-/** Playlist add-to menu — keep in sync with src/features/playlist-menu.ts. */
-var PLAYLIST_MENU_CLASS = "rdw-playlist-menu";
-/** Firefox / modern Chromium thin scrollbar (E HANDOFF). */
-var SCROLLBAR_WIDTH = "thin";
-/** Post panel Original control — keep in sync with post-actions ORIGINAL_BUTTON_SIZE_PX. */
-var POST_PANEL_ORIGINAL_SIZE_PX = 34;
-/** Active tab underline — keep in sync with kit/tabs.tsx. */
-var POST_PANEL_TAB_UNDERLINE_PX = 2;
-/** Post panel classes — keep in sync with src/features/post-panel/post-panel.tsx. */
-var POST_PANEL_ACTIONS_CLASS = "rdw-post-panel-actions";
-var POST_PANEL_ACTIONS_ROW_CLASS = "rdw-post-panel-actions-row";
-var POST_PANEL_FAV_CLASS = "rdw-post-panel-fav";
-var POST_PANEL_ORIGINAL_CLASS = "rdw-post-panel-original";
-var POST_PANEL_TABPANEL_CLASS = "rdw-post-panel-tabpanel";
-var POST_PANEL_POST_ACTION_CLASS = "rdw-post-panel-post-action";
-/** Kit tabs — keep in sync with src/ui/kit/tabs.tsx. */
-var KIT_TABS_CLASS = "rdw-tabs";
-var KIT_TAB_CLASS = "rdw-tabs__tab";
-var KIT_BTN_PRIMARY_CLASS = "rdw-btn--primary";
-/**
-* Body class while search-tools «AI posts» row is rendered
-* (`SEARCH_TOOLS_AI_ROW_BODY_CLASS` in search-tools.tsx — F HANDOFF).
-*/
-var SEARCH_TOOLS_AI_ROW_BODY_CLASS$1 = "rdw-search-tools-ai-posts";
-/** F bulk-select chrome — keep in sync with src/features/favorites-bulk.tsx. */
-var FAV_BULK_SELECTED_CLASS = "rdw-fav-bulk-selected";
-var FAV_BULK_CHECK_CLASS = "rdw-fav-bulk-check";
-var FAV_BULK_ROOT_ID = "rdw-favorites-bulk";
-var FAV_BULK_BAR_CLASS = "rdw-favorites-bulk-bar";
-var FAV_BULK_STATUS_CLASS = "rdw-favorites-bulk-status";
-/** Body class while selection mode is active (featureBodyClass + "-selecting"). */
-var FAV_BULK_SELECTING_BODY_CLASS = "rdw-f-favorites-bulk-selecting";
-var FAV_BULK_OUTLINE_WIDTH = "2px";
-var FAV_BULK_OUTLINE_OFFSET = "2px";
-var FAV_BULK_CHECK_SIZE = "1.25rem";
-var FAV_BULK_CHECK_INSET = "0.25rem";
-var FAV_BULK_CHECK_Z_INDEX = 2;
-var FAV_BULK_CHECK_FONT_SIZE = "0.75rem";
-var v = {
-	bg: `var(${TOKEN_VAR.bg})`,
-	surface: `var(${TOKEN_VAR.surface})`,
-	surface2: `var(${TOKEN_VAR.surface2})`,
-	border: `var(${TOKEN_VAR.border})`,
-	text: `var(${TOKEN_VAR.text})`,
-	muted: `var(${TOKEN_VAR.muted})`,
-	accent: `var(${TOKEN_VAR.accent})`,
-	accentSoft: `var(${TOKEN_VAR.accentSoft})`,
-	danger: `var(${TOKEN_VAR.danger})`,
-	dangerSoft: `var(${TOKEN_VAR.dangerSoft})`,
-	tagArtist: `var(${TOKEN_VAR.tagArtist})`,
-	tagCharacter: `var(${TOKEN_VAR.tagCharacter})`,
-	tagCopyright: `var(${TOKEN_VAR.tagCopyright})`,
-	tagMetadata: `var(${TOKEN_VAR.tagMetadata})`,
-	radiusS: `var(${TOKEN_VAR.radiusS})`,
-	radiusM: `var(${TOKEN_VAR.radiusM})`,
-	radiusL: `var(${TOKEN_VAR.radiusL})`,
-	shadow1: `var(${TOKEN_VAR.shadow1})`,
-	shadow2: `var(${TOKEN_VAR.shadow2})`,
-	font: `var(${TOKEN_VAR.font})`
-};
-/** Full site-skin stylesheet (empty until injected by boot). */
-var SITE_SKIN_CSS = `
-/* —— base —— */
-${ROOT} body {
-  font-family: ${v.font};
-  font-size: 13px;
-  line-height: 1.4;
-  background: ${v.bg};
-  color: ${v.text};
-}
-
-${ROOT} body,
-${ROOT} body div,
-${ROOT} body h1,
-${ROOT} body h2,
-${ROOT} body h3,
-${ROOT} body h4,
-${ROOT} body h5,
-${ROOT} body h6,
-${ROOT} body p,
-${ROOT} body ul,
-${ROOT} body li,
-${ROOT} body dd,
-${ROOT} body dt,
-${ROOT} body input,
-${ROOT} body select,
-${ROOT} body button,
-${ROOT} body textarea {
-  font-family: ${v.font};
-}
-
-${ROOT} a:link {
-  color: ${v.accent};
-  text-decoration: none;
-}
-
-${ROOT} a:visited {
-  color: ${v.muted};
-  text-decoration: none;
-}
-
-${ROOT} a:hover,
-${ROOT} a:active {
-  color: ${v.text};
-  text-decoration: none;
-}
-
-${ROOT} a.last-page {
-  color: ${v.muted};
-}
-
-${ROOT} a.spoiler,
-${ROOT} span.spoiler {
-  color: ${v.text};
-  background: ${v.text};
-}
-
-${ROOT} a.spoiler:hover,
-${ROOT} span.spoiler:hover {
-  color: ${v.bg};
-  background: ${v.text};
-}
-
-${ROOT} hr {
-  border-color: ${v.border};
-}
-
-${ROOT} code {
-  font-family: ui-monospace, monospace;
-}
-
-/* —— header —— */
-${ROOT} div#header {
-  background: ${v.surface};
-  border-bottom: 1px solid ${v.border};
-  margin-bottom: 0.75em;
-}
-
-${ROOT} div#header #site-title {
-  background-image: none;
-  background-color: transparent;
-  padding: 12px 18px 4px 18px;
-  font: 800 17px ${v.font};
-  letter-spacing: -0.02em;
-  color: ${v.text};
-}
-
-${ROOT} div#header #site-title a {
-  color: ${v.text};
-  font-weight: 800;
-  background: none;
-  text-shadow: none;
-}
-
-${ROOT} div#header ul#navbar {
-  background: transparent;
-  padding: 4px 18px 8px 10px;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-}
-
-${ROOT} div#header ul#navbar li {
-  font-size: 13px;
-  font-weight: normal;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  background-image: none;
-  list-style: none;
-  display: inline;
-}
-
-${ROOT} div#header ul#navbar li a {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: ${v.radiusM};
-  color: ${v.muted};
-  font-weight: normal;
-}
-
-${ROOT} div#header ul#navbar li.current-page {
-  background: transparent;
-  background-image: none;
-}
-
-${ROOT} div#header ul#navbar li.current-page a,
-${ROOT} #navbar li.current-page a {
-  background: ${v.accentSoft};
-  color: ${v.accent};
-  font-weight: 600;
-}
-
-${ROOT} div#header ul#subnavbar {
-  background: ${v.surface};
-  border-top: 1px solid ${v.border};
-  border-bottom: none;
-  padding: 6px 18px;
-  margin: 0;
-}
-
-${ROOT} div#header ul#subnavbar li {
-  padding: 0 8px;
-  font-size: 12.5px;
-}
-
-${ROOT} div#header ul#subnavbar li a {
-  color: ${v.muted};
-}
-
-${ROOT} div#header ul#subnavbar li a:hover {
-  color: ${v.accent};
-}
-
-${ROOT} div.tips {
-  background: ${v.accentSoft};
-  background-image: none;
-  border-bottom: 1px solid ${v.border};
-  color: ${v.text};
-}
-
-/* —— sidebar —— */
-${ROOT} div.sidebar {
-  width: 228px;
-  min-width: 228px;
-  max-width: 228px;
-  margin-right: 1em;
-}
-
-${ROOT} div.sidebar h5,
-${ROOT} div.sidebar h6,
-${ROOT} ul#tag-sidebar h5,
-${ROOT} ul#tag-sidebar h6 {
-  font: 600 10.5px ${v.font};
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: ${v.muted};
-  margin: 0 0 6px;
-}
-
-/* Standalone "Tags"/"Search" (and similar) headings above the list card */
-${ROOT} div.sidebar > h5 {
-  display: none;
-}
-
-/* Tags between search panel card and tag list (typical site markup) */
-${ROOT} div.tag-search + h5 {
-  display: none;
-}
-
-/* D: Tags heading immediately after search-tools when they are siblings */
-${ROOT} ${SITE_SELECTORS.tagsHeadingAfterSearchTools} {
-  display: none;
-}
-
-/* F: native AI filter row — only while search-tools AI posts row is rendered */
-${ROOT} body.${SEARCH_TOOLS_AI_ROW_BODY_CLASS$1} ${SITE_SELECTORS.filterAiRow} {
-  display: none;
-}
-
-${ROOT} div.tag-search,
-${ROOT} ul#tag-sidebar {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusL};
-  padding: 12px;
-  box-shadow: ${v.shadow1};
-  box-sizing: border-box;
-}
-
-${ROOT} div.tag-search {
-  margin-bottom: 12px;
-}
-
-${ROOT} ul#tag-sidebar {
-  margin: 0;
-  padding: 12px;
-  list-style: none;
-}
-
-/*
- * Tag rows: ?/+/- /name (list) or ?/name (post) wrap as inline text;
- * count stays top-right on the first line (artists-sidebar.test markup).
- */
-${ROOT} ul#tag-sidebar > li {
-  display: block;
-  position: relative;
-  margin: 0 0 5px;
-  padding-right: 4.5em;
-  font-size: 12.5px;
-  line-height: 1.35;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-${ROOT} ul#tag-sidebar > li > a {
-  display: inline;
-}
-
-${ROOT} ul#tag-sidebar > li > h5,
-${ROOT} ul#tag-sidebar > li > h6 {
-  display: block;
-  margin-top: 8px;
-}
-
-${ROOT} ul#tag-sidebar > li:first-child > h5,
-${ROOT} ul#tag-sidebar > li:first-child > h6 {
-  margin-top: 0;
-}
-
-${ROOT} .tag-count,
-${ROOT} span.post-count,
-${ROOT} span.tag-count {
-  position: absolute;
-  top: 0;
-  right: 0;
-  margin-left: 0;
-  color: ${v.muted};
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-/*
- * Tag type color on the LAST link of the row (tag name).
- * List rows: ? + − name — name is 4th. Post rows: ? name — name is 2nd.
- * Operators / wiki stay muted on every page.
- */
-${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:not(:last-of-type) {
-  color: ${v.muted};
-  font-size: 11px;
-  font-weight: normal;
-}
-
-${ROOT} .tag-type-artist > a,
-${ROOT} .tag-type-artist {
-  color: ${v.tagArtist};
-}
-
-${ROOT} .tag-type-character > a,
-${ROOT} .tag-type-character {
-  color: ${v.tagCharacter};
-}
-
-${ROOT} .tag-type-copyright > a,
-${ROOT} .tag-type-copyright {
-  color: ${v.tagCopyright};
-}
-
-${ROOT} .tag-type-metadata > a,
-${ROOT} .tag-type-metadata {
-  color: ${v.tagMetadata};
-}
-
-${ROOT} ul#tag-sidebar > li.tag-type-artist > a:last-of-type {
-  color: ${v.tagArtist};
-  font-size: 12.5px;
-  font-weight: normal;
-}
-
-${ROOT} ul#tag-sidebar > li.tag-type-character > a:last-of-type {
-  color: ${v.tagCharacter};
-  font-size: 12.5px;
-  font-weight: normal;
-}
-
-${ROOT} ul#tag-sidebar > li.tag-type-copyright > a:last-of-type {
-  color: ${v.tagCopyright};
-  font-size: 12.5px;
-  font-weight: normal;
-}
-
-${ROOT} ul#tag-sidebar > li.tag-type-metadata > a:last-of-type {
-  color: ${v.tagMetadata};
-  font-size: 12.5px;
-  font-weight: normal;
-}
-
-${ROOT} .tag-type-artist > a:hover,
-${ROOT} .tag-type-artist:hover,
-${ROOT} .tag-type-character > a:hover,
-${ROOT} .tag-type-character:hover,
-${ROOT} .tag-type-copyright > a:hover,
-${ROOT} .tag-type-copyright:hover,
-${ROOT} .tag-type-metadata > a:hover,
-${ROOT} .tag-type-metadata:hover,
-${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:last-of-type:hover {
-  color: ${v.accent};
-}
-
-/* Artist Follow: kit secondary on theme tokens (beats document-chrome #fff) */
-${ROOT} button.${CSS_CLASS.artistFollow} {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  color: ${v.text};
-  border-radius: ${v.radiusS};
-}
-
-${ROOT} button.${CSS_CLASS.artistFollow}:hover {
-  background: ${v.accentSoft};
-  border-color: ${v.accent};
-  color: ${v.accent};
-}
-
-${ROOT} button.${CSS_CLASS.artistFollow}.${CSS_CLASS.artistFollowMarked} {
-  background: ${v.accentSoft};
-  border-color: ${v.accent};
-  color: ${v.accent};
-}
-
-/* —— search field —— */
-${ROOT} div.tag-search input[type="text"],
-${ROOT} div.tag-search input[type="search"] {
-  width: 100%;
-  height: 34px;
-  box-sizing: border-box;
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusM};
-  padding: 0 10px;
-  background: ${v.surface};
-  color: ${v.text};
-  font-size: 13px;
-}
-
-${ROOT} div.tag-search input[type="submit"],
-${ROOT} div.tag-search button[type="submit"] {
-  width: 100%;
-  box-sizing: border-box;
-  margin-top: 8px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: ${v.radiusS};
-  background: ${v.accent};
-  color: ${v.surface};
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-${ROOT} div.tag-search input[type="submit"]:hover,
-${ROOT} div.tag-search button[type="submit"]:hover {
-  filter: brightness(1.05);
-}
-
-/* Kit ghost / link-button: single line in the search-tools foot row */
-${ROOT} #${SEARCH_TOOLS_ROOT_ID$1} .${SEARCH_TOOLS_RESET_CLASS} {
-  flex-shrink: 0;
-  white-space: nowrap;
-  background: transparent;
-  border-color: transparent;
-  color: ${v.accent};
-  font-weight: 600;
-  padding: 0;
-  min-height: auto;
-  height: auto;
-}
-
-${ROOT} #${SEARCH_TOOLS_ROOT_ID$1} .${SEARCH_TOOLS_RESET_CLASS}:hover {
-  color: ${v.text};
-  background: transparent;
-  border-color: transparent;
-}
-
-${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL}:focus,
-${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL}:focus,
-${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL}:focus,
-${ROOT} textarea${WHERE_NOT_OUR_CONTROL}:focus,
-${ROOT} select${WHERE_NOT_OUR_CONTROL}:focus {
-  background: ${v.surface};
-  outline: 2px solid ${v.accent};
-  outline-offset: 1px;
-  border-color: ${v.accent};
-}
-
-/* —— awesomplete —— */
-/* Site hides closed lists with opacity/scale + display:block; do not undo that. */
-${ROOT} .awesomplete > ul[hidden],
-${ROOT} .awesomplete > ul:empty {
-  display: none !important;
-  pointer-events: none;
-}
-
-${ROOT} .awesomplete > ul:not([hidden]):not(:empty) {
-  background: ${v.surface};
-  background-image: none;
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusL};
-  box-shadow: ${v.shadow2};
-  margin: 0.35em 0 0;
-  padding: 4px 0;
-  text-shadow: none;
-  transform: none;
-}
-
-${ROOT} .awesomplete > ul:before {
-  display: none;
-  content: none;
-}
-
-${ROOT} .awesomplete > ul > li {
-  padding: 6px 10px;
-  color: ${v.text};
-  cursor: pointer;
-}
-
-${ROOT} .awesomplete > ul > li:hover,
-${ROOT} .awesomplete > ul > li[aria-selected="true"] {
-  background: ${v.accentSoft};
-  color: ${v.accent};
-}
-
-${ROOT} .awesomplete mark {
-  background: ${v.accentSoft};
-  color: ${v.text};
-}
-
-${ROOT} div.auto_complete {
-  background: ${v.surface};
-}
-
-${ROOT} div.auto_complete ul {
-  border-color: ${v.border};
-  background: ${v.surface};
-}
-
-${ROOT} div.auto_complete ul li.selected {
-  background-color: ${v.accentSoft};
-}
-
-${ROOT} div.auto_complete ul strong.highlight {
-  color: ${v.accent};
-}
-
-/* —— grid / thumbs (cell size unchanged) —— */
-${ROOT} div.image-list {
-  gap: 12px;
-  align-items: flex-start;
-  align-content: flex-start;
-}
-
-${ROOT} img.preview {
-  border-radius: ${v.radiusL};
-}
-
-/* Favorites: Remove stays subtle; hover must not paint the thumb cell */
-${ROOT} span.thumb,
-${ROOT} span.thumb:hover,
-${ROOT} span.thumb > a,
-${ROOT} span.thumb > a:hover {
-  background-color: transparent;
-}
-
-${ROOT} span.thumb > a[onclick] {
-  color: ${v.muted};
-  font-size: 12px;
-  font-weight: normal;
-  padding: 2px 8px;
-  border-radius: ${v.radiusS};
-  background: transparent;
-  border: none;
-}
-
-${ROOT} span.thumb > a[onclick]:hover {
-  color: ${v.danger};
-  background: transparent;
-}
-
-${ROOT} span.thumb > a[onclick] b {
-  font-weight: normal;
-  color: inherit;
-}
-
-/* —— favorites bulk select (F HANDOFF; tokens for Light/Dark/Site) —— */
-${ROOT} body.${FAV_BULK_SELECTING_BODY_CLASS} span.thumb {
-  position: relative;
-  cursor: pointer;
-}
-
-${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} {
-  outline: ${FAV_BULK_OUTLINE_WIDTH} solid ${v.accent};
-  outline-offset: ${FAV_BULK_OUTLINE_OFFSET};
-  border-radius: ${v.radiusL};
-}
-
-/*
- * Check badge is a sibling of a#p{ID}, never inside the link.
- * Hidden until the thumb is selected.
- */
-${ROOT} span.thumb > .${FAV_BULK_CHECK_CLASS} {
-  position: absolute;
-  top: ${FAV_BULK_CHECK_INSET};
-  left: ${FAV_BULK_CHECK_INSET};
-  z-index: ${String(FAV_BULK_CHECK_Z_INDEX)};
-  display: none;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: ${FAV_BULK_CHECK_SIZE};
-  height: ${FAV_BULK_CHECK_SIZE};
-  border-radius: 50%;
-  background: ${v.accent};
-  color: ${v.surface};
-  font-size: ${FAV_BULK_CHECK_FONT_SIZE};
-  font-weight: 700;
-  line-height: 1;
-  pointer-events: none;
-}
-
-${ROOT} span.thumb.${FAV_BULK_SELECTED_CLASS} > .${FAV_BULK_CHECK_CLASS} {
-  display: inline-flex;
-}
-
-${ROOT} #${FAV_BULK_ROOT_ID},
-${ROOT} .${FAV_BULK_BAR_CLASS} {
-  color: ${v.text};
-}
-
-${ROOT} #${FAV_BULK_ROOT_ID} .${FAV_BULK_STATUS_CLASS} {
-  color: ${v.muted};
-}
-
-${ROOT} .webm-thumb {
-  border: 1px solid ${v.accent};
-  box-sizing: border-box;
-}
-
-${ROOT} img.flagged,
-${ROOT} img.has-children,
-${ROOT} img.has-parent,
-${ROOT} img.pending,
-${ROOT} img.video {
-  border-width: 1px;
-  border-style: solid;
-  box-sizing: border-box;
-}
-
-${ROOT} img.flagged {
-  border-color: ${v.danger};
-}
-
-${ROOT} img.has-children {
-  border-color: ${v.tagCharacter};
-}
-
-${ROOT} img.has-parent {
-  border-color: ${v.tagMetadata};
-}
-
-${ROOT} img.pending,
-${ROOT} img.video {
-  border-color: ${v.accent};
-}
-
-/* —— pagination —— */
-${ROOT} div#paginator,
-${ROOT} .pagination {
-  display: block;
-  padding: 1.5em 0 1em;
-  text-align: center;
-  clear: both;
-}
-
-${ROOT} div#paginator a,
-${ROOT} .pagination a {
-  display: inline-block;
-  margin: 0 3px;
-  padding: 4px 10px;
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusM};
-  background: ${v.surface};
-  color: ${v.text};
-  text-decoration: none;
-}
-
-${ROOT} div#paginator a:hover,
-${ROOT} .pagination a:hover {
-  background: ${v.accentSoft};
-  color: ${v.accent};
-  border-color: ${v.accent};
-}
-
-${ROOT} div#paginator a.current,
-${ROOT} div#paginator span.current,
-${ROOT} .pagination a.current,
-${ROOT} .pagination span.current {
-  background: ${v.accent};
-  border-color: ${v.accent};
-  color: ${v.surface};
-  font-weight: 600;
-}
-
-${ROOT} div#paginator span {
-  margin: 0 3px;
-  padding: 4px 8px;
-}
-
-${ROOT} .manual-page-chooser > input[type="text"] {
-  width: 4em;
-  height: 28px;
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusS};
-  background: ${v.surface};
-  color: ${v.text};
-  padding: 0 6px;
-}
-
-${ROOT} .manual-page-chooser > input[type="submit"] {
-  height: 28px;
-  margin-left: 4px;
-  padding: 0 10px;
-  border: none;
-  border-radius: ${v.radiusS};
-  background: ${v.accent};
-  color: ${v.surface};
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* —— forms / tables (site chrome; skip search-tools + any .rdw-* control) —— */
-${ROOT} input${WHERE_NOT_OUR_CONTROL},
-${ROOT} select${WHERE_NOT_OUR_CONTROL},
-${ROOT} textarea${WHERE_NOT_OUR_CONTROL},
-${ROOT} button${WHERE_NOT_OUR_CONTROL} {
-  color: ${v.text};
-  font-family: ${v.font};
-}
-
-${ROOT} input[type="text"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} input[type="password"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} input[type="search"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} input[type="number"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} select${WHERE_NOT_OUR_CONTROL},
-${ROOT} textarea${WHERE_NOT_OUR_CONTROL} {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusS};
-  color: ${v.text};
-}
-
-${ROOT} button${WHERE_NOT_OUR_CONTROL},
-${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL},
-${ROOT} .gdprbutton button {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusS};
-  color: ${v.text};
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-${ROOT} button${WHERE_NOT_OUR_CONTROL}:hover,
-${ROOT} input[type="submit"]${WHERE_NOT_OUR_CONTROL}:hover,
-${ROOT} input[type="button"]${WHERE_NOT_OUR_CONTROL}:hover,
-${ROOT} .gdprbutton button:hover {
-  background: ${v.accentSoft};
-  border-color: ${v.accent};
-  color: ${v.accent};
-}
-
-/* Keep search submit as primary accent (overrides generic button chrome) */
-${ROOT} div.tag-search input[type="submit"],
-${ROOT} div.tag-search button[type="submit"],
-${ROOT} .manual-page-chooser > input[type="submit"] {
-  background: ${v.accent};
-  border: none;
-  color: ${v.surface};
-  font-weight: 600;
-}
-
-${ROOT} div.tag-search input[type="submit"]:hover,
-${ROOT} div.tag-search button[type="submit"]:hover,
-${ROOT} .manual-page-chooser > input[type="submit"]:hover {
-  background: ${v.accent};
-  border: none;
-  color: ${v.surface};
-  filter: brightness(1.05);
-}
-
-${ROOT} table {
-  color: ${v.text};
-}
-
-${ROOT} tr.tableheader,
-${ROOT} thead tr {
-  background: ${v.surface2} !important;
-  background-image: none !important;
-  color: ${v.text};
-}
-
-${ROOT} table.highlightable th {
-  color: ${v.text};
-  background: ${v.surface2};
-}
-
-${ROOT} table.highlightable td {
-  border-color: ${v.border};
-}
-
-${ROOT} table.highlightable > tbody > tr:hover {
-  background: ${v.accentSoft};
-}
-
-${ROOT} table tr.good {
-  background: ${v.accentSoft};
-}
-
-${ROOT} table tr.selected {
-  background: ${v.accentSoft} !important;
-}
-
-${ROOT} table tr.highlight {
-  background: ${v.surface2};
-}
-
-${ROOT} table tr.pending-tag {
-  background: ${v.surface2};
-}
-
-/* Zebra without native green tint */
-${ROOT} table tr:nth-child(odd) {
-  background: ${v.surface2};
-}
-
-${ROOT} table.form th {
-  color: ${v.muted};
-}
-
-/* Forum tables */
-${ROOT} div#forum > table {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusL};
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-  box-shadow: ${v.shadow1};
-}
-
-${ROOT} div#forum > table th,
-${ROOT} div#forum > table td {
-  border-color: ${v.border};
-  color: ${v.text};
-}
-
-${ROOT} div#forum > table th:first-child,
-${ROOT} div#forum > table td:first-child {
-  text-align: left;
-}
-
-${ROOT} div#forum > table tr:nth-child(odd) {
-  background: ${v.surface2};
-}
-
-${ROOT} div#forum > table tr:nth-child(even) {
-  background: ${v.surface};
-}
-
-${ROOT} div#forum > table.highlightable > tbody > tr:hover {
-  background: ${v.accentSoft};
-}
-
-${ROOT} .added-tags {
-  color: ${v.tagCharacter};
-}
-
-${ROOT} .removed-tags {
-  color: ${v.danger};
-}
-
-${ROOT} .obsolete-tag-change {
-  color: ${v.text};
-}
-
-/* —— notices / cards —— */
-${ROOT} div.status-notice,
-${ROOT} div.notice,
-${ROOT} div.has-mail,
-${ROOT} div.blocked,
-${ROOT} div.quote,
-${ROOT} div.help div.code,
-${ROOT} div#post-comments div#comment-list > div,
-${ROOT} div#comments div#comment-list > div.post > div.col2,
-${ROOT} div.response-list > div.post > div.content {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusL};
-  box-shadow: ${v.shadow1};
-}
-
-${ROOT} div.status-notice {
-  border-color: ${v.border};
-  padding: 1em;
-  margin: 1em;
-  color: ${v.text};
-}
-
-${ROOT} div.notice {
-  color: ${v.danger};
-  padding: 0.75em 1em;
-  margin-bottom: 1em;
-}
-
-${ROOT} div.has-mail {
-  border-color: ${v.tagCharacter};
-  background: ${v.accentSoft};
-  padding: 1em;
-  margin: 1em;
-  color: ${v.text};
-}
-
-${ROOT} div.blocked {
-  border-color: ${v.danger};
-  background: ${v.dangerSoft};
-  color: ${v.danger};
-  padding: 1em;
-  margin: 1em;
-}
-
-${ROOT} div.quote {
-  border-color: ${v.border};
-  background: ${v.surface2};
-  background-image: none;
-  color: ${v.text};
-  padding: 12px;
-  margin-top: 10px;
-}
-
-${ROOT} div.help div.code {
-  border: 1px dashed ${v.border};
-  background: ${v.surface2};
-  color: ${v.text};
-}
-
-${ROOT} div.help h4 {
-  color: ${v.tagCharacter};
-}
-
-${ROOT} div#post-comments div#comment-list > div,
-${ROOT} div#comments div#comment-list > div.post > div.col2 {
-  padding: 12px;
-  margin-bottom: 1em;
-}
-
-${ROOT} div.response-list > div.post > div.content {
-  padding: 10px 12px;
-}
-
-${ROOT} div.response-list > div.post > div.content > div.footer {
-  color: ${v.muted};
-  margin-top: 0.75em;
-}
-
-/* Edit | Respond (and similar) on comments / forum posts */
-${ROOT} div.response-list > div.post > div.content > div.footer a,
-${ROOT} ul.flat-list li a {
-  color: ${v.muted};
-  font-weight: normal;
-  padding: 2px 6px;
-  border-radius: ${v.radiusS};
-}
-
-${ROOT} div.response-list > div.post > div.content > div.footer a:hover,
-${ROOT} ul.flat-list li a:hover {
-  color: ${v.accent};
-  background: ${v.accentSoft};
-}
-
-${ROOT} ul.flat-list li a.forum-update {
-  font-style: italic;
-  color: ${v.muted};
-}
-
-${ROOT} div.link-list ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-${ROOT} div.link-list li {
-  margin: 0 0 4px;
-}
-
-${ROOT} div.link-list a {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: ${v.radiusS};
-  color: ${v.muted};
-}
-
-${ROOT} div.link-list a:hover {
-  color: ${v.accent};
-  background: ${v.accentSoft};
-}
-
-${ROOT} span.author,
-${ROOT} span.date {
-  color: ${v.muted};
-}
-
-${ROOT} span.locked-topic {
-  color: ${v.muted};
-}
-
-${ROOT} strong.divider {
-  color: ${v.muted};
-}
-
-${ROOT} div#footer {
-  color: ${v.muted};
-}
-
-${ROOT} div#footer > .footer-disabled,
-${ROOT} div#footer > #label {
-  color: ${v.muted};
-}
-
-${ROOT} div#user-record > table > tbody > tr.positive-record {
-  background: ${v.accentSoft};
-}
-
-${ROOT} div#user-record > table > tbody > tr.negative-record {
-  background: ${v.dangerSoft};
-}
-
-${ROOT} div.mailbody {
-  background-color: ${v.surface};
-  border-color: ${v.border};
-}
-
-${ROOT} div.mail .received {
-  color: ${v.tagCharacter};
-}
-
-${ROOT} div.mail .sent {
-  color: ${v.danger};
-}
-
-${ROOT} .gdprinner {
-  background-color: ${v.surface};
-  border-color: ${v.border};
-  color: ${v.text};
-}
-
-/* —— post page —— */
-/* E: hide native left-column chrome only while body.rdw-post-panel-mounted */
-${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div#stats {
-  display: none !important;
-}
-
-${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} div.link-list {
-  display: none !important;
-}
-
-${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} ${POST_PANEL_ICAME_ROW} {
-  display: none !important;
-}
-
-/*
- * A: comments moved into the panel column — lift site max-width: 680px
- * so #post-comments fills the narrow column.
- */
-${ROOT} body.${RDW_POST_PANEL_MOUNTED_CLASS} #${POST_ACTIONS_HOST_ID} #post-comments {
-  max-width: none;
-}
-
-${ROOT} img#image {
-  border-radius: ${v.radiusL};
-}
-
-${ROOT} div#post-view > div#right-col > div#edit,
-${ROOT} div#edit-box {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  border-radius: ${v.radiusL};
-  color: ${v.text};
-}
-
-${ROOT} div#note-container > div.note-body {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  color: ${v.text};
-  border-radius: ${v.radiusS};
-}
-
-${ROOT} div#note-container > div.note-body > p.tn,
-${ROOT} tn {
-  color: ${v.muted};
-}
-
-${ROOT} div#note-container > div.note-box {
-  border-color: ${v.accent};
-  background: ${v.accentSoft};
-}
-
-${ROOT} div#note-container > div.note-box > div.note-corner {
-  background: ${v.accent};
-}
-
-${ROOT} div#note-container > div.unsaved {
-  background: ${v.surface};
-  border-color: ${v.danger};
-}
-
-${ROOT} div#note-container > div.unsaved > div.note-corner {
-  background: ${v.danger};
-}
-
-${ROOT} a.original-file-changed#highres {
-  color: ${v.accent};
-}
-
-${ROOT} div#post-add p#scale {
-  color: ${v.muted};
-}
-
-${ROOT} h2.wiki-title {
-  color: ${v.accent};
-}
-
-${ROOT} div.wiki > h2.title {
-  color: ${v.accent};
-}
-
-${ROOT} div#wiki-show > div#body > div#byline {
-  color: ${v.muted};
-}
-
-${ROOT} div#wiki-diff del {
-  background-color: ${v.dangerSoft};
-  color: ${v.danger};
-}
-
-${ROOT} div#wiki-diff ins {
-  background-color: ${v.accentSoft};
-  color: ${v.text};
-}
-
-${ROOT} dt.bad {
-  color: ${v.danger};
-}
-
-${ROOT} .blacklisted-tags-disabled {
-  color: ${v.muted} !important;
-}
-
-/* —— dark theme contrast (tokens already dark; keep chrome readable) —— */
-${ROOT_DARK} a:visited {
-  color: ${v.muted};
-}
-
-${ROOT_DARK} a:hover,
-${ROOT_DARK} a:active {
-  color: ${v.text};
-}
-
-${ROOT_DARK} a.spoiler,
-${ROOT_DARK} span.spoiler {
-  color: ${v.bg};
-  background: ${v.text};
-}
-
-${ROOT_DARK} a.spoiler:hover,
-${ROOT_DARK} span.spoiler:hover {
-  color: ${v.text};
-  background: ${v.muted};
-}
-
-${ROOT_DARK} div#paginator a.current,
-${ROOT_DARK} div#paginator span.current,
-${ROOT_DARK} .pagination a.current,
-${ROOT_DARK} .pagination span.current,
-${ROOT_DARK} div.tag-search input[type="submit"],
-${ROOT_DARK} div.tag-search button[type="submit"],
-${ROOT_DARK} .manual-page-chooser > input[type="submit"],
-${ROOT_DARK} span.thumb > .${FAV_BULK_CHECK_CLASS},
-${ROOT_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
-  color: ${v.text};
-}
-
-${ROOT_DARK} div.has-mail {
-  background: ${v.surface2};
-  border-color: ${v.tagCharacter};
-}
-
-/*
- * Post panel actions + tabs (A→E HANDOFF).
- * Unscoped under #rdw-post-actions so Site default/Site dark (no html.rdw-skin)
- * still beat native button/link chrome via document --rdw-* tokens.
- */
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_CLASS},
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ACTIONS_ROW_CLASS},
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_TABPANEL_CLASS} {
-  color: ${v.text};
-}
-
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
-  background: ${v.accent};
-  border-color: ${v.accent};
-  color: ${v.surface};
-}
-
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_ORIGINAL_CLASS} {
-  box-sizing: border-box;
-  width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
-  height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
-  min-width: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
-  min-height: ${String(POST_PANEL_ORIGINAL_SIZE_PX)}px;
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  color: ${v.text};
-  text-decoration: none;
-}
-
-#${POST_ACTIONS_HOST_ID} .${KIT_TABS_CLASS} {
-  border-bottom: 1px solid ${v.border};
-  color: ${v.text};
-}
-
-#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
-  background: transparent;
-  border: 0;
-  border-bottom: ${String(POST_PANEL_TAB_UNDERLINE_PX)}px solid transparent;
-  color: ${v.muted};
-}
-
-#${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
-  color: ${v.text};
-  font-weight: 600;
-  border-bottom-color: ${v.accent};
-}
-
-#${POST_ACTIONS_HOST_ID} .${POST_PANEL_POST_ACTION_CLASS} {
-  background: ${v.surface};
-  border: 1px solid ${v.border};
-  color: ${v.text};
-  justify-content: flex-start;
-}
-
-/* Site themes: muted fails AA on green/dark chrome — tabs use text; keep accent underline. */
-${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS},
-${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS} {
-  color: ${v.text};
-}
-
-${ROOT_SITE} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"],
-${ROOT_SITE_DARK} #${POST_ACTIONS_HOST_ID} .${KIT_TAB_CLASS}[aria-selected="true"] {
-  border-bottom-color: ${v.accent};
-  color: ${v.text};
-}
-
-/* Dark RuleDesk: primary fill uses light label (surface token is dark). */
-${ROOT_THEME_DARK} #${POST_ACTIONS_HOST_ID} .${POST_PANEL_FAV_CLASS}.${KIT_BTN_PRIMARY_CLASS} {
-  color: ${v.text};
-}
-
-/*
- * Own scrollable UI — tokens for all four themes (site/site-dark have no html.rdw-skin).
- * Fixes white post-column scrollbar on dark. Kit lists/dialogs + playlist menu.
- */
-#${POST_ACTIONS_HOST_ID},
-.${KIT_SELECT_LIST_CLASS},
-.${KIT_AC_LIST_CLASS},
-.${KIT_DIALOG_CLASS},
-.${PLAYLIST_MENU_CLASS} {
-  scrollbar-width: ${SCROLLBAR_WIDTH};
-  scrollbar-color: ${v.border} ${v.surface};
-}
-
-/* Site autocomplete lists under rdw-skin */
-${ROOT} .awesomplete > ul:not([hidden]):not(:empty),
-${ROOT} div.auto_complete ul {
-  scrollbar-width: ${SCROLLBAR_WIDTH};
-  scrollbar-color: ${v.border} ${v.surface};
-}
-
-/*
- * Script page host sits on site bg for Site default / Site dark (no html.rdw-skin).
- * Color uses document tokens; Shadow title inherits from the host once tokens sync.
- */
-#${RDW_PAGE_ROOT_ID} {
-  color: ${v.text};
-}
-`.trim();
-/** Returns the site-skin CSS string for injection. */
-function getSiteSkinCss() {
-	return SITE_SKIN_CSS;
-}
-var MS_PER_DAY$1 = 864e5;
-var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
-var STYLESHEET_REL = "stylesheet";
-var LIGHT_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_LIGHT}`;
-var DARK_STYLESHEET_PATH = `${SITE_THEME_STYLESHEET_DIR}${SITE_THEME_STYLESHEET_DARK}`;
-function writeThemeCookie(value, expires) {
-	document.cookie = [
-		`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
-		`expires=${expires.toUTCString()}`,
-		`path=/`
-	].join("; ");
-}
-/** Deletes the site `theme` cookie (light / default). */
-function clearSiteThemeCookie() {
-	document.cookie = [
-		`${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}`,
-		`expires=${(/* @__PURE__ */ new Date(0)).toUTCString()}`,
-		`path=/`
-	].join("; ");
-}
-/** Collapse `//` (and longer) runs in a pathname so `/css/...` comparisons work. */
-var REPEATED_PATH_SLASHES = /\/{2,}/g;
-function collapsePathSlashes(pathname) {
-	return pathname.replace(REPEATED_PATH_SLASHES, "/");
-}
-/**
-* Match site desktop CSS hrefs via URL pathname (query ignored).
-* Production uses absolute hrefs with a doubled slash (`…xxx//css/desktop.css?46`);
-* collapsing repeated path slashes makes that equal `/css/desktop.css`.
-*/
-function isSiteDesktopStylesheetHref(href) {
-	try {
-		const path = collapsePathSlashes(new URL(href, location.href).pathname);
-		return path === LIGHT_STYLESHEET_PATH || path === DARK_STYLESHEET_PATH;
-	} catch {
-		return false;
-	}
-}
-function stylesheetFilenameForTheme(theme) {
-	return theme === "dark" ? SITE_THEME_STYLESHEET_DARK : SITE_THEME_STYLESHEET_LIGHT;
-}
-/** Swap filename in the raw href so `//css/` and `/css/` forms stay intact. */
-function replaceStylesheetFilename(href, filename) {
-	if (href.includes("desktop-dark.css")) return href.replace(SITE_THEME_STYLESHEET_DARK, filename);
-	if (href.includes("desktop.css")) return href.replace(SITE_THEME_STYLESHEET_LIGHT, filename);
-	return href;
-}
-function findSiteDesktopStylesheetLink() {
-	const links = document.querySelectorAll(`link[rel="${STYLESHEET_REL}"]`);
-	for (const link of links) {
-		const href = link.getAttribute("href");
-		if (href === null || href.length === 0) continue;
-		if (isSiteDesktopStylesheetHref(href)) return link;
-	}
-	return null;
-}
-/**
-* Swap the site desktop stylesheet link (desktop.css ↔ desktop-dark.css).
-* Preserves query string. No-op (warn) if the link is missing.
-*/
-function applySiteDesktopStylesheet(theme) {
-	const link = findSiteDesktopStylesheetLink();
-	if (link === null) {
-		log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-		return;
-	}
-	const href = link.getAttribute("href");
-	if (href === null || href.length === 0) {
-		log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-		return;
-	}
-	link.setAttribute("href", replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)));
-}
-/**
-* RuleDesk skin modes need a predictable site base: no theme cookie + light CSS.
-* Does not touch html.rdw-skin (that is owned by src/skin/theme.ts).
-*/
-function forceLightSiteBase() {
-	clearSiteThemeCookie();
-	applySiteDesktopStylesheet("light");
-}
-function setSiteTheme(theme) {
-	if (theme === "dark") {
-		const expires = new Date(Date.now() + 365 * MS_PER_DAY$1);
-		writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, expires);
-	} else clearSiteThemeCookie();
-	applySiteDesktopStylesheet(theme);
-}
-var BACKGROUND_DIM_MAX = .8;
-/** JPEG quality when downscaling a custom background to screen size. */
-var APPEARANCE_BACKGROUND_JPEG_QUALITY = .85;
-var CONTRAST_OFFSET = .05;
-var JPEG_MIME = "image/jpeg";
-var BODY_BG_IMAGE = "background-image";
-var BODY_BG_SIZE = "background-size";
-var BODY_BG_POSITION = "background-position";
-var BODY_BG_REPEAT = "background-repeat";
-var BODY_BG_ATTACHMENT = "background-attachment";
-/** Site light tag/link colors (not exported from tokens). */
-var SITE_C_LINK_ARTIST = "#cc0000";
-var SITE_C_LINK_CHARACTER = "#00aa00";
-var SITE_C_LINK_COPYRIGHT = "#aa00aa";
-var SITE_C_LINK_METADATA = "#ff8800";
-/** Site dark accent-soft / tag colors (not exported from tokens). */
-var SITE_DARK_ACCENT_SOFT = SITE_DARK_C_BORDER;
-var SITE_DARK_TAG_ARTIST = "#f0a0a0";
-var SITE_DARK_TAG_CHARACTER = "#f0f0a0";
-var SITE_DARK_TAG_COPYRIGHT = "#f0a0f0";
-var SITE_DARK_TAG_METADATA = "#90d9ed";
-/**
-* Script-page / token palette for Appearance theme "Site default".
-* Card surface = --c-bg; border = --c-bg-alt (aligned with page-css host cards).
-* Danger/radius/shadow/font from Light.
-*/
-var SITE_DEFAULT_PALETTE = {
-	bg: SITE_LIGHT_C_BG,
-	surface: SITE_LIGHT_C_BG,
-	surface2: SITE_LIGHT_C_BG_OVERLAY,
-	border: SITE_LIGHT_C_BG_ALT,
-	text: SITE_LIGHT_C_TEXT,
-	muted: SITE_LIGHT_C_TEXT_SOFT,
-	accent: SITE_LIGHT_C_LINK,
-	accentSoft: SITE_LIGHT_C_BG_ALT,
-	danger: LIGHT_PALETTE.danger,
-	dangerSoft: LIGHT_PALETTE.dangerSoft,
-	tagArtist: SITE_C_LINK_ARTIST,
-	tagCharacter: SITE_C_LINK_CHARACTER,
-	tagCopyright: SITE_C_LINK_COPYRIGHT,
-	tagMetadata: SITE_C_LINK_METADATA,
-	radiusS: LIGHT_PALETTE.radiusS,
-	radiusM: LIGHT_PALETTE.radiusM,
-	radiusL: LIGHT_PALETTE.radiusL,
-	shadow1: LIGHT_PALETTE.shadow1,
-	shadow2: LIGHT_PALETTE.shadow2,
-	font: LIGHT_PALETTE.font
-};
-/**
-* Script-page / token palette for Appearance theme "Site dark".
-* Surface = page bg (not darker chrome); danger/radius/shadow/font from Dark.
-*/
-var SITE_DARK_PALETTE = {
-	bg: SITE_DARK_C_BG,
-	surface: SITE_DARK_C_BG,
-	surface2: SITE_DARK_C_SURFACE2,
-	border: SITE_DARK_C_BORDER,
-	text: SITE_DARK_C_TEXT,
-	muted: SITE_DARK_C_MUTED,
-	accent: SITE_DARK_C_ACCENT,
-	accentSoft: SITE_DARK_ACCENT_SOFT,
-	danger: DARK_PALETTE.danger,
-	dangerSoft: DARK_PALETTE.dangerSoft,
-	tagArtist: SITE_DARK_TAG_ARTIST,
-	tagCharacter: SITE_DARK_TAG_CHARACTER,
-	tagCopyright: SITE_DARK_TAG_COPYRIGHT,
-	tagMetadata: SITE_DARK_TAG_METADATA,
-	radiusS: DARK_PALETTE.radiusS,
-	radiusM: DARK_PALETTE.radiusM,
-	radiusL: DARK_PALETTE.radiusL,
-	shadow1: DARK_PALETTE.shadow1,
-	shadow2: DARK_PALETTE.shadow2,
-	font: DARK_PALETTE.font
-};
-/**
-* Pick text color for a surface: prefer `preferred`, else the first
-* neighboring candidate that meets {@link CONTRAST_RATIO_MIN}.
-*/
-function pickContrastingText(surface, preferred, neighbors) {
-	const preferredRatio = contrastRatio(preferred, surface);
-	if (preferredRatio !== null && preferredRatio >= 4.5) return {
-		text: preferred,
-		ratio: preferredRatio,
-		swapped: false
-	};
-	for (const candidate of neighbors) {
-		const ratio = contrastRatio(candidate, surface);
-		if (ratio !== null && ratio >= 4.5) return {
-			text: candidate,
-			ratio,
-			swapped: true
-		};
-	}
-	return {
-		text: preferred,
-		ratio: preferredRatio,
-		swapped: false
-	};
-}
-function finalizeSitePaletteText(palette) {
-	const picked = pickContrastingText(palette.surface, palette.text, [
-		palette.bg,
-		palette.muted,
-		palette.accent,
-		LIGHT_PALETTE.text,
-		DARK_PALETTE.text
-	]);
-	if (!picked.swapped) return palette;
-	return {
-		...palette,
-		text: picked.text
-	};
-}
-/** Site default after contrast gate (text-on-surface). */
-var SITE_DEFAULT_PALETTE_RESOLVED = finalizeSitePaletteText(SITE_DEFAULT_PALETTE);
-/** Site dark after contrast gate (text-on-surface). */
-var SITE_DARK_PALETTE_RESOLVED = finalizeSitePaletteText(SITE_DARK_PALETTE);
-function createDefaultCustomTheme() {
-	return {
-		base: APPEARANCE_CUSTOM_BASE_LIGHT,
-		backgroundDim: 0
-	};
-}
-function clampBackgroundDim(value) {
-	if (!Number.isFinite(value)) return 0;
-	return Math.min(BACKGROUND_DIM_MAX, Math.max(0, value));
-}
-/** WCAG contrast ratio of two hex colors; null if either is unparseable. */
-function contrastRatio(foreground, background) {
-	const l1 = relativeLuminance(foreground);
-	const l2 = relativeLuminance(background);
-	if (l1 === null || l2 === null) return null;
-	const lighter = Math.max(l1, l2);
-	const darker = Math.min(l1, l2);
-	return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET);
-}
-/**
-* Canonical token palette for an Appearance value.
-* Site themes use site chrome colors — not RuleDesk Light/Dark.
-* Callers (boot/host) should use this instead of light/dark-only resolvers.
-*/
-function resolveAppearancePalette(appearance) {
-	const theme = appearance.theme;
-	if (theme === "site-dark") return SITE_DARK_PALETTE_RESOLVED;
-	if (theme === "site") return SITE_DEFAULT_PALETTE_RESOLVED;
-	if (theme === "dark") return DARK_PALETTE;
-	if (theme === "custom") return appearance.custom?.base === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
-	return LIGHT_PALETTE;
-}
-function escapeUrlForCss(url) {
-	return url.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
-}
-function clearBodyBackground() {
-	const body = document.body;
-	if (body === null) return;
-	body.style.removeProperty(BODY_BG_IMAGE);
-	body.style.removeProperty(BODY_BG_SIZE);
-	body.style.removeProperty(BODY_BG_POSITION);
-	body.style.removeProperty(BODY_BG_REPEAT);
-	body.style.removeProperty(BODY_BG_ATTACHMENT);
-}
-/**
-* Apply custom background image on <body> with a dim overlay (0–0.8).
-* Cleared when image is empty.
-*/
-function applyBodyBackgroundImage(imageUrl, dim) {
-	const body = document.body;
-	if (body === null) return;
-	if (imageUrl === void 0 || imageUrl.length === 0) {
-		clearBodyBackground();
-		return;
-	}
-	const clamped = clampBackgroundDim(dim);
-	const escaped = escapeUrlForCss(imageUrl);
-	body.style.setProperty(BODY_BG_IMAGE, `linear-gradient(rgba(0, 0, 0, ${String(clamped)}), rgba(0, 0, 0, ${String(clamped)})), url("${escaped}")`);
-	body.style.setProperty(BODY_BG_SIZE, "cover");
-	body.style.setProperty(BODY_BG_POSITION, "center");
-	body.style.setProperty(BODY_BG_REPEAT, "no-repeat");
-	body.style.setProperty(BODY_BG_ATTACHMENT, "fixed");
-}
-function syncSiteCookieAndStylesheet(appearance) {
-	if (appearance.theme === "site-dark") {
-		setSiteTheme("dark");
-		return;
-	}
-	if (appearance.theme === "site") {
-		setSiteTheme("light");
-		return;
-	}
-	forceLightSiteBase();
-}
-/** CSS pixel screen size × devicePixelRatio (for background hints/resize). */
-function getScreenPixelSize() {
-	const dpr = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
-	return {
-		width: Math.round(window.screen.width * dpr),
-		height: Math.round(window.screen.height * dpr)
-	};
-}
-/**
-* Fit source inside max box without upscaling. Pure sizing helper (testable).
-*/
-function computeDownscaleSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
-	if (!Number.isFinite(sourceWidth) || !Number.isFinite(sourceHeight) || sourceWidth <= 0 || sourceHeight <= 0) return {
-		width: 0,
-		height: 0
-	};
-	if (sourceWidth <= maxWidth && sourceHeight <= maxHeight) return {
-		width: Math.round(sourceWidth),
-		height: Math.round(sourceHeight)
-	};
-	const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
-	return {
-		width: Math.max(1, Math.round(sourceWidth * scale)),
-		height: Math.max(1, Math.round(sourceHeight * scale))
-	};
-}
-function loadImageElement(src) {
-	return new Promise((resolve, reject) => {
-		const image = new Image();
-		image.onload = () => {
-			resolve(image);
-		};
-		image.onerror = () => {
-			reject(/* @__PURE__ */ new Error("Could not decode image"));
-		};
-		image.src = src;
-	});
-}
-function readFileAsDataUrl(file) {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => {
-			if (typeof reader.result === "string") {
-				resolve(reader.result);
-				return;
-			}
-			reject(/* @__PURE__ */ new Error("Could not read image file"));
-		};
-		reader.onerror = () => {
-			reject(reader.error ?? /* @__PURE__ */ new Error("Could not read image file"));
-		};
-		reader.readAsDataURL(file);
-	});
-}
-/**
-* Decode file, downscale to screen pixels (never upscale), encode JPEG.
-*/
-async function prepareBackgroundImageFile(file) {
-	const image = await loadImageElement(await readFileAsDataUrl(file));
-	const sourceWidth = image.naturalWidth;
-	const sourceHeight = image.naturalHeight;
-	const screen = getScreenPixelSize();
-	const sized = computeDownscaleSize(sourceWidth, sourceHeight, screen.width, screen.height);
-	const canvas = document.createElement("canvas");
-	canvas.width = sized.width;
-	canvas.height = sized.height;
-	const context = canvas.getContext("2d");
-	if (context === null) throw new Error("Could not prepare background image");
-	context.drawImage(image, 0, 0, sized.width, sized.height);
-	return {
-		dataUrl: canvas.toDataURL(JPEG_MIME, APPEARANCE_BACKGROUND_JPEG_QUALITY),
-		sourceWidth,
-		sourceHeight,
-		outputWidth: sized.width,
-		outputHeight: sized.height,
-		belowScreen: sourceWidth < screen.width || sourceHeight < screen.height
-	};
-}
-/**
-* Full theme apply for boot and settings UI:
-* site cookie/stylesheet + html.rdw-skin / tokens / site-skin / custom props + body image.
-* Token palette comes from {@link resolveAppearancePalette} and is written once via
-* injectTokenStyles + syncPageRootTokens (same tick as applyAppearanceToDocument).
-*/
-function applyAppearanceTheme(options) {
-	const { appearance } = options;
-	syncSiteCookieAndStylesheet(appearance);
-	applyAppearanceToDocument({
-		appearance,
-		siteSkinCss: options.siteSkinCss ?? getSiteSkinCss(),
-		...options.backgroundDataUrl !== void 0 ? { backgroundDataUrl: options.backgroundDataUrl } : {}
-	});
-	const palette = resolveAppearancePalette(appearance);
-	injectTokenStyles(palette);
-	syncPageRootTokens(palette);
-	if (!themeEnablesSkin(appearance.theme)) document.documentElement.classList.remove(RDW_SKIN_CLASS);
-	if (appearance.theme === "custom" && appearance.custom !== void 0) {
-		const custom = appearance.custom;
-		applyBodyBackgroundImage(options.backgroundDataUrl ?? custom.backgroundImage, custom.backgroundDim ?? 0);
-		if (custom.backgroundDim !== void 0) document.documentElement.style.setProperty(TOKEN_VAR.backgroundDim, String(clampBackgroundDim(custom.backgroundDim)));
-	} else clearBodyBackground();
-	const textOnSurface = contrastRatio(palette.text, palette.surface);
-	return {
-		contrastWarning: textOnSurface !== null && textOnSurface < 4.5,
-		contrastRatio: textOnSurface
-	};
-}
-/**
-* Whether RuleDesk site-skin class is active.
-* site / site-dark keep native page chrome; light / dark / custom enable rdw-skin.
-*/
-function themeEnablesSkin(theme) {
-	return theme === "light" || theme === "dark" || theme === "custom";
-}
-/**
-* Ensures a <style id=...> exists under documentElement (works before <head>).
-* Safe at document-start. B1/B2 should reuse these helpers.
-*/
-function ensureStyleElement(id) {
-	const existing = document.getElementById(id);
-	if (existing instanceof HTMLStyleElement) return existing;
-	if (existing !== null) existing.remove();
-	const style = document.createElement("style");
-	style.id = id;
-	(document.head ?? document.documentElement).append(style);
-	return style;
-}
-/** Inject or replace the design-token stylesheet. */
-function injectTokenStyles(palette) {
-	const style = ensureStyleElement(TOKEN_STYLE_ID);
-	style.textContent = buildTokensCss(palette, ":root");
-	return style;
-}
-/**
-* Copy the same palette onto #rdw-page-root when present.
-* Shadow DOM uses :host { all: initial }, so document :root tokens do not inherit.
-*/
-function syncPageRootTokens(palette) {
-	const host = document.getElementById(RDW_PAGE_ROOT_ID);
-	if (!(host instanceof HTMLElement)) return;
-	applyTokenProperties(host, palette);
-}
-/**
-* Inject or replace the site-skin stylesheet (rules scoped under html.rdw-skin).
-*/
-function injectSiteSkinHook(cssText = "") {
-	const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
-	style.textContent = cssText;
-	return style;
-}
-function applyHtmlThemeAttributes(theme) {
-	const root = document.documentElement;
-	root.setAttribute(RDW_THEME_ATTR, theme);
-	if (themeEnablesSkin(theme)) root.classList.add(RDW_SKIN_CLASS);
-	else root.classList.remove(RDW_SKIN_CLASS);
-}
-/**
-* Document-start-safe appearance apply:
-* html class/attr + token CSS (+ site-skin) + optional custom props.
-* Palette from {@link resolveAppearancePalette} (site ≠ Light/Dark).
-* Also syncs live #rdw-page-root Shadow host to the same palette.
-*/
-function applyAppearanceToDocument(options) {
-	const { appearance } = options;
-	applyHtmlThemeAttributes(appearance.theme);
-	const palette = resolveAppearancePalette(appearance);
-	injectTokenStyles(palette);
-	syncPageRootTokens(palette);
-	injectSiteSkinHook(options.siteSkinCss ?? "");
-	const root = document.documentElement;
-	clearCustomThemeProperties(root);
-	const omitImage = options.omitBackgroundImage === true;
-	const backgroundImage = omitImage ? void 0 : options.backgroundDataUrl ?? appearance.custom?.backgroundImage;
-	if (appearance.theme === "custom" && appearance.custom !== void 0) {
-		const overrides = backgroundImage !== void 0 && backgroundImage.length > 0 ? {
-			backgroundImage,
-			...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
-		} : { ...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {} };
-		applyCustomThemeProperties(root, overrides);
-	} else if (!omitImage && options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
-}
-/**
-* Pre-paint appearance read: one GM_getValue + shape checks only (no zod).
-* Full AppearanceSchema validation stays on the post-paint store path.
-*/
-var CUSTOM_BASE_LIGHT = "light";
-var CUSTOM_BASE_DARK = "dark";
-/** Cached raw STORAGE_KEY payload from the single pre-paint GM read. */
-var rawStorageCache;
-var rawStorageRead = false;
-function isRecord(value) {
-	return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-function getGmGetValue() {
-	return GM_getValue;
-}
-/**
-* Single GM read for the pre-paint path. Subsequent calls reuse the cache
-* so layout peek does not hit GM again before first paint.
-*/
-function readRawStorageOnce() {
-	if (!rawStorageRead) {
-		rawStorageCache = getGmGetValue()(STORAGE_KEY, void 0);
-		rawStorageRead = true;
-	}
-	return rawStorageCache;
-}
-function cheapParseTheme(value) {
-	if (value === "site") return APPEARANCE_THEME_SITE;
-	if (value === "site-dark") return APPEARANCE_THEME_SITE_DARK;
-	if (value === "light") return APPEARANCE_THEME_LIGHT;
-	if (value === "dark") return APPEARANCE_THEME_DARK;
-	if (value === "custom") return APPEARANCE_THEME_CUSTOM;
-	return DEFAULT_APPEARANCE_THEME;
-}
-function cheapParseCustom(raw) {
-	if (!isRecord(raw)) return;
-	const baseRaw = raw.base;
-	const custom = { base: baseRaw === CUSTOM_BASE_DARK || baseRaw === CUSTOM_BASE_LIGHT ? baseRaw : CUSTOM_BASE_LIGHT };
-	if (typeof raw.backgroundImage === "string") custom.backgroundImage = raw.backgroundImage;
-	if (typeof raw.backgroundDim === "number" && Number.isFinite(raw.backgroundDim)) custom.backgroundDim = raw.backgroundDim;
-	return custom;
-}
-/**
-* Cheap appearance extract from a raw GM storage blob (or undefined).
-* Does not validate marks / collections / artists / favs.
-*/
-function cheapParseAppearance(raw) {
-	if (!isRecord(raw)) return { theme: DEFAULT_APPEARANCE_THEME };
-	const settings = raw.settings;
-	if (!isRecord(settings)) return { theme: DEFAULT_APPEARANCE_THEME };
-	const appearanceRaw = settings.appearance;
-	if (!isRecord(appearanceRaw)) return { theme: DEFAULT_APPEARANCE_THEME };
-	const theme = cheapParseTheme(appearanceRaw.theme);
-	if (theme !== "custom") return { theme };
-	const custom = cheapParseCustom(appearanceRaw.custom);
-	if (custom === void 0) return { theme };
-	return {
-		theme,
-		custom
-	};
-}
-/** Pre-paint appearance: one GM read + cheap shape check. */
-function peekAppearanceForPaint() {
-	return cheapParseAppearance(readRawStorageOnce());
-}
-/**
-* Cheap layout flags from the same cached GM blob (no second GM read, no zod).
-* Used after CSS injection for grid-density / menu-cleanup / search reserve.
-*/
-function peekLayoutSettings() {
-	const raw = readRawStorageOnce();
-	if (!isRecord(raw) || !isRecord(raw.settings)) return {
-		tweaksEnabled: true,
-		features: {},
-		featureChoice: {}
-	};
-	const settings = raw.settings;
-	const tweaksEnabled = typeof settings.tweaksEnabled === "boolean" ? settings.tweaksEnabled : true;
-	const features = {};
-	if (isRecord(settings.features)) {
-		for (const [key, value] of Object.entries(settings.features)) if (typeof value === "boolean") features[key] = value;
-	}
-	const featureChoice = {};
-	if (isRecord(settings.featureChoice)) {
-		for (const [key, value] of Object.entries(settings.featureChoice)) if (typeof value === "string") featureChoice[key] = value;
-	}
-	return {
-		tweaksEnabled,
-		features,
-		featureChoice
-	};
-}
-function resolveFeatureEnabled(layout, id, defaultEnabled) {
-	if (!layout.tweaksEnabled) return false;
-	const stored = layout.features[id];
-	if (stored === void 0) return defaultEnabled;
-	return stored;
-}
-function resolveFeatureChoice(layout, id, defaultValue, allowed) {
-	const stored = layout.featureChoice[id];
-	if (stored !== void 0 && allowed.includes(stored)) return stored;
-	return defaultValue;
-}
-/**
-* Pre-CSS operations on document-start (must stay minimal — A1 counts these):
-* 1. GM_getValue(STORAGE_KEY) via {@link peekAppearanceForPaint}
-* 2. cheap shape parse of settings.appearance (no zod)
-* Then immediately inject theme + skin CSS (base color only, no background image).
-*/
-function syncSiteCookieAfterCss(appearance) {
-	if (appearance.theme === "site-dark") {
-		setSiteTheme("dark");
-		return;
-	}
-	if (appearance.theme === "site") {
-		setSiteTheme("light");
-		return;
-	}
-	forceLightSiteBase();
-}
-/**
-* If the URL already has #rdw/…, stamp html.rdw-own-page after CSS inject.
-* Kept here (not in pages/router) so document-start does not import Preact host.
-*/
-function applyOwnPageClassEarly() {
-	if (parseRdwHash(window.location.hash) === null) return;
-	const root = document.documentElement;
-	if (root === null) return;
-	const style = ensureStyleElement(RDW_OWN_PAGE_STYLE_ID);
-	style.textContent = buildOwnPageCss();
-	root.classList.add(RDW_OWN_PAGE_CLASS);
-}
-/**
-* Runs at userscript document-start, before DOMContentLoaded.
-* Hot path: cheap appearance GM read → inject token + site-skin CSS (no bg image).
-* Cookie sync / rdw-own-page run only after styles are in the DOM.
-*/
-function bootEarly() {
-	const appearance = peekAppearanceForPaint();
-	applyAppearanceToDocument({
-		appearance,
-		siteSkinCss: getSiteSkinCss(),
-		omitBackgroundImage: true
-	});
-	syncSiteCookieAfterCss(appearance);
-	applyOwnPageClassEarly();
-}
-var THUMB_CLASS = "rdw-thumb";
-var THUMB_ANCHOR_NAME = "--rdw-img";
-var FEATURE_STYLE_ID_PREFIX = "rdw-feature-style-";
-var POST_ACTIONS_ID = "rdw-post-actions";
-function featureBodyClass(id) {
-	return `rdw-f-${id}`;
-}
-function featureChoiceBodyClass(id, value) {
-	return `rdw-f-${id}-${value}`;
-}
-var GRID_DENSITY_FEATURE_ID = exports("G","grid-density");
-var FEATURE_ID$12 = GRID_DENSITY_FEATURE_ID;
-var COMPACT_PX = 150;
-var LARGE_PX = 250;
-var MASONRY_VALUE = exports("M","masonry");
-/** List-page host for masonry; favorites has no #post-list so rules do not apply. */
-var MASONRY_LIST_SCOPE = exports("a","#post-list");
-/** Per-thumb CSS variable driving `grid-row-end: span N` (set by masonry-layout). */
-var MASONRY_SPAN_CSS_VAR = exports("b","--rdw-masonry-span");
-var MASONRY_LIST_WIDTH_PERCENT = 100;
-var MASONRY_THUMB_WIDTH_PERCENT = 100;
-var MASONRY_PREVIEW_WIDTH_PERCENT = 100;
-var MASONRY_BORDER_RADIUS_PX = 4;
-/** 1:1 placeholder span at min column width before JS runs. */
-var MASONRY_SPAN_FALLBACK = Math.ceil(174 / 4);
-/** Grow into flex row of #post-list so grid tracks can span content width. */
-var MASONRY_CONTENT_FLEX_GROW = 1;
-var MASONRY_CONTENT_FLEX_SHRINK = 1;
-var MASONRY_CONTENT_FLEX_BASIS = "auto";
-var MASONRY_CONTENT_MIN_WIDTH_PX = 0;
-function sizeCss(choiceValue, px) {
-	const bodyClass = featureChoiceBodyClass(FEATURE_ID$12, choiceValue);
-	return [
-		`body.${bodyClass} span.thumb,`,
-		`body.${bodyClass} span.thumb > a {`,
-		`  width: ${px}px !important;`,
-		`  height: ${px}px !important;`,
-		`}`,
-		`body.${bodyClass} img.preview {`,
-		`  max-width: ${px}px !important;`,
-		`  max-height: ${px}px !important;`,
-		`}`
-	].join("\n");
-}
-function masonryCss() {
-	const bodyClass = featureChoiceBodyClass(FEATURE_ID$12, MASONRY_VALUE);
-	const scope = `body.${bodyClass} ${MASONRY_LIST_SCOPE}`;
-	const contentScope = `body.${bodyClass} ${SITE_SELECTORS.postListContent}`;
-	const contentFlex = `${MASONRY_CONTENT_FLEX_GROW} ${MASONRY_CONTENT_FLEX_SHRINK} ${MASONRY_CONTENT_FLEX_BASIS}`;
-	return [
-		`${contentScope} {`,
-		`  flex: ${contentFlex} !important;`,
-		`  min-width: ${MASONRY_CONTENT_MIN_WIDTH_PX}px !important;`,
-		`}`,
-		`${scope} div.image-list {`,
-		`  display: grid !important;`,
-		`  width: ${MASONRY_LIST_WIDTH_PERCENT}% !important;`,
-		`  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;`,
-		`  grid-auto-rows: 4px !important;`,
-		`  column-gap: 4px !important;`,
-		`  row-gap: 0px !important;`,
-		`}`,
-		`${scope} span.thumb {`,
-		`  display: block !important;`,
-		`  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
-		`  height: auto !important;`,
-		`  margin: 0 !important;`,
-		`  grid-row-end: span var(${MASONRY_SPAN_CSS_VAR}, ${MASONRY_SPAN_FALLBACK}) !important;`,
-		`}`,
-		`${scope} span.thumb > a {`,
-		`  display: block !important;`,
-		`  width: ${MASONRY_THUMB_WIDTH_PERCENT}% !important;`,
-		`  height: auto !important;`,
-		`}`,
-		`${scope} span.thumb img.preview {`,
-		`  display: block !important;`,
-		`  width: ${MASONRY_PREVIEW_WIDTH_PERCENT}% !important;`,
-		`  height: auto !important;`,
-		`  max-width: none !important;`,
-		`  max-height: none !important;`,
-		`  margin: 0 !important;`,
-		`  border-radius: ${MASONRY_BORDER_RADIUS_PX}px !important;`,
-		`}`
-	].join("\n");
-}
-/**
-* Schedule masonry-layout after first paint (rAF + setTimeout 0), matching
-* boot/ready.scheduleAfterFirstPaint so this stay off the CSS-first path.
-*/
-function mountGridDensity(ctx) {
-	if (ctx.pageKind !== "list") return;
-	requestAnimationFrame(() => {
-		setTimeout(() => {
-			module.import('./masonry-layout-BF1C8lGN-wpVMzmir.js').then((mod) => {
-				mod.startMasonryLayout();
-			});
-		}, 0);
-	});
-}
-var gridDensityFeature = exports("bn",{
-	id: FEATURE_ID$12,
-	label: "Grid size",
-	pages: ["list", "favorites"],
-	defaultEnabled: true,
-	cssOnly: true,
-	choice: {
-		options: [
-			{
-				value: "default",
-				label: "Default"
-			},
-			{
-				value: "compact",
-				label: "Compact (150)"
-			},
-			{
-				value: "large",
-				label: "Large (250)"
-			},
-			{
-				value: MASONRY_VALUE,
-				label: "Masonry"
-			}
-		],
-		defaultValue: "default"
-	},
-	css: [
-		sizeCss("compact", COMPACT_PX),
-		sizeCss("large", LARGE_PX),
-		masonryCss()
-	].join("\n"),
-	mount: mountGridDensity
-});
-var FEATURE_ID$11 = "menu-cleanup";
-var FEATURE_LABEL$11 = "Clean header menu";
-var CONTENT_ID$1 = "content";
-var HIDDEN_CLASS = "rdw-menu-hidden";
-var BODY_FEATURE_CLASS$3 = featureBodyClass(FEATURE_ID$11);
-var MISSING_MENU_WARN = "Header menu not found";
-var HIDE_LINK_TEXT_SET = /* @__PURE__ */ new Set([
-	"iCame Top 100",
-	"Discord",
-	"X",
-	"Other Sites",
-	"Contact Us",
-	"DMCA",
-	"About",
-	"TOS",
-	"My Favorites"
-]);
-var FEATURE_PAGES$11 = [
-	"list",
-	"post",
-	"favorites",
-	"other"
-];
-var FEATURE_CSS$11 = `body.${BODY_FEATURE_CLASS$3} li.${HIDDEN_CLASS} { display:none !important; }`;
-function isHeaderMenuLink(anchor, content) {
-	const listItem = anchor.closest("li");
-	if (listItem === null) return false;
-	if (content !== null && content.contains(listItem)) return false;
-	return true;
-}
-function collectHeaderMenuLinks() {
-	const content = document.getElementById(CONTENT_ID$1);
-	const anchors = document.querySelectorAll("a");
-	const headerLinks = [];
-	for (const node of anchors) {
-		if (!(node instanceof HTMLAnchorElement)) continue;
-		if (!isHeaderMenuLink(node, content)) continue;
-		headerLinks.push(node);
-	}
-	return headerLinks;
-}
-function mountMenuCleanup(_ctx) {
-	const headerLinks = collectHeaderMenuLinks();
-	if (headerLinks.length === 0) {
-		log.warn(MISSING_MENU_WARN);
-		return;
-	}
-	for (const anchor of headerLinks) {
-		const text = anchor.textContent?.trim() ?? "";
-		if (!HIDE_LINK_TEXT_SET.has(text)) continue;
-		const listItem = anchor.closest("li");
-		if (listItem === null) continue;
-		listItem.classList.add(HIDDEN_CLASS);
-	}
-}
-var menuCleanupFeature = {
-	id: FEATURE_ID$11,
-	label: FEATURE_LABEL$11,
-	pages: [...FEATURE_PAGES$11],
-	defaultEnabled: true,
-	cssOnly: true,
-	css: FEATURE_CSS$11,
-	mount: mountMenuCleanup
-};
-function detectPageKind(search) {
-	const params = new URLSearchParams(search);
-	const page = params.get(SEARCH_PARAM_PAGE);
-	const section = params.get("s");
-	if (page === "post" && section === "list") return "list";
-	if (page === "post" && section === "view") return "post";
-	if (page === "favorites" && section === "view") return "favorites";
-	return "other";
-}
-function readPostIdFromSearch(search) {
-	const params = new URLSearchParams(search);
-	const page = params.get(SEARCH_PARAM_PAGE);
-	const section = params.get("s");
-	const id = params.get("id");
-	if (page !== "post" || section !== "view") return null;
-	if (id === null || id.trim().length === 0) return null;
-	if (!/^\d+$/.test(id)) return null;
-	return id;
-}
 var COOKIE_PAIR_SEPARATOR = ";";
 var COOKIE_NAME_VALUE_SEPARATOR = "=";
 var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
@@ -7523,6 +5563,468 @@ var blacklistHideFeature = {
 	css: FEATURE_CSS$10,
 	mount: mountBlacklistHide
 };
+var n;
+var t$1;
+var u$2;
+var i$1;
+var f$2;
+var o$2;
+var e$1;
+var l$1;
+var c$1;
+var a$2;
+var h$1 = Symbol.for("pv");
+var p$1 = {};
+var y$1 = [];
+var v$1 = /^m(i|n|o|s|text|space)$/;
+var w$2 = Array.isArray;
+var d$1 = y$1.slice;
+var _$1 = Object.assign;
+function g$1(n) {
+	n && n.parentNode && n.remove();
+}
+function k$1(n, t, r) {
+	var u, i, f, o = {}, e = arguments.length;
+	for (f in t) "key" == f ? u = t[f] : "ref" == f && "function" != typeof n ? i = t[f] : o[f] = t[f];
+	return e > 2 && (o.children = e > 3 ? d$1.call(arguments, 2) : r), m$1(n, o, u, i, null);
+}
+function m$1(r, u, i, f, o) {
+	var e = {
+		type: r,
+		props: u,
+		key: i,
+		ref: f,
+		__k: null,
+		__: null,
+		__b: 0,
+		__e: null,
+		__c: null,
+		constructor: h$1,
+		__v: o || ++t$1,
+		__i: -1,
+		__u: 0
+	};
+	return !o && n.vnode && n.vnode(e), e;
+}
+function $$1(n) {
+	return n.children;
+}
+function x$1(n, t) {
+	this.props = n, this.context = t, this.__g = 0;
+}
+function S(n, t) {
+	if (null == t) return n.__ && S(n.__, n.__i + 1);
+	for (var r; t < n.__k.length; t++) if ((r = n.__k[t]) && r.__e) return r.__e;
+	return "function" != typeof n.type || n.props.__P ? null : S(n);
+}
+function C$1(t) {
+	var r, u = t.__v, i = u.__e, f = [], o = [], e = t.__P;
+	e && ((r = _$1({ constructor: h$1 }, u)).__v = u.__v + 1, n.vnode && n.vnode(r), z$2(e, r, u, t.__n, e.namespaceURI, 32 & u.__u ? [i] : null, f, i || S(u), 32 & u.__u, o), r.__v = u.__v, r.__.__k[r.__i] = r, E$1(f, r, o), u.__ = u.__e = null, r.__e != i && j(r));
+}
+function j(n) {
+	if ((n = n.__) && n.__c && !n.props.__P) return n.__e = null, n.__k.some(function(t) {
+		return t && (n.__e = t.__e);
+	}), j(n);
+}
+function L(t) {
+	(8 & t.__g || (t.__g |= 8, u$2.push(t), f$2++)) && i$1 == n.debounceRendering || ((i$1 = n.debounceRendering) || queueMicrotask)(H$1);
+}
+function H$1() {
+	try {
+		for (var n, t = 1; u$2.length;) u$2.length > t && u$2.sort(o$2), n = u$2.shift(), t = u$2.length, 8 & n.__g && C$1(n);
+	} finally {
+		(f$2 = u$2.length) && (i$1 || queueMicrotask)(H$1);
+	}
+}
+function I(n, t, r, u, i, f, o, e, l, c, a) {
+	var s, h, v, w, d, _, g = u.__k || y$1, k = t.length;
+	for (l = q(r, t, g, l, k), s = 0; s < k; s++) null != (v = r.__k[s]) && (h = ~v.__i && g[v.__i] || p$1, v.__i = s, _ = z$2(n, v, h, i, f, o, e, l, c, a), w = v.__e, (h.ref != v.ref || 8 & h.__u) && (h.ref && G$1(h.ref, null, v, h), v.ref && a.push(v.ref, v.__c || w, v)), d = d || w, 4 & v.__u ? (l = A$1(v, l, n, !h.__v), h.__e && (h.__e = null)) : "function" == typeof v.type && void 0 !== _ ? l = _ : w && (l = w.nextSibling), v.__u &= -21);
+	return r.__e = d, l;
+}
+function q(n, t, r, u, i) {
+	var f, o, e, l, c, a, s, p, y, v = r.length, d = v, _ = 0, g = 0, k = n.__k = Array(i);
+	for (f = 0; f < i; f++) null != (o = t[f]) && "boolean" != typeof o && "function" != typeof o ? ("object" != typeof o || o.constructor === String ? o = k[f] = m$1(null, o) : w$2(o) ? o = k[f] = m$1($$1, { children: o }) : o.constructor === h$1 && o.__b ? o = k[f] = m$1(o.type, o.props, o.key, o.ref, o.__v) : k[f] = o, l = f + _, o.__ = n, o.__b = n.__b + 1, e = null, ~(c = o.__i = P$2(o, r, l, d)) && (d--, (e = r[c]) && (e.__u |= 2)), e && e.__v ? (o.__u |= 16, c == l - 1 ? _-- : c == l + 1 ? _++ : c != l && (c > l ? _-- : _++, g = 1)) : (~c || (i > v ? _-- : i < v && _++), "function" != typeof o.type && (o.__u |= 4))) : k[f] = null;
+	if (g) {
+		for (a = [], s = [], f = 0; f < i; f++) if ((o = k[f]) && 16 & o.__u) {
+			for (_ = 0, p = a.length; _ < p;) a[y = _ + p >> 1] < o.__i ? _ = y + 1 : p = y;
+			a[_] = o.__i, s[f] = _ + 1;
+		}
+		for (_ = a.length; f--;) s[f] && (s[f] == _ ? _-- : k[f].__u |= 4);
+	}
+	if (d) for (f = 0; f < v; f++) !(e = r[f]) || 2 & e.__u || (e.__e == u && (u = S(e)), J$1(e, e));
+	return u;
+}
+function A$1(n, t, r, u) {
+	var i, f, o, e;
+	if ("function" == typeof n.type) {
+		if (n.props.__P) return t;
+		if (i = n.__k) for (f = 0; f < i.length; f++) i[f] && (i[f].__ = n, t = A$1(i[f], t, r, false));
+		return t;
+	}
+	for (t && !t.parentNode && (t = S(n)) && !t.parentNode && (t = null), o = n.__e, e = t; e && 8 == e.nodeType;) e = e.nextSibling;
+	for (o != e && (!u && r.moveBefore && o.parentNode ? r.moveBefore(o, t) : r.insertBefore(o, t || null)), t = o; (t = t && t.nextSibling) && 8 == t.nodeType && !t.data.startsWith("$s"););
+	return t;
+}
+function O(n, t) {
+	return t = t || [], null != n && "boolean" != typeof n && (w$2(n) ? n.some(function(n) {
+		O(n, t);
+	}) : t.push(n)), t;
+}
+function P$2(n, t, r, u) {
+	var i, f = n.key, o = n.type, e = t[r], l = e && !(2 & e.__u);
+	if (null === e && null == f || l && f == e.key && o == e.type) return r;
+	if (u > (l ? 1 : 0)) {
+		for (i = r - 1; i >= 0; i--) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
+		for (i = r + 1; i < t.length; i++) if ((e = t[i]) && !(2 & e.__u) && f == e.key && o == e.type) return i;
+	}
+	return -1;
+}
+function T$1(n, t, r) {
+	r ??= "", "-" == t[0] ? n.setProperty(t, r) : n[t] = r;
+}
+function N(n, t, r, u, i) {
+	var f, o;
+	if ("style" == t) if ("string" == typeof r) n.style.cssText = r;
+	else {
+		if ("string" == typeof u && (n.style.cssText = u = ""), u) for (t in u) r && t in r || T$1(n.style, t);
+		if (r) for (t in r) u && r[t] == u[t] || T$1(n.style, t, r[t]);
+	}
+	else if ("o" == t[0] && "n" == t[1]) "function" != typeof r && (r = null), "function" != typeof u && (u = null), (n.__e || (n.__e = {}))[t] = r, r && u || (o = a$2[t] || (a$2[t] = V(t)), (n.__a || (n.__a = {}))[t] = c$1, f = t != (t = t.replace(l$1, "$1")), (t = t.slice(2))[0] < "a" && (t = t.toLowerCase()), r ? n.addEventListener(t, o, f) : n.removeEventListener(t, o, f));
+	else {
+		if ("http://www.w3.org/2000/svg" == i) t = t.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
+		else if ("width" != t && "height" != t && "href" != t && "list" != t && "form" != t && "tabIndex" != t && "download" != t && "rowSpan" != t && "colSpan" != t && "role" != t && "popover" != t && t in n) try {
+			n[t] = null == r ? "" : r;
+			return;
+		} catch (n) {}
+		if ("function" == typeof r) return;
+		null == r || false === r && "-" != t[4] ? n.removeAttribute(t) : n.setAttribute(t, "popover" == t && 1 == r ? "" : r);
+	}
+}
+function V(t) {
+	return function(r) {
+		var u = this.__e;
+		if (u) {
+			if (u = u[t], null == r[e$1]) r[e$1] = c$1++;
+			else if (r[e$1] < this.__a[t]) return;
+			return u(n.event ? n.event(r) : r);
+		}
+	};
+}
+function z$2(t, r, u, i, f, o, e, l, c, a) {
+	var s, p, v, d, k, b, m, M, C, j, L, H, q, A, O, P, T, N, V = r.type;
+	if (r.constructor !== h$1) return null;
+	128 & u.__u && (c = 32 & u.__u, s = u.__c.__z) && (r.__u |= c, p = o = [], 8 == s.nodeType ? l = B$1(s, o) : o.push(s), l = o[0] || l), (s = n.__b) && s(r);
+	n: if ("function" == typeof V) {
+		v = e.length;
+		try {
+			if (M = r.props, C = (s = V.prototype) && s.render, j = (s = V.contextType) && i[s.__c], L = s ? j ? j.props.value : s.__ : i, (d = u.__c) ? (r.__c = d, 2 & d.__g && (d.__g |= 1)) : (C ? r.__c = d = new V(M, L) : (r.__c = d = new x$1(M, L), d.constructor = V, d.render = K$1), j && j.sub(d), d.state || (d.state = {}), d.__n = i, d.__g |= 8, d.__h = [], d.__k = []), C && (d.__s || (d.__s = d.state), V.getDerivedStateFromProps && (d.__s == d.state && (d.__s = _$1({}, d.__s)), _$1(d.__s, V.getDerivedStateFromProps(M, d.__s)))), k = d.props, b = d.state, d.__v = r, u.__c) {
+				if (M !== k && C && !V.getDerivedStateFromProps && d.componentWillReceiveProps && d.componentWillReceiveProps(M, L), r.__v == u.__v && !(8 & d.__g) || !(4 & d.__g) && d.shouldComponentUpdate && !1 === d.shouldComponentUpdate(M, d.__s, L)) {
+					r.__v != u.__v && (d.props = M, d.state = d.__s, d.__g &= -9), r.__e = u.__e, r.__k = u.__k, r.__k.some(function(n) {
+						n && (n.__ = r);
+					}), y$1.push.apply(d.__h, d.__k), d.__k = [], d.__h.length && e.push(d), l = S(u);
+					break n;
+				}
+				d.componentWillUpdate && d.componentWillUpdate(M, d.__s, L), C && d.componentDidUpdate && d.__h.push(function() {
+					d.componentDidUpdate(k, b, m);
+				});
+			} else C && !V.getDerivedStateFromProps && d.componentWillMount && d.componentWillMount(), C && d.componentDidMount && d.__h.push(d.componentDidMount);
+			d.context = L, d.props = M, d.__P = t, d.__g &= -5, H = n.__r, q = C ? 25 : 0;
+			do
+				d.__g &= -9, H && H(r), s = d.render(d.props, d.state = d.__s, d.context);
+			while (8 & d.__g && ++q < 25);
+			C && (y$1.push.apply(d.__h, d.__k), d.__k = []), d.state = d.__s, d.getChildContext && (i = _$1({}, i, d.getChildContext())), C && u.__c && d.getSnapshotBeforeUpdate && (m = d.getSnapshotBeforeUpdate(k, b)), A = s && s.type === $$1 && null == s.key ? s.props.children : s, M.__P && (s = l, f = (t = M.__P).namespaceURI, c = o = null, u.props && u.props.__P != t && (u.__k.some(function(n) {
+				n && J$1(n, n);
+			}), u.__k = null), l = u.__k ? S(u, 0) : null), l = I(t, w$2(A) ? A : [A], r, u, i, f, o, e, l, c, a), M.__P && (r.__e = null, l = s), r.__u &= -161, p && p.some(g$1), d.__h.length && e.push(d), 1 & d.__g && (d.__g &= -4);
+		} catch (t) {
+			if (e.length = v, r.__v = null, c || o) if (t && t.then) {
+				if (r.__u |= 128 | c, o) {
+					for (~(T = o.indexOf(l || void 0)) || (T = o.length); (N = o[T - 1]) && 8 == N.nodeType;) T--;
+					for (; T < o.length; T++) if (N = o[T]) if (o[T] = null, O) {
+						if (N == P) break;
+					} else {
+						if (8 != N.nodeType) break;
+						N.data.startsWith("$s") && (P = B$1(O = N));
+					}
+				}
+				if (!O) {
+					for (; l && 8 == l.nodeType && l.nextSibling;) l = l.nextSibling;
+					O = l;
+				}
+				(s = B$1(O = r.__c.__z || (r.__c.__z = O))) ? (r.__e = O, l = s) : r.__e = l, l = l && l.nextSibling;
+			} else o && o.some(g$1);
+			else r.__e = u.__e;
+			r.__k || (r.__k = u.__k || []), t && t.then || D$1(r), n.__e(t, r, u);
+		}
+	} else l = r.__e = F$1(u.__e, r, u, i, f, o, e, c, a, t);
+	return (s = n.diffed) && s(r), l;
+}
+function B$1(n, t) {
+	if (n && 8 == n.nodeType && n.data.startsWith("$s")) for (var r = 1; n = n.nextSibling;) {
+		if (8 == n.nodeType) {
+			if (n.data.startsWith("$s")) r++;
+			else if (n.data.startsWith("/$s") && !--r) return n;
+		}
+		t && t.push(n);
+	}
+}
+function D$1(n) {
+	n && (n.__c && (n.__c.__g |= 4), n.__k && n.__k.some(D$1));
+}
+function E$1(t, r, u) {
+	for (var i = 0; i < u.length;) G$1(u[i++], u[i++], u[i++]);
+	n.__c && n.__c(r, t), t.some(function(r) {
+		try {
+			t = r.__h, r.__h = [], t.some(function(n) {
+				n.call(r);
+			});
+		} catch (t) {
+			n.__e(t, r.__v);
+		}
+	});
+}
+function F$1(t, r, u, i, f, o, e, l, c, a) {
+	var s, h, y, _, k, b, m, M, $ = u.props || p$1, x = r.props, C = r.type;
+	if ("svg" == C ? f = "http://www.w3.org/2000/svg" : "math" == C ? f = "http://www.w3.org/1998/Math/MathML" : f || (f = "http://www.w3.org/1999/xhtml"), o) {
+		for (s = 0; s < o.length; s++) if ((k = o[s]) && (C ? k.localName == C : 3 == k.nodeType)) {
+			t = k, o[s] = null;
+			break;
+		}
+	}
+	if (!t) {
+		if (M = a.ownerDocument || document, !C) return M.createTextNode(x);
+		t = M.createElementNS(f, C, x.is ? x : a), l && (n.__m && n.__m(r, o), l = false), o = null;
+	}
+	if (C) {
+		if (a = "template" == C && t.content || t, o = "textarea" == C && null != x.defaultValue ? null : o && d$1.call(a.childNodes), !l && o) for ($ = {}, s = 0; s < t.attributes.length; s++) $[(k = t.attributes[s]).name] = k.value;
+		for (s in $) k = $[s], "dangerouslySetInnerHTML" == s ? y = k : "children" == s || s in x || "value" == s && "defaultValue" in x || "checked" == s && "defaultChecked" in x || N(t, s, null, k, f);
+		for (s in x) k = x[s], "children" == s ? _ = k : "dangerouslySetInnerHTML" == s ? h = k : "value" == s ? b = k : "checked" == s ? m = k : l && "function" != typeof k || $[s] === k || N(t, s, k, $[s], f);
+		h ? (l || y && (h.__html == y.__html || h.__html == t.innerHTML) || (t.innerHTML = h.__html), r.__k = []) : (y && (t.textContent = ""), ("foreignObject" == C || "http://www.w3.org/1998/Math/MathML" == f && v$1.test(C)) && (f = "http://www.w3.org/1999/xhtml"), I(a, w$2(_) ? _ : [_], r, u, i, f, o, e, o ? o[0] : u.__k && S(u, 0), l, c), o && o.some(g$1)), l && "textarea" != C || (s = "value", "progress" == C && null == b ? t.removeAttribute(s) : null == b || b === t[s] && ("progress" != C || b) || N(t, s, b, $[s], f), s = "checked", null != m && m != t[s] && N(t, s, m, $[s], f));
+	} else $ === x || l && t.data == x || (t.data = x);
+	return t;
+}
+function G$1(t, r, u, i) {
+	try {
+		"function" == typeof t ? r ? r.__x = t(r) || 1 : i && (i = i.__c || i.__e) && (r = i.__x) && (i.__x = null, "function" == typeof r ? r() : t(null)) : t.current = r;
+	} catch (t) {
+		n.__e(t, u);
+	}
+}
+function J$1(t, r, u) {
+	var i, f, o, e;
+	if (n.unmount && n.unmount(t), !(i = t.ref) || i.current && i.current != t.__e || G$1(i, null, r, t), i = t.__c) {
+		if (i.componentWillUnmount) try {
+			i.componentWillUnmount();
+		} catch (t) {
+			n.__e(t, r);
+		}
+		i.__P = i.__n = null;
+	}
+	if (i = t.__k) for (e = 0; e < i.length; e++) i[e] && J$1(i[e], r, "function" != typeof t.type || u && !t.props.__P);
+	!u && (i = t.__c) && (i = i.__z) && (f = B$1(i, o = [])) && (i == t.__e && o.some(g$1), g$1(f), g$1(i)), u || g$1(t.__e), t.__e = t.__c = t.__ = null;
+}
+function K$1(n, t, r) {
+	return this.constructor(n, r);
+}
+function Q$1(t, r) {
+	var u, i, f, o;
+	n.__ && n.__(t, r), 9 == r.nodeType && (r = r.documentElement), i = (u = t && 32 & t.__u) ? null : r.__k, r.__k = m$1($$1, { children: [t] }), f = [], o = [], z$2(r, r.__k, i || p$1, p$1, r.namespaceURI, i ? null : r.firstChild ? d$1.call(r.childNodes) : null, f, i ? i.__e : r.firstChild, u, o), E$1(f, r.__k, o), r.__k.props.children = null;
+}
+function W(n) {
+	return n.children;
+}
+function X(n, t) {
+	return m$1(W, {
+		__P: t,
+		children: n
+	});
+}
+n = { __e: function(n, t, r, u) {
+	for (var i, o, e; t = t.__;) if ((i = t.__c) && !(1 & i.__g)) {
+		i.__g |= 4;
+		try {
+			if ((e = (o = i.constructor) && o.getDerivedStateFromError) && i.setState(o.getDerivedStateFromError(n)), i.componentDidCatch && (i.componentDidCatch(n, u || {}), e = 1), e && 8 & i.__g) return void (i.__g |= 2);
+		} catch (t) {
+			n = t;
+		}
+	}
+	throw f$2 = 0, n;
+} }, t$1 = 0, x$1.prototype.setState = function(n, t) {
+	var r = this.__s;
+	r && r != this.state || (r = this.__s = _$1({}, this.state)), "function" == typeof n && (n = n(_$1({}, r), this.props)), n && (_$1(r, n), this.__v && (t && this.__k.push(t), L(this)));
+}, x$1.prototype.forceUpdate = function(n) {
+	this.__v && (this.__g |= 4, n && this.__h.push(n), L(this));
+}, x$1.prototype.render = $$1, u$2 = [], f$2 = 0, o$2 = function(n, t) {
+	return n.__v.__b - t.__v.__b;
+}, e$1 = Symbol(), l$1 = /(PointerCapture)$|Capture$/i, c$1 = 0, a$2 = {};
+var t;
+var r;
+var u$1;
+var i;
+var o$1 = Object.is;
+var f$1 = 0;
+var c = [];
+var e = [];
+var a$1 = n;
+var v = a$1.__b;
+var l = a$1.__r;
+var m = a$1.diffed;
+var h = a$1.__c;
+var s = a$1.unmount;
+var p = a$1.__;
+function y(n, t) {
+	a$1.__h && a$1.__h(r, n, f$1 || t), f$1 = 0;
+	var u = r.__H || (r.__H = {
+		__: [],
+		__h: []
+	});
+	return n >= u.__.length && u.__.push({}), u.__[n];
+}
+function d(n) {
+	return f$1 = 1, _(G, n);
+}
+function _(n, u, i) {
+	var f = y(t++, 2);
+	if (f.t = n, !f.__c && (f.__ = [G(void 0, u), function(n) {
+		var t = (f.__N || f.__)[0], r = f.t(t, n);
+		o$1(t, r) || (f.__N = [r, f.__[1]], f.__c.setState({}));
+	}], f.__c = r, !r.__f)) {
+		r.__f = true;
+		var c = r.shouldComponentUpdate;
+		r.shouldComponentUpdate = function(n, t, r) {
+			var u = this.__H;
+			if (!u) return true;
+			var i = false, f = this.props != n;
+			if (u.__.some(function(n) {
+				n.__N && (i = true, o$1(n.__[0], n.__N[0]) || (f = true));
+			}), c) {
+				var e = c.call(this, n, t, r);
+				return i ? e || f : e;
+			}
+			return !i || f;
+		};
+	}
+	return f.__;
+}
+function A(n, u) {
+	var i = y(t++, 3);
+	!a$1.__s && E(i.__H, u) && (i.__P = true, i.__ = n, i.u = u, r.__H.__h.push(i));
+}
+function F(n, u) {
+	var i = y(t++, 4);
+	!a$1.__s && E(i.__H, u) && (i.__P = false, i.__ = n, i.u = u, r.__h.push(i));
+}
+function T(n) {
+	return f$1 = 5, w$1(function() {
+		return { current: n };
+	}, []);
+}
+function w$1(n, r) {
+	var u = y(t++, 7);
+	return E(u.__H, r) && (u.__ = n(), u.__H = r), u.__;
+}
+function b(n, t) {
+	return f$1 = 8, w$1(function() {
+		return n;
+	}, t);
+}
+function P$1() {
+	var n = y(t++, 11);
+	if (!n.__) {
+		for (var u = r.__v; !u.__m && u.__;) u = u.__;
+		var i = u.__m || (u.__m = [0, 0]);
+		n.__ = "P" + i[0] + "-" + i[1]++;
+	}
+	return n.__;
+}
+function g() {
+	var n;
+	do {
+		for (; n = e.shift();) try {
+			C(n);
+		} catch (t) {
+			a$1.__e(t, { __: (n = n.__P) && n.__v });
+		}
+		for (; n = c.shift();) {
+			var t = n.__H;
+			if (n.__P && t) try {
+				t.__h.some(C), t.__h.some(D), t.__h = [];
+			} catch (r) {
+				t.__h = [], a$1.__e(r, n.__v);
+			}
+		}
+	} while (e.length);
+}
+a$1.__b = function(n) {
+	r = null, v && v(n);
+}, a$1.__ = function(n, t) {
+	n && t.__k && t.__k.__m && (n.__m = t.__k.__m), p && p(n, t);
+}, a$1.__r = function(n) {
+	l && l(n), t = 0;
+	var i = (r = n.__c).__H;
+	i && (u$1 == r ? r.__h = [] : (i.__h.some(C), i.__h.some(D), t = 0), i.__h = [], i.__.some(function(n) {
+		n.__N && (n.__ = n.__N), n.u = n.__N = void 0;
+	})), u$1 = r;
+}, a$1.diffed = function(n) {
+	m && m(n);
+	var t = n.__c;
+	t && t.__H && (t.__H.__h.length && B(c.push(t)), t.__H.__.some(function(n) {
+		n.u && (n.__H = n.u);
+	})), u$1 = r = null;
+}, a$1.__c = function(n, t) {
+	t.some(function(n) {
+		try {
+			n.__h.some(C), n.__h = n.__h.filter(function(n) {
+				return !n.__ || D(n);
+			});
+		} catch (t) {
+			n.__h = [function() {
+				throw t;
+			}];
+		}
+	}), h && h(n, t);
+}, a$1.unmount = function(n) {
+	s && s(n);
+	var t, r, u = n.__c;
+	u && u.__H && (u.__H.__.some(function(u) {
+		try {
+			if (u.__P && u.__c) {
+				if (void 0 === r) {
+					for (r = n.__; r && (!r.__c || !r.__c.__P);) r = r.__;
+					r = r && r.__c;
+				}
+				u.__P = r, B(e.push(u));
+			} else C(u);
+		} catch (n) {
+			t = n;
+		}
+	}), u.__H = void 0, t && a$1.__e(t, u.__v));
+};
+var k = "function" == typeof requestAnimationFrame;
+function z$1(n) {
+	var t, r = function() {
+		clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
+	}, u = setTimeout(r, 35);
+	k && (t = requestAnimationFrame(r));
+}
+function B(n) {
+	1 != n && i == a$1.requestAnimationFrame || ((i = a$1.requestAnimationFrame) || z$1)(g);
+}
+function C(n) {
+	var t = r, u = n.__c;
+	"function" == typeof u && (n.__c = void 0, u()), r = t;
+}
+function D(n) {
+	var t = r;
+	n.__c = n.__(), r = t;
+}
+function E(n, t) {
+	return !n || n.length != t.length || t.some(function(t, r) {
+		return !o$1(t, n[r]);
+	});
+}
+function G(n, t) {
+	return "function" == typeof t ? t(n) : t;
+}
 function buildAddFavUrl(postId) {
 	const params = new URLSearchParams();
 	params.set("id", postId);
@@ -7740,14 +6242,14 @@ function syncFavoritesPage(root = document, search = window.location.search) {
 	bindRemoveClickCapture();
 }
 /** Minimum pause between sequential favorites page fetches. */
-var FAVORITES_SYNC_PAGE_PAUSE_MS = exports("b2",1500);
+var FAVORITES_SYNC_PAGE_PAUSE_MS = exports("aY",1500);
 /** Pauses before each of the three retries (HTTP error / missing paginator). */
 var FAVORITES_SYNC_RETRY_DELAYS_MS = [
 	1e4,
 	3e4,
 	6e4
 ];
-var FAVORITES_SYNC_MODE_INCREMENTAL = exports("bo",FAVS_SYNC_MODE_INCREMENTAL);
+var FAVORITES_SYNC_MODE_INCREMENTAL = exports("bi",FAVS_SYNC_MODE_INCREMENTAL);
 var FAVORITES_SYNC_MODE_FULL = exports("F",FAVS_SYNC_MODE_FULL);
 var MY_FAVORITES_LINK_SELECTOR$1 = "li#my-favorites-container a[href*=\"page=favorites\"]";
 var THUMB_SELECTOR$1 = "span.thumb";
@@ -8217,6 +6719,1697 @@ async function runFavoritesSync(options) {
 		};
 	}
 }
+var KIT_FOCUS_CSS = exports("av",`
+.rdw-kit-focusable:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+`);
+var f = Symbol.for("pv");
+var o = 0;
+function a(t, e, n$6, u, a, i) {
+	e || (e = {});
+	var c, l, p = e;
+	if ("ref" in p && "function" != typeof t) for (l in p = {}, e) "ref" == l ? c = e[l] : p[l] = e[l];
+	var s = {
+		type: t,
+		props: p,
+		key: n$6,
+		ref: c,
+		__k: null,
+		__: null,
+		__b: 0,
+		__e: null,
+		__c: null,
+		constructor: f,
+		__v: --o,
+		__i: -1,
+		__u: 0
+	};
+	return n.vnode && n.vnode(s), s;
+}
+var KEY_ARROW_DOWN = "ArrowDown";
+var KEY_ARROW_UP = "ArrowUp";
+var KEY_ENTER$3 = "Enter";
+var KEY_ESCAPE$3 = "Escape";
+var NO_ACTIVE_INDEX = -1;
+var AUTOCOMPLETE_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-ac {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-ac__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-ac__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-ac__input::placeholder {
+  color: var(--rdw-muted);
+}
+.rdw-ac__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-ac__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  box-shadow: var(--rdw-shadow-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.rdw-ac__option {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--rdw-radius-s);
+  font-size: 12px;
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-ac__option[aria-selected="true"],
+.rdw-ac__option:hover {
+  background: var(--rdw-surface-2);
+}
+`;
+function AutocompleteField(props) {
+	const autoId = P$1();
+	const listId = P$1();
+	const inputId = props.id ?? autoId;
+	const rootRef = T(null);
+	const [open, setOpen] = d(false);
+	const [activeIndex, setActiveIndex] = d(NO_ACTIVE_INDEX);
+	const suggestions = props.suggestions;
+	const hasSuggestions = suggestions.length > 0;
+	const listOpen = open && hasSuggestions && props.disabled !== true;
+	A(() => {
+		setActiveIndex(NO_ACTIVE_INDEX);
+		if (hasSuggestions) setOpen(true);
+		else setOpen(false);
+	}, [suggestions, hasSuggestions]);
+	A(() => {
+		if (!listOpen) return;
+		const onPointerDown = (event) => {
+			const root = rootRef.current;
+			if (root === null) return;
+			if (!event.composedPath().includes(root)) {
+				setOpen(false);
+				setActiveIndex(NO_ACTIVE_INDEX);
+			}
+		};
+		document.addEventListener("mousedown", onPointerDown);
+		return () => {
+			document.removeEventListener("mousedown", onPointerDown);
+		};
+	}, [listOpen]);
+	const selectOption = (option) => {
+		props.onChange(option.value);
+		props.onSelect?.(option);
+		setOpen(false);
+		setActiveIndex(NO_ACTIVE_INDEX);
+	};
+	const className = ["rdw-ac", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	const activeOption = activeIndex >= 0 && activeIndex < suggestions.length ? suggestions[activeIndex] : void 0;
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: AUTOCOMPLETE_FIELD_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		ref: rootRef,
+		children: [
+			props.label !== void 0 ? /* @__PURE__ */ a("label", {
+				className: "rdw-ac__label",
+				htmlFor: inputId,
+				children: props.label
+			}) : null,
+			/* @__PURE__ */ a("input", {
+				id: inputId,
+				className: "rdw-ac__input rdw-kit-focusable",
+				type: "text",
+				role: "combobox",
+				"aria-autocomplete": "list",
+				"aria-expanded": listOpen,
+				"aria-controls": listId,
+				"aria-activedescendant": activeOption !== void 0 ? `${listId}-opt-${String(activeIndex)}` : void 0,
+				value: props.value,
+				placeholder: props.placeholder,
+				disabled: props.disabled,
+				"aria-label": props["aria-label"] ?? props.label,
+				autoComplete: "off",
+				onInput: (event) => {
+					props.onChange(event.currentTarget.value);
+				},
+				onFocus: () => {
+					if (hasSuggestions) setOpen(true);
+				},
+				onKeyDown: (event) => {
+					if (event.key === KEY_ESCAPE$3) {
+						if (listOpen) {
+							event.preventDefault();
+							setOpen(false);
+							setActiveIndex(NO_ACTIVE_INDEX);
+						}
+						return;
+					}
+					if (event.key === KEY_ARROW_DOWN) {
+						if (!hasSuggestions) return;
+						event.preventDefault();
+						setOpen(true);
+						setActiveIndex((current) => {
+							if (current < 0) return 0;
+							return Math.min(current + 1, suggestions.length - 1);
+						});
+						return;
+					}
+					if (event.key === KEY_ARROW_UP) {
+						if (!listOpen) return;
+						event.preventDefault();
+						setActiveIndex((current) => {
+							if (current <= 0) return NO_ACTIVE_INDEX;
+							return current - 1;
+						});
+						return;
+					}
+					if (event.key === KEY_ENTER$3) {
+						if (listOpen && activeOption !== void 0) {
+							event.preventDefault();
+							selectOption(activeOption);
+						}
+					}
+				}
+			}),
+			listOpen ? /* @__PURE__ */ a("ul", {
+				className: "rdw-ac__list",
+				role: "listbox",
+				id: listId,
+				tabIndex: -1,
+				children: suggestions.map((option, index) => /* @__PURE__ */ a("li", {
+					id: `${listId}-opt-${String(index)}`,
+					role: "option",
+					className: "rdw-ac__option rdw-kit-focusable",
+					"aria-selected": index === activeIndex,
+					onMouseDown: (event) => {
+						event.preventDefault();
+					},
+					onClick: () => {
+						selectOption(option);
+					},
+					children: option.label
+				}, `${option.value}:${option.type ?? ""}:${option.label}`))
+			}) : null
+		]
+	})] });
+}
+var BUTTON_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 28px;
+  border-radius: var(--rdw-radius-m);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding: 0 12px;
+  color: var(--rdw-text);
+  background: var(--rdw-surface);
+}
+.rdw-btn--s {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+.rdw-btn--m {
+  min-height: 28px;
+  padding: 0 12px;
+}
+.rdw-btn--primary {
+  background: var(--rdw-accent);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-surface);
+}
+.rdw-btn--secondary {
+  background: var(--rdw-surface);
+  border-color: var(--rdw-border);
+  color: var(--rdw-text);
+}
+.rdw-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--rdw-accent);
+}
+.rdw-btn--danger {
+  background: var(--rdw-danger);
+  border-color: var(--rdw-danger);
+  color: var(--rdw-surface);
+}
+.rdw-btn:disabled,
+.rdw-btn[aria-busy="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-btn__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: rdw-btn-spin 0.7s linear infinite;
+}
+@keyframes rdw-btn-spin {
+  to { transform: rotate(360deg); }
+}
+`;
+function Button(props) {
+	const variant = props.variant ?? "secondary";
+	const size = props.size ?? "m";
+	const loading = props.loading === true;
+	const disabled = props.disabled === true || loading;
+	const className = [
+		"rdw-btn",
+		"rdw-kit-focusable",
+		`rdw-btn--${variant}`,
+		`rdw-btn--${size}`,
+		props.className
+	].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: BUTTON_CSS }), /* @__PURE__ */ a("button", {
+		type: props.type ?? "button",
+		className,
+		disabled,
+		"aria-busy": loading ? true : void 0,
+		"aria-label": props["aria-label"],
+		onClick: props.onClick,
+		children: [loading ? /* @__PURE__ */ a("span", {
+			className: "rdw-btn__spinner",
+			"aria-hidden": "true"
+		}) : null, props.children]
+	})] });
+}
+var CARD_CSS$1 = `
+.rdw-card {
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-1);
+}
+`;
+function Card(props) {
+	const Tag = props.as ?? "div";
+	const className = ["rdw-card", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: CARD_CSS$1 }), /* @__PURE__ */ a(Tag, {
+		className,
+		children: props.children
+	})] });
+}
+var DEFAULT_SIZE = 16;
+function baseProps(size, className, title) {
+	const props = {
+		width: size,
+		height: size,
+		viewBox: "0 0 24 24",
+		fill: "none",
+		stroke: "currentColor",
+		"stroke-width": 2,
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		"aria-hidden": title === void 0 ? true : void 0,
+		role: title === void 0 ? void 0 : "img"
+	};
+	if (className !== void 0) props.className = className;
+	if (title !== void 0) props["aria-label"] = title;
+	return props;
+}
+function IconStar(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })]
+	});
+}
+function IconStarFilled(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		fill: "currentColor",
+		stroke: "none",
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })]
+	});
+}
+function IconPlus(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("line", {
+				x1: "12",
+				y1: "5",
+				x2: "12",
+				y2: "19"
+			}),
+			/* @__PURE__ */ a("line", {
+				x1: "5",
+				y1: "12",
+				x2: "19",
+				y2: "12"
+			})
+		]
+	});
+}
+function IconCheck(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polyline", { points: "20 6 9 17 4 12" })]
+	});
+}
+function IconX(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("line", {
+				x1: "18",
+				y1: "6",
+				x2: "6",
+				y2: "18"
+			}),
+			/* @__PURE__ */ a("line", {
+				x1: "6",
+				y1: "6",
+				x2: "18",
+				y2: "18"
+			})
+		]
+	});
+}
+function IconChevronDown(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("polyline", { points: "6 9 12 15 18 9" })]
+	});
+}
+function IconArrowUp(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("line", {
+				x1: "12",
+				y1: "19",
+				x2: "12",
+				y2: "5"
+			}),
+			/* @__PURE__ */ a("polyline", { points: "5 12 12 5 19 12" })
+		]
+	});
+}
+function IconExternalLink(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }),
+			/* @__PURE__ */ a("polyline", { points: "15 3 21 3 21 9" }),
+			/* @__PURE__ */ a("line", {
+				x1: "10",
+				y1: "14",
+				x2: "21",
+				y2: "3"
+			})
+		]
+	});
+}
+function IconDroplet(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null, /* @__PURE__ */ a("path", { d: "M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" })]
+	});
+}
+function IconPencil(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M12 20h9" }),
+			/* @__PURE__ */ a("path", { d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" })
+		]
+	});
+}
+function IconFlag(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" }),
+			/* @__PURE__ */ a("line", {
+				x1: "4",
+				y1: "22",
+				x2: "4",
+				y2: "15"
+			})
+		]
+	});
+}
+function IconNote(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+			/* @__PURE__ */ a("polyline", { points: "14 2 14 8 20 8" }),
+			/* @__PURE__ */ a("line", {
+				x1: "8",
+				y1: "13",
+				x2: "16",
+				y2: "13"
+			}),
+			/* @__PURE__ */ a("line", {
+				x1: "8",
+				y1: "17",
+				x2: "12",
+				y2: "17"
+			})
+		]
+	});
+}
+function IconTrash(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("polyline", { points: "3 6 5 6 21 6" }),
+			/* @__PURE__ */ a("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
+		]
+	});
+}
+function IconImage(props) {
+	return /* @__PURE__ */ a("svg", {
+		...baseProps(props.size ?? DEFAULT_SIZE, props.className, props.title),
+		children: [
+			props.title !== void 0 ? /* @__PURE__ */ a("title", { children: props.title }) : null,
+			/* @__PURE__ */ a("rect", {
+				x: "3",
+				y: "3",
+				width: "18",
+				height: "18",
+				rx: "2",
+				ry: "2"
+			}),
+			/* @__PURE__ */ a("circle", {
+				cx: "8.5",
+				cy: "8.5",
+				r: "1.5"
+			}),
+			/* @__PURE__ */ a("polyline", { points: "21 15 16 10 5 21" })
+		]
+	});
+}
+var CHIP_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  height: 24px;
+  padding: 0 4px 0 8px;
+  border-radius: 12px;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  font-size: 12px;
+  color: var(--rdw-text);
+  max-width: 100%;
+  white-space: nowrap;
+}
+.rdw-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rdw-muted);
+  flex: none;
+}
+.rdw-chip--artist .rdw-chip__dot { background: var(--rdw-tag-artist); }
+.rdw-chip--character .rdw-chip__dot { background: var(--rdw-tag-character); }
+.rdw-chip--copyright .rdw-chip__dot { background: var(--rdw-tag-copyright); }
+.rdw-chip--metadata .rdw-chip__dot { background: var(--rdw-tag-metadata); }
+.rdw-chip--exclude {
+  background: var(--rdw-danger-soft);
+  border-color: var(--rdw-danger);
+  color: var(--rdw-danger);
+  text-decoration: line-through;
+}
+.rdw-chip--group {
+  background: var(--rdw-accent-soft);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-accent);
+  font-weight: 600;
+}
+.rdw-chip__remove {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  margin: -2px -2px -2px 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--rdw-muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.rdw-chip__remove:hover {
+  background: var(--rdw-surface);
+}
+`;
+function Chip(props) {
+	const variant = props.variant ?? "dot";
+	const kind = props.kind ?? "default";
+	const className = [
+		"rdw-chip",
+		`rdw-chip--${variant}`,
+		kind !== "default" ? `rdw-chip--${kind}` : void 0,
+		props.className
+	].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: CHIP_CSS }), /* @__PURE__ */ a("span", {
+		className,
+		children: [
+			variant === "dot" ? /* @__PURE__ */ a("i", {
+				className: "rdw-chip__dot",
+				"aria-hidden": "true"
+			}) : null,
+			/* @__PURE__ */ a("span", { children: props.label }),
+			props.onRemove !== void 0 ? /* @__PURE__ */ a("button", {
+				type: "button",
+				className: "rdw-chip__remove rdw-kit-focusable",
+				"aria-label": `Remove ${props.label}`,
+				onClick: props.onRemove,
+				children: /* @__PURE__ */ a(IconX, { size: 12 })
+			}) : null
+		]
+	})] });
+}
+var KEY_ESCAPE$2 = "Escape";
+var KEY_TAB = "Tab";
+var EVENT_KEYDOWN$2 = "keydown";
+var EVENT_MOUSEDOWN$1 = "mousedown";
+var DIALOG_Z_INDEX = 40;
+var DIALOG_MAX_WIDTH_PX = 360;
+var DIALOG_BACKDROP_PADDING_PX = 16;
+var DIALOG_BACKDROP_ALPHA = .45;
+var DIALOG_PANEL_PADDING_PX = 16;
+var DIALOG_PANEL_GAP_PX = 12;
+var FOCUSABLE_SELECTOR = [
+	"a[href]",
+	"button:not([disabled])",
+	"textarea:not([disabled])",
+	"input:not([disabled])",
+	"select:not([disabled])",
+	"[tabindex]:not([tabindex=\"-1\"])"
+].join(", ");
+var DIALOG_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: ${String(DIALOG_Z_INDEX)};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: ${String(DIALOG_BACKDROP_PADDING_PX)}px;
+  background: rgba(0, 0, 0, ${String(DIALOG_BACKDROP_ALPHA)});
+}
+.rdw-dialog {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: ${String(DIALOG_MAX_WIDTH_PX)}px;
+  display: grid;
+  gap: ${String(DIALOG_PANEL_GAP_PX)}px;
+  padding: ${String(DIALOG_PANEL_PADDING_PX)}px;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-2);
+  color: var(--rdw-text);
+  font: 12.5px/1.4 var(--rdw-font);
+}
+.rdw-dialog__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rdw-text);
+}
+`;
+function listFocusable(root) {
+	const nodes = root.querySelectorAll(FOCUSABLE_SELECTOR);
+	const result = [];
+	for (const node of nodes) {
+		if (!(node instanceof HTMLElement)) continue;
+		if (node.closest("[hidden]") !== null) continue;
+		result.push(node);
+	}
+	return result;
+}
+function pathIncludesNode$1(path, node) {
+	if (node === null) return false;
+	for (const entry of path) if (entry === node) return true;
+	return false;
+}
+function Dialog(props) {
+	const panelRef = T(null);
+	const wasOpenRef = T(false);
+	const restoreFocusRef = T(null);
+	const titleId = P$1();
+	const hasTitle = props.title !== void 0 && props.title.length > 0;
+	A(() => {
+		if (!props.open) {
+			if (wasOpenRef.current) {
+				wasOpenRef.current = false;
+				const restore = restoreFocusRef.current;
+				restoreFocusRef.current = null;
+				if (restore !== null && typeof restore.focus === "function") restore.focus();
+			}
+			return;
+		}
+		if (!wasOpenRef.current) {
+			const active = document.activeElement;
+			restoreFocusRef.current = active instanceof HTMLElement ? active : null;
+			wasOpenRef.current = true;
+		}
+		const panel = panelRef.current;
+		if (panel !== null) {
+			const initial = props.initialFocusRef?.current ?? null;
+			if (initial !== null && typeof initial.focus === "function") initial.focus();
+			else {
+				const first = listFocusable(panel)[0];
+				if (first !== void 0) first.focus();
+				else panel.focus();
+			}
+		}
+		const onKeyDown = (event) => {
+			if (event.key === KEY_ESCAPE$2) {
+				event.preventDefault();
+				event.stopPropagation();
+				props.onClose();
+				return;
+			}
+			if (event.key !== KEY_TAB) return;
+			const currentPanel = panelRef.current;
+			if (currentPanel === null) return;
+			const focusable = listFocusable(currentPanel);
+			if (focusable.length === 0) {
+				event.preventDefault();
+				currentPanel.focus();
+				return;
+			}
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (first === void 0 || last === void 0) return;
+			const active = document.activeElement;
+			if (event.shiftKey) {
+				if (active === first || !currentPanel.contains(active)) {
+					event.preventDefault();
+					last.focus();
+				}
+				return;
+			}
+			if (active === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+		const onPointerDown = (event) => {
+			const currentPanel = panelRef.current;
+			if (currentPanel === null) return;
+			if (pathIncludesNode$1(event.composedPath(), currentPanel)) return;
+			props.onClose();
+		};
+		document.addEventListener(EVENT_KEYDOWN$2, onKeyDown, true);
+		document.addEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
+		return () => {
+			document.removeEventListener(EVENT_KEYDOWN$2, onKeyDown, true);
+			document.removeEventListener(EVENT_MOUSEDOWN$1, onPointerDown, true);
+		};
+	}, [
+		props.open,
+		props.onClose,
+		props.initialFocusRef
+	]);
+	if (!props.open) return null;
+	const className = ["rdw-dialog", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: DIALOG_CSS }), /* @__PURE__ */ a("div", {
+		className: "rdw-dialog-backdrop",
+		children: /* @__PURE__ */ a("div", {
+			ref: panelRef,
+			className,
+			role: "dialog",
+			"aria-modal": "true",
+			"aria-label": hasTitle ? void 0 : props["aria-label"],
+			"aria-labelledby": hasTitle ? titleId : void 0,
+			tabIndex: -1,
+			children: [hasTitle ? /* @__PURE__ */ a("h2", {
+				id: titleId,
+				className: "rdw-dialog__title",
+				children: props.title
+			}) : null, props.children]
+		})
+	})] });
+}
+var EMPTY_STATE_CSS = `
+.rdw-empty {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 16px 8px;
+  color: var(--rdw-muted);
+  font: 12.5px/1.4 var(--rdw-font);
+}
+.rdw-empty__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rdw-text);
+}
+.rdw-empty__desc {
+  margin: 0;
+}
+`;
+function EmptyState(props) {
+	const className = ["rdw-empty", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: EMPTY_STATE_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		role: "status",
+		children: [
+			/* @__PURE__ */ a("p", {
+				className: "rdw-empty__title",
+				children: props.title
+			}),
+			props.description !== void 0 ? /* @__PURE__ */ a("p", {
+				className: "rdw-empty__desc",
+				children: props.description
+			}) : null,
+			props.action
+		]
+	})] });
+}
+var ICON_BUTTON_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-icon-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--rdw-radius-m);
+  border: 1px solid var(--rdw-border);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-icon-btn[aria-pressed="true"] {
+  background: var(--rdw-accent-soft);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-accent);
+}
+.rdw-icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+function IconButton(props) {
+	const className = [
+		"rdw-icon-btn",
+		"rdw-kit-focusable",
+		props.className
+	].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: ICON_BUTTON_CSS }), /* @__PURE__ */ a("button", {
+		type: "button",
+		className,
+		"aria-label": props.label,
+		"aria-pressed": props.pressed,
+		disabled: props.disabled,
+		onClick: props.onClick,
+		children: props.children
+	})] });
+}
+var NUMBER_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-num {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-num__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-num__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-num__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+function NumberField(props) {
+	const autoId = P$1();
+	const inputId = props.id ?? autoId;
+	const className = ["rdw-num", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: NUMBER_FIELD_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		children: [props.label !== void 0 ? /* @__PURE__ */ a("label", {
+			className: "rdw-num__label",
+			htmlFor: inputId,
+			children: props.label
+		}) : null, /* @__PURE__ */ a("input", {
+			id: inputId,
+			className: "rdw-num__input rdw-kit-focusable",
+			type: "number",
+			value: props.value ?? "",
+			min: props.min,
+			max: props.max,
+			step: props.step,
+			placeholder: props.placeholder,
+			disabled: props.disabled,
+			"aria-label": props.label,
+			onInput: (event) => {
+				const raw = event.currentTarget.value;
+				if (raw.trim() === "") {
+					props.onChange(null);
+					return;
+				}
+				const next = Number(raw);
+				props.onChange(Number.isFinite(next) ? next : null);
+			}
+		})]
+	})] });
+}
+var w = Object.assign;
+var x = /^(-|f[lo].*[^se]$|g.{5,}[^ps]$|z|o[pr]|(W.{5})?[lL]i.*(t|mp)$|an|(bo|s).{4}Im|sca|m.{6}[ds]|ta|c.*[st]$|wido|ini|asp|fill|st)/;
+function U(n, t) {
+	var e = X(n, t);
+	return e.containerInfo = t, e;
+}
+var P = Symbol.for("react.element");
+var $ = /^(?:accent|alignment|arabic|baseline|cap|clip(?!PathU)|color|dominant|fill|flood|font|glyph(?!R)|horiz|image(?!S)|letter|lighting|marker(?!H|W|U)|overline|paint|pointer|shape|stop|strikethrough|stroke|text(?!L)|transform|underline|unicode|units|v|vector|vert|word|writing|x(?!C))[A-Z]/;
+var z = /[A-Z0-9]/g;
+var H = typeof document < "u";
+var Y = function(n) {
+	return /fil|che|rad/.test(n);
+};
+x$1.prototype.isReactComponent = true, [
+	"componentWillMount",
+	"componentWillReceiveProps",
+	"componentWillUpdate"
+].forEach(function(n) {
+	Object.defineProperty(x$1.prototype, n, {
+		configurable: true,
+		get: function() {
+			return this["UNSAFE_" + n];
+		},
+		set: function(t) {
+			Object.defineProperty(this, n, {
+				configurable: true,
+				writable: true,
+				value: t
+			});
+		}
+	});
+});
+var J = n.event;
+n.event = function(n) {
+	return J && (n = J(n)), n.persist = function() {}, n.isPropagationStopped = function() {
+		return this.cancelBubble;
+	}, n.isDefaultPrevented = function() {
+		return this.defaultPrevented;
+	}, n.nativeEvent = n;
+};
+var K = {
+	configurable: true,
+	get: function() {
+		return this.class;
+	}
+};
+var Q = n.vnode;
+n.vnode = function(t) {
+	if ("string" == typeof t.type) (function(t) {
+		var e = t.props, r = t.type, u = {}, i = -1 == r.indexOf("-");
+		for (var o in e) {
+			var f = e[o];
+			if (!("value" == o && "defaultValue" in e && null == f || H && "children" == o && "noscript" == r || "class" == o || "className" == o)) {
+				if ("style" == o && f && f.constructor == Object) {
+					var l = void 0;
+					for (var a in f) "number" != typeof f[a] || x.test(a) || (l || (l = f = w({}, f)), f[a] += "px");
+				} else if ("defaultValue" == o && "value" in e && null == e.value) o = "value";
+				else if ("download" == o && true === f) f = "";
+				else if ("translate" == o && "no" === f) f = false;
+				else if ("o" == o[0] && "n" == o[1]) {
+					var c = o.toLowerCase();
+					"ondoubleclick" == c ? o = "ondblclick" : "onchange" != c || "input" != r && "textarea" != r || Y(e.type) ? "onfocus" == c ? o = "onfocusin" : "onblur" == c && (o = "onfocusout") : c = o = "oninput", "oninput" == c && u[o = c] && (o = "oninputCapture");
+				} else i && $.test(o) ? o = o.replace(z, "-$&").toLowerCase() : null === f && (f = void 0);
+				u[o] = f;
+			}
+		}
+		if ("select" == r) {
+			var s = null != u.defaultValue ? u.defaultValue : u.multiple && Array.isArray(u.value) ? u.value : null;
+			null != s && (u.value = O(e.children).forEach(function(n) {
+				n.props.selected = u.multiple ? -1 != s.indexOf(n.props.value) : s == n.props.value;
+			}));
+		}
+		e.class && !e.className ? (u.class = e.class, Object.defineProperty(u, "className", K)) : e.className && (u.class = u.className = e.className), t.props = u;
+	})(t);
+	else if ("function" == typeof t.type && ("ref" in t.props && "prototype" in t.type && t.type.prototype.render && (t.ref = t.props.ref, delete t.props.ref), t.type.defaultProps)) {
+		var e = w({}, t.props);
+		for (var r in t.type.defaultProps) void 0 === e[r] && (e[r] = t.type.defaultProps[r]);
+		t.props = e;
+	}
+	t.ref && !("ref" in t.props) && Object.defineProperty(t.props, "ref", {
+		value: t.ref,
+		configurable: true,
+		writable: true
+	}), t.$$typeof = P, Q && Q(t);
+};
+var KEY_ESCAPE$1 = "Escape";
+var EVENT_KEYDOWN$1 = "keydown";
+var EVENT_MOUSEDOWN = "mousedown";
+var EVENT_SCROLL = "scroll";
+var EVENT_RESIZE = "resize";
+var POPOVER_FIXED_CLASS = "rdw-popover--fixed";
+/** Above the post panel host (z-index 100 in post-actions.ts). */
+var POPOVER_FIXED_Z_INDEX = 120;
+var POPOVER_ANCHOR_GAP_PX = 4;
+var POPOVER_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-popover {
+  position: absolute;
+  z-index: 30;
+  min-width: 180px;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-l);
+  box-shadow: var(--rdw-shadow-2);
+  color: var(--rdw-text);
+  font: 12px/1.35 var(--rdw-font);
+}
+.rdw-popover.${POPOVER_FIXED_CLASS} {
+  position: fixed;
+  z-index: ${String(POPOVER_FIXED_Z_INDEX)};
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+`;
+function computeAnchoredPopoverPosition(anchorLeft, anchorBottom, widthPx, viewportWidthPx) {
+	let left = anchorLeft;
+	if (left + widthPx > viewportWidthPx) left = viewportWidthPx - widthPx;
+	return {
+		top: anchorBottom + POPOVER_ANCHOR_GAP_PX,
+		left
+	};
+}
+function pathIncludesNode(path, node) {
+	if (node === null) return false;
+	for (const entry of path) if (entry === node) return true;
+	return false;
+}
+function Popover(props) {
+	const rootRef = T(null);
+	const wasOpenRef = T(false);
+	A(() => {
+		if (!props.open) {
+			if (wasOpenRef.current) {
+				wasOpenRef.current = false;
+				const anchor = props.anchorRef?.current ?? null;
+				if (anchor !== null && typeof anchor.focus === "function") anchor.focus();
+			}
+			return;
+		}
+		wasOpenRef.current = true;
+		const onKeyDown = (event) => {
+			if (event.key === KEY_ESCAPE$1) {
+				event.preventDefault();
+				props.onClose();
+			}
+		};
+		const onPointerDown = (event) => {
+			const root = rootRef.current;
+			if (root === null) return;
+			const path = event.composedPath();
+			if (pathIncludesNode(path, root)) return;
+			if (pathIncludesNode(path, props.anchorRef?.current ?? null)) return;
+			props.onClose();
+		};
+		document.addEventListener(EVENT_KEYDOWN$1, onKeyDown);
+		document.addEventListener(EVENT_MOUSEDOWN, onPointerDown);
+		return () => {
+			document.removeEventListener(EVENT_KEYDOWN$1, onKeyDown);
+			document.removeEventListener(EVENT_MOUSEDOWN, onPointerDown);
+		};
+	}, [
+		props.open,
+		props.onClose,
+		props.anchorRef
+	]);
+	const widthPx = props.widthPx;
+	const anchored = widthPx !== void 0;
+	F(() => {
+		if (!props.open || widthPx === void 0) return;
+		const apply = () => {
+			const anchor = props.anchorRef?.current ?? null;
+			const root = rootRef.current;
+			if (anchor === null || root === null) return;
+			const rect = anchor.getBoundingClientRect();
+			const position = computeAnchoredPopoverPosition(rect.left, rect.bottom, widthPx, window.innerWidth);
+			root.style.position = "fixed";
+			root.style.top = `${String(position.top)}px`;
+			root.style.left = `${String(position.left)}px`;
+			root.style.width = `${String(widthPx)}px`;
+		};
+		apply();
+		const onScrollOrResize = () => {
+			apply();
+		};
+		window.addEventListener(EVENT_SCROLL, onScrollOrResize, true);
+		window.addEventListener(EVENT_RESIZE, onScrollOrResize);
+		return () => {
+			window.removeEventListener(EVENT_SCROLL, onScrollOrResize, true);
+			window.removeEventListener(EVENT_RESIZE, onScrollOrResize);
+		};
+	}, [
+		props.open,
+		props.anchorRef,
+		widthPx
+	]);
+	if (!props.open) return null;
+	const className = [
+		"rdw-popover",
+		anchored ? POPOVER_FIXED_CLASS : void 0,
+		props.className
+	].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	const body = /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: POPOVER_CSS }), /* @__PURE__ */ a("div", {
+		ref: rootRef,
+		className,
+		role: "dialog",
+		"aria-label": props["aria-label"],
+		children: props.children
+	})] });
+	if (anchored && document.body !== null) return U(body, document.body);
+	return body;
+}
+var PROGRESS_WIDTH_VAR = "--rdw-progress-width";
+var PROGRESS_BAR_CSS = `
+.rdw-progress {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.rdw-progress__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-progress__track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  overflow: hidden;
+}
+.rdw-progress__fill {
+  height: 100%;
+  width: var(${PROGRESS_WIDTH_VAR}, 0%);
+  background: var(--rdw-accent);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.rdw-progress__fill--indeterminate {
+  width: 40%;
+  animation: rdw-progress-indeterminate 1.1s ease-in-out infinite;
+}
+@keyframes rdw-progress-indeterminate {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(280%); }
+}
+`;
+function clampUnit(value) {
+	if (!Number.isFinite(value)) return 0;
+	if (value < 0) return 0;
+	if (value > 1) return 1;
+	return value;
+}
+function ProgressBar(props) {
+	const fillRef = T(null);
+	const waiting = props.waiting === true;
+	const hasValue = props.value !== void 0 && props.value !== null;
+	const ratio = hasValue ? clampUnit(props.value) : 0;
+	const className = ["rdw-progress", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	A(() => {
+		const fill = fillRef.current;
+		if (fill === null) return;
+		if (waiting || !hasValue) {
+			fill.style.removeProperty(PROGRESS_WIDTH_VAR);
+			return;
+		}
+		fill.style.setProperty(PROGRESS_WIDTH_VAR, `${Math.round(ratio * 100)}%`);
+	}, [
+		waiting,
+		hasValue,
+		ratio
+	]);
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: PROGRESS_BAR_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		children: [props.label !== void 0 ? /* @__PURE__ */ a("div", {
+			className: "rdw-progress__label",
+			children: props.label
+		}) : null, /* @__PURE__ */ a("div", {
+			className: "rdw-progress__track",
+			role: "progressbar",
+			"aria-label": props.label,
+			"aria-valuemin": 0,
+			"aria-valuemax": 100,
+			"aria-valuenow": hasValue && !waiting ? Math.round(ratio * 100) : void 0,
+			children: /* @__PURE__ */ a("div", {
+				ref: fillRef,
+				className: waiting ? "rdw-progress__fill rdw-progress__fill--indeterminate" : "rdw-progress__fill"
+			})
+		})]
+	})] });
+}
+var SECTION_LABEL_CSS = `
+.rdw-section-label {
+  display: block;
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+  margin: 0 0 4px;
+}
+`;
+function SectionLabel(props) {
+	const className = ["rdw-section-label", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	if (props.htmlFor !== void 0) return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: SECTION_LABEL_CSS }), /* @__PURE__ */ a("label", {
+		className,
+		htmlFor: props.htmlFor,
+		children: props.children
+	})] });
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: SECTION_LABEL_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		children: props.children
+	})] });
+}
+var SEGMENTED_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  padding: 2px;
+  gap: 2px;
+}
+.rdw-seg__btn {
+  min-height: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--rdw-radius-s);
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+.rdw-seg__btn[aria-checked="true"] {
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font-weight: 600;
+  box-shadow: var(--rdw-shadow-1);
+}
+`;
+function Segmented(props) {
+	const className = ["rdw-seg", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: SEGMENTED_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		role: "radiogroup",
+		"aria-label": props.label,
+		children: props.options.map((option) => {
+			const selected = option.value === props.value;
+			return /* @__PURE__ */ a("button", {
+				type: "button",
+				role: "radio",
+				className: "rdw-seg__btn rdw-kit-focusable",
+				"aria-checked": selected,
+				tabIndex: selected ? 0 : -1,
+				onClick: () => {
+					props.onChange(option.value);
+				},
+				onKeyDown: (event) => {
+					if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+					event.preventDefault();
+					const index = props.options.findIndex((item) => item.value === props.value);
+					if (index < 0) return;
+					const delta = event.key === "ArrowRight" ? 1 : -1;
+					const next = props.options[(index + delta + props.options.length) % props.options.length];
+					if (next !== void 0) props.onChange(next.value);
+				},
+				children: option.label
+			}, option.value);
+		})
+	})] });
+}
+var SELECT_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-select {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-select__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-select__trigger {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.rdw-select__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-select__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--rdw-surface);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  box-shadow: var(--rdw-shadow-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.rdw-select__option {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--rdw-radius-s);
+  font-size: 12px;
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-select__option[aria-selected="true"],
+.rdw-select__option:hover {
+  background: var(--rdw-surface-2);
+}
+`;
+function Select(props) {
+	const listId = P$1();
+	const rootRef = T(null);
+	const [open, setOpen] = d(false);
+	const selected = props.options.find((option) => option.value === props.value) ?? props.options[0];
+	const className = ["rdw-select", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	A(() => {
+		if (!open) return;
+		const onKeyDown = (event) => {
+			if (event.key === "Escape") setOpen(false);
+		};
+		const onPointerDown = (event) => {
+			const root = rootRef.current;
+			if (root === null) return;
+			if (!event.composedPath().includes(root)) setOpen(false);
+		};
+		document.addEventListener("keydown", onKeyDown);
+		document.addEventListener("mousedown", onPointerDown);
+		return () => {
+			document.removeEventListener("keydown", onKeyDown);
+			document.removeEventListener("mousedown", onPointerDown);
+		};
+	}, [open]);
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: SELECT_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		ref: rootRef,
+		children: [
+			props.label !== void 0 ? /* @__PURE__ */ a("span", {
+				className: "rdw-select__label",
+				id: `${listId}-label`,
+				children: props.label
+			}) : null,
+			/* @__PURE__ */ a("button", {
+				type: "button",
+				className: "rdw-select__trigger rdw-kit-focusable",
+				"aria-haspopup": "listbox",
+				"aria-expanded": open,
+				"aria-controls": listId,
+				"aria-labelledby": props.label !== void 0 ? `${listId}-label` : void 0,
+				disabled: props.disabled,
+				onClick: () => {
+					setOpen((prev) => !prev);
+				},
+				children: [/* @__PURE__ */ a("span", { children: selected?.label ?? props.value }), /* @__PURE__ */ a(IconChevronDown, { size: 14 })]
+			}),
+			open ? /* @__PURE__ */ a("ul", {
+				className: "rdw-select__list",
+				role: "listbox",
+				id: listId,
+				tabIndex: -1,
+				children: props.options.map((option) => /* @__PURE__ */ a("li", {
+					role: "option",
+					className: "rdw-select__option rdw-kit-focusable",
+					"aria-selected": option.value === props.value,
+					tabIndex: 0,
+					onClick: () => {
+						props.onChange(option.value);
+						setOpen(false);
+					},
+					onKeyDown: (event) => {
+						if (event.key === "Enter" || event.key === " ") {
+							event.preventDefault();
+							props.onChange(option.value);
+							setOpen(false);
+						}
+					},
+					children: option.label
+				}, option.value))
+			}) : null
+		]
+	})] });
+}
+var SITE_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE}"]`;
+var SITE_DARK_THEME_SELECTOR = `[${RDW_THEME_ATTR}="${APPEARANCE_THEME_SITE_DARK}"]`;
+var SWITCH_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-switch-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.rdw-switch {
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 28px;
+  min-width: 36px;
+  min-height: 28px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.rdw-switch__track {
+  display: block;
+  width: 30px;
+  height: 17px;
+  margin: 0 auto;
+  border-radius: 9px;
+  background: var(--rdw-border);
+  position: relative;
+  transition: background 0.15s ease;
+}
+.rdw-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--rdw-surface);
+  transition: left 0.15s ease;
+}
+.rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: var(--rdw-accent);
+}
+.rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  left: 15px;
+}
+.rdw-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.rdw-switch__label {
+  font-size: 12.5px;
+  color: var(--rdw-text);
+}
+/* Site default: green ON (not link blue); OFF stays border; thumb contrast-checked. */
+html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: ${SITE_DEFAULT_SWITCH_ON};
+}
+html${SITE_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  background: ${resolveSwitchThumbOn(SITE_DEFAULT_SWITCH_ON, SITE_DEFAULT_SWITCH_THUMB_ON, [SITE_LIGHT_C_BG_ALT, "#ffffff"])};
+}
+html${SITE_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
+:host-context(${SITE_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
+  background: var(--rdw-border);
+}
+/* Site dark: ON = accent; OFF = border; thumb contrast-checked vs accent. */
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__track,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__track {
+  background: ${SITE_DARK_C_ACCENT};
+}
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch[aria-checked="true"] .rdw-switch__thumb,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch[aria-checked="true"] .rdw-switch__thumb {
+  background: ${resolveSwitchThumbOn(SITE_DARK_C_ACCENT, SITE_DARK_C_BG, ["#16181c", "#ffffff"])};
+}
+html${SITE_DARK_THEME_SELECTOR} .rdw-switch:not([aria-checked="true"]) .rdw-switch__track,
+:host-context(${SITE_DARK_THEME_SELECTOR}) .rdw-switch:not([aria-checked="true"]) .rdw-switch__track {
+  background: ${SITE_DARK_C_BORDER};
+}
+`;
+function Switch(props) {
+	const className = ["rdw-switch-row", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: SWITCH_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		children: [/* @__PURE__ */ a("button", {
+			type: "button",
+			id: props.id,
+			className: "rdw-switch rdw-kit-focusable",
+			role: "switch",
+			"aria-checked": props.checked,
+			"aria-label": props.label,
+			disabled: props.disabled,
+			onClick: () => {
+				props.onChange(!props.checked);
+			},
+			children: /* @__PURE__ */ a("span", {
+				className: "rdw-switch__track",
+				children: /* @__PURE__ */ a("span", { className: "rdw-switch__thumb" })
+			})
+		}), props.label !== void 0 ? /* @__PURE__ */ a("span", {
+			className: "rdw-switch__label",
+			children: props.label
+		}) : null]
+	})] });
+}
+var TAB_ID_PREFIX = "rdw-tab-";
+var TAB_PANEL_ID_PREFIX = "rdw-tabpanel-";
+var KEY_ARROW_RIGHT = "ArrowRight";
+var KEY_ARROW_LEFT = "ArrowLeft";
+function kitTabId(id) {
+	return `${TAB_ID_PREFIX}${id}`;
+}
+function kitTabPanelId(id) {
+	return `${TAB_PANEL_ID_PREFIX}${id}`;
+}
+var TABS_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rdw-border);
+  padding: 0 8px;
+}
+.rdw-tabs__tab {
+  box-sizing: border-box;
+  min-height: 28px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.rdw-tabs__tab[aria-selected="true"] {
+  color: var(--rdw-text);
+  font-weight: 600;
+  border-bottom-color: var(--rdw-accent);
+}
+`;
+function Tabs(props) {
+	const className = ["rdw-tabs", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: TABS_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		role: "tablist",
+		"aria-label": props["aria-label"],
+		children: props.items.map((item) => {
+			const selected = item.id === props.value;
+			return /* @__PURE__ */ a("button", {
+				type: "button",
+				role: "tab",
+				id: kitTabId(item.id),
+				className: "rdw-tabs__tab rdw-kit-focusable",
+				"aria-selected": selected,
+				"aria-controls": kitTabPanelId(item.id),
+				tabIndex: selected ? 0 : -1,
+				onClick: () => {
+					props.onChange(item.id);
+				},
+				onKeyDown: (event) => {
+					if (event.key !== KEY_ARROW_RIGHT && event.key !== KEY_ARROW_LEFT) return;
+					event.preventDefault();
+					const index = props.items.findIndex((entry) => entry.id === props.value);
+					if (index < 0) return;
+					const delta = event.key === KEY_ARROW_RIGHT ? 1 : -1;
+					const next = props.items[(index + delta + props.items.length) % props.items.length];
+					if (next === void 0) return;
+					props.onChange(next.id);
+					const nextTab = event.currentTarget.parentElement?.querySelector(`#${kitTabId(next.id)}`);
+					if (nextTab instanceof HTMLElement) nextTab.focus();
+				},
+				children: item.label
+			}, item.id);
+		})
+	})] });
+}
+var TEXT_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-field__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-field__input {
+  box-sizing: border-box;
+  min-height: 28px;
+  height: 28px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-field__input::placeholder {
+  color: var(--rdw-muted);
+}
+.rdw-field__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+function TextField(props) {
+	const autoId = P$1();
+	const inputId = props.id ?? autoId;
+	const className = ["rdw-field", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: TEXT_FIELD_CSS }), /* @__PURE__ */ a("div", {
+		className,
+		children: [props.label !== void 0 ? /* @__PURE__ */ a("label", {
+			className: "rdw-field__label",
+			htmlFor: inputId,
+			children: props.label
+		}) : null, /* @__PURE__ */ a("input", {
+			id: inputId,
+			className: "rdw-field__input rdw-kit-focusable",
+			type: "text",
+			value: props.value,
+			placeholder: props.placeholder,
+			disabled: props.disabled,
+			"aria-label": props["aria-label"] ?? props.label,
+			onInput: (event) => {
+				props.onChange(event.currentTarget.value);
+			}
+		})]
+	})] });
+}
 var FEATURE_ID$9 = "favorites-bulk";
 var FEATURE_LABEL$9 = "Bulk remove favorites";
 var FEATURE_PAGES$9 = ["favorites"];
@@ -8615,31 +8808,28 @@ function FavoritesBulkBar(props) {
 			children: TEXT_SELECT
 		})
 	});
-	if (phase.kind === "removing") {
-		const ratio = phase.total === 0 ? 0 : phase.done / phase.total;
-		return /* @__PURE__ */ a("div", {
-			className: BAR_CLASS,
-			children: [
-				/* @__PURE__ */ a("div", {
-					className: PROGRESS_WRAP_CLASS,
-					children: /* @__PURE__ */ a(ProgressBar, {
-						value: ratio,
-						label: progressLabel(phase.done, phase.total)
-					})
-				}),
-				/* @__PURE__ */ a("span", {
-					className: STATUS_CLASS,
-					children: progressLabel(phase.done, phase.total)
-				}),
-				/* @__PURE__ */ a(Button, {
-					variant: "secondary",
-					size: "s",
-					onClick: stopRemoval,
-					children: TEXT_STOP
+	if (phase.kind === "removing") return /* @__PURE__ */ a("div", {
+		className: BAR_CLASS,
+		children: [
+			/* @__PURE__ */ a("div", {
+				className: PROGRESS_WRAP_CLASS,
+				children: /* @__PURE__ */ a(ProgressBar, {
+					value: phase.total === 0 ? 0 : phase.done / phase.total,
+					label: progressLabel(phase.done, phase.total)
 				})
-			]
-		});
-	}
+			}),
+			/* @__PURE__ */ a("span", {
+				className: STATUS_CLASS,
+				children: progressLabel(phase.done, phase.total)
+			}),
+			/* @__PURE__ */ a(Button, {
+				variant: "secondary",
+				size: "s",
+				onClick: stopRemoval,
+				children: TEXT_STOP
+			})
+		]
+	});
 	if (phase.kind === "error" || phase.kind === "stopped") return /* @__PURE__ */ a("div", {
 		className: BAR_CLASS,
 		children: [/* @__PURE__ */ a("span", {
@@ -8654,7 +8844,7 @@ function FavoritesBulkBar(props) {
 	});
 	const count = selected.size;
 	const confirmOpen = phase.kind === "confirm";
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("div", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("div", {
 		className: BAR_CLASS,
 		children: [
 			/* @__PURE__ */ a("span", {
@@ -8723,7 +8913,7 @@ function mountFavoritesBulk(_ctx) {
 	const onSelectionModeChange = (active) => {
 		document.body.classList.toggle(BODY_SELECTING_CLASS, active);
 	};
-	Q(/* @__PURE__ */ a(FavoritesBulkBar, { onSelectionModeChange }), root);
+	Q$1(/* @__PURE__ */ a(FavoritesBulkBar, { onSelectionModeChange }), root);
 }
 var favoritesBulkFeature = {
 	id: FEATURE_ID$9,
@@ -9703,7 +9893,6 @@ body.${BODY_FEATURE_CLASS$1} .${CLASS_STATUS} {
   text-align: center;
   font-size: 0.875rem;
   line-height: 1.4;
-  grid-column: 1 / -1;
 }
 body.${BODY_FEATURE_CLASS$1} .${CLASS_SEPARATOR} {
   display: block;
@@ -9713,7 +9902,6 @@ body.${BODY_FEATURE_CLASS$1} .${CLASS_SEPARATOR} {
   font-size: 0.8125rem;
   font-weight: 600;
   opacity: 0.75;
-  grid-column: 1 / -1;
 }
 body.${BODY_FEATURE_CLASS$1} .${CLASS_RETRY} {
   margin-left: 0.5rem;
@@ -10144,8 +10332,7 @@ function createBar(match) {
 }
 function mountPlaylistBar(ctx) {
 	removeExistingBar(document);
-	const tagsParam = readTagsParam(ctx.search);
-	const queryIds = parsePlaylistQuery(tagsParam);
+	const queryIds = parsePlaylistQuery(readTagsParam(ctx.search));
 	if (queryIds === null) return;
 	const match = findPlaylistMatch(queryIds);
 	if (match === null) return;
@@ -10496,8 +10683,7 @@ function showNewPlaylistForm(host, list, postId, onCreated) {
 	const commit = () => {
 		const name = input.value.trim();
 		if (name.length === 0) return;
-		const playlist = createPlaylist(name);
-		addPostToPlaylist(playlist.id, postId);
+		addPostToPlaylist(createPlaylist(name).id, postId);
 		fillPlaylistList(list, postId);
 		syncAddButtonsForPost(postId);
 		onCreated?.();
@@ -10647,13 +10833,13 @@ function CollectionsMenu(props) {
 	const [newName, setNewName] = d("");
 	const [revision, setRevision] = d(0);
 	const triggerRef = T(null);
-	const playlists = w(() => {
+	const playlists = w$1(() => {
 		return listPlaylists();
 	}, [revision]);
-	const members = w(() => {
+	const members = w$1(() => {
 		return memberIdSet(props.postId);
 	}, [props.postId, revision]);
-	const visible = w(() => filterPlaylists(playlists, filter), [playlists, filter]);
+	const visible = w$1(() => filterPlaylists(playlists, filter), [playlists, filter]);
 	const bump = b(() => {
 		setRevision((value) => value + 1);
 	}, []);
@@ -10679,8 +10865,7 @@ function CollectionsMenu(props) {
 	const commitNew = b(() => {
 		const name = newName.trim();
 		if (name.length === 0) return;
-		const playlist = createPlaylist(name);
-		addPostToPlaylist(playlist.id, props.postId);
+		addPostToPlaylist(createPlaylist(name).id, props.postId);
 		bump();
 		setCreating(false);
 		setNewName("");
@@ -10705,6 +10890,7 @@ function CollectionsMenu(props) {
 			open,
 			onClose: close,
 			anchorRef: triggerRef,
+			widthPx: 260,
 			"aria-label": ARIA_COLLECTIONS,
 			children: [
 				/* @__PURE__ */ a(TextField, {
@@ -11119,8 +11305,6 @@ function readCommentCount() {
 	}
 	return null;
 }
-/** `settings.featureChoice[POST_PANEL_TAB_CHOICE_ID]` values. */
-var POST_PANEL_TAB_CHOICE_ID = "post-actions";
 var POST_PANEL_TAB_INFO = "info";
 var POST_PANEL_TAB_COMMENTS = "comments";
 var TEXT_FAVORITE = "Favorite";
@@ -11169,11 +11353,6 @@ function commentsTabLabel(count) {
 	if (count === null) return TEXT_COMMENTS;
 	return `${TEXT_COMMENTS}${TEXT_COMMENTS_COUNTED_SEP}${String(count)}`;
 }
-function readStoredTab() {
-	const stored = getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID);
-	if (stored === "info" || stored === "comments") return stored;
-	return POST_PANEL_TAB_INFO;
-}
 function PostPanel(props) {
 	const numericId = parseNumericPostId(props.postId);
 	const [favorited, setFavorited] = d(() => props.postId !== null ? isFav(props.postId) : false);
@@ -11191,11 +11370,7 @@ function PostPanel(props) {
 	const [iCame] = d(() => findICameTarget());
 	const [hasComments] = d(() => findPostComments() !== null);
 	const [commentCount] = d(() => hasComments ? readCommentCount() : null);
-	const [activeTab, setActiveTab] = d(() => {
-		const stored = readStoredTab();
-		if (stored === "comments" && !hasComments) return POST_PANEL_TAB_INFO;
-		return stored;
-	});
+	const [activeTab, setActiveTab] = d(POST_PANEL_TAB_INFO);
 	A(() => {
 		if (props.postId === null) return;
 		return observeScoreSpan(props.postId, (text) => {
@@ -11260,9 +11435,8 @@ function PostPanel(props) {
 	}, [iCame]);
 	const onTabChange = b((id) => {
 		setActiveTab(id);
-		setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, id);
 	}, []);
-	const tabItems = w(() => {
+	const tabItems = w$1(() => {
 		const items = [{
 			id: POST_PANEL_TAB_INFO,
 			label: TEXT_INFO
@@ -11365,7 +11539,7 @@ function InfoPanel(props) {
 		children: [props.stats.length > 0 ? /* @__PURE__ */ a("div", {
 			className: CLASS_STATS,
 			children: props.stats.map((row) => /* @__PURE__ */ a(StatRowView, { row }, row.label))
-		}) : null, props.moreLinks.length > 0 ? /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_POST }), /* @__PURE__ */ a(PostActionsList, { links: props.moreLinks })] }) : null]
+		}) : null, props.moreLinks.length > 0 ? /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a(SectionLabel, { children: TEXT_POST }), /* @__PURE__ */ a(PostActionsList, { links: props.moreLinks })] }) : null]
 	});
 }
 function CommentsHost() {
@@ -11390,7 +11564,7 @@ function CommentsHost() {
 }
 function StatRowView(props) {
 	const { row } = props;
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("span", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("span", {
 		className: CLASS_STAT_LABEL,
 		children: row.label
 	}), row.label === "Source" && row.href !== null ? /* @__PURE__ */ a("a", {
@@ -11612,7 +11786,7 @@ function removeExistingPanel() {
 		layoutCleanup = null;
 	}
 	if (panelHost !== null) {
-		Q(null, panelHost);
+		Q$1(null, panelHost);
 		panelHost.remove();
 		panelHost = null;
 	}
@@ -11689,7 +11863,7 @@ function mountPostActions(ctx) {
 	document.body.classList.add(POST_PANEL_MOUNTED_CLASS);
 	placePanel(host, flexi);
 	bindLayout(host, flexi);
-	Q(k$1(PostPanel, { postId }), host);
+	Q$1(k$1(PostPanel, { postId }), host);
 }
 var postActionsFeature = {
 	id: FEATURE_ID$4,
@@ -12448,7 +12622,7 @@ function SearchToolsPanel(props) {
 		setScoreDraft(null);
 		window.location.assign(buildSearchUrl([]));
 	};
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: CHIP_CSS }), /* @__PURE__ */ a(Card, {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: CHIP_CSS }), /* @__PURE__ */ a(Card, {
 		className: CARD_CLASS,
 		children: [
 			view.chips.length > 0 ? /* @__PURE__ */ a("div", {
@@ -12609,7 +12783,7 @@ function mountSearchTools(_ctx) {
 		return;
 	}
 	const root = ensureRoot(form);
-	Q(/* @__PURE__ */ a(SearchToolsPanel, { input }), root);
+	Q$1(/* @__PURE__ */ a(SearchToolsPanel, { input }), root);
 }
 var searchToolsFeature = {
 	id: FEATURE_ID$3,
@@ -12635,8 +12809,17 @@ var GROUP_HEADER_NAME_SET = /* @__PURE__ */ new Set([
 ]);
 var DEFAULT_COLLAPSED = ["General", "Meta"];
 var FEATURE_PAGES$2 = ["list", "post"];
+/**
+* Site-skin `html.rdw-skin ul#tag-sidebar > li { display: block }` includes an id,
+* so a body+class rule cannot hide the row. Match that chain, then add the
+* collapsed class. The second selector covers site themes (no html.rdw-skin).
+*/
+var COLLAPSED_ROW = `ul#tag-sidebar > li.${COLLAPSED_CLASS}`;
+var HIDE_COLLAPSED_WITH_SKIN = `html.${RDW_SKIN_CLASS} body.${BODY_FEATURE_CLASS} ${COLLAPSED_ROW}`;
+var HIDE_COLLAPSED_SITE_THEME = `body.${BODY_FEATURE_CLASS} ${COLLAPSED_ROW}`;
 var FEATURE_CSS$2 = [
-	`body.${BODY_FEATURE_CLASS} li.${COLLAPSED_CLASS} { display: none; }`,
+	`${HIDE_COLLAPSED_WITH_SKIN},`,
+	`${HIDE_COLLAPSED_SITE_THEME} { display: none; }`,
 	`body.${BODY_FEATURE_CLASS} button.${TOGGLE_CLASS} {`,
 	"  background: transparent;",
 	"  border: none;",
@@ -12650,7 +12833,7 @@ var FEATURE_CSS$2 = [
 	"  outline-offset: 2px;",
 	"}"
 ].join("\n");
-var TagGroupsStateSchema = object({ collapsed: array(string()) });
+var TagGroupsStateSchema = /* @__PURE__ */ object({ collapsed: /* @__PURE__ */ array(/* @__PURE__ */ string()) });
 function defaultState() {
 	return { collapsed: [...DEFAULT_COLLAPSED] };
 }
@@ -13128,7 +13311,7 @@ function mountVideoPreview(ctx) {
 		startBindings();
 	});
 }
-var FEATURES = exports("aL",[
+var FEATURES = exports("aF",[
 	feedFeature,
 	menuCleanupFeature,
 	tagGroupsFeature,
@@ -13373,187 +13556,12 @@ bootEarly();
 whenDomReady(() => {
 	applyLayoutBeforePaint();
 	scheduleAfterFirstPaint(() => {
-		module.import('./app-Bgw8MjqR-BT__KS5T.js').then(({ startApp }) => {
+		module.import('./app-DbCqnCui-BYA0sn3V.js').then(({ startApp }) => {
 			startApp();
 		});
 	});
 });})}}));
-System.register("./masonry-layout-BF1C8lGN-wpVMzmir.js", ['./___monkey.entry.js'],(function(exports){'use strict';var onThumbsAdded,featureChoiceBodyClass,MASONRY_VALUE,GRID_DENSITY_FEATURE_ID,MASONRY_LIST_SCOPE,SITE_SELECTORS,MASONRY_SPAN_CSS_VAR;return{setters:[function(module){onThumbsAdded=module.o;featureChoiceBodyClass=module.f;MASONRY_VALUE=module.M;GRID_DENSITY_FEATURE_ID=module.G;MASONRY_LIST_SCOPE=module.a;SITE_SELECTORS=module.S;MASONRY_SPAN_CSS_VAR=module.b;}],execute:(function(){exports("startMasonryLayout",startMasonryLayout);/**
-* CSS-grid masonry spans for list thumbs. Loaded after first paint from
-* grid-density mount (dynamic import) so the 0.12 CSS-first boot stays intact.
-*/
-var MASONRY_BODY_CLASS = featureChoiceBodyClass(GRID_DENSITY_FEATURE_ID, MASONRY_VALUE);
-var IMAGE_LIST_SELECTOR = `${MASONRY_LIST_SCOPE} ${SITE_SELECTORS.imageList}`;
-var PLACEHOLDER_NATURAL_SIZE = 1;
-var MIN_COLUMN_COUNT = 1;
-var MIN_ROW_SPAN = 1;
-var BODY_CLASS_OBSERVER_OPTIONS = {
-	attributes: true,
-	attributeFilter: ["class"]
-};
-var columnWidthPx = 170;
-var resizeObserver;
-var bodyClassObserver;
-var unsubscribeThumbsAdded;
-var rafId = 0;
-var started = false;
-var layoutActive = false;
-var placedThumbs = /* @__PURE__ */ new Set();
-var pendingSpans = /* @__PURE__ */ new Map();
-var loadListeners = /* @__PURE__ */ new WeakMap();
-/**
-* Row span N for grid-row-end. Uses intrinsic ratio only — no element layout reads.
-* Missing / zero natural sizes → 1:1 placeholder.
-*/
-function computeMasonryRowSpan(columnWidth, naturalWidth, naturalHeight) {
-	const totalHeightPx = columnWidth * ((naturalHeight > 0 ? naturalHeight : PLACEHOLDER_NATURAL_SIZE) / (naturalWidth > 0 ? naturalWidth : PLACEHOLDER_NATURAL_SIZE)) + 4;
-	return Math.max(MIN_ROW_SPAN, Math.ceil(totalHeightPx / 4));
-}
-/**
-* Column width for `repeat(auto-fill, minmax(min, 1fr))` with a fixed column-gap.
-*/
-function computeMasonryColumnWidthPx(listWidthPx) {
-	if (listWidthPx <= 0) return 170;
-	const columnCount = Math.max(MIN_COLUMN_COUNT, Math.floor((listWidthPx + 4) / 174));
-	return (listWidthPx - (columnCount - 1) * 4) / columnCount;
-}
-function isMasonryChoiceActive() {
-	return document.body.classList.contains(MASONRY_BODY_CLASS);
-}
-function findImageList() {
-	const node = document.querySelector(IMAGE_LIST_SELECTOR);
-	if (!(node instanceof HTMLElement)) return null;
-	return node;
-}
-function flushPendingSpans() {
-	rafId = 0;
-	for (const [thumb, span] of pendingSpans) thumb.style.setProperty(MASONRY_SPAN_CSS_VAR, String(span));
-	pendingSpans.clear();
-}
-function scheduleSpanWrite(thumb, span) {
-	pendingSpans.set(thumb, span);
-	if (rafId !== 0) return;
-	rafId = requestAnimationFrame(flushPendingSpans);
-}
-function readPreviewRatio(thumb) {
-	const img = thumb.querySelector(SITE_SELECTORS.previewImage);
-	if (!(img instanceof HTMLImageElement)) return {
-		naturalWidth: PLACEHOLDER_NATURAL_SIZE,
-		naturalHeight: PLACEHOLDER_NATURAL_SIZE
-	};
-	if (img.naturalWidth > 0 && img.naturalHeight > 0) return {
-		naturalWidth: img.naturalWidth,
-		naturalHeight: img.naturalHeight
-	};
-	return {
-		naturalWidth: PLACEHOLDER_NATURAL_SIZE,
-		naturalHeight: PLACEHOLDER_NATURAL_SIZE
-	};
-}
-function bindPreviewLoad(thumb) {
-	const img = thumb.querySelector(SITE_SELECTORS.previewImage);
-	if (!(img instanceof HTMLImageElement)) return;
-	if (loadListeners.has(img)) return;
-	const onLoad = () => {
-		if (!layoutActive || !placedThumbs.has(thumb)) return;
-		const { naturalWidth, naturalHeight } = readPreviewRatio(thumb);
-		scheduleSpanWrite(thumb, computeMasonryRowSpan(columnWidthPx, naturalWidth, naturalHeight));
-	};
-	loadListeners.set(img, onLoad);
-	img.addEventListener("load", onLoad);
-}
-function placeThumb(thumb) {
-	if (placedThumbs.has(thumb)) return;
-	placedThumbs.add(thumb);
-	const { naturalWidth, naturalHeight } = readPreviewRatio(thumb);
-	scheduleSpanWrite(thumb, computeMasonryRowSpan(columnWidthPx, naturalWidth, naturalHeight));
-	bindPreviewLoad(thumb);
-}
-function placeThumbsInRoot(root) {
-	const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
-	for (const node of thumbs) {
-		if (!(node instanceof HTMLElement)) continue;
-		placeThumb(node);
-	}
-}
-function updateColumnWidthFromList(list) {
-	columnWidthPx = computeMasonryColumnWidthPx(list.clientWidth);
-}
-function recalculateAllPlacedInList(list) {
-	const thumbs = list.querySelectorAll(SITE_SELECTORS.thumb);
-	for (const node of thumbs) {
-		if (!(node instanceof HTMLElement)) continue;
-		if (!placedThumbs.has(node)) {
-			placeThumb(node);
-			continue;
-		}
-		const { naturalWidth, naturalHeight } = readPreviewRatio(node);
-		scheduleSpanWrite(node, computeMasonryRowSpan(columnWidthPx, naturalWidth, naturalHeight));
-	}
-}
-function activateLayout() {
-	if (layoutActive) return;
-	const list = findImageList();
-	if (list === null) return;
-	layoutActive = true;
-	updateColumnWidthFromList(list);
-	placeThumbsInRoot(list);
-	if (resizeObserver === void 0) {
-		resizeObserver = new ResizeObserver(() => {
-			if (!layoutActive) return;
-			const current = findImageList();
-			if (current === null) return;
-			const nextWidth = computeMasonryColumnWidthPx(current.clientWidth);
-			if (nextWidth === columnWidthPx) return;
-			columnWidthPx = nextWidth;
-			recalculateAllPlacedInList(current);
-		});
-		resizeObserver.observe(list);
-	}
-}
-function deactivateLayout() {
-	layoutActive = false;
-	placedThumbs.clear();
-	if (resizeObserver !== void 0) {
-		resizeObserver.disconnect();
-		resizeObserver = void 0;
-	}
-	pendingSpans.clear();
-	if (rafId !== 0) {
-		cancelAnimationFrame(rafId);
-		rafId = 0;
-	}
-}
-function syncLayoutToBodyClass() {
-	if (isMasonryChoiceActive()) {
-		activateLayout();
-		return;
-	}
-	deactivateLayout();
-}
-function onThumbsAddedRoot(root) {
-	if (!isMasonryChoiceActive()) return;
-	if (!layoutActive) activateLayout();
-	if (!layoutActive) return;
-	placeThumbsInRoot(root);
-}
-/**
-* Begin observing list masonry (no-op when choice is not masonry).
-* Safe to call once per page; idempotent.
-*/
-function startMasonryLayout() {
-	if (started) return;
-	started = true;
-	if (unsubscribeThumbsAdded === void 0) unsubscribeThumbsAdded = onThumbsAdded(onThumbsAddedRoot);
-	if (bodyClassObserver === void 0) {
-		bodyClassObserver = new MutationObserver(() => {
-			syncLayoutToBodyClass();
-		});
-		bodyClassObserver.observe(document.body, BODY_CLASS_OBSERVER_OPTIONS);
-	}
-	syncLayoutToBodyClass();
-}})}}));
-System.register("./app-Bgw8MjqR-BT__KS5T.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$,PANEL_UI_CLASS,TOKEN_VAR,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.c;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.h;SEARCH_PARAM_TAGS=module.i;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.j;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.k;HEADER_SELECTOR=module.H;RDW_OWN_PAGE_CLASS=module.p;MENU_ITEM_ID=module.q;parseRdwHash=module.t;getSyncState=module.u;readFavoritesSyncMode=module.v;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.w;UI_TEXT=module.U;Q=module.Q;RDW_PAGE_ROOT_ID=module.x;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.z;RDW_HASH_COLLECTIONS=module.A;MENU_LABEL=module.B;RDW_HASH_FOLLOWING=module.D;resolveFavoritesUserId=module.E;MY_FAVORITES_CONTAINER_ID=module.I;RDW_HASH_SETTINGS=module.J;RDW_HASH_PREFIX=module.K;createFavoritesSyncTabId=module.L;APPEARANCE_BACKGROUND_KEY=module.O;readArtistsMirror=module.P;listArtistTags=module.T;writeArtistsMirror=module.V;reloadFromStorage=module.W;save=module.X;CURRENT_PAGE_CLASS=module.Y;setSyncState=module.Z;SEARCH_PARAM_PAGE=module._;FAVORITES_PAGE=module.$;FAVORITES_SECTION_VIEW=module.a0;SEARCH_PATH=module.a1;a=module.a2;applyTokenProperties=module.a3;resolveAppearancePalette=module.a4;getSiteSkinCss=module.a5;$=module.a6;PANEL_UI_CLASS=module.a7;TOKEN_VAR=module.a8;RDW_THEME_ATTR=module.a9;APPEARANCE_THEME_SITE=module.aa;APPEARANCE_THEME_SITE_DARK=module.ab;SITE_LIGHT_C_BG=module.ac;SITE_LIGHT_C_BG_ALT=module.ad;SITE_DARK_C_BG=module.ae;SITE_DARK_C_BORDER=module.af;APPEARANCE_BACKGROUND_TOO_LARGE=module.ag;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
+System.register("./app-DbCqnCui-BYA0sn3V.js", ['./___monkey.entry.js'],(function(exports,module){'use strict';var yieldToMain,detectPageKind,mountCards,syncFavoritesPage,runFeaturesYielding,getAppearance,applyAppearanceTheme,ensureDocumentStyles,SITE_SELECTORS,log,SITE_ORIGIN,SEARCH_PARAM_TAGS,normalizeArtistTag,CSS_CLASS,ensureStyleElement,RDW_OWN_PAGE_STYLE_ID,buildOwnPageCss,HEADER_SELECTOR$1,RDW_OWN_PAGE_CLASS,MENU_ITEM_ID,parseRdwHash,getSyncState,readFavoritesSyncMode,FAVORITES_SYNC_MODE_FULL,runFavoritesSync,UI_TEXT,Q$1,RDW_PAGE_ROOT_ID,NAVBAR_SELECTOR,FEED_MENU_ITEM_ID,RDW_HASH_COLLECTIONS,MENU_LABEL,RDW_HASH_FOLLOWING,resolveFavoritesUserId,MY_FAVORITES_CONTAINER_ID,RDW_HASH_SETTINGS,RDW_HASH_PREFIX,createFavoritesSyncTabId,APPEARANCE_BACKGROUND_KEY,readArtistsMirror,listArtistTags,writeArtistsMirror,reloadFromStorage,save,CURRENT_PAGE_CLASS$1,setSyncState,SEARCH_PARAM_PAGE,FAVORITES_PAGE,FAVORITES_SECTION_VIEW,SEARCH_PATH,a,applyTokenProperties,resolveAppearancePalette,getSiteSkinCss,$$1,PANEL_UI_CLASS,TOKEN_VAR,RDW_THEME_ATTR,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,SITE_LIGHT_C_BG,SITE_LIGHT_C_BG_ALT,SITE_DARK_C_BG,SITE_DARK_C_BORDER,APPEARANCE_BACKGROUND_TOO_LARGE;return{setters:[function(module){yieldToMain=module.y;detectPageKind=module.d;mountCards=module.m;syncFavoritesPage=module.s;runFeaturesYielding=module.r;getAppearance=module.g;applyAppearanceTheme=module.a;ensureDocumentStyles=module.e;SITE_SELECTORS=module.S;log=module.l;SITE_ORIGIN=module.b;SEARCH_PARAM_TAGS=module.c;normalizeArtistTag=module.n;CSS_CLASS=module.C;ensureStyleElement=module.f;RDW_OWN_PAGE_STYLE_ID=module.R;buildOwnPageCss=module.h;HEADER_SELECTOR$1=module.H;RDW_OWN_PAGE_CLASS=module.i;MENU_ITEM_ID=module.M;parseRdwHash=module.p;getSyncState=module.j;readFavoritesSyncMode=module.k;FAVORITES_SYNC_MODE_FULL=module.F;runFavoritesSync=module.o;UI_TEXT=module.U;Q$1=module.Q;RDW_PAGE_ROOT_ID=module.q;NAVBAR_SELECTOR=module.N;FEED_MENU_ITEM_ID=module.t;RDW_HASH_COLLECTIONS=module.u;MENU_LABEL=module.v;RDW_HASH_FOLLOWING=module.w;resolveFavoritesUserId=module.x;MY_FAVORITES_CONTAINER_ID=module.z;RDW_HASH_SETTINGS=module.A;RDW_HASH_PREFIX=module.B;createFavoritesSyncTabId=module.D;APPEARANCE_BACKGROUND_KEY=module.E;readArtistsMirror=module.G;listArtistTags=module.I;writeArtistsMirror=module.J;reloadFromStorage=module.K;save=module.L;CURRENT_PAGE_CLASS$1=module.O;setSyncState=module.P;SEARCH_PARAM_PAGE=module.T;FAVORITES_PAGE=module.V;FAVORITES_SECTION_VIEW=module.W;SEARCH_PATH=module.X;a=module.Y;applyTokenProperties=module.Z;resolveAppearancePalette=module._;getSiteSkinCss=module.$;$$1=module.a0;PANEL_UI_CLASS=module.a1;TOKEN_VAR=module.a2;RDW_THEME_ATTR=module.a3;APPEARANCE_THEME_SITE=module.a4;APPEARANCE_THEME_SITE_DARK=module.a5;SITE_LIGHT_C_BG=module.a6;SITE_LIGHT_C_BG_ALT=module.a7;SITE_DARK_C_BG=module.a8;SITE_DARK_C_BORDER=module.a9;APPEARANCE_BACKGROUND_TOO_LARGE=module.aa;}],execute:(function(){exports({n:loadBackground,r:saveBackground,startApp:startApp,t:clearBackground});/** Matches host.tsx page title class (owned there; styled here for site polish). */
 var PAGE_TITLE_CLASS$1 = "rdw-page-title";
 /** Matches kit SectionLabel class. */
 var SECTION_LABEL_CLASS = "rdw-section-label";
@@ -13824,7 +13832,7 @@ var PAGE_HOST_CSS = `
 ${PAGE_CONTENT_CSS}
 `;
 function PageShell(props) {
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: PAGE_HOST_CSS }), /* @__PURE__ */ a("div", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: PAGE_HOST_CSS }), /* @__PURE__ */ a("div", {
 		className: PAGE_SHELL_CLASS,
 		children: [/* @__PURE__ */ a("h1", {
 			className: PAGE_TITLE_CLASS,
@@ -13842,21 +13850,21 @@ var collectionsFactory = null;
 var followingFactory = null;
 function getSettingsFactory() {
 	if (settingsFactory === null) settingsFactory = async () => {
-		const mod = await module.import('./settings-page-CyOa0Slg-C5mWZPWm.js');
+		const mod = await module.import('./settings-page-B0nDeaCc-B01Ffn4T.js');
 		return /* @__PURE__ */ a(mod.SettingsPage, {});
 	};
 	return settingsFactory;
 }
 function getCollectionsFactory() {
 	if (collectionsFactory === null) collectionsFactory = async () => {
-		const mod = await module.import('./collections-page-D63diUPv-CrlxDMuM.js');
+		const mod = await module.import('./collections-page-BY_JwDXA-CbhDLuYq.js');
 		return /* @__PURE__ */ a(mod.CollectionsPage, {});
 	};
 	return collectionsFactory;
 }
 function getFollowingFactory() {
 	if (followingFactory === null) followingFactory = async () => {
-		const mod = await module.import('./following-page-CtG_KQU1-DECxbkpG.js');
+		const mod = await module.import('./following-page-Co1KJLrS-BqxCEE3u.js');
 		return /* @__PURE__ */ a(mod.FollowingPage, {});
 	};
 	return followingFactory;
@@ -13902,7 +13910,7 @@ async function showRdwPage(route, header) {
 	const generation = ++renderGeneration;
 	const page = await pageFactoryForRoute(route)();
 	if (generation !== renderGeneration || mountPoint !== mount) return;
-	Q(/* @__PURE__ */ a(PageShell, {
+	Q$1(/* @__PURE__ */ a(PageShell, {
 		title: titleForRoute(route),
 		children: page
 	}), mount);
@@ -13910,7 +13918,7 @@ async function showRdwPage(route, header) {
 /** Unmount own page and remove #rdw-page-root. */
 function hideRdwPage() {
 	renderGeneration += 1;
-	if (mountPoint !== null) Q(null, mountPoint);
+	if (mountPoint !== null) Q$1(null, mountPoint);
 	if (hostElement !== null) hostElement.remove();
 	hostElement = null;
 	mountPoint = null;
@@ -13944,7 +13952,7 @@ function findNavbar() {
 	return navbar instanceof HTMLUListElement ? navbar : null;
 }
 function findHeader$1() {
-	const header = document.querySelector(HEADER_SELECTOR);
+	const header = document.querySelector(HEADER_SELECTOR$1);
 	return header instanceof HTMLElement ? header : null;
 }
 /**
@@ -14058,28 +14066,28 @@ function captureSiteCurrentIfNeeded() {
 		savedSiteCurrent = null;
 		return;
 	}
-	const current = navbar.querySelector(`li.${CURRENT_PAGE_CLASS}`);
+	const current = navbar.querySelector(`li.${CURRENT_PAGE_CLASS$1}`);
 	savedSiteCurrent = current instanceof HTMLLIElement && current.id !== MENU_ITEM_ID.collections && current.id !== MENU_ITEM_ID.following && current.id !== MENU_ITEM_ID.favorites && current.id !== MENU_ITEM_ID.settings ? current : null;
 }
 function clearAllOwnCurrent() {
 	for (const id of Object.values(MENU_ITEM_ID)) {
 		const item = document.getElementById(id);
-		if (item instanceof HTMLLIElement) item.classList.remove(CURRENT_PAGE_CLASS);
+		if (item instanceof HTMLLIElement) item.classList.remove(CURRENT_PAGE_CLASS$1);
 	}
 }
 /** Mark the own-page nav item; remember site current-page for restore. */
 function setOwnPageCurrentHighlight(route) {
 	captureSiteCurrentIfNeeded();
 	const navbar = findNavbar();
-	if (navbar !== null) for (const child of navbar.querySelectorAll(`li.${CURRENT_PAGE_CLASS}`)) child.classList.remove(CURRENT_PAGE_CLASS);
+	if (navbar !== null) for (const child of navbar.querySelectorAll(`li.${CURRENT_PAGE_CLASS$1}`)) child.classList.remove(CURRENT_PAGE_CLASS$1);
 	clearAllOwnCurrent();
 	const item = document.getElementById(menuItemIdForRoute(route));
-	if (item instanceof HTMLLIElement) item.classList.add(CURRENT_PAGE_CLASS);
+	if (item instanceof HTMLLIElement) item.classList.add(CURRENT_PAGE_CLASS$1);
 }
 /** Restore site current-page after leaving #rdw/ routes. */
 function clearOwnPageCurrentHighlight() {
 	clearAllOwnCurrent();
-	if (savedSiteCurrent !== null && savedSiteCurrent.isConnected) savedSiteCurrent.classList.add(CURRENT_PAGE_CLASS);
+	if (savedSiteCurrent !== null && savedSiteCurrent.isConnected) savedSiteCurrent.classList.add(CURRENT_PAGE_CLASS$1);
 	savedSiteCurrent = null;
 	siteCurrentCaptured = false;
 }
@@ -14094,7 +14102,7 @@ function ensureOwnPageStyle() {
 	style.textContent = buildOwnPageCss();
 }
 function findHeader() {
-	const header = document.querySelector(HEADER_SELECTOR);
+	const header = document.querySelector(HEADER_SELECTOR$1);
 	return header instanceof HTMLElement ? header : null;
 }
 async function enterRoute(route) {
@@ -14557,7 +14565,7 @@ async function startApp() {
 	await yieldToMain();
 	maybeResumeFavoritesSync();
 }})}}));
-System.register("./settings-page-CyOa0Slg-C5mWZPWm.js", ['./___monkey.entry.js','./app-Bgw8MjqR-BT__KS5T.js','./autocomplete-DSgnS6yZ-CTyQokkI.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,getFeatureChoice,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ah;a=module.a2;PANEL_UI_CLASS=module.a7;Card=module.ai;SectionLabel=module.aj;Switch=module.ak;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.al;setTweaksEnabled=module.am;NumberField=module.an;UPDATES_GROUP_SIZE_ID=module.ao;setUpdatesGroupSize=module.ap;getUpdatesGroupSize=module.aq;PLAYLIST_CHUNK_SIZE_ID=module.ar;setPlaylistChunkSize=module.as;getPlaylistChunkSize=module.at;GRID_FAV_CHECKBOX_ID=module.au;setGridFavButtonsEnabled=module.av;setGridFavButtonsVisible=module.aw;P=module.ax;T=module.ay;A=module.az;APPEARANCE_THEME_CUSTOM=module.aA;KIT_FOCUS_CSS=module.aB;Select=module.aC;APPEARANCE_THEME_SITE=module.aa;APPEARANCE_THEME_SITE_DARK=module.ab;APPEARANCE_THEME_LIGHT=module.aD;APPEARANCE_THEME_DARK=module.aE;$=module.a6;Segmented=module.aF;APPEARANCE_CUSTOM_BASE_LIGHT=module.aG;APPEARANCE_CUSTOM_BASE_DARK=module.aH;TextField=module.aI;Button=module.aJ;clampBackgroundDim=module.aK;FEATURES=module.aL;featurePanelLabel=module.aM;FEATURE_CHECKBOX_ID_PREFIX=module.aN;setFeatureEnabled=module.aO;applyCssOnlyFeatureEnabled=module.aP;isFeatureEnabled=module.aQ;FEATURE_CHOICE_ID_PREFIX=module.aR;setFeatureChoiceValue=module.aS;applyCssOnlyFeatureChoice=module.aT;getFeatureChoice=module.aU;b=module.aV;Chip=module.aW;readSiteBlacklist=module.aX;AutocompleteField=module.aY;ProgressBar=module.aZ;createDefaultCustomTheme=module.a_;AppearanceThemeSchema=module.a$;getAppearance=module.g;prepareBackgroundImageFile=module.b0;writeSiteBlacklist=module.b1;runFavoritesSync=module.w;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.b2;load=module.b3;createDefaultStorage=module.b4;clearStorageCache=module.b5;clearFavsCache=module.b6;getSyncState=module.u;object=module.b7;StorageSchema=module.b8;optional=module.b9;string=module.ba;FavsSchema=module.bb;literal=module.bc;IMPORT_SCHEMA_ERROR_PREFIX=module.bd;stripLegacyPanelWindowSize=module.be;save=module.X;migrateMarksFavToFavs=module.bf;FAVS_STORAGE_KEY=module.bg;createDefaultFavs=module.bh;parseFavsStrict=module.bi;setAppearance=module.bj;applyAppearanceTheme=module.c;getSiteSkinCss=module.a5;loadFavSet=module.bk;STORAGE_BACKUP_KEY=module.bl;extractFavIdsFromMarks=module.bm;gridDensityFeature=module.bn;FAVORITES_SYNC_MODE_INCREMENTAL=module.bo;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bp;getGridFavButtonsEnabled=module.bq;getFeatureChoiceValue=module.br;getScreenPixelSize=module.bs;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
+System.register("./settings-page-B0nDeaCc-B01Ffn4T.js", ['./___monkey.entry.js','./app-DbCqnCui-BYA0sn3V.js','./autocomplete-HoEAiNev-O5tr1WB9.js'],(function(exports){'use strict';var d,a,PANEL_UI_CLASS,Card,SectionLabel,Switch,UI_TEXT,TWEAKS_SWITCH_ID,setTweaksEnabled,NumberField,UPDATES_GROUP_SIZE_ID,setUpdatesGroupSize,getUpdatesGroupSize,PLAYLIST_CHUNK_SIZE_ID,setPlaylistChunkSize,getPlaylistChunkSize,GRID_FAV_CHECKBOX_ID,setGridFavButtonsEnabled,setGridFavButtonsVisible,P$1,T,A,APPEARANCE_THEME_CUSTOM,KIT_FOCUS_CSS,Select,APPEARANCE_THEME_SITE,APPEARANCE_THEME_SITE_DARK,APPEARANCE_THEME_LIGHT,APPEARANCE_THEME_DARK,$$1,Segmented,APPEARANCE_CUSTOM_BASE_LIGHT,APPEARANCE_CUSTOM_BASE_DARK,TextField,Button,clampBackgroundDim,FEATURES,featurePanelLabel,FEATURE_CHECKBOX_ID_PREFIX,setFeatureEnabled,applyCssOnlyFeatureEnabled,isFeatureEnabled,FEATURE_CHOICE_ID_PREFIX,setFeatureChoiceValue,applyCssOnlyFeatureChoice,getFeatureChoice,b,Chip,readSiteBlacklist,AutocompleteField,ProgressBar,createDefaultCustomTheme,AppearanceThemeSchema,getAppearance,prepareBackgroundImageFile,writeSiteBlacklist,runFavoritesSync,log,FAVORITES_SYNC_PAGE_PAUSE_MS,load,createDefaultStorage,clearStorageCache,clearFavsCache,getSyncState,object,StorageSchema,optional,string,FavsSchema,literal,IMPORT_SCHEMA_ERROR_PREFIX,stripLegacyPanelWindowSize,save,migrateMarksFavToFavs,FAVS_STORAGE_KEY,createDefaultFavs,parseFavsStrict,setAppearance,applyAppearanceTheme,getSiteSkinCss,loadFavSet,STORAGE_BACKUP_KEY,extractFavIdsFromMarks,gridDensityFeature,FAVORITES_SYNC_MODE_INCREMENTAL,FAVORITES_SYNC_MODE_FULL,getTweaksEnabled,getGridFavButtonsEnabled,getFeatureChoiceValue,getScreenPixelSize,clearBackground,saveBackground,loadBackground,createAutocompleteQuerier;return{setters:[function(module){d=module.ab;a=module.Y;PANEL_UI_CLASS=module.a1;Card=module.ac;SectionLabel=module.ad;Switch=module.ae;UI_TEXT=module.U;TWEAKS_SWITCH_ID=module.af;setTweaksEnabled=module.ag;NumberField=module.ah;UPDATES_GROUP_SIZE_ID=module.ai;setUpdatesGroupSize=module.aj;getUpdatesGroupSize=module.ak;PLAYLIST_CHUNK_SIZE_ID=module.al;setPlaylistChunkSize=module.am;getPlaylistChunkSize=module.an;GRID_FAV_CHECKBOX_ID=module.ao;setGridFavButtonsEnabled=module.ap;setGridFavButtonsVisible=module.aq;P$1=module.ar;T=module.as;A=module.at;APPEARANCE_THEME_CUSTOM=module.au;KIT_FOCUS_CSS=module.av;Select=module.aw;APPEARANCE_THEME_SITE=module.a4;APPEARANCE_THEME_SITE_DARK=module.a5;APPEARANCE_THEME_LIGHT=module.ax;APPEARANCE_THEME_DARK=module.ay;$$1=module.a0;Segmented=module.az;APPEARANCE_CUSTOM_BASE_LIGHT=module.aA;APPEARANCE_CUSTOM_BASE_DARK=module.aB;TextField=module.aC;Button=module.aD;clampBackgroundDim=module.aE;FEATURES=module.aF;featurePanelLabel=module.aG;FEATURE_CHECKBOX_ID_PREFIX=module.aH;setFeatureEnabled=module.aI;applyCssOnlyFeatureEnabled=module.aJ;isFeatureEnabled=module.aK;FEATURE_CHOICE_ID_PREFIX=module.aL;setFeatureChoiceValue=module.aM;applyCssOnlyFeatureChoice=module.aN;getFeatureChoice=module.aO;b=module.aP;Chip=module.aQ;readSiteBlacklist=module.aR;AutocompleteField=module.aS;ProgressBar=module.aT;createDefaultCustomTheme=module.aU;AppearanceThemeSchema=module.aV;getAppearance=module.g;prepareBackgroundImageFile=module.aW;writeSiteBlacklist=module.aX;runFavoritesSync=module.o;log=module.l;FAVORITES_SYNC_PAGE_PAUSE_MS=module.aY;load=module.aZ;createDefaultStorage=module.a_;clearStorageCache=module.a$;clearFavsCache=module.b0;getSyncState=module.j;object=module.b1;StorageSchema=module.b2;optional=module.b3;string=module.b4;FavsSchema=module.b5;literal=module.b6;IMPORT_SCHEMA_ERROR_PREFIX=module.b7;stripLegacyPanelWindowSize=module.b8;save=module.L;migrateMarksFavToFavs=module.b9;FAVS_STORAGE_KEY=module.ba;createDefaultFavs=module.bb;parseFavsStrict=module.bc;setAppearance=module.bd;applyAppearanceTheme=module.a;getSiteSkinCss=module.$;loadFavSet=module.be;STORAGE_BACKUP_KEY=module.bf;extractFavIdsFromMarks=module.bg;gridDensityFeature=module.bh;FAVORITES_SYNC_MODE_INCREMENTAL=module.bi;FAVORITES_SYNC_MODE_FULL=module.F;getTweaksEnabled=module.bj;getGridFavButtonsEnabled=module.bk;getFeatureChoiceValue=module.bl;getScreenPixelSize=module.bm;},function(module){clearBackground=module.t;saveBackground=module.r;loadBackground=module.n;},function(module){createAutocompleteQuerier=module.c;}],execute:(function(){exports("SettingsPage",SettingsPage);var GRID_FEATURE_ID = gridDensityFeature.id;
 var THEME_OPTIONS = [
 	{
 		value: APPEARANCE_THEME_SITE,
@@ -14592,10 +14600,6 @@ var GRID_OPTIONS = [
 	{
 		value: "large",
 		label: "Large"
-	},
-	{
-		value: "masonry",
-		label: "Masonry"
 	}
 ];
 var BASE_OPTIONS = [{
@@ -14734,7 +14738,7 @@ function formatScreenHint() {
 	return `${SCREEN_HINT_PREFIX}${String(screen.width)}x${String(screen.height)}`;
 }
 function AppearanceSection(props) {
-	const fileInputId = P();
+	const fileInputId = P$1();
 	const fileRef = T(null);
 	const [appearance, setAppearanceState] = d(() => getAppearance());
 	const [gridValue, setGridValue] = d(() => resolveGridChoice());
@@ -14886,7 +14890,7 @@ function AppearanceSection(props) {
 		applyCssOnlyFeatureChoice(GRID_FEATURE_ID, value);
 	}
 	const className = ["rdw-appearance", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: APPEARANCE_SECTION_CSS }), /* @__PURE__ */ a("section", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: APPEARANCE_SECTION_CSS }), /* @__PURE__ */ a("section", {
 		className,
 		"aria-label": SECTION_TITLE,
 		children: [
@@ -14903,7 +14907,7 @@ function AppearanceSection(props) {
 					onChange: onThemeChange
 				})]
 			}),
-			isCustom ? /* @__PURE__ */ a($, { children: [
+			isCustom ? /* @__PURE__ */ a($$1, { children: [
 				/* @__PURE__ */ a("div", {
 					className: "rdw-appearance__row",
 					children: [/* @__PURE__ */ a("div", {
@@ -15115,7 +15119,7 @@ function BlacklistSection(props = {}) {
 		setSuggestions([]);
 		querierRef.current.cancel();
 	}, [draft]);
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: BLACKLIST_SECTION_CSS }), /* @__PURE__ */ a("section", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: BLACKLIST_SECTION_CSS }), /* @__PURE__ */ a("section", {
 		className: `rdw-section ${SECTION_CLASS$2}`,
 		children: [
 			includeHeading ? /* @__PURE__ */ a(SectionLabel, { children: "Blacklist" }) : null,
@@ -15460,7 +15464,7 @@ function DataSection(props = {}) {
 	const [mode, setMode] = d(IMPORT_MODE_MERGE);
 	const [error, setError] = d("");
 	const [summary, setSummary] = d("");
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: DATA_SECTION_CSS }), /* @__PURE__ */ a("section", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: DATA_SECTION_CSS }), /* @__PURE__ */ a("section", {
 		className: `rdw-section ${SECTION_CLASS$1}`,
 		children: [
 			includeHeading ? /* @__PURE__ */ a(SectionLabel, { children: HEADING$1 }) : null,
@@ -15737,7 +15741,7 @@ function FavoritesSyncSection(props = {}) {
 			activeSync?.listeners.delete(listener);
 		};
 	}, []);
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: FAVORITES_SYNC_SECTION_CSS }), /* @__PURE__ */ a("section", {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: FAVORITES_SYNC_SECTION_CSS }), /* @__PURE__ */ a("section", {
 		className: `rdw-section ${SECTION_CLASS}`,
 		children: [
 			includeHeading ? /* @__PURE__ */ a(SectionLabel, { children: HEADING }) : null,
@@ -15752,7 +15756,7 @@ function FavoritesSyncSection(props = {}) {
 			}),
 			/* @__PURE__ */ a("div", {
 				className: ACTIONS_CLASS,
-				children: [!ui.unfinished ? /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a(Button, {
+				children: [!ui.unfinished ? /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a(Button, {
 					variant: "primary",
 					disabled: ui.busy,
 					onClick: () => {
@@ -15818,7 +15822,7 @@ function FeatureModules() {
 		children: FEATURES.filter((feature) => !PAGE_FEATURE_SKIP.has(feature.id)).map((feature) => {
 			const label = featurePanelLabel(feature.id, feature.label);
 			const choice = feature.choice;
-			return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("div", {
+			return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("div", {
 				className: PANEL_UI_CLASS.settingsRow,
 				children: [/* @__PURE__ */ a(Switch, {
 					id: `${FEATURE_CHECKBOX_ID_PREFIX}${feature.id}`,
@@ -15954,7 +15958,7 @@ function SettingsPage() {
 		]
 	});
 }})}}));
-System.register("./collections-page-D63diUPv-CrlxDMuM.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ah;listPlaylists=module.bt;readTagsFromLocation=module.bu;a=module.a2;Card=module.ai;PANEL_UI_CLASS=module.a7;SectionLabel=module.aj;addCollection=module.bv;$=module.a6;Button=module.aJ;UI_TEXT=module.U;serialize=module.bw;renameCollection=module.bx;deleteCollection=module.by;buildSearchUrl=module.bz;createPlaylist=module.bA;EmptyState=module.bB;buildPlaylistQueries=module.bC;getPlaylistChunkSize=module.at;buildUpdatesSearchUrl=module.bD;load=module.b3;isPlaylist=module.bE;A=module.az;TextField=module.aI;IconButton=module.bF;IconTrash=module.bG;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
+System.register("./collections-page-BY_JwDXA-CbhDLuYq.js", ['./___monkey.entry.js'],(function(exports){'use strict';var d,listPlaylists,readTagsFromLocation,a,Card,PANEL_UI_CLASS,SectionLabel,addCollection,$$1,Button,UI_TEXT,serialize,renameCollection,deleteCollection,buildSearchUrl,createPlaylist,EmptyState,buildPlaylistQueries,getPlaylistChunkSize,buildUpdatesSearchUrl,load,isPlaylist,A,TextField,IconButton,IconTrash;return{setters:[function(module){d=module.ab;listPlaylists=module.bn;readTagsFromLocation=module.bo;a=module.Y;Card=module.ac;PANEL_UI_CLASS=module.a1;SectionLabel=module.ad;addCollection=module.bp;$$1=module.a0;Button=module.aD;UI_TEXT=module.U;serialize=module.bq;renameCollection=module.br;deleteCollection=module.bs;buildSearchUrl=module.bt;createPlaylist=module.bu;EmptyState=module.bv;buildPlaylistQueries=module.bw;getPlaylistChunkSize=module.an;buildUpdatesSearchUrl=module.bx;load=module.aZ;isPlaylist=module.by;A=module.at;TextField=module.aC;IconButton=module.bz;IconTrash=module.bA;}],execute:(function(){exports("CollectionsPage",CollectionsPage);var PAGE_CLASS = "rdw-collections-page";
 var PLAYLIST_META_CLASS = "rdw-playlist-meta";
 var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
 var PLAYLIST_PART_CLASS = "rdw-playlist-part";
@@ -16087,7 +16091,7 @@ function CollectionsPage() {
 	const playlists = listPlaylists();
 	const searchTags = readTagsFromLocation(window.location.search);
 	const canSave = searchTags !== null && searchTags.length > 0;
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: COLLECTIONS_PAGE_CSS }), /* @__PURE__ */ a(Card, {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: COLLECTIONS_PAGE_CSS }), /* @__PURE__ */ a(Card, {
 		className: `${PANEL_UI_CLASS.pageCard} ${PAGE_CLASS}`,
 		children: [/* @__PURE__ */ a("section", {
 			className: "rdw-section",
@@ -16114,7 +16118,7 @@ function CollectionsPage() {
 					onCancel: () => {
 						setModeBoth({ kind: "list" });
 					}
-				}) : /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a(Button, {
+				}) : /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a(Button, {
 					variant: "primary",
 					disabled: !canSave,
 					onClick: () => {
@@ -16150,7 +16154,7 @@ function CollectionsPage() {
 							onCancel: () => {
 								setModeBoth({ kind: "list" });
 							}
-						}) : mode.kind === "confirm-delete" && mode.id === collection.id ? /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("p", {
+						}) : mode.kind === "confirm-delete" && mode.id === collection.id ? /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("p", {
 							className: "rdw-hint",
 							children: `${UI_TEXT.confirmDelete} (${collection.name})`
 						}), /* @__PURE__ */ a("div", {
@@ -16254,7 +16258,7 @@ function CollectionsPage() {
 								onCancel: () => {
 									setModeBoth({ kind: "list" });
 								}
-							}) : mode.kind === "confirm-delete" && mode.id === playlist.id ? /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("p", {
+							}) : mode.kind === "confirm-delete" && mode.id === playlist.id ? /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("p", {
 								className: "rdw-hint",
 								children: `${UI_TEXT.confirmDelete} (${playlist.name})`
 							}), /* @__PURE__ */ a("div", {
@@ -16275,7 +16279,7 @@ function CollectionsPage() {
 									},
 									children: UI_TEXT.cancel
 								})]
-							})] }) : /* @__PURE__ */ a($, { children: [
+							})] }) : /* @__PURE__ */ a($$1, { children: [
 								/* @__PURE__ */ a("div", {
 									className: ROW_MAIN_CLASS,
 									children: [/* @__PURE__ */ a("button", {
@@ -16327,7 +16331,7 @@ function CollectionsPage() {
 		})]
 	})] });
 }})}}));
-System.register("./following-page-CtG_KQU1-DECxbkpG.js", ['./___monkey.entry.js','./autocomplete-DSgnS6yZ-CTyQokkI.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ah;T=module.ay;A=module.az;getSeenPostId=module.bH;a=module.a2;Card=module.ai;PANEL_UI_CLASS=module.a7;UI_TEXT=module.U;$=module.a6;EmptyState=module.bB;ARTISTS_EMPTY_HINT=module.bI;ARTISTS_EMPTY_TITLE=module.bJ;Button=module.aJ;SEARCH_PATH=module.a1;SEARCH_PARAM_PAGE=module._;SEARCH_PAGE=module.bK;SEARCH_SECTION=module.bL;TextField=module.aI;ARTIST_FILTER_LABEL=module.bM;ARTIST_FILTER_ID=module.bN;UNFOLLOWED_PREFIX=module.bO;UNFOLLOW_UNDO_LABEL=module.bP;buildSearchUrl=module.bz;TAG_TYPE_INCLUDE=module.bQ;IconButton=module.bF;IconX=module.bR;AutocompleteField=module.aY;normalizeArtistTag=module.n;isFollowingArtist=module.bS;addArtist=module.bT;log=module.l;removeArtist=module.bU;UNFOLLOW_UNDO_MS=module.bV;load=module.b3;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
+System.register("./following-page-Co1KJLrS-BqxCEE3u.js", ['./___monkey.entry.js','./autocomplete-HoEAiNev-O5tr1WB9.js'],(function(exports){'use strict';var d,T,A,getSeenPostId,a,Card,PANEL_UI_CLASS,UI_TEXT,$$1,EmptyState,ARTISTS_EMPTY_HINT,ARTISTS_EMPTY_TITLE,Button,SEARCH_PATH,SEARCH_PARAM_PAGE,SEARCH_PAGE,SEARCH_SECTION,TextField,ARTIST_FILTER_LABEL,ARTIST_FILTER_ID,UNFOLLOWED_PREFIX,UNFOLLOW_UNDO_LABEL,buildSearchUrl,TAG_TYPE_INCLUDE,IconButton,IconX,AutocompleteField,normalizeArtistTag,isFollowingArtist,addArtist,log,removeArtist,UNFOLLOW_UNDO_MS,load,createAutocompleteQuerier,AUTOCOMPLETE_TAG_TYPE_ARTIST;return{setters:[function(module){d=module.ab;T=module.as;A=module.at;getSeenPostId=module.bB;a=module.Y;Card=module.ac;PANEL_UI_CLASS=module.a1;UI_TEXT=module.U;$$1=module.a0;EmptyState=module.bv;ARTISTS_EMPTY_HINT=module.bC;ARTISTS_EMPTY_TITLE=module.bD;Button=module.aD;SEARCH_PATH=module.X;SEARCH_PARAM_PAGE=module.T;SEARCH_PAGE=module.bE;SEARCH_SECTION=module.bF;TextField=module.aC;ARTIST_FILTER_LABEL=module.bG;ARTIST_FILTER_ID=module.bH;UNFOLLOWED_PREFIX=module.bI;UNFOLLOW_UNDO_LABEL=module.bJ;buildSearchUrl=module.bt;TAG_TYPE_INCLUDE=module.bK;IconButton=module.bz;IconX=module.bL;AutocompleteField=module.aS;normalizeArtistTag=module.n;isFollowingArtist=module.bM;addArtist=module.bN;log=module.l;removeArtist=module.bO;UNFOLLOW_UNDO_MS=module.bP;load=module.aZ;},function(module){createAutocompleteQuerier=module.c;AUTOCOMPLETE_TAG_TYPE_ARTIST=module.A;}],execute:(function(){exports("FollowingPage",FollowingPage);var ADD_FORM_CLASS = "rdw-following-add";
 var ADD_INPUT_ID = "rdw-following-add-tag";
 var OPEN_POSTS_LABEL = "Open Posts";
 var OPEN_POSTS_HREF = `${SEARCH_PATH}?${SEARCH_PARAM_PAGE}=${SEARCH_PAGE}&s=${SEARCH_SECTION}`;
@@ -16468,7 +16472,7 @@ function FollowingPage() {
 	const seen = getSeenPostId();
 	const count = artists.length;
 	const empty = sorted.length === 0 && pending.length === 0;
-	return /* @__PURE__ */ a($, { children: [/* @__PURE__ */ a("style", { children: FOLLOWING_PAGE_CSS }), /* @__PURE__ */ a(Card, {
+	return /* @__PURE__ */ a($$1, { children: [/* @__PURE__ */ a("style", { children: FOLLOWING_PAGE_CSS }), /* @__PURE__ */ a(Card, {
 		className: PANEL_UI_CLASS.pageCard,
 		children: /* @__PURE__ */ a("div", {
 			className: PANEL_UI_CLASS.scrollRegion,
@@ -16498,7 +16502,7 @@ function FollowingPage() {
 					},
 					onSubmit: onAdd
 				}),
-				empty ? /* @__PURE__ */ a($, { children: /* @__PURE__ */ a(EmptyState, {
+				empty ? /* @__PURE__ */ a($$1, { children: /* @__PURE__ */ a(EmptyState, {
 					title: ARTISTS_EMPTY_TITLE,
 					description: ARTISTS_EMPTY_HINT,
 					action: /* @__PURE__ */ a(Button, {
@@ -16508,7 +16512,7 @@ function FollowingPage() {
 						},
 						children: OPEN_POSTS_LABEL
 					})
-				}) }) : /* @__PURE__ */ a($, { children: [showFilter ? /* @__PURE__ */ a("div", {
+				}) }) : /* @__PURE__ */ a($$1, { children: [showFilter ? /* @__PURE__ */ a("div", {
 					className: PANEL_UI_CLASS.artistFilter,
 					children: /* @__PURE__ */ a(TextField, {
 						id: ARTIST_FILTER_ID,
@@ -16562,7 +16566,7 @@ function FollowingPage() {
 		})
 	})] });
 }})}}));
-System.register("./autocomplete-DSgnS6yZ-CTyQokkI.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bW;log=module.l;SITE_ORIGIN=module.h;array=module.bX;object=module.b7;optional=module.b9;nullable=module.bY;string=module.ba;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
+System.register("./autocomplete-HoEAiNev-O5tr1WB9.js", ['./___monkey.entry.js'],(function(exports){'use strict';var FETCH_CREDENTIALS,log,SITE_ORIGIN,array,object,optional,nullable,string;return{setters:[function(module){FETCH_CREDENTIALS=module.bQ;log=module.l;SITE_ORIGIN=module.b;array=module.bR;object=module.b1;optional=module.b3;nullable=module.bS;string=module.b4;}],execute:(function(){exports("c",createAutocompleteQuerier);var AUTOCOMPLETE_PATH = "/public/autocomplete.php";
 var AUTOCOMPLETE_TAG_TYPE_ARTIST = exports("A","artist");
 var HTTP_TOO_MANY_REQUESTS = 429;
 var ABORT_ERROR_NAME = "AbortError";

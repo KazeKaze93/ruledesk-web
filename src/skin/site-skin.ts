@@ -9,6 +9,7 @@ import {
   APPEARANCE_THEME_SITE,
   APPEARANCE_THEME_SITE_DARK,
   CSS_CLASS,
+  IMAGE_LIST_GAP_PX,
   RDW_SKIN_CLASS,
   RDW_THEME_ATTR,
 } from "../config/constants";
@@ -594,7 +595,8 @@ ${ROOT} div.auto_complete ul strong.highlight {
 
 /* —— grid / thumbs (cell size unchanged) —— */
 ${ROOT} div.image-list {
-  gap: 12px;
+  column-gap: ${String(IMAGE_LIST_GAP_PX)}px;
+  row-gap: ${String(IMAGE_LIST_GAP_PX)}px;
   align-items: flex-start;
   align-content: flex-start;
 }

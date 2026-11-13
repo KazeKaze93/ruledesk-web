@@ -168,6 +168,12 @@ export const LEGACY_PANEL_FEATURE_STATE_ID = "panel";
 export const LEGACY_PANEL_WIDTH_KEY = "width";
 export const LEGACY_PANEL_HEIGHT_KEY = "height";
 
+const GRID_DENSITY_CHOICE_ID = "grid-density";
+const GRID_DENSITY_DEFAULT_VALUE = "default";
+const LEGACY_MASONRY_CHOICE_VALUE = "masonry";
+/** Post panel Info/Comments tab used to live here. Always Info as of 0.15.1. */
+const POST_PANEL_TAB_CHOICE_ID = "post-actions";
+
 export const FavsSyncLockSchema = z.object({
   tabId: z.string().check(z.minLength(1)),
   beatAt: z.number(),
@@ -327,6 +333,50 @@ export function stripLegacyPanelWindowSize(
     nextSettings.featureState = nextFeatureState;
   }
 
+  return {
+    data: {
+      ...data,
+      settings: nextSettings,
+    },
+    changed: true,
+  };
+}
+
+/**
+ * Saved masonry grid becomes default. Post-panel tab choice is removed.
+ * No SCHEMA_VERSION bump.
+ */
+export function migrateRetiredFeatureChoices(
+  data: StorageData,
+): { data: StorageData; changed: boolean } {
+  const featureChoice = data.settings?.featureChoice;
+  if (featureChoice === undefined) {
+    return { data, changed: false };
+  }
+  const nextChoice: Record<string, string> = { ...featureChoice };
+  let changed = false;
+  if (nextChoice[GRID_DENSITY_CHOICE_ID] === LEGACY_MASONRY_CHOICE_VALUE) {
+    nextChoice[GRID_DENSITY_CHOICE_ID] = GRID_DENSITY_DEFAULT_VALUE;
+    changed = true;
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(nextChoice, POST_PANEL_TAB_CHOICE_ID)
+  ) {
+    delete nextChoice[POST_PANEL_TAB_CHOICE_ID];
+    changed = true;
+  }
+  if (!changed) {
+    return { data, changed: false };
+  }
+  const nextSettings =
+    data.settings === undefined
+      ? { gridFavButtons: DEFAULT_GRID_FAV_BUTTONS }
+      : { ...data.settings };
+  if (Object.keys(nextChoice).length === 0) {
+    delete nextSettings.featureChoice;
+  } else {
+    nextSettings.featureChoice = nextChoice;
+  }
   return {
     data: {
       ...data,

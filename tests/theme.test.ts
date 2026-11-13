@@ -6,7 +6,12 @@ import {
   SITE_THEME_STYLESHEET_DARK,
   SITE_THEME_STYLESHEET_LIGHT,
 } from "../src/config/constants";
-import { getSiteTheme, setSiteTheme } from "../src/site/theme";
+import {
+  getSiteTheme,
+  resetSiteDesktopStylesheetWatch,
+  scheduleSiteDesktopStylesheet,
+  setSiteTheme,
+} from "../src/site/theme";
 
 const OTHER_COOKIE = "session=abc123";
 const OTHER_STYLESHEET_HREF = "https://rule34.xxx/css/other.css?v=9";
@@ -174,6 +179,52 @@ describe("setSiteTheme", () => {
     expect(document.cookie).toContain(
       `${SITE_THEME_COOKIE_NAME}=${SITE_THEME_COOKIE_VALUE_DARK}`,
     );
+    expect(warnSpy).toHaveBeenCalled();
+  });
+});
+
+describe("scheduleSiteDesktopStylesheet before the link exists", () => {
+  function setReadyState(value: DocumentReadyState): void {
+    Object.defineProperty(document, "readyState", {
+      configurable: true,
+      get: () => value,
+    });
+  }
+
+  function restoreReadyState(): void {
+    Reflect.deleteProperty(document, "readyState");
+  }
+
+  beforeEach(() => {
+    document.head.replaceChildren();
+    document.body.replaceChildren();
+    resetSiteDesktopStylesheetWatch();
+    setReadyState("loading");
+  });
+
+  afterEach(() => {
+    resetSiteDesktopStylesheetWatch();
+    restoreReadyState();
+    vi.restoreAllMocks();
+  });
+
+  it("does not warn before the link exists and swaps when the link is inserted", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    scheduleSiteDesktopStylesheet("dark");
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    const siteLink = appendStylesheet(LIGHT_HREF_DOUBLE_SLASH);
+    await vi.waitFor(() => {
+      expect(siteLink.getAttribute("href")).toBe(DARK_HREF_DOUBLE_SLASH);
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("warns only after DOMContentLoaded when the link never appears", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    scheduleSiteDesktopStylesheet("dark");
+    expect(warnSpy).not.toHaveBeenCalled();
+    document.dispatchEvent(new Event("DOMContentLoaded"));
     expect(warnSpy).toHaveBeenCalled();
   });
 });

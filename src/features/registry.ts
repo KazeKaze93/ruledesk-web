@@ -14,9 +14,6 @@ import type { Feature } from "./types";
 import { videoPlayerFeature } from "./video-player";
 import { videoPreviewFeature } from "./video-preview";
 
-// Package A: masonry-layout is started from gridDensityFeature.mount (dynamic
-// import after first paint) — no separate FEATURES entry required.
-
 export const FEATURES: Feature[] = [
   feedFeature,
   menuCleanupFeature,

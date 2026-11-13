@@ -10,6 +10,7 @@ import {
   FavsSyncSchema,
   StorageSchema,
   createDefaultFavs,
+  migrateRetiredFeatureChoices,
   stripLegacyPanelWindowSize,
   type FavsData,
   type FavsSyncState,
@@ -194,8 +195,9 @@ export function migrateMarksFavToFavs(): void {
       nextMain = { ...main, marks: nextMarks };
     }
     const stripped = stripLegacyPanelWindowSize(nextMain);
-    if (marksChanged || stripped.changed) {
-      mainToWrite = stripped.data;
+    const choices = migrateRetiredFeatureChoices(stripped.data);
+    if (marksChanged || stripped.changed || choices.changed) {
+      mainToWrite = choices.data;
     }
   }
 

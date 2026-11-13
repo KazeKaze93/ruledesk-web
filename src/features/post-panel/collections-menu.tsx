@@ -10,6 +10,7 @@ import {
   removePostFromPlaylist,
 } from "../../storage/store";
 import {
+  ANCHORED_POPOVER_WIDTH_PX,
   Button,
   IconCheck,
   IconPlus,
@@ -139,6 +140,7 @@ export function CollectionsMenu(
         open={open}
         onClose={close}
         anchorRef={triggerRef}
+        widthPx={ANCHORED_POPOVER_WIDTH_PX}
         aria-label={ARIA_COLLECTIONS}
       >
         <TextField

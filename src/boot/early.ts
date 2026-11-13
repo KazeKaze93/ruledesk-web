@@ -10,11 +10,12 @@ import {
   parseRdwHash,
 } from "../pages/constants";
 import { getSiteSkinCss } from "../skin/site-skin";
-import { forceLightSiteBase, setSiteTheme } from "../site/theme";
 import {
-  APPEARANCE_THEME_SITE,
-  APPEARANCE_THEME_SITE_DARK,
-} from "../config/constants";
+  scheduleSiteDesktopStylesheet,
+  writeSiteThemeCookie,
+  type SiteTheme,
+} from "../site/theme";
+import { APPEARANCE_THEME_SITE_DARK } from "../config/constants";
 import type { Appearance } from "../storage/schema";
 
 /**
@@ -25,15 +26,10 @@ import type { Appearance } from "../storage/schema";
  */
 
 function syncSiteCookieAfterCss(appearance: Appearance): void {
-  if (appearance.theme === APPEARANCE_THEME_SITE_DARK) {
-    setSiteTheme("dark");
-    return;
-  }
-  if (appearance.theme === APPEARANCE_THEME_SITE) {
-    setSiteTheme("light");
-    return;
-  }
-  forceLightSiteBase();
+  const theme: SiteTheme =
+    appearance.theme === APPEARANCE_THEME_SITE_DARK ? "dark" : "light";
+  writeSiteThemeCookie(theme);
+  scheduleSiteDesktopStylesheet(theme);
 }
 
 /**

@@ -108,6 +108,9 @@ export const SITE_THEME_STYLESHEET_DIR = "/css/";
 export const SITE_THEME_STYLESHEET_LIGHT = "desktop.css";
 export const SITE_THEME_STYLESHEET_DARK = "desktop-dark.css";
 
+/** Thumb grid gap on both axes for Default, Compact, and Large. */
+export const IMAGE_LIST_GAP_PX = 4;
+
 export const UI_TEXT = {
   toggleOpen: "Open RuleDesk",
   toggleClose: "Close RuleDesk",

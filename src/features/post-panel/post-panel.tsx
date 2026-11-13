@@ -13,10 +13,6 @@ import { log } from "../../log";
 import { addFavorite, removeFavorite, voteUp } from "../../site/favorites";
 import { addFav, isFav, removeFav } from "../../storage/favs";
 import {
-  getFeatureChoiceValue,
-  setFeatureChoiceValue,
-} from "../../storage/store";
-import {
   Button,
   Card,
   IconArrowUp,
@@ -47,7 +43,7 @@ import {
   type StatRow,
 } from "./site-reads";
 
-/** `settings.featureChoice[POST_PANEL_TAB_CHOICE_ID]` values. */
+/** Retired `settings.featureChoice` key. The tab is not persisted. */
 export const POST_PANEL_TAB_CHOICE_ID = "post-actions";
 export const POST_PANEL_TAB_INFO = "info";
 export const POST_PANEL_TAB_COMMENTS = "comments";
@@ -117,17 +113,6 @@ function commentsTabLabel(count: number | null): string {
   return `${TEXT_COMMENTS}${TEXT_COMMENTS_COUNTED_SEP}${String(count)}`;
 }
 
-function readStoredTab(): string {
-  const stored = getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID);
-  if (
-    stored === POST_PANEL_TAB_INFO ||
-    stored === POST_PANEL_TAB_COMMENTS
-  ) {
-    return stored;
-  }
-  return POST_PANEL_TAB_INFO;
-}
-
 export function PostPanel(props: PostPanelProps): JSX.Element {
   const numericId = parseNumericPostId(props.postId);
   const [favorited, setFavorited] = useState(
@@ -152,13 +137,7 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
   const [commentCount] = useState<number | null>(() =>
     hasComments ? readCommentCount() : null,
   );
-  const [activeTab, setActiveTab] = useState(() => {
-    const stored = readStoredTab();
-    if (stored === POST_PANEL_TAB_COMMENTS && !hasComments) {
-      return POST_PANEL_TAB_INFO;
-    }
-    return stored;
-  });
+  const [activeTab, setActiveTab] = useState(POST_PANEL_TAB_INFO);
 
   useEffect(() => {
     if (props.postId === null) {
@@ -233,7 +212,6 @@ export function PostPanel(props: PostPanelProps): JSX.Element {
 
   const onTabChange = useCallback((id: string): void => {
     setActiveTab(id);
-    setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, id);
   }, []);
 
   const tabItems = useMemo(() => {

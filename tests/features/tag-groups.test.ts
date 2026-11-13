@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CSS_CLASS } from "../../src/config/constants";
+import { CSS_CLASS, RDW_SKIN_CLASS } from "../../src/config/constants";
 import { tagGroupsFeature } from "../../src/features/tag-groups";
+import { getSiteSkinCss } from "../../src/skin/site-skin";
 import {
   featureBodyClass,
   type FeatureContext,
@@ -129,6 +130,9 @@ describe("tagGroupsFeature", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    document.documentElement.classList.remove(RDW_SKIN_CLASS);
+    document.getElementById("rdw-tag-groups-skin-test")?.remove();
+    document.getElementById("rdw-tag-groups-feature-test")?.remove();
   });
 
   it("exports feature contract fields", () => {
@@ -141,11 +145,46 @@ describe("tagGroupsFeature", () => {
   it("scopes collapse css under the feature body class", () => {
     const bodyClass = featureBodyClass("tag-groups");
     expect(tagGroupsFeature.css).toContain(
-      `body.${bodyClass} li.${COLLAPSED_CLASS} { display: none; }`,
+      `html.${RDW_SKIN_CLASS} body.${bodyClass} ul#tag-sidebar > li.${COLLAPSED_CLASS}`,
+    );
+    expect(tagGroupsFeature.css).toContain(
+      `body.${bodyClass} ul#tag-sidebar > li.${COLLAPSED_CLASS}`,
+    );
+    expect(tagGroupsFeature.css).not.toMatch(
+      /li\.rdw-tag-group-collapsed[^{]*\{[^}]*!important/,
     );
     expect(tagGroupsFeature.css).toContain(
       `body.${bodyClass} button.${TOGGLE_CLASS}:focus-visible`,
     );
+  });
+
+  it("hides a collapsed row when site-skin display:block is also applied", () => {
+    document.documentElement.classList.add(RDW_SKIN_CLASS);
+    document.body.classList.add(featureBodyClass("tag-groups"));
+    const skin = document.createElement("style");
+    skin.id = "rdw-tag-groups-skin-test";
+    skin.textContent = getSiteSkinCss();
+    const feature = document.createElement("style");
+    feature.id = "rdw-tag-groups-feature-test";
+    feature.textContent = tagGroupsFeature.css;
+    document.head.append(skin, feature);
+
+    const list = document.createElement("ul");
+    list.id = "tag-sidebar";
+    const collapsed = document.createElement("li");
+    collapsed.className = COLLAPSED_CLASS;
+    collapsed.textContent = "hidden row";
+    const visible = document.createElement("li");
+    visible.textContent = "shown row";
+    list.append(collapsed, visible);
+    document.body.append(list);
+
+    expect(getComputedStyle(visible).display).toBe("block");
+    expect(getComputedStyle(collapsed).display).toBe("none");
+
+    document.documentElement.classList.remove(RDW_SKIN_CLASS);
+    expect(getComputedStyle(collapsed).display).toBe("none");
+    expect(getComputedStyle(visible).display).not.toBe("none");
   });
 
   it("collapses General and Meta by default and leaves others expanded", () => {

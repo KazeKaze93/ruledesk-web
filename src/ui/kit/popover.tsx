@@ -1,5 +1,6 @@
 import type { ComponentChildren, JSX, RefObject } from "preact";
-import { useEffect, useRef } from "preact/hooks";
+import { createPortal } from "preact/compat";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 
 import { KIT_FOCUS_CSS } from "./shared";
 
@@ -11,11 +12,24 @@ export type PopoverProps = {
   readonly "aria-label"?: string;
   /** Trigger (and optional extra roots) excluded from outside-click close; focus returns here. */
   readonly anchorRef?: RefObject<HTMLElement | null>;
+  /**
+   * When set, the popover is portaled to document.body with position:fixed
+   * so a scrollport (post column) cannot clip it. Width is this many pixels.
+   */
+  readonly widthPx?: number;
 };
 
 const KEY_ESCAPE = "Escape";
 const EVENT_KEYDOWN = "keydown";
 const EVENT_MOUSEDOWN = "mousedown";
+const EVENT_SCROLL = "scroll";
+const EVENT_RESIZE = "resize";
+const POPOVER_FIXED_CLASS = "rdw-popover--fixed";
+/** Above the post panel host (z-index 100 in post-actions.ts). */
+const POPOVER_FIXED_Z_INDEX = 120;
+const POPOVER_ANCHOR_GAP_PX = 4;
+/** Collections list width. */
+export const ANCHORED_POPOVER_WIDTH_PX = 260;
 
 export const POPOVER_CSS = `
 ${KIT_FOCUS_CSS}
@@ -33,7 +47,30 @@ ${KIT_FOCUS_CSS}
   color: var(--rdw-text);
   font: 12px/1.35 var(--rdw-font);
 }
+.rdw-popover.${POPOVER_FIXED_CLASS} {
+  position: fixed;
+  z-index: ${String(POPOVER_FIXED_Z_INDEX)};
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
 `;
+
+export function computeAnchoredPopoverPosition(
+  anchorLeft: number,
+  anchorBottom: number,
+  widthPx: number,
+  viewportWidthPx: number,
+): { top: number; left: number } {
+  let left = anchorLeft;
+  if (left + widthPx > viewportWidthPx) {
+    left = viewportWidthPx - widthPx;
+  }
+  return {
+    top: anchorBottom + POPOVER_ANCHOR_GAP_PX,
+    left,
+  };
+}
 
 function pathIncludesNode(
   path: readonly EventTarget[],
@@ -96,15 +133,56 @@ export function Popover(props: PopoverProps): JSX.Element | null {
     };
   }, [props.open, props.onClose, props.anchorRef]);
 
+  const widthPx = props.widthPx;
+  const anchored = widthPx !== undefined;
+
+  useLayoutEffect(() => {
+    if (!props.open || widthPx === undefined) {
+      return;
+    }
+    const apply = (): void => {
+      const anchor = props.anchorRef?.current ?? null;
+      const root = rootRef.current;
+      if (anchor === null || root === null) {
+        return;
+      }
+      const rect = anchor.getBoundingClientRect();
+      const position = computeAnchoredPopoverPosition(
+        rect.left,
+        rect.bottom,
+        widthPx,
+        window.innerWidth,
+      );
+      root.style.position = "fixed";
+      root.style.top = `${String(position.top)}px`;
+      root.style.left = `${String(position.left)}px`;
+      root.style.width = `${String(widthPx)}px`;
+    };
+    apply();
+    const onScrollOrResize = (): void => {
+      apply();
+    };
+    window.addEventListener(EVENT_SCROLL, onScrollOrResize, true);
+    window.addEventListener(EVENT_RESIZE, onScrollOrResize);
+    return () => {
+      window.removeEventListener(EVENT_SCROLL, onScrollOrResize, true);
+      window.removeEventListener(EVENT_RESIZE, onScrollOrResize);
+    };
+  }, [props.open, props.anchorRef, widthPx]);
+
   if (!props.open) {
     return null;
   }
 
-  const className = ["rdw-popover", props.className]
+  const className = [
+    "rdw-popover",
+    anchored ? POPOVER_FIXED_CLASS : undefined,
+    props.className,
+  ]
     .filter((part) => part !== undefined && part.length > 0)
     .join(" ");
 
-  return (
+  const body = (
     <>
       <style>{POPOVER_CSS}</style>
       <div
@@ -117,4 +195,9 @@ export function Popover(props: PopoverProps): JSX.Element | null {
       </div>
     </>
   );
+
+  if (anchored && document.body !== null) {
+    return createPortal(body, document.body);
+  }
+  return body;
 }

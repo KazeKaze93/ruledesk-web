@@ -229,7 +229,7 @@ describe("infiniteScrollFeature", () => {
     expect(infiniteScrollFeature.css).toContain(
       `body.${featureBodyClass("infinite-scroll")}`,
     );
-    expect(infiniteScrollFeature.css).toContain("grid-column: 1 / -1");
+    expect(infiniteScrollFeature.css).not.toContain("grid-column");
   });
 
   it("uses two viewport heights as IntersectionObserver rootMargin", () => {

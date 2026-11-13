@@ -26,7 +26,12 @@ export {
   NUMBER_FIELD_CSS,
   type NumberFieldProps,
 } from "./number-field";
-export { Popover, POPOVER_CSS, type PopoverProps } from "./popover";
+export {
+  ANCHORED_POPOVER_WIDTH_PX,
+  Popover,
+  POPOVER_CSS,
+  type PopoverProps,
+} from "./popover";
 export {
   ProgressBar,
   PROGRESS_BAR_CSS,

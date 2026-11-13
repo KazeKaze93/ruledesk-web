@@ -52,7 +52,6 @@ body.${BODY_FEATURE_CLASS} .${CLASS_STATUS} {
   text-align: center;
   font-size: 0.875rem;
   line-height: 1.4;
-  grid-column: 1 / -1;
 }
 body.${BODY_FEATURE_CLASS} .${CLASS_SEPARATOR} {
   display: block;
@@ -62,7 +61,6 @@ body.${BODY_FEATURE_CLASS} .${CLASS_SEPARATOR} {
   font-size: 0.8125rem;
   font-weight: 600;
   opacity: 0.75;
-  grid-column: 1 / -1;
 }
 body.${BODY_FEATURE_CLASS} .${CLASS_RETRY} {
   margin-left: 0.5rem;

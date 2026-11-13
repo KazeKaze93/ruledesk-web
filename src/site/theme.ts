@@ -103,25 +103,122 @@ function findSiteDesktopStylesheetLink(): HTMLLinkElement | null {
   return null;
 }
 
-/**
- * Swap the site desktop stylesheet link (desktop.css ↔ desktop-dark.css).
- * Preserves query string. No-op (warn) if the link is missing.
- */
-export function applySiteDesktopStylesheet(theme: SiteTheme): void {
-  const link = findSiteDesktopStylesheetLink();
-  if (link === null) {
-    log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-    return;
-  }
+const WARN_STYLESHEET_MISSING =
+  "Site desktop stylesheet link not found; theme cookie updated only";
+const READY_STATE_LOADING = "loading";
+const EVENT_DOM_CONTENT_LOADED = "DOMContentLoaded";
+const STYLESHEET_OBSERVER_OPTIONS: MutationObserverInit = {
+  childList: true,
+  subtree: true,
+};
+
+let pendingStylesheetTheme: SiteTheme | null = null;
+let stylesheetObserver: MutationObserver | null = null;
+let domContentLoadedBound = false;
+
+function swapStylesheetLink(link: HTMLLinkElement, theme: SiteTheme): boolean {
   const href = link.getAttribute("href");
   if (href === null || href.length === 0) {
-    log.warn("Site desktop stylesheet link not found; theme cookie updated only");
-    return;
+    return false;
   }
   link.setAttribute(
     "href",
     replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)),
   );
+  return true;
+}
+
+function disconnectStylesheetWatch(): void {
+  if (stylesheetObserver !== null) {
+    stylesheetObserver.disconnect();
+    stylesheetObserver = null;
+  }
+  if (domContentLoadedBound) {
+    document.removeEventListener(EVENT_DOM_CONTENT_LOADED, onStylesheetDomReady);
+    domContentLoadedBound = false;
+  }
+}
+
+function tryApplyPendingStylesheet(): boolean {
+  if (pendingStylesheetTheme === null) {
+    return false;
+  }
+  const link = findSiteDesktopStylesheetLink();
+  if (link === null) {
+    return false;
+  }
+  if (!swapStylesheetLink(link, pendingStylesheetTheme)) {
+    return false;
+  }
+  pendingStylesheetTheme = null;
+  disconnectStylesheetWatch();
+  return true;
+}
+
+function onStylesheetDomReady(): void {
+  domContentLoadedBound = false;
+  if (tryApplyPendingStylesheet()) {
+    return;
+  }
+  if (pendingStylesheetTheme !== null) {
+    log.warn(WARN_STYLESHEET_MISSING);
+    pendingStylesheetTheme = null;
+    disconnectStylesheetWatch();
+  }
+}
+
+function warnStylesheetMissing(): void {
+  log.warn(WARN_STYLESHEET_MISSING);
+  pendingStylesheetTheme = null;
+  disconnectStylesheetWatch();
+}
+
+/**
+ * Swap desktop.css ↔ desktop-dark.css once the link exists.
+ * At document-start the link is not parsed yet: watch documentElement and
+ * fall back to DOMContentLoaded. Warn only if it is still missing after that.
+ */
+export function scheduleSiteDesktopStylesheet(theme: SiteTheme): void {
+  const link = findSiteDesktopStylesheetLink();
+  if (link !== null && swapStylesheetLink(link, theme)) {
+    pendingStylesheetTheme = null;
+    disconnectStylesheetWatch();
+    return;
+  }
+  pendingStylesheetTheme = theme;
+  if (document.readyState !== READY_STATE_LOADING) {
+    warnStylesheetMissing();
+    return;
+  }
+  const root = document.documentElement;
+  if (stylesheetObserver === null && root !== null) {
+    stylesheetObserver = new MutationObserver(() => {
+      tryApplyPendingStylesheet();
+    });
+    stylesheetObserver.observe(root, STYLESHEET_OBSERVER_OPTIONS);
+  }
+  if (!domContentLoadedBound) {
+    document.addEventListener(EVENT_DOM_CONTENT_LOADED, onStylesheetDomReady);
+    domContentLoadedBound = true;
+  }
+}
+
+/** Drops a document-start stylesheet watch (tests). */
+export function resetSiteDesktopStylesheetWatch(): void {
+  pendingStylesheetTheme = null;
+  disconnectStylesheetWatch();
+}
+
+/** Cookie only. Stylesheet swap is {@link scheduleSiteDesktopStylesheet}. */
+export function writeSiteThemeCookie(theme: SiteTheme): void {
+  if (theme === "dark") {
+    const expires = new Date(
+      Date.now() + SITE_THEME_COOKIE_MAX_AGE_DAYS * MS_PER_DAY,
+    );
+    writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, expires);
+    return;
+  }
+  clearSiteThemeCookie();
 }
 
 /**
@@ -129,8 +226,8 @@ export function applySiteDesktopStylesheet(theme: SiteTheme): void {
  * Does not touch html.rdw-skin (that is owned by src/skin/theme.ts).
  */
 export function forceLightSiteBase(): void {
-  clearSiteThemeCookie();
-  applySiteDesktopStylesheet("light");
+  writeSiteThemeCookie("light");
+  scheduleSiteDesktopStylesheet("light");
 }
 
 export function getSiteTheme(): SiteTheme {
@@ -142,13 +239,6 @@ export function getSiteTheme(): SiteTheme {
 }
 
 export function setSiteTheme(theme: SiteTheme): void {
-  if (theme === "dark") {
-    const expires = new Date(
-      Date.now() + SITE_THEME_COOKIE_MAX_AGE_DAYS * MS_PER_DAY,
-    );
-    writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, expires);
-  } else {
-    clearSiteThemeCookie();
-  }
-  applySiteDesktopStylesheet(theme);
+  writeSiteThemeCookie(theme);
+  scheduleSiteDesktopStylesheet(theme);
 }

@@ -18,12 +18,18 @@ Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
 Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typically 0/5 vs ~5/5 with UserScripts API; pages also open faster. Prefer Dynamic for RuleDesk Web.
 
+### 0.15.1 notes
+
+- **Grid:** Default / Compact / Large only (saved Masonry becomes Default). Thumb gap is 4px on both axes; cell sizes stay 150 / site default / 250
+- **Post panel:** Info / Comments always opens on Info (the choice is not saved). Collections list is drawn outside the scrolling column
+- **Site theme:** document-start writes the theme cookie only; the desktop stylesheet swaps when its `<link>` appears (no missing-link warning before the document is parsed)
+- **Tag groups:** collapsed rows hide again under the site skin
+
 ### 0.15.0 notes
 
 - **Post panel tabs:** Info / Comments tabs in the post panel (native `#post-comments` in Comments; reply form stays on the page)
 - **Video size:** Fit height (may upscale; fills under the header, not wider than the media column), Fit width, Original (pixel-perfect); default Fit height. Persist volume/mute/rate (no mouse-wheel volume)
 - **Video preview on hover:** optional grid webm preview (default off; 200 ms hover delay; each preview loads the video file itself)
-- **Masonry grid:** column `minmax` floor 170px
 - **Skin:** stylesheet URL slash-collapse; thinner scrollbars; post panel tab styles
 
 ### 0.14.0 notes
@@ -36,7 +42,6 @@ Measured on Tampermonkey 5.5.1: with Dynamic, native page flash on load is typic
 
 ### 0.13.0 notes
 
-- **Masonry grid:** CSS grid masonry density on list pages (row-span thumbs; infinite-scroll separators span full width)
 - **AI filter:** search-tools control to exclude AI-tagged posts
 - **Post panel:** redesigned post-page actions (Favorite, collections, Original, score, stats, More)
 - **Bulk favorites:** select and remove multiple favorites on the favorites page
@@ -125,7 +130,7 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 | `blacklist-hide` | Hide blacklisted thumbs | on | list | Hides thumbs matching the site blacklist cookie (no reload) |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / collection / Original / Score bar (and Options proxies) on the post page |
-| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (CSS grid + row-span on list; content flex-grows; favorites falls back to default) |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large; 4px gap on both axes (cell size unchanged) |
 | `video-player` | Video player tweaks | on | post | Persist volume/mute/rate; **Video size**: Fit height (may upscale; under header, ≤ media column), Fit width, Original (pixel-perfect) |
 | `video-preview` | Video preview on hover | off | list, favorites | Hover preview on webm thumbs after 200 ms (loads the video file itself) |
 

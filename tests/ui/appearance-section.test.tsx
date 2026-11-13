@@ -200,13 +200,13 @@ describe("createAppearanceSection", () => {
     const gridTrigger = selectTriggers(host)[1];
     expect(gridTrigger).toBeTruthy();
     fireClick(gridTrigger!);
-    chooseSelectOption(host, "Masonry");
+    chooseSelectOption(host, "Large");
     await flushEffects();
 
-    expect(getFeatureChoiceValue("grid-density")).toBe("masonry");
+    expect(getFeatureChoiceValue("grid-density")).toBe("large");
     expect(
       document.body.classList.contains(
-        featureChoiceBodyClass("grid-density", "masonry"),
+        featureChoiceBodyClass("grid-density", "large"),
       ),
     ).toBe(true);
   });

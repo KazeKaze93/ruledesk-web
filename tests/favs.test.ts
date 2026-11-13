@@ -297,6 +297,36 @@ describe("favs storage", () => {
     expect(again.changed).toBe(false);
   });
 
+  it("rewrites saved masonry to default and drops the post panel tab", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [],
+      marks: {},
+      settings: {
+        gridFavButtons: true,
+        featureChoice: {
+          "grid-density": "masonry",
+          "post-actions": "comments",
+          "video-player": "fit-width",
+        },
+      },
+    });
+
+    migrateMarksFavToFavs();
+
+    expect(load().settings?.featureChoice).toEqual({
+      "grid-density": "default",
+      "video-player": "fit-width",
+    });
+
+    migrateMarksFavToFavs();
+    expect(load().settings?.featureChoice).toEqual({
+      "grid-density": "default",
+      "video-player": "fit-width",
+    });
+  });
+
   it("imports old format with marks.fav into favs", () => {
     save(createDefaultStorage());
     addFav(1);

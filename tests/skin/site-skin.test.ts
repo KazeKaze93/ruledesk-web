@@ -170,11 +170,14 @@ describe("site-skin CSS export", () => {
     );
   });
 
-  it("sets sidebar to 228px and grid gap to 12px", () => {
+  it("sets sidebar to 228px and grid gap to 4px on both axes", () => {
     expect(SITE_SKIN_CSS).toContain("width: 228px");
     expect(SITE_SKIN_CSS).toContain("min-width: 228px");
     expect(SITE_SKIN_CSS).toContain("max-width: 228px");
-    expect(SITE_SKIN_CSS).toMatch(/div\.image-list\s*\{[^}]*gap:\s*12px/s);
+    expect(SITE_SKIN_CSS).toMatch(
+      /div\.image-list\s*\{[^}]*column-gap:\s*4px/s,
+    );
+    expect(SITE_SKIN_CSS).toMatch(/div\.image-list\s*\{[^}]*row-gap:\s*4px/s);
   });
 
   it("removes native chrome images and thick blue webm border", () => {

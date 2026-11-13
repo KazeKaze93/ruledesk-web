@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 
+import { RDW_SKIN_CLASS } from "../config/constants";
 import { log } from "../log";
 import {
   featureBodyClass,
@@ -31,8 +32,18 @@ const DEFAULT_COLLAPSED: readonly GroupHeaderName[] = ["General", "Meta"];
 
 const FEATURE_PAGES = ["list", "post"] as const;
 
+/**
+ * Site-skin `html.rdw-skin ul#tag-sidebar > li { display: block }` includes an id,
+ * so a body+class rule cannot hide the row. Match that chain, then add the
+ * collapsed class. The second selector covers site themes (no html.rdw-skin).
+ */
+const COLLAPSED_ROW = `ul#tag-sidebar > li.${COLLAPSED_CLASS}`;
+const HIDE_COLLAPSED_WITH_SKIN = `html.${RDW_SKIN_CLASS} body.${BODY_FEATURE_CLASS} ${COLLAPSED_ROW}`;
+const HIDE_COLLAPSED_SITE_THEME = `body.${BODY_FEATURE_CLASS} ${COLLAPSED_ROW}`;
+
 const FEATURE_CSS = [
-  `body.${BODY_FEATURE_CLASS} li.${COLLAPSED_CLASS} { display: none; }`,
+  `${HIDE_COLLAPSED_WITH_SKIN},`,
+  `${HIDE_COLLAPSED_SITE_THEME} { display: none; }`,
   `body.${BODY_FEATURE_CLASS} button.${TOGGLE_CLASS} {`,
   "  background: transparent;",
   "  border: none;",

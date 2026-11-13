@@ -53,7 +53,6 @@ import {
   clearStorageCache,
   createPlaylist,
   getFeatureChoiceValue,
-  setFeatureChoiceValue,
 } from "../../src/storage/store";
 import { kitTabId, kitTabPanelId } from "../../src/ui/kit";
 
@@ -988,7 +987,7 @@ describe("postActionsFeature", () => {
     ).toBe(TEXT_COMMENTS);
   });
 
-  it("remembers selected Info/Comments tab in featureChoice", async () => {
+  it("opens Info on every post and does not persist the tab", async () => {
     buildPostDom({ includeComments: true });
     postActionsFeature.mount(makeCtx());
 
@@ -1011,36 +1010,25 @@ describe("postActionsFeature", () => {
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     await vi.waitFor(() => {
-      expect(getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID)).toBe(
-        POST_PANEL_TAB_COMMENTS,
-      );
+      expect(commentsPanel?.hasAttribute("hidden")).toBe(false);
     });
-    expect(commentsPanel?.hasAttribute("hidden")).toBe(false);
     expect(infoPanel?.hasAttribute("hidden")).toBe(true);
+    expect(getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID)).toBeUndefined();
 
     document.body.replaceChildren();
     buildPostDom({ includeComments: true });
     postActionsFeature.mount(makeCtx());
     expect(
       document
-        .getElementById(kitTabPanelId(POST_PANEL_TAB_COMMENTS))
+        .getElementById(kitTabPanelId(POST_PANEL_TAB_INFO))
         ?.hasAttribute("hidden"),
     ).toBe(false);
     expect(
       document
-        .getElementById(kitTabId(POST_PANEL_TAB_COMMENTS))
-        ?.getAttribute("aria-selected"),
-    ).toBe("true");
-  });
-
-  it("falls back to Info when stored Comments tab has no comments block", () => {
-    setFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID, POST_PANEL_TAB_COMMENTS);
-    buildPostDom();
-    postActionsFeature.mount(makeCtx());
-    expect(document.querySelector(`.${CLASS_TABS}`)).toBeNull();
-    expect(
-      document.getElementById(kitTabPanelId(POST_PANEL_TAB_INFO)),
-    ).not.toBeNull();
+        .getElementById(kitTabPanelId(POST_PANEL_TAB_COMMENTS))
+        ?.hasAttribute("hidden"),
+    ).toBe(true);
+    expect(getFeatureChoiceValue(POST_PANEL_TAB_CHOICE_ID)).toBeUndefined();
   });
 
   it("replaces an existing panel on remount", () => {
