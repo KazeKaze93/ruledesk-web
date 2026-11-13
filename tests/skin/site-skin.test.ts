@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { RDW_SKIN_CLASS, RDW_THEME_ATTR } from "../../src/config/constants";
 import { getSiteSkinCss, SITE_SKIN_CSS } from "../../src/skin/site-skin";
-import { TOKEN_VAR } from "../../src/ui/tokens";
+import { LIGHT_PALETTE, TOKEN_VAR } from "../../src/ui/tokens";
 
 const HEX_IN_RULES = /#[0-9a-fA-F]{3,8}\b/;
 const COMMENT_BLOCK = /\/\*[\s\S]*?\*\//g;
@@ -37,6 +37,10 @@ const KEY_SELECTORS = [
   `div.quote`,
   `img#image`,
   `div#note-container`,
+  `div#forum`,
+  `ul.flat-list`,
+  `div.link-list`,
+  `span.thumb > a[onclick]`,
 ] as const;
 
 function stripComments(css: string): string {
@@ -117,5 +121,26 @@ describe("site-skin CSS export", () => {
     );
     expect(SITE_SKIN_CSS).toContain(".awesomplete > ul:before");
     expect(SITE_SKIN_CSS).toContain("display: none");
+  });
+
+  it("uses light page bg from mock-site-skin .new, not the old green", () => {
+    expect(LIGHT_PALETTE.bg).toBe("#f3f5f7");
+    expect(LIGHT_PALETTE.bg).not.toBe("#aae5a4");
+  });
+
+  it("colors the last tag-sidebar link by type; mutes the others", () => {
+    expect(SITE_SKIN_CSS).toContain(
+      'ul#tag-sidebar > li[class*="tag-type-"] > a:not(:last-of-type)',
+    );
+    expect(SITE_SKIN_CSS).toContain(
+      "ul#tag-sidebar > li.tag-type-artist > a:last-of-type",
+    );
+    expect(SITE_SKIN_CSS).not.toContain("a:nth-of-type(-n+3)");
+  });
+
+  it("hides the standalone Tags heading above the tag list card", () => {
+    expect(SITE_SKIN_CSS).toMatch(
+      /div\.sidebar\s*>\s*h5\s*\{[^}]*display:\s*none/s,
+    );
   });
 });

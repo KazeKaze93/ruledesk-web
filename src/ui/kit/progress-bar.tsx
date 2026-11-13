@@ -4,8 +4,10 @@ import { useEffect, useRef } from "preact/hooks";
 const PROGRESS_WIDTH_VAR = "--rdw-progress-width";
 
 export type ProgressBarProps = {
-  /** 0–1 when determinate; omit or null for indeterminate. */
+  /** 0–1 when determinate; omit or null leaves the bar empty unless waiting. */
   readonly value?: number | null;
+  /** Explicit waiting animation; not implied by a missing value. */
+  readonly waiting?: boolean;
   readonly label?: string;
   readonly className?: string;
 };
@@ -61,9 +63,9 @@ function clampUnit(value: number): number {
 
 export function ProgressBar(props: ProgressBarProps): JSX.Element {
   const fillRef = useRef<HTMLDivElement>(null);
-  const indeterminate =
-    props.value === undefined || props.value === null;
-  const ratio = indeterminate ? 0 : clampUnit(props.value);
+  const waiting = props.waiting === true;
+  const hasValue = props.value !== undefined && props.value !== null;
+  const ratio = hasValue ? clampUnit(props.value) : 0;
   const className = ["rdw-progress", props.className]
     .filter((part) => part !== undefined && part.length > 0)
     .join(" ");
@@ -73,12 +75,12 @@ export function ProgressBar(props: ProgressBarProps): JSX.Element {
     if (fill === null) {
       return;
     }
-    if (indeterminate) {
+    if (waiting || !hasValue) {
       fill.style.removeProperty(PROGRESS_WIDTH_VAR);
       return;
     }
     fill.style.setProperty(PROGRESS_WIDTH_VAR, `${Math.round(ratio * 100)}%`);
-  }, [indeterminate, ratio]);
+  }, [waiting, hasValue, ratio]);
 
   return (
     <>
@@ -93,12 +95,12 @@ export function ProgressBar(props: ProgressBarProps): JSX.Element {
           aria-label={props.label}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={indeterminate ? undefined : Math.round(ratio * 100)}
+          aria-valuenow={hasValue && !waiting ? Math.round(ratio * 100) : undefined}
         >
           <div
             ref={fillRef}
             className={
-              indeterminate
+              waiting
                 ? "rdw-progress__fill rdw-progress__fill--indeterminate"
                 : "rdw-progress__fill"
             }

@@ -17,6 +17,7 @@ const HIDE_LINK_TEXTS = [
   "DMCA",
   "About",
   "TOS",
+  "My Favorites",
 ] as const;
 
 const HIDE_LINK_TEXT_SET: ReadonlySet<string> = new Set(HIDE_LINK_TEXTS);

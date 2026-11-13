@@ -97,11 +97,24 @@ export const StorageSchema = z.object({
   updates: z.optional(UpdatesSchema),
 });
 
+/** Legacy floating-panel size keys under settings.featureState.panel. */
+export const LEGACY_PANEL_FEATURE_STATE_ID = "panel";
+export const LEGACY_PANEL_WIDTH_KEY = "width";
+export const LEGACY_PANEL_HEIGHT_KEY = "height";
+
+export const FavsSyncLockSchema = z.object({
+  tabId: z.string().check(z.minLength(1)),
+  beatAt: z.number(),
+});
+
 export const FavsSyncSchema = z.object({
   nextPid: z.int(),
   lastPid: z.int(),
   startedAt: z.string(),
   finishedAt: z.optional(z.string()),
+  running: z.optional(z.boolean()),
+  userId: z.optional(z.int()),
+  lock: z.optional(FavsSyncLockSchema),
 });
 
 export const FavsSchema = z.object({
@@ -133,9 +146,74 @@ export type Appearance = z.infer<typeof AppearanceSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 export type UpdatesState = z.infer<typeof UpdatesSchema>;
 export type StorageData = z.infer<typeof StorageSchema>;
+export type FavsSyncLock = z.infer<typeof FavsSyncLockSchema>;
 export type FavsSyncState = z.infer<typeof FavsSyncSchema>;
 export type FavsData = z.infer<typeof FavsSchema>;
 export type ExportBlob = z.infer<typeof ExportBlobSchema>;
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Drop legacy floating-panel width/height from featureState.panel.
+ * Keeps tab and any other keys. No SCHEMA_VERSION bump.
+ */
+export function stripLegacyPanelWindowSize(
+  data: StorageData,
+): { data: StorageData; changed: boolean } {
+  const featureState = data.settings?.featureState;
+  if (featureState === undefined) {
+    return { data, changed: false };
+  }
+  const panelRaw = featureState[LEGACY_PANEL_FEATURE_STATE_ID];
+  if (!isUnknownRecord(panelRaw)) {
+    return { data, changed: false };
+  }
+  const hasWidth = Object.prototype.hasOwnProperty.call(
+    panelRaw,
+    LEGACY_PANEL_WIDTH_KEY,
+  );
+  const hasHeight = Object.prototype.hasOwnProperty.call(
+    panelRaw,
+    LEGACY_PANEL_HEIGHT_KEY,
+  );
+  if (!hasWidth && !hasHeight) {
+    return { data, changed: false };
+  }
+
+  const nextPanel: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(panelRaw)) {
+    if (key === LEGACY_PANEL_WIDTH_KEY || key === LEGACY_PANEL_HEIGHT_KEY) {
+      continue;
+    }
+    nextPanel[key] = value;
+  }
+
+  const nextFeatureState: Record<string, unknown> = { ...featureState };
+  if (Object.keys(nextPanel).length === 0) {
+    delete nextFeatureState[LEGACY_PANEL_FEATURE_STATE_ID];
+  } else {
+    nextFeatureState[LEGACY_PANEL_FEATURE_STATE_ID] = nextPanel;
+  }
+
+  const nextSettings = data.settings === undefined
+    ? { gridFavButtons: DEFAULT_GRID_FAV_BUTTONS }
+    : { ...data.settings };
+  if (Object.keys(nextFeatureState).length === 0) {
+    delete nextSettings.featureState;
+  } else {
+    nextSettings.featureState = nextFeatureState;
+  }
+
+  return {
+    data: {
+      ...data,
+      settings: nextSettings,
+    },
+    changed: true,
+  };
+}
 
 export function isPlaylist(collection: Collection): boolean {
   return collection.kind === COLLECTION_KIND_POSTS;

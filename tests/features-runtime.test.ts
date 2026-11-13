@@ -31,8 +31,13 @@ import {
   setPostSeenMark,
   setTweaksEnabled,
 } from "../src/storage/store";
-import { mountPanel } from "../src/ui/panel";
-import { PANEL_ROOT_ID } from "../src/config/constants";
+import {
+  FEATURE_CHECKBOX_ID_PREFIX,
+  RDW_PAGE_ROOT_ID,
+  RDW_ROUTE_SETTINGS,
+  TWEAKS_SWITCH_ID,
+} from "../src/pages/constants";
+import { hideRdwPage, showRdwPage } from "../src/pages/host";
 
 const memory = new Map<string, unknown>();
 const ORIGINAL_FEATURES = [...FEATURES];
@@ -452,7 +457,7 @@ describe("features runtime", () => {
   });
 });
 
-describe("panel settings apply", () => {
+describe("settings page feature apply", () => {
   beforeEach(() => {
     installGmMocks();
     memory.set(DEBUG_KEY, false);
@@ -461,18 +466,22 @@ describe("panel settings apply", () => {
     document.body.replaceChildren();
     document.body.className = "";
     document.head.querySelectorAll("style").forEach((node) => node.remove());
+    const header = document.createElement("div");
+    header.id = "header";
+    document.body.append(header);
     window.history.replaceState({}, "", "/index.php?page=post&s=list");
   });
 
   afterEach(() => {
     restoreFeatures();
     resetFeatureRuntimeState();
-    document.getElementById(PANEL_ROOT_ID)?.remove();
+    hideRdwPage();
+    document.body.replaceChildren();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  function clickPanel(el: Element): void {
+  function clickControl(el: Element): void {
     act(() => {
       el.dispatchEvent(
         new MouseEvent("click", { bubbles: true, composed: true }),
@@ -480,27 +489,20 @@ describe("panel settings apply", () => {
     });
   }
 
-  function openPanelTab(tab: "settings" | "blacklist"): ShadowRoot {
-    mountPanel();
-    const host = document.getElementById(PANEL_ROOT_ID);
+  function openSettingsShadow(): ShadowRoot {
+    const header = document.getElementById("header");
+    expect(header).toBeInstanceOf(HTMLElement);
+    if (!(header instanceof HTMLElement)) {
+      throw new Error("expected #header");
+    }
+    showRdwPage(RDW_ROUTE_SETTINGS, header);
+    const host = document.getElementById(RDW_PAGE_ROOT_ID);
     expect(host).not.toBeNull();
     const shadow = host?.shadowRoot;
     expect(shadow).not.toBeNull();
     if (shadow === null || shadow === undefined) {
-      throw new Error("expected panel shadow root");
+      throw new Error("expected settings page shadow root");
     }
-    const toggle = shadow.querySelector("#ruledesk-web-toggle");
-    expect(toggle).toBeInstanceOf(HTMLButtonElement);
-    if (!(toggle instanceof HTMLButtonElement)) {
-      throw new Error("expected toggle button");
-    }
-    clickPanel(toggle);
-    const tabButton = shadow.querySelector(`#rdw-tab-${tab}`);
-    expect(tabButton).toBeInstanceOf(HTMLButtonElement);
-    if (!(tabButton instanceof HTMLButtonElement)) {
-      throw new Error(`expected ${tab} tab`);
-    }
-    clickPanel(tabButton);
     return shadow;
   }
 
@@ -511,7 +513,7 @@ describe("panel settings apply", () => {
       throw new Error(`expected switch #${id}`);
     }
     expect(control.getAttribute("role")).toBe("switch");
-    clickPanel(control);
+    clickControl(control);
   }
 
   it("reloads when a non-cssOnly feature is toggled", () => {
@@ -530,8 +532,8 @@ describe("panel settings apply", () => {
       }),
     );
 
-    const shadow = openPanelTab("settings");
-    clickSwitch(shadow, "rdw-feature-needs-reload");
+    const shadow = openSettingsShadow();
+    clickSwitch(shadow, `${FEATURE_CHECKBOX_ID_PREFIX}needs-reload`);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
@@ -545,7 +547,7 @@ describe("panel settings apply", () => {
 
     FEATURES.push(
       makeFeature({
-        id: "live-panel",
+        id: "live-settings",
         pages: ["list"],
         defaultEnabled: false,
         cssOnly: true,
@@ -553,11 +555,11 @@ describe("panel settings apply", () => {
     );
 
     runFeatures("list", "?page=post&s=list");
-    const shadow = openPanelTab("settings");
-    clickSwitch(shadow, "rdw-feature-live-panel");
+    const shadow = openSettingsShadow();
+    clickSwitch(shadow, `${FEATURE_CHECKBOX_ID_PREFIX}live-settings`);
     expect(reload).not.toHaveBeenCalled();
     expect(
-      document.body.classList.contains(featureBodyClass("live-panel")),
+      document.body.classList.contains(featureBodyClass("live-settings")),
     ).toBe(true);
   });
 
@@ -569,27 +571,16 @@ describe("panel settings apply", () => {
       search: "?page=post&s=list",
     });
 
-    const shadow = openPanelTab("settings");
-    clickSwitch(shadow, "rdw-tweaks-enabled");
+    const shadow = openSettingsShadow();
+    clickSwitch(shadow, TWEAKS_SWITCH_ID);
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show a reload-to-apply hint for feature toggles", () => {
-    const settings = openPanelTab("settings");
-    const settingsText =
-      settings.querySelector("#rdw-tabpanel-settings")?.textContent ?? "";
-    expect(settingsText).not.toContain("Reload the page to apply");
-
-    const blacklistTab = settings.querySelector("#rdw-tab-blacklist");
-    expect(blacklistTab).toBeInstanceOf(HTMLButtonElement);
-    if (!(blacklistTab instanceof HTMLButtonElement)) {
-      throw new Error("expected blacklist tab");
-    }
-    clickPanel(blacklistTab);
-    const blacklist = settings.querySelector(".rdw-blacklist");
-    expect(blacklist).not.toBeNull();
-    expect(blacklist?.textContent ?? "").toContain(
-      "Saved. Reload the page to apply.",
-    );
+  it("does not show a reload-to-apply hint on Settings or Blacklist", () => {
+    const shadow = openSettingsShadow();
+    const text = shadow.textContent ?? "";
+    expect(text).not.toContain("Reload the page to apply");
+    expect(text).not.toContain("Saved. Reload the page to apply.");
+    expect(text).toContain("Blacklist");
   });
 });

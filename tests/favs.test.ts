@@ -16,7 +16,11 @@ import {
   removeFav,
   setSyncState,
 } from "../src/storage/favs";
-import { createDefaultStorage } from "../src/storage/schema";
+import {
+  LEGACY_PANEL_FEATURE_STATE_ID,
+  createDefaultStorage,
+  stripLegacyPanelWindowSize,
+} from "../src/storage/schema";
 import {
   clearStorageCache,
   exportJson,
@@ -143,19 +147,85 @@ describe("favs storage", () => {
       nextPid: 42,
       lastPid: 0,
       startedAt: "2026-01-01T00:00:00.000Z",
+      running: true,
+      userId: 479099,
+      lock: { tabId: "t1", beatAt: 1_700_000_000_000 },
     });
     expect(getSyncState()).toEqual({
       nextPid: 42,
       lastPid: 0,
       startedAt: "2026-01-01T00:00:00.000Z",
+      running: true,
+      userId: 479099,
+      lock: { tabId: "t1", beatAt: 1_700_000_000_000 },
     });
     clearFavsCache();
     expect(getSyncState()).toEqual({
       nextPid: 42,
       lastPid: 0,
       startedAt: "2026-01-01T00:00:00.000Z",
+      running: true,
+      userId: 479099,
+      lock: { tabId: "t1", beatAt: 1_700_000_000_000 },
     });
     expect(isFav(1)).toBe(true);
+  });
+
+  it("reads legacy sync blobs without running/userId/lock", () => {
+    memory.set(FAVS_STORAGE_KEY, {
+      version: 1,
+      ids: [1],
+      sync: {
+        nextPid: 50,
+        lastPid: 100,
+        startedAt: "2020-01-01T00:00:00.000Z",
+      },
+    });
+    clearFavsCache();
+    expect(getSyncState()).toEqual({
+      nextPid: 50,
+      lastPid: 100,
+      startedAt: "2020-01-01T00:00:00.000Z",
+    });
+    expect(isFav(1)).toBe(true);
+  });
+
+  it("strips legacy panel window size without SCHEMA_VERSION bump", () => {
+    memory.set(STORAGE_KEY, {
+      version: 1,
+      collections: [],
+      artists: [{ tag: "artist_a" }],
+      marks: {
+        "9": { seen: true },
+      },
+      settings: {
+        gridFavButtons: true,
+        featureState: {
+          [LEGACY_PANEL_FEATURE_STATE_ID]: {
+            tab: "favorites",
+            width: 480,
+            height: 640,
+          },
+          "tag-groups": { collapsed: true },
+        },
+      },
+    });
+
+    migrateMarksFavToFavs();
+
+    const main = load();
+    expect(main.version).toBe(1);
+    expect(main.artists).toEqual([{ tag: "artist_a" }]);
+    expect(main.marks["9"]).toEqual({ seen: true });
+    expect(main.settings?.featureState?.[LEGACY_PANEL_FEATURE_STATE_ID]).toEqual({
+      tab: "favorites",
+    });
+    expect(main.settings?.featureState?.["tag-groups"]).toEqual({
+      collapsed: true,
+    });
+
+    const again = stripLegacyPanelWindowSize(main);
+    expect(again.changed).toBe(false);
   });
 
   it("imports old format with marks.fav into favs", () => {

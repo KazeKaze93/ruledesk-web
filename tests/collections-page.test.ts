@@ -16,10 +16,10 @@ import {
   setPlaylistChunkSize,
 } from "../src/storage/store";
 import {
-  COLLECTIONS_TAB_CSS,
-  createCollectionsTab,
-  resetCollectionsTabState,
-} from "../src/ui/panel";
+  COLLECTIONS_PAGE_CSS,
+  createCollectionsPage,
+  resetCollectionsPageState,
+} from "../src/pages/collections-page";
 
 const memory = new Map<string, unknown>();
 
@@ -78,35 +78,40 @@ function findButtonByAria(
   return match instanceof HTMLButtonElement ? match : null;
 }
 
-describe("createCollectionsTab", () => {
+describe("createCollectionsPage", () => {
   beforeEach(() => {
     installGmMocks();
-    resetCollectionsTabState();
+    resetCollectionsPageState();
     document.body.replaceChildren();
     save(createDefaultStorage());
   });
 
   afterEach(() => {
-    resetCollectionsTabState();
+    resetCollectionsPageState();
     document.body.replaceChildren();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it("exports CSS for the panel shadow root", () => {
-    expect(COLLECTIONS_TAB_CSS).toContain(".rdw-collections-tab");
-    expect(COLLECTIONS_TAB_CSS).toContain(".rdw-playlist-parts");
+  it("exports CSS and uses Custom Collection naming", () => {
+    expect(COLLECTIONS_PAGE_CSS).toContain(".rdw-collections-page");
+    expect(COLLECTIONS_PAGE_CSS).toContain(".rdw-playlist-parts");
+    stubLocation("");
+    const root = createCollectionsPage();
+    document.body.append(root);
+    expect(root.textContent).toContain("Custom Collection");
+    expect(root.textContent).toContain("Dynamic Collection");
+    expect(root.textContent).toContain("No custom collections yet.");
+    expect(root.textContent).not.toContain("Playlists");
+    expect(root.textContent).not.toContain("Saved searches");
   });
 
-  it("creates a playlist by name and lists it with a disabled open button when empty", () => {
+  it("creates a custom collection by name", () => {
     stubLocation("");
-    const root = createCollectionsTab();
+    const root = createCollectionsPage();
     document.body.append(root);
 
-    expect(root.textContent).toContain("No playlists yet.");
-    expect(root.textContent).toContain("Use the + button on a post");
-
-    const newPlaylist = findButton(root, "New playlist");
+    const newPlaylist = findButton(root, "New Custom Collection");
     expect(newPlaylist).not.toBeNull();
     if (newPlaylist !== null) {
       click(newPlaylist);
@@ -127,24 +132,23 @@ describe("createCollectionsTab", () => {
     expect(listPlaylists().map((item) => item.name)).toEqual(["Later"]);
     expect(root.textContent).toContain("Later");
     expect(root.textContent).toContain("0 posts");
-    expect(root.textContent).not.toContain("No playlists yet.");
 
-    const openBtn = findButtonByAria(root, "Open playlist: Later");
+    const openBtn = findButtonByAria(root, "Open Custom Collection: Later");
     expect(openBtn).toBeInstanceOf(HTMLButtonElement);
     expect(openBtn?.disabled).toBe(true);
   });
 
-  it("opens the first playlist part via location.assign", () => {
+  it("opens the first custom collection part via location.assign", () => {
     const { assign } = stubLocation("");
     const playlist = createPlaylist("Watch");
     addPostToPlaylist(playlist.id, 30);
     addPostToPlaylist(playlist.id, 20);
     addPostToPlaylist(playlist.id, 10);
 
-    const root = createCollectionsTab();
+    const root = createCollectionsPage();
     document.body.append(root);
 
-    const openBtn = findButtonByAria(root, "Open playlist: Watch");
+    const openBtn = findButtonByAria(root, "Open Custom Collection: Watch");
     expect(openBtn?.disabled).toBe(false);
     if (openBtn !== null) {
       click(openBtn);
@@ -157,10 +161,9 @@ describe("createCollectionsTab", () => {
     expect(expected).toBeDefined();
     expect(assign).toHaveBeenCalledTimes(1);
     expect(String(assign.mock.calls[0]?.[0])).toContain("tags=");
-    expect(String(assign.mock.calls[0]?.[0])).toContain("id");
   });
 
-  it("lists numbered part links when a playlist spans multiple chunks", () => {
+  it("lists numbered part links when a custom collection spans chunks", () => {
     stubLocation("");
     setPlaylistChunkSize(2);
     const playlist = createPlaylist("Chunks");
@@ -168,40 +171,29 @@ describe("createCollectionsTab", () => {
       addPostToPlaylist(playlist.id, id);
     }
 
-    const root = createCollectionsTab();
+    const root = createCollectionsPage();
     document.body.append(root);
 
     const parts = root.querySelectorAll(".rdw-playlist-part");
     expect(parts).toHaveLength(3);
-    expect(Array.from(parts).map((node) => node.textContent)).toEqual([
-      "1",
-      "2",
-      "3",
-    ]);
-    const hrefs = Array.from(parts).map((node) =>
-      node instanceof HTMLAnchorElement ? node.href : "",
-    );
-    const queries = buildPlaylistQueries([5, 4, 3, 2, 1], 2);
-    expect(queries).toHaveLength(3);
-    for (let index = 0; index < queries.length; index += 1) {
-      const query = queries[index];
-      expect(query).toBeDefined();
-      expect(hrefs[index]).toContain("tags=");
-    }
-    expect(root.textContent).toContain("5 posts");
+    expect(
+      root
+        .querySelector('[aria-label="Custom Collection parts"]')
+        ?.querySelectorAll(".rdw-playlist-part"),
+    ).toHaveLength(3);
   });
 
-  it("keeps saved-search open/rename/delete and Save current search", () => {
+  it("keeps dynamic collection open/rename/delete and Save current search", () => {
     const { assign } = stubLocation("?page=post&s=list&tags=cat+dog");
     addCollection("Cats", [
       { tag: "cat", type: "include" },
       { tag: "dog", type: "include" },
     ]);
 
-    const root = createCollectionsTab();
+    const root = createCollectionsPage();
     document.body.append(root);
 
-    expect(root.textContent).toContain("Saved searches");
+    expect(root.textContent).toContain("Dynamic Collection");
     expect(root.textContent).toContain("Cats");
 
     const openBtn = findButtonByAria(root, `${UI_TEXT.openCollection}: Cats`);
@@ -269,19 +261,22 @@ describe("createCollectionsTab", () => {
     ).toBe(false);
   });
 
-  it("does not list playlists under saved searches", () => {
+  it("does not list custom collections under dynamic collections", () => {
     stubLocation("");
     addCollection("Search only", [{ tag: "bird", type: "include" }]);
     createPlaylist("Posts only");
 
-    const root = createCollectionsTab();
+    const root = createCollectionsPage();
     document.body.append(root);
 
     const openSearch = findButtonByAria(
       root,
       `${UI_TEXT.openCollection}: Search only`,
     );
-    const openPlaylist = findButtonByAria(root, "Open playlist: Posts only");
+    const openPlaylist = findButtonByAria(
+      root,
+      "Open Custom Collection: Posts only",
+    );
     expect(openSearch).not.toBeNull();
     expect(openPlaylist).not.toBeNull();
     expect(

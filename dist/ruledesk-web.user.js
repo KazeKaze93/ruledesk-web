@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         RuleDesk Web
 // @namespace    https://github.com/kazekaze93/ruledesk-web
-// @version      0.9.0
+// @version      0.10.0
 // @description  Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx
 // @downloadURL  https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
 // @updateURL    https://raw.githubusercontent.com/KazeKaze93/ruledesk-web/main/dist/ruledesk-web.user.js
@@ -49,16 +49,11 @@
 	var TAG_TYPE_INCLUDE = "include";
 	var TAG_TYPE_EXCLUDE = "exclude";
 	var UPDATES_ID_PREFIX = "id:>";
-	var EXPORT_FILENAME = "ruledesk-web-collections.json";
-	var EXPORT_MIME = "application/json";
 	var IMPORT_SCHEMA_ERROR_PREFIX = "File is not a RuleDesk Web export";
 	var COLLECTION_KIND_SEARCH = "search";
 	var COLLECTION_KIND_POSTS = "posts";
-	var PANEL_ROOT_ID = "ruledesk-web-root";
-	var TOGGLE_BUTTON_ID = "ruledesk-web-toggle";
 	var DOCUMENT_STYLE_ID = "ruledesk-web-document-style";
 	var UPDATES_BAR_ID = "ruledesk-web-updates-bar";
-	var USERSCRIPT_VERSION = "0.9.0";
 	var SITE_THEME_COOKIE_NAME = "theme";
 	var SITE_THEME_COOKIE_VALUE_DARK = "dark";
 	var SITE_BLACKLIST_COOKIE_NAME = "tag_blacklist";
@@ -1894,14 +1889,15 @@
 		fav: optional(boolean()),
 		seen: optional(boolean())
 	});
+	var AppearanceThemeSchema = _enum([
+		APPEARANCE_THEME_SITE,
+		APPEARANCE_THEME_SITE_DARK,
+		APPEARANCE_THEME_LIGHT,
+		APPEARANCE_THEME_DARK,
+		APPEARANCE_THEME_CUSTOM
+	]);
 	var AppearanceSchema = object({
-		theme: _enum([
-			APPEARANCE_THEME_SITE,
-			APPEARANCE_THEME_SITE_DARK,
-			APPEARANCE_THEME_LIGHT,
-			APPEARANCE_THEME_DARK,
-			APPEARANCE_THEME_CUSTOM
-		]),
+		theme: AppearanceThemeSchema,
 		custom: optional(object({
 			accent: string(),
 			bg: string(),
@@ -1930,26 +1926,66 @@
 		settings: optional(SettingsSchema),
 		updates: optional(UpdatesSchema)
 	});
+	var LEGACY_PANEL_FEATURE_STATE_ID = "panel";
+	var LEGACY_PANEL_WIDTH_KEY = "width";
+	var LEGACY_PANEL_HEIGHT_KEY = "height";
+	var FavsSyncLockSchema = object({
+		tabId: string().check(_minLength(1)),
+		beatAt: number()
+	});
 	var FavsSyncSchema = object({
 		nextPid: int(),
 		lastPid: int(),
 		startedAt: string(),
-		finishedAt: optional(string())
+		finishedAt: optional(string()),
+		running: optional(boolean()),
+		userId: optional(int()),
+		lock: optional(FavsSyncLockSchema)
 	});
 	var FavsSchema = object({
 		version: literal(1),
 		ids: array(int()),
 		sync: optional(FavsSyncSchema)
 	});
-	var ExportBlobSchema = object({
-		version: literal(1),
-		collections: array(CollectionSchema),
-		artists: array(ArtistEntrySchema),
-		marks: record(string(), MarkFlagsSchema),
-		settings: optional(SettingsSchema),
-		updates: optional(UpdatesSchema),
-		favIds: optional(array(int()))
-	});
+	function isUnknownRecord(value) {
+		return value !== null && typeof value === "object" && !Array.isArray(value);
+	}
+	function stripLegacyPanelWindowSize(data) {
+		const featureState = data.settings?.featureState;
+		if (featureState === void 0) return {
+			data,
+			changed: false
+		};
+		const panelRaw = featureState[LEGACY_PANEL_FEATURE_STATE_ID];
+		if (!isUnknownRecord(panelRaw)) return {
+			data,
+			changed: false
+		};
+		const hasWidth = Object.prototype.hasOwnProperty.call(panelRaw, LEGACY_PANEL_WIDTH_KEY);
+		const hasHeight = Object.prototype.hasOwnProperty.call(panelRaw, LEGACY_PANEL_HEIGHT_KEY);
+		if (!hasWidth && !hasHeight) return {
+			data,
+			changed: false
+		};
+		const nextPanel = {};
+		for (const [key, value] of Object.entries(panelRaw)) {
+			if (key === "width" || key === "height") continue;
+			nextPanel[key] = value;
+		}
+		const nextFeatureState = { ...featureState };
+		if (Object.keys(nextPanel).length === 0) delete nextFeatureState[LEGACY_PANEL_FEATURE_STATE_ID];
+		else nextFeatureState[LEGACY_PANEL_FEATURE_STATE_ID] = nextPanel;
+		const nextSettings = data.settings === void 0 ? { gridFavButtons: true } : { ...data.settings };
+		if (Object.keys(nextFeatureState).length === 0) delete nextSettings.featureState;
+		else nextSettings.featureState = nextFeatureState;
+		return {
+			data: {
+				...data,
+				settings: nextSettings
+			},
+			changed: true
+		};
+	}
 	function isPlaylist(collection) {
 		return collection.kind === COLLECTION_KIND_POSTS;
 	}
@@ -1998,10 +2034,10 @@
 	var cachedIds = null;
 	var cachedSync;
 	var cacheHydrated = false;
-	function getGmGetValue$1() {
+	function getGmGetValue$2() {
 		return GM_getValue;
 	}
-	function getGmSetValue$1() {
+	function getGmSetValue$2() {
 		return GM_setValue;
 	}
 	function normalizePostId$1(id) {
@@ -2016,7 +2052,7 @@
 		return Math.trunc(parsed);
 	}
 	function readFavsRaw() {
-		const raw = getGmGetValue$1()(FAVS_STORAGE_KEY, void 0);
+		const raw = getGmGetValue$2()(FAVS_STORAGE_KEY, void 0);
 		if (raw === void 0 || raw === null) return createDefaultFavs();
 		const parsed = FavsSchema.safeParse(raw);
 		if (!parsed.success) {
@@ -2027,7 +2063,7 @@
 	}
 	function writeFavsData(data) {
 		const parsed = FavsSchema.parse(data);
-		getGmSetValue$1()(FAVS_STORAGE_KEY, parsed);
+		getGmSetValue$2()(FAVS_STORAGE_KEY, parsed);
 	}
 	function setCacheFromData(data) {
 		cachedIds = new Set(data.ids);
@@ -2035,20 +2071,21 @@
 		cacheHydrated = true;
 	}
 	function readMainStorageRaw() {
-		const raw = getGmGetValue$1()(STORAGE_KEY, void 0);
+		const raw = getGmGetValue$2()(STORAGE_KEY, void 0);
 		if (raw === void 0 || raw === null) return null;
 		const parsed = StorageSchema.safeParse(raw);
 		if (!parsed.success) return null;
 		return parsed.data;
 	}
 	function writeMainStorage(data) {
-		getGmSetValue$1()(STORAGE_KEY, StorageSchema.parse(data));
+		getGmSetValue$2()(STORAGE_KEY, StorageSchema.parse(data));
 	}
 	function migrateMarksFavToFavs() {
 		const main = readMainStorageRaw();
 		const favs = readFavsRaw();
 		const ids = new Set(favs.ids);
 		let marksChanged = false;
+		let mainToWrite = null;
 		if (main !== null) {
 			const nextMarks = {};
 			for (const [postId, flags] of Object.entries(main.marks)) {
@@ -2062,11 +2099,15 @@
 				if (Object.keys(nextFlags).length > 0) nextMarks[postId] = nextFlags;
 				else if (flags.fav === void 0 && flags.seen === void 0) nextMarks[postId] = {};
 			}
-			if (marksChanged) {
-				main.marks = nextMarks;
-				writeMainStorage(main);
-			}
+			let nextMain = main;
+			if (marksChanged) nextMain = {
+				...main,
+				marks: nextMarks
+			};
+			const stripped = stripLegacyPanelWindowSize(nextMain);
+			if (marksChanged || stripped.changed) mainToWrite = stripped.data;
 		}
+		if (mainToWrite !== null) writeMainStorage(mainToWrite);
 		const nextFavs = {
 			version: favs.version,
 			ids: Array.from(ids)
@@ -2090,6 +2131,11 @@
 		writeFavsData(next);
 		cachedIds = ids;
 		cacheHydrated = true;
+	}
+	function clearFavsCache() {
+		cachedIds = null;
+		cachedSync = void 0;
+		cacheHydrated = false;
 	}
 	function loadFavSet() {
 		return ensureCache();
@@ -2154,36 +2200,19 @@
 		writeFavsData(next);
 		cacheHydrated = true;
 	}
-	function extractFavIdsFromMarks(marks) {
-		const favIds = [];
-		const nextMarks = {};
-		for (const [postId, flags] of Object.entries(marks)) {
-			if (flags.fav === true) {
-				const normalized = normalizePostId$1(postId);
-				if (normalized !== null) favIds.push(normalized);
-			}
-			const nextFlags = {};
-			if (flags.seen === true) nextFlags.seen = true;
-			if (Object.keys(nextFlags).length > 0) nextMarks[postId] = nextFlags;
-		}
-		return {
-			marks: nextMarks,
-			favIds
-		};
-	}
 	var cachedStorage = null;
 	var storageCacheHydrated = false;
-	function getGmGetValue() {
+	function getGmGetValue$1() {
 		return GM_getValue;
 	}
-	function getGmSetValue() {
+	function getGmSetValue$1() {
 		return GM_setValue;
 	}
 	function readRaw() {
-		return getGmGetValue()(STORAGE_KEY, void 0);
+		return getGmGetValue$1()(STORAGE_KEY, void 0);
 	}
 	function writeData(data) {
-		getGmSetValue()(STORAGE_KEY, data);
+		getGmSetValue$1()(STORAGE_KEY, data);
 	}
 	function setStorageCache(data) {
 		cachedStorage = data;
@@ -2213,17 +2242,11 @@
 		return reparsed.data;
 	}
 	function backupInvalid(raw) {
-		getGmSetValue()(STORAGE_BACKUP_KEY, raw);
+		getGmSetValue$1()(STORAGE_BACKUP_KEY, raw);
 		log.error("Invalid storage content backed up", {
 			key: STORAGE_KEY,
 			backupKey: STORAGE_BACKUP_KEY
 		});
-	}
-	function formatSchemaImportError(error) {
-		const issue = error.issues[0];
-		if (issue === void 0) return new Error(`${IMPORT_SCHEMA_ERROR_PREFIX}: (root): Invalid data`);
-		const path = issue.path.length === 0 ? "(root)" : issue.path.map((segment) => String(segment)).join(".");
-		return new Error(`${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`);
 	}
 	function currentSettings(data) {
 		const next = {
@@ -2473,16 +2496,16 @@
 		return parsed;
 	}
 	function getAppearanceBackgroundDataUrl() {
-		const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, void 0);
+		const raw = getGmGetValue$1()(APPEARANCE_BACKGROUND_KEY, void 0);
 		if (typeof raw !== "string" || raw.length === 0) return;
 		return raw;
 	}
 	function setAppearanceBackgroundDataUrl(dataUrl) {
 		if (byteLengthUtf8(dataUrl) > 1572864) throw new Error(APPEARANCE_BACKGROUND_TOO_LARGE);
-		getGmSetValue()(APPEARANCE_BACKGROUND_KEY, dataUrl);
+		getGmSetValue$1()(APPEARANCE_BACKGROUND_KEY, dataUrl);
 	}
 	function clearAppearanceBackgroundDataUrl() {
-		getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
+		getGmSetValue$1()(APPEARANCE_BACKGROUND_KEY, "");
 	}
 	function getSeenPostId() {
 		return resolveSeenPostId(load());
@@ -2520,113 +2543,94 @@
 		save(data);
 		return true;
 	}
-	function exportJson() {
-		const data = load();
-		const favIds = Array.from(loadFavSet()).sort((a, b) => a - b);
-		const blob = {
-			...data,
-			favIds
-		};
-		return `${JSON.stringify(blob, null, 2)}\n`;
-	}
-	function mergeCollections(current, incoming) {
-		const byId = new Map();
-		for (const item of current) byId.set(item.id, item);
-		for (const item of incoming) byId.set(item.id, item);
-		return Array.from(byId.values());
-	}
-	function mergeArtists(current, incoming) {
-		const byTag = new Map();
-		for (const item of current) byTag.set(item.tag, item);
-		for (const item of incoming) byTag.set(item.tag, item);
-		return Array.from(byTag.values());
-	}
-	function mergeStringRecord(current, incoming) {
-		if (incoming === void 0 && current === void 0) return;
-		return {
-			...current ?? {},
-			...incoming ?? {}
+	var COOKIE_PAIR_SEPARATOR = ";";
+	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
+	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
+	var USER_ENTRY_PREFIX = "user:";
+	var RATING_ENTRY_PREFIX = "rating:";
+	var MS_PER_DAY$1 = 864e5;
+	var DAYS_PER_YEAR = 365;
+	var BLACKLIST_TAG_SEPARATOR = " ";
+	var changeListeners = new Set();
+	function onSiteBlacklistChange(cb) {
+		changeListeners.add(cb);
+		return () => {
+			changeListeners.delete(cb);
 		};
 	}
-	function mergeBooleanRecord(current, incoming) {
-		if (incoming === void 0 && current === void 0) return;
-		return {
-			...current ?? {},
-			...incoming ?? {}
-		};
-	}
-	function mergeUnknownRecord(current, incoming) {
-		if (incoming === void 0 && current === void 0) return;
-		return {
-			...current ?? {},
-			...incoming ?? {}
-		};
-	}
-	function mergeMarks(current, incoming) {
-		const merged = { ...current };
-		for (const [postId, flags] of Object.entries(incoming)) merged[postId] = {
-			...merged[postId] ?? {},
-			...flags
-		};
-		return merged;
-	}
-	function mergeSettings(current, incoming) {
-		if (incoming === void 0) return current;
-		if (current === void 0) return incoming;
-		const merged = {
-			gridFavButtons: incoming.gridFavButtons,
-			updatesGroupSize: incoming.updatesGroupSize ?? current.updatesGroupSize,
-			playlistChunkSize: incoming.playlistChunkSize ?? current.playlistChunkSize
-		};
-		if (incoming.tweaksEnabled !== void 0) merged.tweaksEnabled = incoming.tweaksEnabled;
-		else if (current.tweaksEnabled !== void 0) merged.tweaksEnabled = current.tweaksEnabled;
-		const features = mergeBooleanRecord(current.features, incoming.features);
-		if (features !== void 0) merged.features = features;
-		const featureChoice = mergeStringRecord(current.featureChoice, incoming.featureChoice);
-		if (featureChoice !== void 0) merged.featureChoice = featureChoice;
-		const featureState = mergeUnknownRecord(current.featureState, incoming.featureState);
-		if (featureState !== void 0) merged.featureState = featureState;
-		if (incoming.appearance !== void 0) merged.appearance = incoming.appearance;
-		else if (current.appearance !== void 0) merged.appearance = current.appearance;
-		return merged;
-	}
-	function mergeUpdates(current, incoming) {
-		const currentSeen = current?.seenPostId ?? 0;
-		const incomingSeen = incoming?.seenPostId ?? 0;
-		return { seenPostId: Math.max(currentSeen, incomingSeen) };
-	}
-	function importJson(raw) {
-		let json;
-		try {
-			json = JSON.parse(raw);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Invalid JSON";
-			throw new Error(message);
+	function readCookieValue(name) {
+		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
+		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
+		for (const pair of pairs) {
+			const trimmed = pair.trim();
+			if (!trimmed.startsWith(prefix)) continue;
+			return trimmed.slice(prefix.length);
 		}
-		const parsed = ExportBlobSchema.safeParse(json);
-		if (!parsed.success) throw formatSchemaImportError(parsed.error);
-		const incoming = parsed.data;
-		const fromMarks = extractFavIdsFromMarks(incoming.marks);
-		const favIdsToMerge = new Set(fromMarks.favIds);
-		if (incoming.favIds !== void 0) for (const id of incoming.favIds) favIdsToMerge.add(id);
-		const current = load();
-		const merged = {
-			version: current.version,
-			collections: mergeCollections(current.collections, incoming.collections),
-			artists: mergeArtists(current.artists, incoming.artists),
-			marks: mergeMarks(current.marks, fromMarks.marks),
-			settings: mergeSettings(current.settings, incoming.settings),
-			updates: mergeUpdates(current.updates, incoming.updates)
-		};
-		if (merged.settings === void 0) merged.settings = {
-			gridFavButtons: true,
-			updatesGroupSize: 0,
-			playlistChunkSize: 40,
-			tweaksEnabled: true
-		};
-		save(merged);
-		addFavs(Array.from(favIdsToMerge));
-		return merged;
+		return null;
+	}
+	function normalizeBlacklistTags(tags) {
+		const seen = new Set();
+		const result = [];
+		for (const raw of tags) {
+			const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
+			if (normalized.length === 0 || seen.has(normalized)) continue;
+			seen.add(normalized);
+			result.push(normalized);
+		}
+		return result;
+	}
+	function encodeBlacklistCookieValue(tags) {
+		if (tags.length === 0) return "";
+		return encodeURIComponent(encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)));
+	}
+	function writeBlacklistCookie(value, expires) {
+		document.cookie = [
+			`${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
+			`expires=${expires.toUTCString()}`,
+			`path=/`
+		].join("; ");
+	}
+	function readSiteBlacklist() {
+		const raw = readCookieValue(SITE_BLACKLIST_COOKIE_NAME);
+		if (raw === null || raw.length === 0) return [];
+		let decoded;
+		try {
+			decoded = decodeURIComponent(decodeURI(raw));
+		} catch {
+			return [];
+		}
+		const result = [];
+		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
+			const trimmed = part.trim().toLowerCase();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function writeSiteBlacklist(tags) {
+		const normalized = normalizeBlacklistTags(tags);
+		const expires = new Date(Date.now() + 5 * DAYS_PER_YEAR * MS_PER_DAY$1);
+		writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
+		for (const listener of changeListeners) listener(normalized);
+	}
+	function isBlacklisted(tags, score, rating, list) {
+		if (list.length === 0) return false;
+		const tagSet = new Set();
+		for (const tag of tags) {
+			const normalized = tag.trim().toLowerCase();
+			if (normalized.length > 0) tagSet.add(normalized);
+		}
+		const ratingNorm = rating.trim().toLowerCase();
+		for (const entry of list) {
+			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
+			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
+				const value = entry.slice(7);
+				if (value.length > 0 && value === ratingNorm) return true;
+				continue;
+			}
+			if (tagSet.has(entry)) return true;
+		}
+		return false;
 	}
 	var SITE_SELECTORS = {
 		thumb: "span.thumb",
@@ -2664,6 +2668,157 @@
 	}
 	function featureChoiceBodyClass(id, value) {
 		return `rdw-f-${id}-${value}`;
+	}
+	var FEATURE_ID$9 = "blacklist-hide";
+	var FEATURE_LABEL$8 = "Hide blacklisted posts";
+	var FEATURE_PAGES$8 = ["list"];
+	var BODY_FEATURE_CLASS$3 = featureBodyClass(FEATURE_ID$9);
+	var CLASS_BLACKLISTED$1 = "rdw-blacklisted";
+	var SCORE_TOKEN_PREFIX$2 = "score:";
+	var RATING_TOKEN_PREFIX$1 = "rating:";
+	var WHITESPACE_SPLIT = /\s+/;
+	var FEATURE_CSS$8 = `
+body.${BODY_FEATURE_CLASS$3} span.thumb.${CLASS_BLACKLISTED$1} {
+  display: none !important;
+}
+`.trim();
+	var unsubscribeThumbsAdded$4;
+	var unsubscribeBlacklistChange;
+	function parseAltTags(alt) {
+		const tags = [];
+		for (const token of alt.trim().split(WHITESPACE_SPLIT)) {
+			if (token.length === 0) continue;
+			const lower = token.toLowerCase();
+			if (lower.startsWith(SCORE_TOKEN_PREFIX$2) || lower.startsWith(RATING_TOKEN_PREFIX$1)) continue;
+			tags.push(token);
+		}
+		return tags;
+	}
+	function parseTitleRating(title) {
+		for (const token of title.trim().split(WHITESPACE_SPLIT)) {
+			if (token.length === 0) continue;
+			if (token.toLowerCase().startsWith(RATING_TOKEN_PREFIX$1)) return token.slice(7);
+		}
+		return "";
+	}
+	function applyBlacklistToThumb(thumb, list) {
+		if (!(thumb instanceof HTMLElement)) return;
+		const img = thumb.querySelector(SITE_SELECTORS.previewImage);
+		const alt = img?.getAttribute("alt") ?? "";
+		const title = img?.getAttribute("title") ?? "";
+		const matched = isBlacklisted(parseAltTags(alt), 0, parseTitleRating(title), list);
+		thumb.classList.toggle(CLASS_BLACKLISTED$1, matched);
+	}
+	function applyBlacklistToRoot(root, list = readSiteBlacklist()) {
+		const thumbs = root.querySelectorAll(SITE_SELECTORS.thumb);
+		for (const thumb of thumbs) applyBlacklistToThumb(thumb, list);
+	}
+	function ensureSubscriptions() {
+		if (unsubscribeThumbsAdded$4 === void 0) unsubscribeThumbsAdded$4 = onThumbsAdded((root) => {
+			applyBlacklistToRoot(root);
+		});
+		if (unsubscribeBlacklistChange === void 0) unsubscribeBlacklistChange = onSiteBlacklistChange((list) => {
+			applyBlacklistToRoot(document, list);
+		});
+	}
+	function mountBlacklistHide(ctx) {
+		if (ctx.pageKind !== "list") return;
+		applyBlacklistToRoot(document);
+		ensureSubscriptions();
+	}
+	var blacklistHideFeature = {
+		id: FEATURE_ID$9,
+		label: FEATURE_LABEL$8,
+		pages: [...FEATURE_PAGES$8],
+		defaultEnabled: true,
+		cssOnly: true,
+		css: FEATURE_CSS$8,
+		mount: mountBlacklistHide
+	};
+	var RDW_HASH_PREFIX = "#rdw/";
+	var RDW_ROUTE_COLLECTIONS = "collections";
+	var RDW_ROUTE_FOLLOWING = "following";
+	var RDW_ROUTE_SETTINGS = "settings";
+	var RDW_ROUTES = [
+		RDW_ROUTE_COLLECTIONS,
+		RDW_ROUTE_FOLLOWING,
+		RDW_ROUTE_SETTINGS
+	];
+	var RDW_HASH_COLLECTIONS = `${RDW_HASH_PREFIX}${RDW_ROUTE_COLLECTIONS}`;
+	var RDW_HASH_FOLLOWING = `${RDW_HASH_PREFIX}${RDW_ROUTE_FOLLOWING}`;
+	var RDW_HASH_SETTINGS = `${RDW_HASH_PREFIX}${RDW_ROUTE_SETTINGS}`;
+	var RDW_OWN_PAGE_CLASS = "rdw-own-page";
+	var RDW_PAGE_ROOT_ID = "rdw-page-root";
+	var RDW_OWN_PAGE_STYLE_ID = "rdw-own-page-style";
+	var HEADER_SELECTOR = "div#header";
+	var NAVBAR_SELECTOR = "div#header ul#navbar";
+	var CURRENT_PAGE_CLASS$1 = "current-page";
+	var MENU_ITEM_ID = {
+		collections: "rdw-nav-collections",
+		following: "rdw-nav-following",
+		favorites: "rdw-nav-favorites",
+		settings: "rdw-nav-settings"
+	};
+	var MENU_LABEL = {
+		collections: "Collections",
+		following: "Following",
+		favorites: "Favorites",
+		settings: "RuleDesk"
+	};
+	var MY_FAVORITES_CONTAINER_ID = "my-favorites-container";
+	var MY_FAVORITES_LINK_SELECTOR$2 = "li#my-favorites-container a[href*=\"page=favorites\"]";
+	var FEED_MENU_ITEM_ID = "rdw-feed-menu";
+	var PANEL_UI_CLASS = {
+		artistMeta: "rdw-artist-meta",
+		artistFilter: "rdw-artist-filter",
+		artistList: "rdw-artist-list",
+		artistRow: "rdw-artist-row",
+		artistLink: "rdw-artist-link",
+		artistUndo: "rdw-artist-undo",
+		scrollRegion: "rdw-scroll-region",
+		settingsGroup: "rdw-settings-group",
+		settingsRow: "rdw-settings-row",
+		pageCard: "rdw-page-card"
+	};
+	var UNFOLLOW_UNDO_MS = 5e3;
+	var ARTISTS_EMPTY_TITLE = "No followed artists yet";
+	var ARTISTS_EMPTY_HINT = "Follow artists with the Follow button next to their name in the tag list.";
+	var ARTIST_FILTER_LABEL = "Filter artists";
+	var UNFOLLOW_UNDO_LABEL = "Undo";
+	var UNFOLLOWED_PREFIX = "Unfollowed ";
+	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
+	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
+	var UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
+	var PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
+	var ARTIST_FILTER_ID = "rdw-artist-filter";
+	var GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
+	var TWEAKS_SWITCH_ID = "rdw-tweaks-enabled";
+	var TAG_GROUPS_PANEL_LABEL = "Collapse tags";
+	function featurePanelLabel(featureId, fallback) {
+		if (featureId === "tag-groups") return TAG_GROUPS_PANEL_LABEL;
+		return fallback;
+	}
+	function isRdwRoute(value) {
+		return RDW_ROUTES.some((route) => route === value);
+	}
+	function parseRdwHash(hash) {
+		const trimmed = hash.trim();
+		if (!trimmed.startsWith("#rdw/")) return null;
+		const path = trimmed.slice(5).split(/[/?#]/)[0] ?? "";
+		if (isRdwRoute(path)) return path;
+		return null;
+	}
+	function buildOwnPageCss() {
+		return `
+html.${RDW_OWN_PAGE_CLASS} ${HEADER_SELECTOR} ~ *:not(#${RDW_PAGE_ROOT_ID}) {
+  display: none !important;
+}
+#${RDW_PAGE_ROOT_ID} {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+}
+`;
 	}
 	var BASE_GRID_CSS = `
 .${THUMB_CLASS} {
@@ -3670,10 +3825,9 @@ ${ICON_BUTTON_CSS}
 		"favorites",
 		"other"
 	];
-	var CONTENT_ID$1 = "content";
+	var CONTENT_ID$2 = "content";
 	var POSTS_LINK_TEXT = "Posts";
 	var FEED_LINK_TEXT = "Feed";
-	var FEED_MENU_ITEM_ID = "rdw-feed-menu";
 	var CURRENT_PAGE_CLASS = "current-page";
 	var NO_ARTISTS_TITLE = "Follow artists to build your feed";
 	var MISSING_POSTS_WARN = "feed: Posts menu item not found";
@@ -3712,8 +3866,8 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 	var unsubscribeThumbsAdded$2;
 	var pageshowBound$1 = false;
 	var boundFeedLink = null;
-	function findPostsMenuItem() {
-		const content = document.getElementById(CONTENT_ID$1);
+	function findPostsMenuItem$1() {
+		const content = document.getElementById(CONTENT_ID$2);
 		const anchors = document.querySelectorAll("a");
 		for (const node of anchors) {
 			if (!(node instanceof HTMLAnchorElement)) continue;
@@ -3725,19 +3879,10 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 		}
 		return null;
 	}
-	function resolveFeedHref(postsAnchor) {
+	function resolveFeedHref() {
 		const artistTags = listArtistTags();
-		if (artistTags.length === 0) {
-			if (postsAnchor !== null) return postsAnchor.href;
-			return buildFeedUrl([], getUpdatesGroupSize());
-		}
+		if (artistTags.length === 0) return RDW_HASH_FOLLOWING;
 		return buildFeedUrl(artistTags, getUpdatesGroupSize());
-	}
-	function findPostsAnchor() {
-		const postsItem = findPostsMenuItem();
-		if (postsItem === null) return null;
-		const postsAnchor = postsItem.querySelector("a");
-		return postsAnchor instanceof HTMLAnchorElement ? postsAnchor : null;
 	}
 	function findFeedLink() {
 		const feedItem = document.getElementById(FEED_MENU_ITEM_ID);
@@ -3746,9 +3891,10 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 		return feedLink instanceof HTMLAnchorElement ? feedLink : null;
 	}
 	function refreshFeedHref() {
+		reloadFromStorage();
 		const feedLink = findFeedLink();
 		if (feedLink === null) return;
-		feedLink.href = resolveFeedHref(findPostsAnchor());
+		feedLink.href = resolveFeedHref();
 		if (listArtistTags().length === 0) feedLink.title = NO_ARTISTS_TITLE;
 		else feedLink.removeAttribute("title");
 	}
@@ -3778,17 +3924,17 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 			}
 			return existing;
 		}
-		const postsItem = findPostsMenuItem();
+		const postsItem = findPostsMenuItem$1();
 		if (postsItem === null) {
 			log.warn(MISSING_POSTS_WARN);
 			return null;
 		}
-		const postsLink = findPostsAnchor();
+		reloadFromStorage();
 		const feedItem = document.createElement("li");
 		feedItem.id = FEED_MENU_ITEM_ID;
 		const feedLink = document.createElement("a");
 		feedLink.textContent = FEED_LINK_TEXT;
-		feedLink.href = resolveFeedHref(postsLink);
+		feedLink.href = resolveFeedHref();
 		if (listArtistTags().length === 0) feedLink.title = NO_ARTISTS_TITLE;
 		feedItem.append(feedLink);
 		postsItem.after(feedItem);
@@ -3801,7 +3947,7 @@ body.${BODY_CLASS$2} span.thumb.new.${THUMB_CLASS}::after {
 		return isFullUpdatesQuery(tagsParam, artistTags) || isPartialUpdatesQuery(tagsParam, artistTags);
 	}
 	function applyCurrentPageHighlight(feedItem, onFeed) {
-		const postsItem = findPostsMenuItem();
+		const postsItem = findPostsMenuItem$1();
 		if (onFeed) {
 			postsItem?.classList.remove(CURRENT_PAGE_CLASS);
 			feedItem.classList.add(CURRENT_PAGE_CLASS);
@@ -3996,87 +4142,6 @@ body.${featureBodyClass(SEEN_DIM_FEATURE_ID)} .${SEEN_CLASS}:hover img.preview {
 `,
 		mount: mountSeenDim
 	};
-	var COOKIE_PAIR_SEPARATOR = ";";
-	var COOKIE_NAME_VALUE_SEPARATOR$1 = "=";
-	var BLACKLIST_SPLIT_PATTERN = /[, ]|%20+/g;
-	var USER_ENTRY_PREFIX = "user:";
-	var RATING_ENTRY_PREFIX = "rating:";
-	var MS_PER_DAY$1 = 864e5;
-	var DAYS_PER_YEAR = 365;
-	var BLACKLIST_TAG_SEPARATOR = " ";
-	function readCookieValue(name) {
-		const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
-		const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR$1}`;
-		for (const pair of pairs) {
-			const trimmed = pair.trim();
-			if (!trimmed.startsWith(prefix)) continue;
-			return trimmed.slice(prefix.length);
-		}
-		return null;
-	}
-	function normalizeBlacklistTags(tags) {
-		const seen = new Set();
-		const result = [];
-		for (const raw of tags) {
-			const normalized = raw.trim().toLowerCase().replaceAll(" ", "_");
-			if (normalized.length === 0 || seen.has(normalized)) continue;
-			seen.add(normalized);
-			result.push(normalized);
-		}
-		return result;
-	}
-	function encodeBlacklistCookieValue(tags) {
-		if (tags.length === 0) return "";
-		return encodeURIComponent(encodeURIComponent(tags.join(BLACKLIST_TAG_SEPARATOR)));
-	}
-	function writeBlacklistCookie(value, expires) {
-		document.cookie = [
-			`${SITE_BLACKLIST_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR$1}${value}`,
-			`expires=${expires.toUTCString()}`,
-			`path=/`
-		].join("; ");
-	}
-	function readSiteBlacklist() {
-		const raw = readCookieValue(SITE_BLACKLIST_COOKIE_NAME);
-		if (raw === null || raw.length === 0) return [];
-		let decoded;
-		try {
-			decoded = decodeURIComponent(decodeURI(raw));
-		} catch {
-			return [];
-		}
-		const result = [];
-		for (const part of decoded.split(BLACKLIST_SPLIT_PATTERN)) {
-			const trimmed = part.trim().toLowerCase();
-			if (trimmed.length === 0) continue;
-			result.push(trimmed);
-		}
-		return result;
-	}
-	function writeSiteBlacklist(tags) {
-		const normalized = normalizeBlacklistTags(tags);
-		const expires = new Date(Date.now() + 5 * DAYS_PER_YEAR * MS_PER_DAY$1);
-		writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
-	}
-	function isBlacklisted(tags, score, rating, list) {
-		if (list.length === 0) return false;
-		const tagSet = new Set();
-		for (const tag of tags) {
-			const normalized = tag.trim().toLowerCase();
-			if (normalized.length > 0) tagSet.add(normalized);
-		}
-		const ratingNorm = rating.trim().toLowerCase();
-		for (const entry of list) {
-			if (entry.startsWith(USER_ENTRY_PREFIX)) continue;
-			if (entry.startsWith(RATING_ENTRY_PREFIX)) {
-				const value = entry.slice(7);
-				if (value.length > 0 && value === ratingNorm) return true;
-				continue;
-			}
-			if (tagSet.has(entry)) return true;
-		}
-		return false;
-	}
 	var IMAGE_LIST_SELECTOR = SITE_SELECTORS.imageList;
 	var THUMB_SELECTOR$1 = SITE_SELECTORS.thumb;
 	var PAGINATION_SELECTOR = "div.pagination";
@@ -4396,7 +4461,7 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 	};
 	var FEATURE_ID$5 = "menu-cleanup";
 	var FEATURE_LABEL$5 = "Clean header menu";
-	var CONTENT_ID = "content";
+	var CONTENT_ID$1 = "content";
 	var HIDDEN_CLASS = "rdw-menu-hidden";
 	var BODY_FEATURE_CLASS$1 = featureBodyClass(FEATURE_ID$5);
 	var MISSING_MENU_WARN = "Header menu not found";
@@ -4408,7 +4473,8 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		"Contact Us",
 		"DMCA",
 		"About",
-		"TOS"
+		"TOS",
+		"My Favorites"
 	]);
 	var FEATURE_PAGES$5 = [
 		"list",
@@ -4424,7 +4490,7 @@ body.${BODY_FEATURE_CLASS$2} span.thumb.${CLASS_BLACKLISTED} {
 		return true;
 	}
 	function collectHeaderMenuLinks() {
-		const content = document.getElementById(CONTENT_ID);
+		const content = document.getElementById(CONTENT_ID$1);
 		const anchors = document.querySelectorAll("a");
 		const headerLinks = [];
 		for (const node of anchors) {
@@ -6029,18 +6095,23 @@ ${KIT_FOCUS_CSS}
 	}
 	function ProgressBar(props) {
 		const fillRef = T(null);
-		const indeterminate = props.value === void 0 || props.value === null;
-		const ratio = indeterminate ? 0 : clampUnit(props.value);
+		const waiting = props.waiting === true;
+		const hasValue = props.value !== void 0 && props.value !== null;
+		const ratio = hasValue ? clampUnit(props.value) : 0;
 		const className = ["rdw-progress", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
 		A(() => {
 			const fill = fillRef.current;
 			if (fill === null) return;
-			if (indeterminate) {
+			if (waiting || !hasValue) {
 				fill.style.removeProperty(PROGRESS_WIDTH_VAR);
 				return;
 			}
 			fill.style.setProperty(PROGRESS_WIDTH_VAR, `${Math.round(ratio * 100)}%`);
-		}, [indeterminate, ratio]);
+		}, [
+			waiting,
+			hasValue,
+			ratio
+		]);
 		return a$1($, { children: [a$1("style", { children: PROGRESS_BAR_CSS }), a$1("div", {
 			className,
 			children: [props.label !== void 0 ? a$1("div", {
@@ -6052,10 +6123,10 @@ ${KIT_FOCUS_CSS}
 				"aria-label": props.label,
 				"aria-valuemin": 0,
 				"aria-valuemax": 100,
-				"aria-valuenow": indeterminate ? void 0 : Math.round(ratio * 100),
+				"aria-valuenow": hasValue && !waiting ? Math.round(ratio * 100) : void 0,
 				children: a$1("div", {
 					ref: fillRef,
-					className: indeterminate ? "rdw-progress__fill rdw-progress__fill--indeterminate" : "rdw-progress__fill"
+					className: waiting ? "rdw-progress__fill rdw-progress__fill--indeterminate" : "rdw-progress__fill"
 				})
 			})]
 		})] });
@@ -6228,7 +6299,7 @@ ${KIT_FOCUS_CSS}
 			const onPointerDown = (event) => {
 				const root = rootRef.current;
 				if (root === null) return;
-				if (event.target instanceof Node && !root.contains(event.target)) setOpen(false);
+				if (!event.composedPath().includes(root)) setOpen(false);
 			};
 			document.addEventListener("keydown", onKeyDown);
 			document.addEventListener("mousedown", onPointerDown);
@@ -6366,65 +6437,6 @@ ${KIT_FOCUS_CSS}
 			}) : null]
 		})] });
 	}
-	var TABS_CSS = `
-${KIT_FOCUS_CSS}
-.rdw-tabs {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--rdw-border);
-  padding: 0 8px;
-}
-.rdw-tabs__tab {
-  box-sizing: border-box;
-  min-height: 28px;
-  padding: 7px 10px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--rdw-muted);
-  font: inherit;
-  font-size: 12.5px;
-  cursor: pointer;
-  margin-bottom: -1px;
-}
-.rdw-tabs__tab[aria-selected="true"] {
-  color: var(--rdw-text);
-  font-weight: 600;
-  border-bottom-color: var(--rdw-accent);
-}
-`;
-	function Tabs(props) {
-		const className = ["rdw-tabs", props.className].filter((part) => part !== void 0 && part.length > 0).join(" ");
-		return a$1($, { children: [a$1("style", { children: TABS_CSS }), a$1("div", {
-			className,
-			role: "tablist",
-			"aria-label": props["aria-label"],
-			children: props.items.map((item) => {
-				const selected = item.id === props.value;
-				return a$1("button", {
-					type: "button",
-					role: "tab",
-					id: `rdw-tab-${item.id}`,
-					className: "rdw-tabs__tab rdw-kit-focusable",
-					"aria-selected": selected,
-					tabIndex: selected ? 0 : -1,
-					onClick: () => {
-						props.onChange(item.id);
-					},
-					onKeyDown: (event) => {
-						if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-						event.preventDefault();
-						const index = props.items.findIndex((entry) => entry.id === props.value);
-						if (index < 0) return;
-						const delta = event.key === "ArrowRight" ? 1 : -1;
-						const next = props.items[(index + delta + props.items.length) % props.items.length];
-						if (next !== void 0) props.onChange(next.id);
-					},
-					children: item.label
-				}, item.id);
-			})
-		})] });
-	}
 	var TEXT_FIELD_CSS = `
 ${KIT_FOCUS_CSS}
 .rdw-field {
@@ -6502,7 +6514,7 @@ ${KIT_FOCUS_CSS}
 	var FIELD_CLASS = "rdw-search-tools-field";
 	var ROW_SORT_CLASS = "rdw-search-tools-row-sort";
 	var FOOT_CLASS = "rdw-search-tools-foot";
-	var HINT_CLASS$1 = "rdw-search-tools-hint";
+	var HINT_CLASS$2 = "rdw-search-tools-hint";
 	var RESET_CLASS = "rdw-search-tools-reset";
 	var TOKEN_SPLIT_RE = /\s+/;
 	var MULTI_SPACE_RE = /\s+/g;
@@ -6516,7 +6528,7 @@ ${KIT_FOCUS_CSS}
 	var MEDIA_IMAGES = `-${MEDIA_VIDEO}`;
 	var TAG_TYPE_CLASS_PREFIX = "tag-type-";
 	var SORT_HINT = "Sorts within the current search";
-	var FOOT_HINT = "Applies instantly";
+	var FOOT_HINT = "Typing needs Search or Enter; chips and filters apply instantly";
 	var RESET_LABEL$1 = "Reset search";
 	var KEY_ENTER = "Enter";
 	var EVENT_INPUT = "input";
@@ -6633,7 +6645,7 @@ ${KIT_FOCUS_CSS}
 		"  border-top: 1px solid var(--rdw-border);",
 		"  padding-top: 8px;",
 		"}",
-		`body.${BODY_CLASS} .${HINT_CLASS$1} {`,
+		`body.${BODY_CLASS} .${HINT_CLASS$2} {`,
 		"  font-size: 12px;",
 		"  color: var(--rdw-muted);",
 		"}",
@@ -6995,7 +7007,7 @@ ${KIT_FOCUS_CSS}
 		applyViewRef.current = applyViewFromInput;
 		A(() => {
 			const onSiteInput = () => {
-				applyViewRef.current({ navigate: true });
+				applyViewRef.current({ navigate: false });
 			};
 			input.addEventListener(EVENT_INPUT, onSiteInput);
 			input.addEventListener(EVENT_CHANGE, onSiteInput);
@@ -7128,7 +7140,7 @@ ${KIT_FOCUS_CSS}
 		return a$1($, { children: [a$1("style", { children: CHIP_CSS }), a$1(Card, {
 			className: CARD_CLASS,
 			children: [
-				a$1("div", {
+				view.chips.length > 0 ? a$1("div", {
 					className: FIELD_CLASS,
 					children: [a$1(SectionLabel, { children: "Tags" }), a$1("div", {
 						className: CHIPS_CLASS$1,
@@ -7186,7 +7198,7 @@ ${KIT_FOCUS_CSS}
 							}, `g-${String(chip.start)}-${String(chip.end)}-${chip.label}`);
 						})
 					})]
-				}),
+				}) : null,
 				a$1("div", {
 					className: FIELD_CLASS,
 					children: [a$1(SectionLabel, { children: "Media" }), a$1(Segmented, {
@@ -7249,7 +7261,7 @@ ${KIT_FOCUS_CSS}
 				a$1("div", {
 					className: FOOT_CLASS,
 					children: [a$1("span", {
-						className: HINT_CLASS$1,
+						className: HINT_CLASS$2,
 						children: FOOT_HINT
 					}), a$1(Button, {
 						variant: "ghost",
@@ -7407,6 +7419,7 @@ ${KIT_FOCUS_CSS}
 		seenDimFeature,
 		playlistMenuFeature,
 		playlistBarFeature,
+		blacklistHideFeature,
 		infiniteScrollFeature,
 		postActionsFeature,
 		gridDensityFeature
@@ -7560,7 +7573,7 @@ ${KIT_FOCUS_CSS}
 		backgroundDim: "--rdw-background-dim"
 	};
 	var LIGHT_PALETTE = {
-		bg: "#aae5a4",
+		bg: "#f3f5f7",
 		surface: "#ffffff",
 		surface2: "#f4f6f8",
 		border: "#cfd6dd",
@@ -7652,6 +7665,818 @@ ${KIT_FOCUS_CSS}
 		target.style.removeProperty(TOKEN_VAR.backgroundImage);
 		target.style.removeProperty(TOKEN_VAR.backgroundDim);
 	}
+	function themeEnablesSkin(theme) {
+		return theme === "light" || theme === "dark" || theme === "custom";
+	}
+	function paletteModeForTheme(theme) {
+		if (theme === "dark" || theme === "site-dark") return "dark";
+		if (theme === "custom") return "light";
+		return "light";
+	}
+	function resolveTokenPalette(appearance) {
+		const base = paletteForMode(paletteModeForTheme(appearance.theme));
+		if (appearance.theme !== "custom" || appearance.custom === void 0) return base;
+		return {
+			...base,
+			accent: appearance.custom.accent,
+			bg: appearance.custom.bg,
+			surface: appearance.custom.surface,
+			text: appearance.custom.text
+		};
+	}
+	function ensureStyleElement(id) {
+		const existing = document.getElementById(id);
+		if (existing instanceof HTMLStyleElement) return existing;
+		if (existing !== null) existing.remove();
+		const style = document.createElement("style");
+		style.id = id;
+		(document.head ?? document.documentElement).append(style);
+		return style;
+	}
+	function injectTokenStyles(palette) {
+		const style = ensureStyleElement(TOKEN_STYLE_ID);
+		style.textContent = buildTokensCss(palette, ":root");
+		return style;
+	}
+	function injectSiteSkinHook(cssText = "") {
+		const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
+		style.textContent = cssText;
+		return style;
+	}
+	function applyHtmlThemeAttributes(theme) {
+		const root = document.documentElement;
+		root.setAttribute(RDW_THEME_ATTR, theme);
+		if (themeEnablesSkin(theme)) root.classList.add(RDW_SKIN_CLASS);
+		else root.classList.remove(RDW_SKIN_CLASS);
+	}
+	function applyAppearanceToDocument(options) {
+		const { appearance } = options;
+		applyHtmlThemeAttributes(appearance.theme);
+		injectTokenStyles(resolveTokenPalette(appearance));
+		injectSiteSkinHook(options.siteSkinCss ?? "");
+		const root = document.documentElement;
+		clearCustomThemeProperties(root);
+		if (appearance.theme === "custom" && appearance.custom !== void 0) {
+			const backgroundImage = options.backgroundDataUrl ?? appearance.custom.backgroundImage;
+			applyCustomThemeProperties(root, backgroundImage !== void 0 && backgroundImage.length > 0 ? {
+				accent: appearance.custom.accent,
+				bg: appearance.custom.bg,
+				surface: appearance.custom.surface,
+				text: appearance.custom.text,
+				backgroundImage,
+				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
+			} : {
+				accent: appearance.custom.accent,
+				bg: appearance.custom.bg,
+				surface: appearance.custom.surface,
+				text: appearance.custom.text,
+				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
+			});
+		} else if (options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
+	}
+	var PAGE_CLASS = "rdw-collections-page";
+	var PLAYLIST_META_CLASS = "rdw-playlist-meta";
+	var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
+	var PLAYLIST_PART_CLASS = "rdw-playlist-part";
+	var ROW_MAIN_CLASS = "rdw-collections-row-main";
+	var DYNAMIC_COLLECTIONS_HEADING = "Dynamic Collection";
+	var CUSTOM_COLLECTIONS_HEADING = "Custom Collection";
+	var EMPTY_DYNAMIC_COLLECTIONS = "No dynamic collections yet.";
+	var EMPTY_CUSTOM_COLLECTIONS = "No custom collections yet.";
+	var EMPTY_CUSTOM_COLLECTIONS_HINT = "Use the + button on a post";
+	var NEW_CUSTOM_COLLECTION = "New Custom Collection";
+	var OPEN_CUSTOM_COLLECTION = "Open Custom Collection";
+	var CUSTOM_COLLECTION_PARTS_LABEL = "Custom Collection parts";
+	var SAVE_NAME_ID = "rdw-save-name";
+	var PLAYLIST_NAME_ID = "rdw-playlist-name";
+	var COLLECTIONS_PAGE_CSS = `
+.${PAGE_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.${PAGE_CLASS} .${ROW_MAIN_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.${PAGE_CLASS} .${PLAYLIST_META_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+.${PAGE_CLASS} .${PLAYLIST_PARTS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.${PAGE_CLASS} .${PLAYLIST_PART_CLASS} {
+  color: var(--rdw-accent);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.${PAGE_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+`.trim();
+	var sharedMode = { kind: "list" };
+	var sharedNameDraft = "";
+	function postsLabel(count) {
+		return `${String(count)} post${count === 1 ? "" : "s"}`;
+	}
+	function listSavedSearches() {
+		return load().collections.filter((entry) => !isPlaylist(entry));
+	}
+	function playlistPostCount(playlist) {
+		return playlist.postIds?.length ?? 0;
+	}
+	function NameForm(props) {
+		A(() => {
+			const input = document.getElementById(props.inputId);
+			if (input instanceof HTMLInputElement) {
+				input.focus();
+				input.select();
+			}
+		}, [props.inputId]);
+		return a$1("form", {
+			className: "rdw-form",
+			onSubmit: (event) => {
+				event.preventDefault();
+				props.onSubmit();
+			},
+			children: [a$1(TextField, {
+				id: props.inputId,
+				label: UI_TEXT.nameLabel,
+				value: props.value,
+				onChange: props.onChange
+			}), a$1("div", {
+				className: "rdw-form-actions",
+				children: [a$1(Button, {
+					type: "submit",
+					variant: "primary",
+					children: UI_TEXT.save
+				}), a$1(Button, {
+					type: "button",
+					variant: "secondary",
+					onClick: props.onCancel,
+					children: UI_TEXT.cancel
+				})]
+			})]
+		});
+	}
+	function RenameDeleteActions(props) {
+		return a$1("div", {
+			className: "rdw-item-actions",
+			children: [a$1(Button, {
+				variant: "secondary",
+				size: "s",
+				"aria-label": `${UI_TEXT.rename}: ${props.collection.name}`,
+				onClick: props.onRename,
+				children: UI_TEXT.rename
+			}), a$1(IconButton, {
+				label: `${UI_TEXT.delete}: ${props.collection.name}`,
+				onClick: props.onDelete,
+				children: a$1(IconTrash, { size: 14 })
+			})]
+		});
+	}
+	function CollectionsPage() {
+		const [mode, setMode] = d(sharedMode);
+		const [nameDraft, setNameDraft] = d(sharedNameDraft);
+		const [, setTick] = d(0);
+		const refresh = () => {
+			setTick((value) => value + 1);
+		};
+		const setModeBoth = (next) => {
+			sharedMode = next;
+			setMode(next);
+		};
+		const setDraftBoth = (next) => {
+			sharedNameDraft = next;
+			setNameDraft(next);
+		};
+		const saved = listSavedSearches();
+		const playlists = listPlaylists();
+		const searchTags = readTagsFromLocation(window.location.search);
+		const canSave = searchTags !== null && searchTags.length > 0;
+		return a$1($, { children: [a$1("style", { children: COLLECTIONS_PAGE_CSS }), a$1(Card, {
+			className: `${PANEL_UI_CLASS.pageCard} ${PAGE_CLASS}`,
+			children: [a$1("section", {
+				className: "rdw-section",
+				children: [
+					a$1(SectionLabel, { children: DYNAMIC_COLLECTIONS_HEADING }),
+					mode.kind === "save-search" ? a$1(NameForm, {
+						inputId: SAVE_NAME_ID,
+						value: nameDraft,
+						onChange: setDraftBoth,
+						onSubmit: () => {
+							const tags = readTagsFromLocation(window.location.search);
+							if (tags === null || tags.length === 0) {
+								setModeBoth({ kind: "list" });
+								refresh();
+								return;
+							}
+							const name = nameDraft.trim();
+							if (name.length === 0) return;
+							addCollection(name, tags);
+							setModeBoth({ kind: "list" });
+							setDraftBoth("");
+							refresh();
+						},
+						onCancel: () => {
+							setModeBoth({ kind: "list" });
+						}
+					}) : a$1($, { children: [a$1(Button, {
+						variant: "primary",
+						disabled: !canSave,
+						onClick: () => {
+							const tags = readTagsFromLocation(window.location.search);
+							if (tags === null || tags.length === 0) return;
+							setDraftBoth(serialize(tags));
+							setModeBoth({ kind: "save-search" });
+						},
+						children: UI_TEXT.saveCurrent
+					}), !canSave ? a$1("p", {
+						className: "rdw-hint",
+						children: UI_TEXT.notOnSearchPage
+					}) : null] }),
+					saved.length === 0 ? a$1("p", {
+						className: "rdw-hint",
+						children: EMPTY_DYNAMIC_COLLECTIONS
+					}) : a$1("ul", {
+						className: "rdw-list",
+						children: saved.map((collection) => a$1("li", {
+							className: "rdw-list-item",
+							children: mode.kind === "rename" && mode.id === collection.id ? a$1(NameForm, {
+								inputId: `rdw-rename-${collection.id}`,
+								value: nameDraft,
+								onChange: setDraftBoth,
+								onSubmit: () => {
+									const nextName = nameDraft.trim();
+									if (nextName.length === 0) return;
+									renameCollection(collection.id, nextName);
+									setModeBoth({ kind: "list" });
+									setDraftBoth("");
+									refresh();
+								},
+								onCancel: () => {
+									setModeBoth({ kind: "list" });
+								}
+							}) : mode.kind === "confirm-delete" && mode.id === collection.id ? a$1($, { children: [a$1("p", {
+								className: "rdw-hint",
+								children: `${UI_TEXT.confirmDelete} (${collection.name})`
+							}), a$1("div", {
+								className: "rdw-confirm-row",
+								children: [a$1(Button, {
+									variant: "danger",
+									onClick: () => {
+										deleteCollection(collection.id);
+										setModeBoth({ kind: "list" });
+										setDraftBoth("");
+										refresh();
+									},
+									children: UI_TEXT.confirm
+								}), a$1(Button, {
+									variant: "secondary",
+									onClick: () => {
+										setModeBoth({ kind: "list" });
+									},
+									children: UI_TEXT.cancel
+								})]
+							})] }) : a$1("div", {
+								className: ROW_MAIN_CLASS,
+								children: [a$1("button", {
+									type: "button",
+									className: "rdw-item-name",
+									"aria-label": `${UI_TEXT.openCollection}: ${collection.name}`,
+									onClick: () => {
+										window.location.assign(buildSearchUrl(collection.tags));
+									},
+									children: collection.name
+								}), a$1(RenameDeleteActions, {
+									collection,
+									onRename: () => {
+										setDraftBoth(collection.name);
+										setModeBoth({
+											kind: "rename",
+											id: collection.id
+										});
+									},
+									onDelete: () => {
+										setModeBoth({
+											kind: "confirm-delete",
+											id: collection.id
+										});
+									}
+								})]
+							})
+						}, collection.id))
+					})
+				]
+			}), a$1("section", {
+				className: "rdw-section",
+				children: [
+					a$1(SectionLabel, { children: CUSTOM_COLLECTIONS_HEADING }),
+					mode.kind === "create-playlist" ? a$1(NameForm, {
+						inputId: PLAYLIST_NAME_ID,
+						value: nameDraft,
+						onChange: setDraftBoth,
+						onSubmit: () => {
+							const name = nameDraft.trim();
+							if (name.length === 0) return;
+							createPlaylist(name);
+							setModeBoth({ kind: "list" });
+							setDraftBoth("");
+							refresh();
+						},
+						onCancel: () => {
+							setModeBoth({ kind: "list" });
+						}
+					}) : a$1(Button, {
+						variant: "primary",
+						onClick: () => {
+							setDraftBoth("");
+							setModeBoth({ kind: "create-playlist" });
+						},
+						children: NEW_CUSTOM_COLLECTION
+					}),
+					playlists.length === 0 ? a$1(EmptyState, {
+						title: EMPTY_CUSTOM_COLLECTIONS,
+						description: EMPTY_CUSTOM_COLLECTIONS_HINT
+					}) : a$1("ul", {
+						className: "rdw-list",
+						children: playlists.map((playlist) => {
+							const count = playlistPostCount(playlist);
+							const queries = buildPlaylistQueries(playlist.postIds ?? [], getPlaylistChunkSize());
+							const canOpen = count > 0 && queries.length > 0;
+							return a$1("li", {
+								className: "rdw-list-item",
+								children: mode.kind === "rename" && mode.id === playlist.id ? a$1(NameForm, {
+									inputId: `rdw-rename-${playlist.id}`,
+									value: nameDraft,
+									onChange: setDraftBoth,
+									onSubmit: () => {
+										const nextName = nameDraft.trim();
+										if (nextName.length === 0) return;
+										renameCollection(playlist.id, nextName);
+										setModeBoth({ kind: "list" });
+										setDraftBoth("");
+										refresh();
+									},
+									onCancel: () => {
+										setModeBoth({ kind: "list" });
+									}
+								}) : mode.kind === "confirm-delete" && mode.id === playlist.id ? a$1($, { children: [a$1("p", {
+									className: "rdw-hint",
+									children: `${UI_TEXT.confirmDelete} (${playlist.name})`
+								}), a$1("div", {
+									className: "rdw-confirm-row",
+									children: [a$1(Button, {
+										variant: "danger",
+										onClick: () => {
+											deleteCollection(playlist.id);
+											setModeBoth({ kind: "list" });
+											setDraftBoth("");
+											refresh();
+										},
+										children: UI_TEXT.confirm
+									}), a$1(Button, {
+										variant: "secondary",
+										onClick: () => {
+											setModeBoth({ kind: "list" });
+										},
+										children: UI_TEXT.cancel
+									})]
+								})] }) : a$1($, { children: [
+									a$1("div", {
+										className: ROW_MAIN_CLASS,
+										children: [a$1("button", {
+											type: "button",
+											className: "rdw-item-name",
+											"aria-label": `${OPEN_CUSTOM_COLLECTION}: ${playlist.name}`,
+											disabled: !canOpen,
+											onClick: () => {
+												const first = queries[0];
+												if (first === void 0) return;
+												window.location.assign(buildUpdatesSearchUrl(first));
+											},
+											children: playlist.name
+										}), a$1(RenameDeleteActions, {
+											collection: playlist,
+											onRename: () => {
+												setDraftBoth(playlist.name);
+												setModeBoth({
+													kind: "rename",
+													id: playlist.id
+												});
+											},
+											onDelete: () => {
+												setModeBoth({
+													kind: "confirm-delete",
+													id: playlist.id
+												});
+											}
+										})]
+									}),
+									a$1("p", {
+										className: PLAYLIST_META_CLASS,
+										children: postsLabel(count)
+									}),
+									queries.length > 1 ? a$1("ul", {
+										className: PLAYLIST_PARTS_CLASS,
+										"aria-label": CUSTOM_COLLECTION_PARTS_LABEL,
+										children: queries.map((query, index) => a$1("li", { children: a$1("a", {
+											className: PLAYLIST_PART_CLASS,
+											href: buildUpdatesSearchUrl(query),
+											children: String(index + 1)
+										}) }, `${playlist.id}-${String(index)}`))
+									}) : null
+								] })
+							}, playlist.id);
+						})
+					})
+				]
+			})]
+		})] });
+	}
+	var ADD_FORM_CLASS = "rdw-following-add";
+	var ADD_INPUT_ID$1 = "rdw-following-add-tag";
+	var OPEN_POSTS_LABEL = "Open Posts";
+	var OPEN_POSTS_HREF = `${SEARCH_PATH}?${SEARCH_PARAM_PAGE}=${SEARCH_PAGE}&s=${SEARCH_SECTION}`;
+	var FOLLOWING_PAGE_CSS = `
+.${ADD_FORM_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.${ADD_FORM_CLASS} .rdw-field {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+`.trim();
+	function displayArtistName(tag) {
+		return tag.replaceAll("_", " ");
+	}
+	function compareArtistTags(a, b) {
+		return a.localeCompare(b, void 0, { sensitivity: "base" });
+	}
+	function readArtists() {
+		return [...load().artists];
+	}
+	function AddArtistForm(props) {
+		return a$1("form", {
+			className: ADD_FORM_CLASS,
+			onSubmit: (event) => {
+				event.preventDefault();
+				props.onSubmit();
+			},
+			children: [
+				a$1(TextField, {
+					id: ADD_INPUT_ID$1,
+					label: UI_TEXT.artistTagLabel,
+					value: props.draft,
+					onChange: props.onDraftChange
+				}),
+				a$1(Button, {
+					type: "submit",
+					variant: "primary",
+					children: UI_TEXT.artistAdd
+				}),
+				props.error.length > 0 ? a$1("p", {
+					className: "rdw-error",
+					children: props.error
+				}) : null
+			]
+		});
+	}
+	function FollowingPage() {
+		const [artists, setArtists] = d(() => readArtists());
+		const [pending, setPending] = d([]);
+		const [filter, setFilter] = d("");
+		const [draft, setDraft] = d("");
+		const [addError, setAddError] = d("");
+		const pendingRef = T(pending);
+		pendingRef.current = pending;
+		A(() => {
+			return () => {
+				for (const entry of pendingRef.current) clearTimeout(entry.timer);
+			};
+		}, []);
+		const clearPendingUnfollow = (tag) => {
+			setPending((current) => {
+				const index = current.findIndex((entry) => entry.tag === tag);
+				if (index < 0) return current;
+				const removed = current[index];
+				if (removed !== void 0) clearTimeout(removed.timer);
+				return current.filter((entry) => entry.tag !== tag);
+			});
+		};
+		const onUnfollow = (tag) => {
+			const existing = pendingRef.current.find((entry) => entry.tag === tag);
+			if (existing !== void 0) clearTimeout(existing.timer);
+			removeArtist(tag);
+			const timer = setTimeout(() => {
+				clearPendingUnfollow(tag);
+				setArtists(readArtists());
+			}, UNFOLLOW_UNDO_MS);
+			setPending([...pendingRef.current.filter((entry) => entry.tag !== tag), {
+				tag,
+				timer
+			}]);
+			setArtists(readArtists());
+		};
+		const onUndo = (tag) => {
+			clearPendingUnfollow(tag);
+			try {
+				addArtist(tag);
+			} catch (error) {
+				log.warn("Undo unfollow failed", error);
+			}
+			setArtists(readArtists());
+		};
+		const onAdd = () => {
+			const normalized = normalizeArtistTag(draft);
+			if (normalized === null) {
+				setAddError(UI_TEXT.artistInvalid);
+				return;
+			}
+			if (isFollowingArtist(normalized)) {
+				setAddError(UI_TEXT.artistDuplicate);
+				return;
+			}
+			try {
+				addArtist(normalized);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : UI_TEXT.artistDuplicate;
+				setAddError(message.toLowerCase().includes("duplicate") ? UI_TEXT.artistDuplicate : UI_TEXT.artistInvalid);
+				return;
+			}
+			setDraft("");
+			setAddError("");
+			setArtists(readArtists());
+		};
+		const pendingTags = new Set(pending.map((entry) => entry.tag));
+		const sorted = [...artists].sort((a, b) => compareArtistTags(a.tag, b.tag));
+		const showFilter = sorted.length + pending.length > 12;
+		const filterValue = showFilter ? filter.trim().toLowerCase() : "";
+		A(() => {
+			if (!showFilter && filter.length > 0) setFilter("");
+		}, [showFilter, filter]);
+		const matchesFilter = (tag) => {
+			if (filterValue.length === 0) return true;
+			return tag.toLowerCase().includes(filterValue) || displayArtistName(tag).toLowerCase().includes(filterValue);
+		};
+		const pendingSorted = [...pending].sort((a, b) => compareArtistTags(a.tag, b.tag));
+		const seen = getSeenPostId();
+		const count = artists.length;
+		const empty = sorted.length === 0 && pending.length === 0;
+		return a$1($, { children: [a$1("style", { children: FOLLOWING_PAGE_CSS }), a$1(Card, {
+			className: PANEL_UI_CLASS.pageCard,
+			children: a$1("div", {
+				className: PANEL_UI_CLASS.scrollRegion,
+				children: [
+					a$1("div", {
+						className: PANEL_UI_CLASS.artistMeta,
+						children: [a$1("p", {
+							className: "rdw-hint",
+							children: `${String(count)} artist${count === 1 ? "" : "s"}`
+						}), a$1("p", {
+							className: "rdw-hint",
+							children: seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing
+						})]
+					}),
+					a$1(AddArtistForm, {
+						draft,
+						error: addError,
+						onDraftChange: (value) => {
+							setDraft(value);
+							if (addError.length > 0) setAddError("");
+						},
+						onSubmit: onAdd
+					}),
+					empty ? a$1($, { children: a$1(EmptyState, {
+						title: ARTISTS_EMPTY_TITLE,
+						description: ARTISTS_EMPTY_HINT,
+						action: a$1(Button, {
+							variant: "secondary",
+							onClick: () => {
+								window.location.assign(OPEN_POSTS_HREF);
+							},
+							children: OPEN_POSTS_LABEL
+						})
+					}) }) : a$1($, { children: [showFilter ? a$1("div", {
+						className: PANEL_UI_CLASS.artistFilter,
+						children: a$1(TextField, {
+							id: ARTIST_FILTER_ID,
+							label: ARTIST_FILTER_LABEL,
+							value: filter,
+							onChange: setFilter
+						})
+					}) : null, a$1("ul", {
+						className: PANEL_UI_CLASS.artistList,
+						children: [pendingSorted.map((entry) => {
+							if (!matchesFilter(entry.tag)) return null;
+							return a$1("li", {
+								className: PANEL_UI_CLASS.artistRow,
+								"data-tag": entry.tag,
+								children: a$1("div", {
+									className: PANEL_UI_CLASS.artistUndo,
+									children: [a$1("span", { children: `${UNFOLLOWED_PREFIX}${displayArtistName(entry.tag)}` }), a$1(Button, {
+										variant: "secondary",
+										size: "s",
+										onClick: () => {
+											onUndo(entry.tag);
+										},
+										children: UNFOLLOW_UNDO_LABEL
+									})]
+								})
+							}, `undo-${entry.tag}`);
+						}), sorted.map((artist) => {
+							if (pendingTags.has(artist.tag) || !matchesFilter(artist.tag)) return null;
+							return a$1("li", {
+								className: PANEL_UI_CLASS.artistRow,
+								"data-tag": artist.tag,
+								children: [a$1("a", {
+									className: PANEL_UI_CLASS.artistLink,
+									href: buildSearchUrl([{
+										tag: artist.tag,
+										type: TAG_TYPE_INCLUDE
+									}]),
+									title: artist.tag,
+									children: displayArtistName(artist.tag)
+								}), a$1(IconButton, {
+									label: `Unfollow ${artist.tag}`,
+									onClick: () => {
+										onUnfollow(artist.tag);
+									},
+									children: a$1(IconX, { size: 14 })
+								})]
+							}, artist.tag);
+						})]
+					})] })
+				]
+			})
+		})] });
+	}
+	var PAGE_CONTENT_CSS = `
+.${PANEL_UI_CLASS.pageCard} {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+.${PANEL_UI_CLASS.scrollRegion} {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.${CSS_CLASS.section} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${PANEL_UI_CLASS.settingsGroup} {
+  display: grid;
+  gap: 2px;
+}
+.${PANEL_UI_CLASS.settingsRow} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--rdw-radius-m);
+  font-size: 12.5px;
+}
+.${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
+  background: var(--rdw-surface-2);
+}
+.${PANEL_UI_CLASS.settingsRow} .rdw-switch-row {
+  width: 100%;
+  justify-content: space-between;
+  flex-direction: row-reverse;
+}
+.${PANEL_UI_CLASS.settingsRow} .rdw-select,
+.${PANEL_UI_CLASS.settingsRow} .rdw-num {
+  width: 100%;
+}
+.${PANEL_UI_CLASS.artistMeta} {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.${PANEL_UI_CLASS.artistFilter} {
+  flex-shrink: 0;
+}
+.${PANEL_UI_CLASS.artistList} {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.${PANEL_UI_CLASS.artistRow} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--rdw-radius-s);
+}
+.${PANEL_UI_CLASS.artistRow}:hover {
+  background: var(--rdw-surface-2);
+}
+.${PANEL_UI_CLASS.artistLink} {
+  color: var(--rdw-accent);
+  text-decoration: none;
+  font-weight: 600;
+  word-break: break-word;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.${PANEL_UI_CLASS.artistLink}:hover {
+  text-decoration: underline;
+}
+.${PANEL_UI_CLASS.artistLink}:focus-visible {
+  outline: 2px solid var(--rdw-accent);
+  outline-offset: 2px;
+}
+.${PANEL_UI_CLASS.artistUndo} {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--rdw-muted);
+}
+.${CSS_CLASS.list} {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.${CSS_CLASS.listItem} {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+}
+.${CSS_CLASS.itemName} {
+  border: 0;
+  background: transparent;
+  color: var(--rdw-accent);
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  word-break: break-word;
+}
+.${CSS_CLASS.itemName}:disabled {
+  color: var(--rdw-muted);
+  cursor: not-allowed;
+}
+.${CSS_CLASS.itemActions},
+.${CSS_CLASS.formActions},
+.${CSS_CLASS.toolbar},
+.${CSS_CLASS.confirmRow} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.${CSS_CLASS.form} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${CSS_CLASS.hint} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+.${CSS_CLASS.error} {
+  margin: 0;
+  color: var(--rdw-danger);
+  font-size: 12px;
+}
+`.trim();
 	var ROOT = `html.${RDW_SKIN_CLASS}`;
 	var ROOT_DARK = `${ROOT}[${RDW_THEME_ATTR}="dark"]`;
 	var v = {
@@ -7857,6 +8682,11 @@ ${ROOT} ul#tag-sidebar h6 {
   margin: 0 0 6px;
 }
 
+/* Standalone "Tags" (and similar) heading above the list card */
+${ROOT} div.sidebar > h5 {
+  display: none;
+}
+
 ${ROOT} div.tag-search,
 ${ROOT} ul#tag-sidebar {
   background: ${v.surface};
@@ -7906,8 +8736,12 @@ ${ROOT} span.tag-count {
   font-size: 12px;
 }
 
-/* ? + − operators (first three anchors); tag name keeps type color */
-${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:nth-of-type(-n+3) {
+/*
+ * Tag type color on the LAST link of the row (tag name).
+ * List rows: ? + − name — name is 4th. Post rows: ? name — name is 2nd.
+ * Operators / wiki stay muted on every page.
+ */
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:not(:last-of-type) {
   color: ${v.muted};
   font-size: 11px;
   font-weight: normal;
@@ -7933,6 +8767,30 @@ ${ROOT} .tag-type-metadata {
   color: ${v.tagMetadata};
 }
 
+${ROOT} ul#tag-sidebar > li.tag-type-artist > a:last-of-type {
+  color: ${v.tagArtist};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-character > a:last-of-type {
+  color: ${v.tagCharacter};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-copyright > a:last-of-type {
+  color: ${v.tagCopyright};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-metadata > a:last-of-type {
+  color: ${v.tagMetadata};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
 ${ROOT} .tag-type-artist > a:hover,
 ${ROOT} .tag-type-artist:hover,
 ${ROOT} .tag-type-character > a:hover,
@@ -7940,7 +8798,8 @@ ${ROOT} .tag-type-character:hover,
 ${ROOT} .tag-type-copyright > a:hover,
 ${ROOT} .tag-type-copyright:hover,
 ${ROOT} .tag-type-metadata > a:hover,
-${ROOT} .tag-type-metadata:hover {
+${ROOT} .tag-type-metadata:hover,
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:last-of-type:hover {
   color: ${v.accent};
 }
 
@@ -8044,10 +8903,33 @@ ${ROOT} div.auto_complete ul strong.highlight {
 /* —— grid / thumbs (cell size unchanged) —— */
 ${ROOT} div.image-list {
   gap: 12px;
+  align-items: flex-start;
+  align-content: flex-start;
 }
 
 ${ROOT} img.preview {
   border-radius: ${v.radiusL};
+}
+
+/* Favorites: Remove stays subtle; preview radius matches grid (no thumb size change) */
+${ROOT} span.thumb > a[onclick] {
+  color: ${v.muted};
+  font-size: 12px;
+  font-weight: normal;
+  padding: 2px 8px;
+  border-radius: ${v.radiusS};
+  background: transparent;
+  border: none;
+}
+
+${ROOT} span.thumb > a[onclick]:hover {
+  color: ${v.danger};
+  background: ${v.dangerSoft};
+}
+
+${ROOT} span.thumb > a[onclick] b {
+  font-weight: normal;
+  color: inherit;
 }
 
 ${ROOT} .webm-thumb {
@@ -8147,12 +9029,13 @@ ${ROOT} .manual-page-chooser > input[type="submit"] {
   cursor: pointer;
 }
 
-/* —— forms / tables —— */
+/* —— forms / tables (site chrome outside our panel) —— */
 ${ROOT} input,
 ${ROOT} select,
 ${ROOT} textarea,
 ${ROOT} button {
   color: ${v.text};
+  font-family: ${v.font};
 }
 
 ${ROOT} input[type="text"],
@@ -8165,6 +9048,46 @@ ${ROOT} textarea {
   border: 1px solid ${v.border};
   border-radius: ${v.radiusS};
   color: ${v.text};
+}
+
+${ROOT} button,
+${ROOT} input[type="submit"],
+${ROOT} input[type="button"],
+${ROOT} .gdprbutton button {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusS};
+  color: ${v.text};
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+${ROOT} button:hover,
+${ROOT} input[type="submit"]:hover,
+${ROOT} input[type="button"]:hover,
+${ROOT} .gdprbutton button:hover {
+  background: ${v.accentSoft};
+  border-color: ${v.accent};
+  color: ${v.accent};
+}
+
+/* Keep search submit as primary accent (overrides generic button chrome) */
+${ROOT} div.tag-search input[type="submit"],
+${ROOT} div.tag-search button[type="submit"],
+${ROOT} .manual-page-chooser > input[type="submit"] {
+  background: ${v.accent};
+  border: none;
+  color: ${v.surface};
+  font-weight: 600;
+}
+
+${ROOT} div.tag-search input[type="submit"]:hover,
+${ROOT} div.tag-search button[type="submit"]:hover,
+${ROOT} .manual-page-chooser > input[type="submit"]:hover {
+  background: ${v.accent};
+  border: none;
+  color: ${v.surface};
+  filter: brightness(1.05);
 }
 
 ${ROOT} table {
@@ -8207,12 +9130,47 @@ ${ROOT} table tr.pending-tag {
   background: ${v.surface2};
 }
 
+/* Zebra without native green tint */
 ${ROOT} table tr:nth-child(odd) {
   background: ${v.surface2};
 }
 
 ${ROOT} table.form th {
   color: ${v.muted};
+}
+
+/* Forum tables */
+${ROOT} div#forum > table {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  box-shadow: ${v.shadow1};
+}
+
+${ROOT} div#forum > table th,
+${ROOT} div#forum > table td {
+  border-color: ${v.border};
+  color: ${v.text};
+}
+
+${ROOT} div#forum > table th:first-child,
+${ROOT} div#forum > table td:first-child {
+  text-align: left;
+}
+
+${ROOT} div#forum > table tr:nth-child(odd) {
+  background: ${v.surface2};
+}
+
+${ROOT} div#forum > table tr:nth-child(even) {
+  background: ${v.surface};
+}
+
+${ROOT} div#forum > table.highlightable > tbody > tr:hover {
+  background: ${v.accentSoft};
 }
 
 ${ROOT} .added-tags {
@@ -8303,10 +9261,49 @@ ${ROOT} div.response-list > div.post > div.content {
 
 ${ROOT} div.response-list > div.post > div.content > div.footer {
   color: ${v.muted};
+  margin-top: 0.75em;
 }
 
-${ROOT} div.response-list > div.post > div.content > div.footer a {
+/* Edit | Respond (and similar) on comments / forum posts */
+${ROOT} div.response-list > div.post > div.content > div.footer a,
+${ROOT} ul.flat-list li a {
   color: ${v.muted};
+  font-weight: normal;
+  padding: 2px 6px;
+  border-radius: ${v.radiusS};
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer a:hover,
+${ROOT} ul.flat-list li a:hover {
+  color: ${v.accent};
+  background: ${v.accentSoft};
+}
+
+${ROOT} ul.flat-list li a.forum-update {
+  font-style: italic;
+  color: ${v.muted};
+}
+
+${ROOT} div.link-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+${ROOT} div.link-list li {
+  margin: 0 0 4px;
+}
+
+${ROOT} div.link-list a {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: ${v.radiusS};
+  color: ${v.muted};
+}
+
+${ROOT} div.link-list a:hover {
+  color: ${v.accent};
+  background: ${v.accentSoft};
 }
 
 ${ROOT} span.author,
@@ -8478,75 +9475,6 @@ ${ROOT_DARK} div.has-mail {
 `.trim();
 	function getSiteSkinCss() {
 		return SITE_SKIN_CSS;
-	}
-	function themeEnablesSkin(theme) {
-		return theme === "light" || theme === "dark" || theme === "custom";
-	}
-	function paletteModeForTheme(theme) {
-		if (theme === "dark" || theme === "site-dark") return "dark";
-		if (theme === "custom") return "light";
-		return "light";
-	}
-	function resolveTokenPalette(appearance) {
-		const base = paletteForMode(paletteModeForTheme(appearance.theme));
-		if (appearance.theme !== "custom" || appearance.custom === void 0) return base;
-		return {
-			...base,
-			accent: appearance.custom.accent,
-			bg: appearance.custom.bg,
-			surface: appearance.custom.surface,
-			text: appearance.custom.text
-		};
-	}
-	function ensureStyleElement(id) {
-		const existing = document.getElementById(id);
-		if (existing instanceof HTMLStyleElement) return existing;
-		if (existing !== null) existing.remove();
-		const style = document.createElement("style");
-		style.id = id;
-		(document.head ?? document.documentElement).append(style);
-		return style;
-	}
-	function injectTokenStyles(palette) {
-		const style = ensureStyleElement(TOKEN_STYLE_ID);
-		style.textContent = buildTokensCss(palette, ":root");
-		return style;
-	}
-	function injectSiteSkinHook(cssText = "") {
-		const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
-		style.textContent = cssText;
-		return style;
-	}
-	function applyHtmlThemeAttributes(theme) {
-		const root = document.documentElement;
-		root.setAttribute(RDW_THEME_ATTR, theme);
-		if (themeEnablesSkin(theme)) root.classList.add(RDW_SKIN_CLASS);
-		else root.classList.remove(RDW_SKIN_CLASS);
-	}
-	function applyAppearanceToDocument(options) {
-		const { appearance } = options;
-		applyHtmlThemeAttributes(appearance.theme);
-		injectTokenStyles(resolveTokenPalette(appearance));
-		injectSiteSkinHook(options.siteSkinCss ?? "");
-		const root = document.documentElement;
-		clearCustomThemeProperties(root);
-		if (appearance.theme === "custom" && appearance.custom !== void 0) {
-			const backgroundImage = options.backgroundDataUrl ?? appearance.custom.backgroundImage;
-			applyCustomThemeProperties(root, backgroundImage !== void 0 && backgroundImage.length > 0 ? {
-				accent: appearance.custom.accent,
-				bg: appearance.custom.bg,
-				surface: appearance.custom.surface,
-				text: appearance.custom.text,
-				backgroundImage,
-				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
-			} : {
-				accent: appearance.custom.accent,
-				bg: appearance.custom.bg,
-				surface: appearance.custom.surface,
-				text: appearance.custom.text,
-				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
-			});
-		} else if (options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
 	}
 	var MS_PER_DAY = 864e5;
 	var COOKIE_NAME_VALUE_SEPARATOR = "=";
@@ -8757,1339 +9685,6 @@ ${ROOT_DARK} div.has-mail {
 			contrastWarning,
 			contrastRatio: ratio
 		};
-	}
-	var removeClickBound = false;
-	function collectFavoritePostIds(root) {
-		const ids = [];
-		const seen = new Set();
-		const links = root.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
-		for (const link of links) {
-			if (!(link instanceof HTMLAnchorElement)) continue;
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) continue;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null || seen.has(postId)) continue;
-			seen.add(postId);
-			ids.push(postId);
-		}
-		return ids;
-	}
-	function bindRemoveClickCapture() {
-		if (removeClickBound) return;
-		removeClickBound = true;
-		document.addEventListener("click", (event) => {
-			const target = event.target;
-			if (!(target instanceof Element)) return;
-			const link = target.closest("a");
-			if (!(link instanceof HTMLAnchorElement)) return;
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) return;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null) return;
-			removeFav(postId);
-		}, true);
-	}
-	function syncFavoritesPage(root = document, search = window.location.search) {
-		if (detectPageKind(search) !== "favorites") return;
-		const ids = collectFavoritePostIds(root);
-		const numericIds = [];
-		for (const postId of ids) {
-			const parsed = Number(postId);
-			if (Number.isFinite(parsed)) numericIds.push(Math.trunc(parsed));
-		}
-		addFavs(numericIds);
-		bindRemoveClickCapture();
-	}
-	function extractArtistTagFromLi(li) {
-		const links = li.querySelectorAll("a[href]");
-		for (const node of links) {
-			if (!(node instanceof HTMLAnchorElement)) continue;
-			if (node.hasAttribute("onclick")) continue;
-			const href = node.getAttribute("href");
-			if (href === null || href.length === 0) continue;
-			let url;
-			try {
-				url = new URL(href, SITE_ORIGIN);
-			} catch {
-				continue;
-			}
-			if (url.searchParams.get("page") !== "post") continue;
-			if (url.searchParams.get("s") !== "list") continue;
-			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
-			if (tags === null) continue;
-			return normalizeArtistTag(tags);
-		}
-		return null;
-	}
-	function applyFollowState(button, following) {
-		button.setAttribute("aria-pressed", following ? "true" : "false");
-		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
-		const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
-		const tag = button.dataset.rdwArtistTag ?? "";
-		button.setAttribute("aria-label", `${label}: ${tag}`);
-		button.textContent = label;
-	}
-	function attachFollowButton(li, tag) {
-		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
-		const button = document.createElement("button");
-		button.type = "button";
-		button.className = CSS_CLASS.artistFollow;
-		button.dataset.rdwArtistTag = tag;
-		applyFollowState(button, isFollowingArtist(tag));
-		button.addEventListener("click", (event) => {
-			event.preventDefault();
-			event.stopPropagation();
-			const following = button.getAttribute("aria-pressed") === "true";
-			try {
-				if (following) {
-					removeArtist(tag);
-					applyFollowState(button, false);
-				} else {
-					addArtist(tag);
-					applyFollowState(button, true);
-				}
-			} catch {
-				applyFollowState(button, isFollowingArtist(tag));
-			}
-		});
-		li.append(button);
-	}
-	function mountArtistSidebar(root = document, search = window.location.search) {
-		const kind = detectPageKind(search);
-		if (kind !== "list" && kind !== "post") return;
-		ensureDocumentStyles();
-		const sidebar = root.querySelector(SITE_SELECTORS.tagSidebar);
-		if (sidebar === null) return;
-		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
-		for (const row of rows) {
-			if (!(row instanceof HTMLElement)) continue;
-			const tag = extractArtistTagFromLi(row);
-			if (tag === null) continue;
-			attachFollowButton(row, tag);
-		}
-	}
-	var PANEL_FEATURE_STATE_ID = "panel";
-	var PANEL_TABS = [
-		"collections",
-		"artists",
-		"favorites",
-		"settings",
-		"blacklist"
-	];
-	var PANEL_TAB_LABELS = {
-		collections: "Collections",
-		artists: "Artists",
-		favorites: "Favorites",
-		settings: "Settings",
-		blacklist: "Blacklist"
-	};
-	var PANEL_UI_CLASS = {
-		tabs: "rdw-tabs",
-		tab: "rdw-tab",
-		tabPanel: "rdw-tab-panel",
-		footer: "rdw-footer",
-		artistMeta: "rdw-artist-meta",
-		artistFilter: "rdw-artist-filter",
-		artistList: "rdw-artist-list",
-		artistRow: "rdw-artist-row",
-		artistLink: "rdw-artist-link",
-		artistUndo: "rdw-artist-undo",
-		scrollRegion: "rdw-scroll-region",
-		themeDark: "rdw-theme-dark",
-		settingsGroup: "rdw-settings-group",
-		settingsRow: "rdw-settings-row",
-		resizeHint: "rdw-resize-hint"
-	};
-	var UNFOLLOW_UNDO_MS = 5e3;
-	var ARTISTS_EMPTY_HINT = "Follow artists with the Follow button next to their name in the tag list.";
-	var ARTIST_FILTER_LABEL = "Filter artists";
-	var UNFOLLOW_UNDO_LABEL = "Undo";
-	var UNFOLLOWED_PREFIX = "Unfollowed ";
-	var RESIZE_HINT = "Drag the corner to resize";
-	var FEATURE_CHECKBOX_ID_PREFIX = "rdw-feature-";
-	var FEATURE_CHOICE_ID_PREFIX = "rdw-feature-choice-";
-	var UPDATES_GROUP_SIZE_ID = "rdw-updates-group-size";
-	var PLAYLIST_CHUNK_SIZE_ID = "rdw-playlist-chunk-size";
-	var ARTIST_FILTER_ID = "rdw-artist-filter";
-	var GRID_FAV_CHECKBOX_ID = "rdw-grid-fav-buttons";
-	var TWEAKS_SWITCH_ID = "rdw-tweaks-enabled";
-	var TAG_GROUPS_PANEL_LABEL = "Collapse tags";
-	function isPanelTab(value) {
-		return typeof value === "string" && PANEL_TABS.some((tab) => tab === value);
-	}
-	function featurePanelLabel(featureId, fallback) {
-		if (featureId === "tag-groups") return TAG_GROUPS_PANEL_LABEL;
-		return fallback;
-	}
-	function displayArtistName(tag) {
-		return tag.replaceAll("_", " ");
-	}
-	function compareArtistTags(a, b) {
-		return a.localeCompare(b, void 0, { sensitivity: "base" });
-	}
-	function ArtistsTab(props) {
-		const pendingTags = new Set(props.pending.map((entry) => entry.tag));
-		const sorted = [...props.artists].sort((a, b) => compareArtistTags(a.tag, b.tag));
-		const showFilter = sorted.length + props.pending.length > 12;
-		const filterValue = showFilter ? props.filter.trim().toLowerCase() : "";
-		A(() => {
-			if (!showFilter && props.filter.length > 0) props.onFilterChange("");
-		}, [
-			showFilter,
-			props.filter,
-			props.onFilterChange
-		]);
-		const matchesFilter = (tag) => {
-			if (filterValue.length === 0) return true;
-			return tag.toLowerCase().includes(filterValue) || displayArtistName(tag).toLowerCase().includes(filterValue);
-		};
-		const pendingSorted = [...props.pending].sort((a, b) => compareArtistTags(a.tag, b.tag));
-		const seen = getSeenPostId();
-		const count = props.artists.length;
-		const empty = sorted.length === 0 && props.pending.length === 0;
-		return a$1("div", {
-			className: PANEL_UI_CLASS.scrollRegion,
-			children: [a$1("div", {
-				className: PANEL_UI_CLASS.artistMeta,
-				children: [a$1("p", {
-					className: "rdw-hint",
-					children: `${String(count)} artist${count === 1 ? "" : "s"}`
-				}), a$1("p", {
-					className: "rdw-hint",
-					children: seen > 0 ? `${UI_TEXT.seenUpTo}${String(seen)}` : UI_TEXT.seenNothing
-				})]
-			}), empty ? a$1(EmptyState, { title: ARTISTS_EMPTY_HINT }) : a$1($, { children: [showFilter ? a$1("div", {
-				className: PANEL_UI_CLASS.artistFilter,
-				children: a$1(TextField, {
-					id: ARTIST_FILTER_ID,
-					label: ARTIST_FILTER_LABEL,
-					value: props.filter,
-					onChange: props.onFilterChange
-				})
-			}) : null, a$1("ul", {
-				className: PANEL_UI_CLASS.artistList,
-				children: [pendingSorted.map((entry) => {
-					if (!matchesFilter(entry.tag)) return null;
-					return a$1("li", {
-						className: PANEL_UI_CLASS.artistRow,
-						"data-tag": entry.tag,
-						children: a$1("div", {
-							className: PANEL_UI_CLASS.artistUndo,
-							children: [a$1("span", { children: `${UNFOLLOWED_PREFIX}${displayArtistName(entry.tag)}` }), a$1(Button, {
-								variant: "secondary",
-								size: "s",
-								onClick: () => {
-									props.onUndo(entry.tag);
-								},
-								children: UNFOLLOW_UNDO_LABEL
-							})]
-						})
-					}, `undo-${entry.tag}`);
-				}), sorted.map((artist) => {
-					if (pendingTags.has(artist.tag) || !matchesFilter(artist.tag)) return null;
-					return a$1("li", {
-						className: PANEL_UI_CLASS.artistRow,
-						"data-tag": artist.tag,
-						children: [a$1("a", {
-							className: PANEL_UI_CLASS.artistLink,
-							href: buildSearchUrl([{
-								tag: artist.tag,
-								type: TAG_TYPE_INCLUDE
-							}]),
-							title: artist.tag,
-							children: displayArtistName(artist.tag)
-						}), a$1(IconButton, {
-							label: `Unfollow ${artist.tag}`,
-							onClick: () => {
-								props.onUnfollow(artist.tag);
-							},
-							children: a$1(IconX, { size: 14 })
-						})]
-					}, artist.tag);
-				})]
-			})] })]
-		});
-	}
-	var SECTION_CLASS$1 = "rdw-blacklist";
-	var CHIPS_CLASS = "rdw-blacklist-chips";
-	var ADD_ROW_CLASS = "rdw-blacklist-add-row";
-	var SAVED_ROW_CLASS = "rdw-blacklist-saved-row";
-	var HINT_CLASS = "rdw-blacklist-hint";
-	var ADD_LABEL = "Add tag";
-	var ADD_BUTTON = "Add";
-	var SAVED_TEXT = "Saved. Reload the page to apply.";
-	var RELOAD_BUTTON = "Reload";
-	var PERMANENT_HINT = "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
-	var ADD_INPUT_ID = "rdw-blacklist-add";
-	var TAG_SPLIT_PATTERN = /[, ]+/;
-	var BLACKLIST_SECTION_CSS = `
-.${SECTION_CLASS$1} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.${SECTION_CLASS$1} .${CHIPS_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.${SECTION_CLASS$1} .${ADD_ROW_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-end;
-}
-.${SECTION_CLASS$1} .${ADD_ROW_CLASS} .rdw-field {
-  flex: 1 1 12rem;
-  margin: 0;
-}
-.${SECTION_CLASS$1} .${SAVED_ROW_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.${SECTION_CLASS$1} .${HINT_CLASS} {
-  margin: 0;
-  color: var(--rdw-muted);
-  font-size: 12px;
-}
-`.trim();
-	function parseAddTokens(raw) {
-		const result = [];
-		for (const part of raw.split(TAG_SPLIT_PATTERN)) {
-			const trimmed = part.trim();
-			if (trimmed.length === 0) continue;
-			result.push(trimmed);
-		}
-		return result;
-	}
-	function persistTags(tags) {
-		writeSiteBlacklist([...tags]);
-		return readSiteBlacklist();
-	}
-	function BlacklistSection(props = {}) {
-		const includeHeading = props.includeHeading !== false;
-		const [tags, setTags] = d(() => readSiteBlacklist());
-		const [draft, setDraft] = d("");
-		const addTokens = b(() => {
-			const tokens = parseAddTokens(draft);
-			if (tokens.length === 0) return;
-			setTags(persistTags([...readSiteBlacklist(), ...tokens]));
-			setDraft("");
-		}, [draft]);
-		return a$1($, { children: [a$1("style", { children: BLACKLIST_SECTION_CSS }), a$1("section", {
-			className: `rdw-section ${SECTION_CLASS$1}`,
-			children: [
-				includeHeading ? a$1(SectionLabel, { children: "Blacklist" }) : null,
-				a$1("ul", {
-					className: CHIPS_CLASS,
-					children: tags.map((tag) => a$1("li", { children: a$1(Chip, {
-						label: tag,
-						onRemove: () => {
-							const next = readSiteBlacklist().filter((entry) => entry !== tag);
-							setTags(persistTags(next));
-						}
-					}) }, tag))
-				}),
-				a$1("form", {
-					className: ADD_ROW_CLASS,
-					onSubmit: (event) => {
-						event.preventDefault();
-						addTokens();
-					},
-					children: [a$1(TextField, {
-						id: ADD_INPUT_ID,
-						label: ADD_LABEL,
-						value: draft,
-						onChange: setDraft
-					}), a$1(Button, {
-						type: "submit",
-						variant: "primary",
-						children: ADD_BUTTON
-					})]
-				}),
-				a$1("div", {
-					className: SAVED_ROW_CLASS,
-					children: [a$1("p", {
-						className: "rdw-hint",
-						children: SAVED_TEXT
-					}), a$1(Button, {
-						variant: "secondary",
-						onClick: () => {
-							window.location.reload();
-						},
-						children: RELOAD_BUTTON
-					})]
-				}),
-				a$1("p", {
-					className: HINT_CLASS,
-					children: PERMANENT_HINT
-				})
-			]
-		})] });
-	}
-	var TAB_CLASS = "rdw-collections-tab";
-	var PLAYLIST_META_CLASS = "rdw-playlist-meta";
-	var PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
-	var PLAYLIST_PART_CLASS = "rdw-playlist-part";
-	var ROW_MAIN_CLASS = "rdw-collections-row-main";
-	var SAVED_SEARCHES_HEADING = "Saved searches";
-	var PLAYLISTS_HEADING = "Playlists";
-	var EMPTY_SAVED_SEARCHES = "No saved searches yet.";
-	var EMPTY_PLAYLISTS = "No playlists yet.";
-	var EMPTY_PLAYLISTS_HINT = "Use the + button on a post";
-	var NEW_PLAYLIST = "New playlist";
-	var OPEN_PLAYLIST = "Open playlist";
-	var SAVE_NAME_ID = "rdw-save-name";
-	var PLAYLIST_NAME_ID = "rdw-playlist-name";
-	var COLLECTIONS_TAB_CSS = `
-.${TAB_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.${TAB_CLASS} .${ROW_MAIN_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.${TAB_CLASS} .${PLAYLIST_META_CLASS} {
-  margin: 0;
-  color: var(--rdw-muted);
-  font-size: 12px;
-}
-.${TAB_CLASS} .${PLAYLIST_PARTS_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS} {
-  color: var(--rdw-accent);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-}
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
-  outline: 2px solid var(--rdw-accent);
-  outline-offset: 2px;
-}
-`.trim();
-	var sharedMode = { kind: "list" };
-	var sharedNameDraft = "";
-	function postsLabel(count) {
-		return `${String(count)} post${count === 1 ? "" : "s"}`;
-	}
-	function listSavedSearches() {
-		return load().collections.filter((entry) => !isPlaylist(entry));
-	}
-	function playlistPostCount(playlist) {
-		return playlist.postIds?.length ?? 0;
-	}
-	function NameForm(props) {
-		A(() => {
-			const input = document.getElementById(props.inputId);
-			if (input instanceof HTMLInputElement) {
-				input.focus();
-				input.select();
-			}
-		}, [props.inputId]);
-		return a$1("form", {
-			className: "rdw-form",
-			onSubmit: (event) => {
-				event.preventDefault();
-				props.onSubmit();
-			},
-			children: [a$1(TextField, {
-				id: props.inputId,
-				label: UI_TEXT.nameLabel,
-				value: props.value,
-				onChange: props.onChange
-			}), a$1("div", {
-				className: "rdw-form-actions",
-				children: [a$1(Button, {
-					type: "submit",
-					variant: "primary",
-					children: UI_TEXT.save
-				}), a$1(Button, {
-					type: "button",
-					variant: "secondary",
-					onClick: props.onCancel,
-					children: UI_TEXT.cancel
-				})]
-			})]
-		});
-	}
-	function RenameDeleteActions(props) {
-		return a$1("div", {
-			className: "rdw-item-actions",
-			children: [a$1(Button, {
-				variant: "secondary",
-				size: "s",
-				"aria-label": `${UI_TEXT.rename}: ${props.collection.name}`,
-				onClick: props.onRename,
-				children: UI_TEXT.rename
-			}), a$1(IconButton, {
-				label: `${UI_TEXT.delete}: ${props.collection.name}`,
-				onClick: props.onDelete,
-				children: a$1(IconTrash, { size: 14 })
-			})]
-		});
-	}
-	function CollectionsTab() {
-		const [mode, setMode] = d(sharedMode);
-		const [nameDraft, setNameDraft] = d(sharedNameDraft);
-		const [, setTick] = d(0);
-		const refresh = () => {
-			setTick((value) => value + 1);
-		};
-		const setModeBoth = (next) => {
-			sharedMode = next;
-			setMode(next);
-		};
-		const setDraftBoth = (next) => {
-			sharedNameDraft = next;
-			setNameDraft(next);
-		};
-		const saved = listSavedSearches();
-		const playlists = listPlaylists();
-		const searchTags = readTagsFromLocation(window.location.search);
-		const canSave = searchTags !== null && searchTags.length > 0;
-		return a$1($, { children: [a$1("style", { children: COLLECTIONS_TAB_CSS }), a$1("div", {
-			className: `${PANEL_UI_CLASS.scrollRegion} ${TAB_CLASS}`,
-			children: [a$1("section", {
-				className: "rdw-section",
-				children: [
-					a$1(SectionLabel, { children: SAVED_SEARCHES_HEADING }),
-					mode.kind === "save-search" ? a$1(NameForm, {
-						inputId: SAVE_NAME_ID,
-						value: nameDraft,
-						onChange: setDraftBoth,
-						onSubmit: () => {
-							const tags = readTagsFromLocation(window.location.search);
-							if (tags === null || tags.length === 0) {
-								setModeBoth({ kind: "list" });
-								refresh();
-								return;
-							}
-							const name = nameDraft.trim();
-							if (name.length === 0) return;
-							addCollection(name, tags);
-							setModeBoth({ kind: "list" });
-							setDraftBoth("");
-							refresh();
-						},
-						onCancel: () => {
-							setModeBoth({ kind: "list" });
-						}
-					}) : a$1($, { children: [a$1(Button, {
-						variant: "primary",
-						disabled: !canSave,
-						onClick: () => {
-							const tags = readTagsFromLocation(window.location.search);
-							if (tags === null || tags.length === 0) return;
-							setDraftBoth(serialize(tags));
-							setModeBoth({ kind: "save-search" });
-						},
-						children: UI_TEXT.saveCurrent
-					}), !canSave ? a$1("p", {
-						className: "rdw-hint",
-						children: UI_TEXT.notOnSearchPage
-					}) : null] }),
-					saved.length === 0 ? a$1("p", {
-						className: "rdw-hint",
-						children: EMPTY_SAVED_SEARCHES
-					}) : a$1("ul", {
-						className: "rdw-list",
-						children: saved.map((collection) => a$1("li", {
-							className: "rdw-list-item",
-							children: mode.kind === "rename" && mode.id === collection.id ? a$1(NameForm, {
-								inputId: `rdw-rename-${collection.id}`,
-								value: nameDraft,
-								onChange: setDraftBoth,
-								onSubmit: () => {
-									const nextName = nameDraft.trim();
-									if (nextName.length === 0) return;
-									renameCollection(collection.id, nextName);
-									setModeBoth({ kind: "list" });
-									setDraftBoth("");
-									refresh();
-								},
-								onCancel: () => {
-									setModeBoth({ kind: "list" });
-								}
-							}) : mode.kind === "confirm-delete" && mode.id === collection.id ? a$1($, { children: [a$1("p", {
-								className: "rdw-hint",
-								children: `${UI_TEXT.confirmDelete} (${collection.name})`
-							}), a$1("div", {
-								className: "rdw-confirm-row",
-								children: [a$1(Button, {
-									variant: "danger",
-									onClick: () => {
-										deleteCollection(collection.id);
-										setModeBoth({ kind: "list" });
-										setDraftBoth("");
-										refresh();
-									},
-									children: UI_TEXT.confirm
-								}), a$1(Button, {
-									variant: "secondary",
-									onClick: () => {
-										setModeBoth({ kind: "list" });
-									},
-									children: UI_TEXT.cancel
-								})]
-							})] }) : a$1("div", {
-								className: ROW_MAIN_CLASS,
-								children: [a$1("button", {
-									type: "button",
-									className: "rdw-item-name",
-									"aria-label": `${UI_TEXT.openCollection}: ${collection.name}`,
-									onClick: () => {
-										window.location.assign(buildSearchUrl(collection.tags));
-									},
-									children: collection.name
-								}), a$1(RenameDeleteActions, {
-									collection,
-									onRename: () => {
-										setDraftBoth(collection.name);
-										setModeBoth({
-											kind: "rename",
-											id: collection.id
-										});
-									},
-									onDelete: () => {
-										setModeBoth({
-											kind: "confirm-delete",
-											id: collection.id
-										});
-									}
-								})]
-							})
-						}, collection.id))
-					})
-				]
-			}), a$1("section", {
-				className: "rdw-section",
-				children: [
-					a$1(SectionLabel, { children: PLAYLISTS_HEADING }),
-					mode.kind === "create-playlist" ? a$1(NameForm, {
-						inputId: PLAYLIST_NAME_ID,
-						value: nameDraft,
-						onChange: setDraftBoth,
-						onSubmit: () => {
-							const name = nameDraft.trim();
-							if (name.length === 0) return;
-							createPlaylist(name);
-							setModeBoth({ kind: "list" });
-							setDraftBoth("");
-							refresh();
-						},
-						onCancel: () => {
-							setModeBoth({ kind: "list" });
-						}
-					}) : a$1(Button, {
-						variant: "primary",
-						onClick: () => {
-							setDraftBoth("");
-							setModeBoth({ kind: "create-playlist" });
-						},
-						children: NEW_PLAYLIST
-					}),
-					playlists.length === 0 ? a$1(EmptyState, {
-						title: EMPTY_PLAYLISTS,
-						description: EMPTY_PLAYLISTS_HINT
-					}) : a$1("ul", {
-						className: "rdw-list",
-						children: playlists.map((playlist) => {
-							const count = playlistPostCount(playlist);
-							const queries = buildPlaylistQueries(playlist.postIds ?? [], getPlaylistChunkSize());
-							const canOpen = count > 0 && queries.length > 0;
-							return a$1("li", {
-								className: "rdw-list-item",
-								children: mode.kind === "rename" && mode.id === playlist.id ? a$1(NameForm, {
-									inputId: `rdw-rename-${playlist.id}`,
-									value: nameDraft,
-									onChange: setDraftBoth,
-									onSubmit: () => {
-										const nextName = nameDraft.trim();
-										if (nextName.length === 0) return;
-										renameCollection(playlist.id, nextName);
-										setModeBoth({ kind: "list" });
-										setDraftBoth("");
-										refresh();
-									},
-									onCancel: () => {
-										setModeBoth({ kind: "list" });
-									}
-								}) : mode.kind === "confirm-delete" && mode.id === playlist.id ? a$1($, { children: [a$1("p", {
-									className: "rdw-hint",
-									children: `${UI_TEXT.confirmDelete} (${playlist.name})`
-								}), a$1("div", {
-									className: "rdw-confirm-row",
-									children: [a$1(Button, {
-										variant: "danger",
-										onClick: () => {
-											deleteCollection(playlist.id);
-											setModeBoth({ kind: "list" });
-											setDraftBoth("");
-											refresh();
-										},
-										children: UI_TEXT.confirm
-									}), a$1(Button, {
-										variant: "secondary",
-										onClick: () => {
-											setModeBoth({ kind: "list" });
-										},
-										children: UI_TEXT.cancel
-									})]
-								})] }) : a$1($, { children: [
-									a$1("div", {
-										className: ROW_MAIN_CLASS,
-										children: [a$1("button", {
-											type: "button",
-											className: "rdw-item-name",
-											"aria-label": `${OPEN_PLAYLIST}: ${playlist.name}`,
-											disabled: !canOpen,
-											onClick: () => {
-												const first = queries[0];
-												if (first === void 0) return;
-												window.location.assign(buildUpdatesSearchUrl(first));
-											},
-											children: playlist.name
-										}), a$1(RenameDeleteActions, {
-											collection: playlist,
-											onRename: () => {
-												setDraftBoth(playlist.name);
-												setModeBoth({
-													kind: "rename",
-													id: playlist.id
-												});
-											},
-											onDelete: () => {
-												setModeBoth({
-													kind: "confirm-delete",
-													id: playlist.id
-												});
-											}
-										})]
-									}),
-									a$1("p", {
-										className: PLAYLIST_META_CLASS,
-										children: postsLabel(count)
-									}),
-									queries.length > 1 ? a$1("ul", {
-										className: PLAYLIST_PARTS_CLASS,
-										"aria-label": "Playlist parts",
-										children: queries.map((query, index) => a$1("li", { children: a$1("a", {
-											className: PLAYLIST_PART_CLASS,
-											href: buildUpdatesSearchUrl(query),
-											children: String(index + 1)
-										}) }, `${playlist.id}-${String(index)}`))
-									}) : null
-								] })
-							}, playlist.id);
-						})
-					})
-				]
-			})]
-		})] });
-	}
-	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
-	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
-	var THUMB_SELECTOR = "span.thumb";
-	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
-	var PAGINATOR_SELECTOR = "#paginator";
-	var LASTPAGE_SELECTOR = "a[name=\"lastpage\"]";
-	var NEXT_SELECTOR = "a[name=\"next\"]";
-	var REMOVE_LINK_SELECTOR = "a[onclick]";
-	var POST_LINK_ID_PATTERN = /^p(\d+)$/;
-	var ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
-	var URL_PARSE_BASE = "https://rule34.xxx";
-	var FAVORITES_SYNC_ERROR_NOT_LOGGED_IN = "not logged in or menu not found";
-	var FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE = "unexpected page";
-	function createAbortResult(total, page, pages) {
-		return {
-			status: "aborted",
-			total,
-			page,
-			pages
-		};
-	}
-	function isAbortError(error) {
-		return error instanceof DOMException && error.name === "AbortError" || error instanceof Error && error.name === "AbortError";
-	}
-	function throwIfAborted(signal) {
-		if (signal.aborted) throw new DOMException("Aborted", "AbortError");
-	}
-	function delay(ms, signal) {
-		return new Promise((resolve, reject) => {
-			if (signal.aborted) {
-				reject(new DOMException("Aborted", "AbortError"));
-				return;
-			}
-			const timer = setTimeout(() => {
-				signal.removeEventListener("abort", onAbort);
-				if (signal.aborted) {
-					reject(new DOMException("Aborted", "AbortError"));
-					return;
-				}
-				resolve();
-			}, ms);
-			const onAbort = () => {
-				clearTimeout(timer);
-				reject(new DOMException("Aborted", "AbortError"));
-			};
-			signal.addEventListener("abort", onAbort, { once: true });
-		});
-	}
-	function parsePositiveInt(raw) {
-		if (raw === null) return null;
-		const trimmed = raw.trim();
-		if (trimmed.length === 0) return null;
-		const value = Number(trimmed);
-		if (!Number.isFinite(value) || value < 0) return null;
-		return Math.trunc(value);
-	}
-	function parsePidFromOnclick(onclick) {
-		const raw = ONCLICK_PID_PATTERN.exec(onclick)?.[1];
-		if (raw === void 0) return null;
-		return parsePositiveInt(raw);
-	}
-	function extractUserIdFromDocument(root) {
-		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
-		if (!(link instanceof HTMLAnchorElement)) return null;
-		const href = link.getAttribute("href");
-		if (href === null || href.length === 0) return null;
-		try {
-			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("id"));
-		} catch {
-			return null;
-		}
-	}
-	function buildFavoritesPageUrl(userId, pid) {
-		const params = new URLSearchParams();
-		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
-		params.set("s", FAVORITES_SECTION_VIEW);
-		params.set("id", String(userId));
-		params.set("pid", String(pid));
-		return `${SEARCH_PATH}?${params.toString()}`;
-	}
-	function pageIndexFromPid(pid) {
-		return Math.floor(pid / 50) + 1;
-	}
-	function pagesFromLastPid$1(lastPid) {
-		return Math.floor(lastPid / 50) + 1;
-	}
-	function collectFavoriteIdsFromDocument(doc) {
-		const ids = new Set();
-		const postLinks = doc.querySelectorAll(THUMB_POST_LINK_SELECTOR);
-		for (const link of postLinks) {
-			const raw = POST_LINK_ID_PATTERN.exec(link.id)?.[1];
-			if (raw === void 0) continue;
-			const parsed = Number(raw);
-			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
-		}
-		const removeLinks = doc.querySelectorAll(REMOVE_LINK_SELECTOR);
-		for (const link of removeLinks) {
-			const onclick = link.getAttribute("onclick");
-			if (onclick === null) continue;
-			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
-			if (postId === null) continue;
-			const parsed = Number(postId);
-			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
-		}
-		return Array.from(ids);
-	}
-	function resolveLastPid(doc, currentPid) {
-		const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
-		if (lastpage instanceof HTMLAnchorElement) {
-			const onclick = lastpage.getAttribute("onclick");
-			if (onclick === null || onclick.length === 0) return null;
-			return parsePidFromOnclick(onclick);
-		}
-		if (doc.querySelector(NEXT_SELECTOR) !== null) return null;
-		return currentPid;
-	}
-	function isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount) {
-		if (cardCount === 0 && pid <= lastPid) return true;
-		if (pid === 0 && cardCount === 0 && doc.querySelector(PAGINATOR_SELECTOR) === null) return true;
-		return false;
-	}
-	function persistSyncProgress(state) {
-		setSyncState(state);
-	}
-	async function runFavoritesSync(options) {
-		const { onProgress, signal } = options;
-		const userId = extractUserIdFromDocument(document);
-		if (userId === null) {
-			log.warn("favorites sync: user id not found");
-			return {
-				status: "error",
-				message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN
-			};
-		}
-		const existing = getSyncState();
-		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
-		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
-		let pid = unfinished ? existing.nextPid : 0;
-		let lastPid = unfinished ? existing.lastPid : 0;
-		let total = loadFavSet().size;
-		let page = pageIndexFromPid(pid);
-		let pages = pagesFromLastPid$1(lastPid);
-		try {
-			throwIfAborted(signal);
-			while (true) {
-				throwIfAborted(signal);
-				const url = buildFavoritesPageUrl(userId, pid);
-				let response;
-				try {
-					response = await fetch(url, {
-						method: "GET",
-						credentials: FETCH_CREDENTIALS
-					});
-				} catch (error) {
-					if (isAbortError(error)) throw error;
-					log.warn("favorites sync: fetch failed", url, error);
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: error instanceof Error ? error.message : "request failed"
-					};
-				}
-				if (!response.ok) {
-					log.warn("favorites sync: HTTP error", response.status, url);
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: `HTTP ${String(response.status)}`
-					};
-				}
-				const html = await response.text();
-				const doc = new DOMParser().parseFromString(html, "text/html");
-				const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
-				const resolvedLastPid = resolveLastPid(doc, pid);
-				if (resolvedLastPid === null) {
-					log.warn("favorites sync: unexpected page", {
-						pid,
-						cardCount
-					});
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
-					};
-				}
-				lastPid = resolvedLastPid;
-				page = pageIndexFromPid(pid);
-				pages = pagesFromLastPid$1(lastPid);
-				if (isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount)) {
-					log.warn("favorites sync: unexpected page", {
-						pid,
-						lastPid,
-						cardCount
-					});
-					persistSyncProgress({
-						nextPid: pid,
-						lastPid,
-						startedAt
-					});
-					return {
-						status: "error",
-						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
-					};
-				}
-				addFavs(collectFavoriteIdsFromDocument(doc));
-				total = loadFavSet().size;
-				const nextPid = pid + 50;
-				persistSyncProgress({
-					nextPid,
-					lastPid,
-					startedAt
-				});
-				onProgress({
-					page,
-					pages,
-					total
-				});
-				if (pid >= lastPid) {
-					const finishedAt = new Date().toISOString();
-					persistSyncProgress({
-						nextPid,
-						lastPid,
-						startedAt,
-						finishedAt
-					});
-					log.info("favorites sync: completed", {
-						total,
-						pages
-					});
-					return {
-						status: "completed",
-						total,
-						pages
-					};
-				}
-				throwIfAborted(signal);
-				await delay(FAVORITES_SYNC_PAGE_PAUSE_MS, signal);
-				throwIfAborted(signal);
-				pid = nextPid;
-				page = pageIndexFromPid(pid);
-			}
-		} catch (error) {
-			if (isAbortError(error)) {
-				log.info("favorites sync: aborted", {
-					pid,
-					total
-				});
-				return createAbortResult(total, page, pages);
-			}
-			log.error("favorites sync: unexpected failure", error);
-			persistSyncProgress({
-				nextPid: pid,
-				lastPid,
-				startedAt
-			});
-			return {
-				status: "error",
-				message: error instanceof Error ? error.message : "unexpected error"
-			};
-		}
-	}
-	var SECTION_CLASS = "rdw-favs-sync";
-	var STATUS_CLASS = "rdw-favs-sync-status";
-	var ACTIONS_CLASS = "rdw-favs-sync-actions";
-	var WARNING_CLASS = "rdw-favs-sync-warning";
-	var NOTE_CLASS = "rdw-favs-sync-note";
-	var HEADING = "Favorites sync";
-	var TEXT_SYNC = "Sync favorites";
-	var TEXT_RESUME = "Resume";
-	var TEXT_STOP = "Stop";
-	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
-	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
-	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
-	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
-	var TEXT_PAUSED = (page, pages) => `Paused at page ${String(page)} of ${String(pages)}`;
-	var TEXT_PROGRESS = (p) => `Page ${String(p.page)} of ${String(p.pages)} · ${String(p.total)} ids`;
-	var TEXT_DONE = (total, pages) => `Synced ${String(total)} ids across ${String(pages)} pages`;
-	var TEXT_ABORTED = (page, pages, total) => `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
-	var PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1e3;
-	var FAVORITES_SYNC_SECTION_CSS = `
-.${SECTION_CLASS} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.${SECTION_CLASS} .${STATUS_CLASS} {
-  margin: 0;
-  color: var(--rdw-text);
-  font-size: 12px;
-}
-.${SECTION_CLASS} .${ACTIONS_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.${SECTION_CLASS} .${WARNING_CLASS},
-.${SECTION_CLASS} .${NOTE_CLASS} {
-  margin: 0;
-  color: var(--rdw-muted);
-  font-size: 12px;
-}
-`.trim();
-	var activeSync = null;
-	function formatSyncDate(iso) {
-		const parsed = Date.parse(iso);
-		if (!Number.isFinite(parsed)) return iso;
-		return new Date(parsed).toLocaleString();
-	}
-	function pageFromPid(pid) {
-		return Math.floor(pid / 50) + 1;
-	}
-	function pagesFromLastPid(lastPid) {
-		return Math.floor(lastPid / 50) + 1;
-	}
-	function isUnfinished(sync) {
-		return sync !== void 0 && sync.finishedAt === void 0;
-	}
-	function buildStatusText() {
-		const count = loadFavSet().size;
-		const sync = getSyncState();
-		const parts = [TEXT_IDLE_COUNT(count)];
-		if (sync !== void 0 && sync.finishedAt === void 0) {
-			const page = pageFromPid(sync.nextPid);
-			const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
-			parts.push(TEXT_PAUSED(page, pages));
-		} else if (sync?.finishedAt !== void 0) parts.push(TEXT_LAST_SYNC(sync.finishedAt));
-		return parts.join(" · ");
-	}
-	function idleUi() {
-		return {
-			status: buildStatusText(),
-			progress: null,
-			error: "",
-			unfinished: isUnfinished(getSyncState()),
-			busy: activeSync !== null
-		};
-	}
-	function applyResult(result) {
-		activeSync = null;
-		if (result.status === "error") return {
-			...idleUi(),
-			error: result.message
-		};
-		if (result.status === "completed") return {
-			status: TEXT_DONE(result.total, result.pages),
-			progress: 1,
-			error: "",
-			unfinished: false,
-			busy: false
-		};
-		return {
-			status: TEXT_ABORTED(result.page, result.pages, result.total),
-			progress: result.pages > 0 ? result.page / Math.max(result.pages, 1) : 0,
-			error: "",
-			unfinished: isUnfinished(getSyncState()),
-			busy: false
-		};
-	}
-	async function startSync(setUi) {
-		if (activeSync !== null) return;
-		const controller = new AbortController();
-		const listeners = new Set();
-		activeSync = {
-			controller,
-			listeners
-		};
-		listeners.add((progress) => {
-			setUi({
-				status: TEXT_PROGRESS(progress),
-				progress: progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
-				error: "",
-				unfinished: true,
-				busy: true
-			});
-		});
-		setUi({
-			status: TEXT_PROGRESS({
-				page: 0,
-				pages: 1,
-				total: loadFavSet().size
-			}),
-			progress: 0,
-			error: "",
-			unfinished: true,
-			busy: true
-		});
-		try {
-			const result = await runFavoritesSync({
-				onProgress: (progress) => {
-					for (const listener of listeners) listener(progress);
-				},
-				signal: controller.signal
-			});
-			if (activeSync?.controller === controller) setUi(applyResult(result));
-		} catch (error) {
-			log.error("favorites sync section: unexpected failure", error);
-			if (activeSync?.controller === controller) {
-				activeSync = null;
-				setUi({
-					...idleUi(),
-					error: error instanceof Error ? error.message : "unexpected error"
-				});
-			}
-		}
-	}
-	function FavoritesSyncSection(props = {}) {
-		const includeHeading = props.includeHeading !== false;
-		const [ui, setUi] = d(() => idleUi());
-		A(() => {
-			if (activeSync === null) return;
-			const listener = (progress) => {
-				setUi({
-					status: TEXT_PROGRESS(progress),
-					progress: progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
-					error: "",
-					unfinished: true,
-					busy: true
-				});
-			};
-			activeSync.listeners.add(listener);
-			setUi({
-				status: TEXT_PROGRESS({
-					page: 0,
-					pages: 1,
-					total: loadFavSet().size
-				}),
-				progress: 0,
-				error: "",
-				unfinished: true,
-				busy: true
-			});
-			return () => {
-				activeSync?.listeners.delete(listener);
-			};
-		}, []);
-		return a$1($, { children: [a$1("style", { children: FAVORITES_SYNC_SECTION_CSS }), a$1("section", {
-			className: `rdw-section ${SECTION_CLASS}`,
-			children: [
-				includeHeading ? a$1(SectionLabel, { children: HEADING }) : null,
-				a$1("p", {
-					className: STATUS_CLASS,
-					children: ui.status
-				}),
-				a$1(ProgressBar, {
-					value: ui.progress,
-					label: "Favorites sync progress"
-				}),
-				a$1("div", {
-					className: ACTIONS_CLASS,
-					children: [!ui.unfinished ? a$1(Button, {
-						variant: "primary",
-						disabled: ui.busy,
-						onClick: () => {
-							startSync(setUi);
-						},
-						children: TEXT_SYNC
-					}) : a$1(Button, {
-						variant: "secondary",
-						disabled: ui.busy,
-						onClick: () => {
-							startSync(setUi);
-						},
-						children: TEXT_RESUME
-					}), a$1(Button, {
-						variant: "secondary",
-						disabled: !ui.busy,
-						onClick: () => {
-							activeSync?.controller.abort();
-						},
-						children: TEXT_STOP
-					})]
-				}),
-				ui.error.length > 0 ? a$1("p", {
-					className: "rdw-error",
-					children: ui.error
-				}) : null,
-				a$1("p", {
-					className: WARNING_CLASS,
-					children: TEXT_WARNING
-				}),
-				a$1("p", {
-					className: NOTE_CLASS,
-					children: TEXT_NOTE
-				}),
-				a$1("p", {
-					className: "rdw-hint",
-					children: `Pause between pages: ${String(PAUSE_SECONDS)} s`
-				})
-			]
-		})] });
-	}
-	function FavoritesTab(props) {
-		return a$1("div", {
-			className: PANEL_UI_CLASS.scrollRegion,
-			children: [
-				a$1(SectionLabel, { children: "Favorites" }),
-				a$1("div", {
-					className: PANEL_UI_CLASS.settingsRow,
-					children: [a$1("span", { children: UI_TEXT.gridFavButtonsLabel }), a$1(Switch, {
-						id: GRID_FAV_CHECKBOX_ID,
-						label: UI_TEXT.gridFavButtonsLabel,
-						checked: props.gridFavEnabled,
-						onChange: (checked) => {
-							setGridFavButtonsEnabled(checked);
-							setGridFavButtonsVisible(checked);
-							props.onGridFavChange(checked);
-						}
-					})]
-				}),
-				a$1(FavoritesSyncSection, { includeHeading: true })
-			]
-		});
-	}
-	function readInitialGridFavEnabled() {
-		return getGridFavButtonsEnabled();
-	}
-	var PANEL_MAX_WIDTH_CSS = "90vw";
-	var PANEL_MAX_HEIGHT_CSS = "90vh";
-	function clampSize(value, min) {
-		if (!Number.isFinite(value)) return min;
-		return Math.max(min, Math.floor(value));
-	}
-	function measureBorderBoxSize(entry, element) {
-		const boxList = entry.borderBoxSize;
-		const box = boxList !== void 0 && boxList.length > 0 ? boxList[0] : void 0;
-		let width;
-		let height;
-		if (box !== void 0) {
-			width = Math.round(box.inlineSize);
-			height = Math.round(box.blockSize);
-		} else {
-			width = Math.round(element.offsetWidth);
-			height = Math.round(element.offsetHeight);
-		}
-		if (width <= 0 || height <= 0) return null;
-		return {
-			width: clampSize(width, 340),
-			height: clampSize(height, 260)
-		};
-	}
-	function sizesEqual(a, b) {
-		return a.width === b.width && a.height === b.height;
-	}
-	function buildSizeCssRule(width, height) {
-		return `.rdw-panel{width:${String(width)}px;height:${String(height)}px;}`;
-	}
-	function isUnknownRecord(value) {
-		return value !== null && typeof value === "object";
-	}
-	function readPersistedPanelState() {
-		const raw = getFeatureState(PANEL_FEATURE_STATE_ID);
-		let tab = "collections";
-		let width = 360;
-		let height = 480;
-		if (isUnknownRecord(raw)) {
-			if (isPanelTab(raw["tab"])) tab = raw["tab"];
-			const rawWidth = raw["width"];
-			const rawHeight = raw["height"];
-			if (typeof rawWidth === "number") width = clampSize(rawWidth, 340);
-			if (typeof rawHeight === "number") height = clampSize(rawHeight, 260);
-		}
-		return {
-			tab,
-			width,
-			height
-		};
-	}
-	function writePersistedPanelState(next) {
-		setFeatureState(PANEL_FEATURE_STATE_ID, {
-			tab: next.tab,
-			width: next.width,
-			height: next.height
-		});
 	}
 	var GRID_FEATURE_ID = gridDensityFeature.id;
 	var THEME_OPTIONS = [
@@ -10328,7 +9923,9 @@ ${KIT_FOCUS_CSS}
 			setFileError("");
 		}
 		function onThemeChange(value) {
-			const theme = value;
+			const parsed = AppearanceThemeSchema.safeParse(value);
+			if (!parsed.success) return;
+			const theme = parsed.data;
 			if (theme === "custom") {
 				commitAppearance({
 					theme,
@@ -10580,6 +10177,1098 @@ ${KIT_FOCUS_CSS}
 			]
 		})] });
 	}
+	var SECTION_CLASS$2 = "rdw-blacklist";
+	var CHIPS_CLASS = "rdw-blacklist-chips";
+	var ADD_ROW_CLASS = "rdw-blacklist-add-row";
+	var HINT_CLASS$1 = "rdw-blacklist-hint";
+	var ADD_LABEL = "Add tag";
+	var ADD_BUTTON = "Add";
+	var PERMANENT_HINT = "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
+	var ADD_INPUT_ID = "rdw-blacklist-add";
+	var TAG_SPLIT_PATTERN = /[, ]+/;
+	var BLACKLIST_SECTION_CSS = `
+.${SECTION_CLASS$2} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${SECTION_CLASS$2} .${CHIPS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.${SECTION_CLASS$2} .${ADD_ROW_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.${SECTION_CLASS$2} .${ADD_ROW_CLASS} .rdw-field {
+  flex: 1 1 12rem;
+  margin: 0;
+}
+.${SECTION_CLASS$2} .${HINT_CLASS$1} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+`.trim();
+	function parseAddTokens(raw) {
+		const result = [];
+		for (const part of raw.split(TAG_SPLIT_PATTERN)) {
+			const trimmed = part.trim();
+			if (trimmed.length === 0) continue;
+			result.push(trimmed);
+		}
+		return result;
+	}
+	function persistTags(tags) {
+		writeSiteBlacklist([...tags]);
+		return readSiteBlacklist();
+	}
+	function BlacklistSection(props = {}) {
+		const includeHeading = props.includeHeading !== false;
+		const [tags, setTags] = d(() => readSiteBlacklist());
+		const [draft, setDraft] = d("");
+		const addTokens = b(() => {
+			const tokens = parseAddTokens(draft);
+			if (tokens.length === 0) return;
+			setTags(persistTags([...readSiteBlacklist(), ...tokens]));
+			setDraft("");
+		}, [draft]);
+		return a$1($, { children: [a$1("style", { children: BLACKLIST_SECTION_CSS }), a$1("section", {
+			className: `rdw-section ${SECTION_CLASS$2}`,
+			children: [
+				includeHeading ? a$1(SectionLabel, { children: "Blacklist" }) : null,
+				a$1("ul", {
+					className: CHIPS_CLASS,
+					children: tags.map((tag) => a$1("li", { children: a$1(Chip, {
+						label: tag,
+						onRemove: () => {
+							const next = readSiteBlacklist().filter((entry) => entry !== tag);
+							setTags(persistTags(next));
+						}
+					}) }, tag))
+				}),
+				a$1("form", {
+					className: ADD_ROW_CLASS,
+					onSubmit: (event) => {
+						event.preventDefault();
+						addTokens();
+					},
+					children: [a$1(TextField, {
+						id: ADD_INPUT_ID,
+						label: ADD_LABEL,
+						value: draft,
+						onChange: setDraft
+					}), a$1(Button, {
+						type: "submit",
+						variant: "primary",
+						children: ADD_BUTTON
+					})]
+				}),
+				a$1("p", {
+					className: HINT_CLASS$1,
+					children: PERMANENT_HINT
+				})
+			]
+		})] });
+	}
+	var BACKUP_FORMAT = "ruledesk-web-backup";
+	var IMPORT_MODE_MERGE = "merge";
+	var IMPORT_MODE_REPLACE = "replace";
+	var BackupFileSchema = object({
+		format: literal(BACKUP_FORMAT),
+		version: literal(1),
+		exportedAt: string(),
+		storage: StorageSchema,
+		favs: FavsSchema,
+		background: optional(string())
+	});
+	function getGmGetValue() {
+		return GM_getValue;
+	}
+	function getGmSetValue() {
+		return GM_setValue;
+	}
+	function formatSchemaError(error) {
+		const issue = error.issues[0];
+		if (issue === void 0) return `${IMPORT_SCHEMA_ERROR_PREFIX}: (root): Invalid data`;
+		return `${IMPORT_SCHEMA_ERROR_PREFIX}: ${issue.path.length === 0 ? "(root)" : issue.path.map((segment) => String(segment)).join(".")}: ${issue.message}`;
+	}
+	function readBackgroundRaw() {
+		const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, void 0);
+		if (typeof raw !== "string" || raw.length === 0) return;
+		return raw;
+	}
+	function writeBackgroundRaw(value) {
+		if (value === void 0 || value.length === 0) {
+			getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
+			return;
+		}
+		getGmSetValue()(APPEARANCE_BACKGROUND_KEY, value);
+	}
+	function readFavsForBackup() {
+		const raw = getGmGetValue()(FAVS_STORAGE_KEY, void 0);
+		if (raw === void 0 || raw === null) return createDefaultFavs();
+		const parsed = FavsSchema.safeParse(raw);
+		if (!parsed.success) {
+			log.error("backup: invalid favs; exporting empty favs", { key: FAVS_STORAGE_KEY });
+			return createDefaultFavs();
+		}
+		return parsed.data;
+	}
+	function writeFavsForBackup(data) {
+		getGmSetValue()(FAVS_STORAGE_KEY, FavsSchema.parse(data));
+		clearFavsCache();
+	}
+	function snapshotCurrentToBackupKey() {
+		const background = readBackgroundRaw();
+		const snapshot = {
+			format: BACKUP_FORMAT,
+			version: 1,
+			exportedAt: new Date().toISOString(),
+			storage: load(),
+			favs: readFavsForBackup(),
+			...background !== void 0 ? { background } : {}
+		};
+		getGmSetValue()(STORAGE_BACKUP_KEY, snapshot);
+	}
+	function mergeArtists(current, incoming) {
+		const byTag = new Map();
+		for (const entry of current) byTag.set(entry.tag, entry);
+		for (const entry of incoming) byTag.set(entry.tag, entry);
+		return Array.from(byTag.values());
+	}
+	function mergeCollections(current, incoming) {
+		const byId = new Map();
+		for (const entry of current) byId.set(entry.id, entry);
+		for (const entry of incoming) byId.set(entry.id, entry);
+		return Array.from(byId.values());
+	}
+	function mergeMarks(current, incoming) {
+		const merged = { ...current };
+		for (const [postId, flags] of Object.entries(incoming)) merged[postId] = {
+			...merged[postId] ?? {},
+			...flags
+		};
+		return merged;
+	}
+	function mergeFavs(current, incoming) {
+		const ids = new Set([...current.ids, ...incoming.ids]);
+		const next = {
+			version: incoming.version,
+			ids: Array.from(ids)
+		};
+		if (incoming.sync !== void 0) next.sync = incoming.sync;
+		else if (current.sync !== void 0) next.sync = current.sync;
+		return next;
+	}
+	function buildSummary(storage, favs) {
+		return {
+			artistCount: storage.artists.length,
+			collectionCount: storage.collections.length,
+			favCount: favs.ids.length
+		};
+	}
+	function applyImportedState(storage, favs, background, applyBackground) {
+		snapshotCurrentToBackupKey();
+		save(stripLegacyPanelWindowSize(storage).data);
+		writeFavsForBackup(favs);
+		if (applyBackground) writeBackgroundRaw(background);
+		migrateMarksFavToFavs();
+		clearStorageCache();
+		clearFavsCache();
+		return buildSummary(load(), readFavsForBackup());
+	}
+	function backupDateStamp(date = new Date()) {
+		return `${String(date.getFullYear())}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+	}
+	function buildBackupFilename(date = new Date()) {
+		return `ruledesk-web-backup-${backupDateStamp(date)}.json`;
+	}
+	function buildBackupFile(options) {
+		const storage = load();
+		const favs = readFavsForBackup();
+		const file = {
+			format: BACKUP_FORMAT,
+			version: 1,
+			exportedAt: new Date().toISOString(),
+			storage,
+			favs
+		};
+		if (options.includeBackground) {
+			const background = readBackgroundRaw();
+			if (background !== void 0) return {
+				...file,
+				background
+			};
+		}
+		return file;
+	}
+	function serializeBackupFile(file) {
+		return `${JSON.stringify(file, null, 2)}\n`;
+	}
+	function downloadBackupText(json, filename) {
+		const blob = new Blob([json], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const anchor = document.createElement("a");
+		anchor.href = url;
+		anchor.download = filename;
+		anchor.rel = "noopener";
+		document.body.append(anchor);
+		anchor.click();
+		anchor.remove();
+		URL.revokeObjectURL(url);
+	}
+	function exportBackupDownload(options) {
+		const file = buildBackupFile(options);
+		downloadBackupText(serializeBackupFile(file), buildBackupFilename());
+		return file;
+	}
+	function importBackupJson(raw, mode) {
+		let json;
+		try {
+			json = JSON.parse(raw);
+		} catch (error) {
+			return {
+				ok: false,
+				error: error instanceof Error ? error.message : "Invalid JSON"
+			};
+		}
+		const parsed = BackupFileSchema.safeParse(json);
+		if (!parsed.success) return {
+			ok: false,
+			error: formatSchemaError(parsed.error)
+		};
+		const incoming = parsed.data;
+		const hasBackgroundField = Object.prototype.hasOwnProperty.call(incoming, "background");
+		try {
+			if (mode === "replace") return {
+				ok: true,
+				summary: applyImportedState(incoming.storage, incoming.favs, hasBackgroundField ? incoming.background : void 0, true)
+			};
+			const currentStorage = load();
+			const currentFavs = readFavsForBackup();
+			const mergedStorage = {
+				version: currentStorage.version,
+				collections: mergeCollections(currentStorage.collections, incoming.storage.collections),
+				artists: mergeArtists(currentStorage.artists, incoming.storage.artists),
+				marks: mergeMarks(currentStorage.marks, incoming.storage.marks),
+				settings: incoming.storage.settings,
+				updates: incoming.storage.updates ?? currentStorage.updates
+			};
+			if (mergedStorage.settings === void 0) mergedStorage.settings = createDefaultStorage().settings;
+			return {
+				ok: true,
+				summary: applyImportedState(mergedStorage, mergeFavs(currentFavs, incoming.favs), incoming.background, hasBackgroundField)
+			};
+		} catch (error) {
+			log.error("backup import failed after parse", error);
+			clearStorageCache();
+			clearFavsCache();
+			return {
+				ok: false,
+				error: error instanceof Error ? error.message : "Import failed unexpectedly"
+			};
+		}
+	}
+	var SECTION_CLASS$1 = "rdw-data-section";
+	var ACTIONS_CLASS$1 = "rdw-data-actions";
+	var HINT_CLASS = "rdw-data-hint";
+	var FILE_CLASS = "rdw-data-file";
+	var HEADING$1 = "Data";
+	var INCLUDE_BACKGROUND_LABEL = "Include background image";
+	var INCLUDE_BACKGROUND_ID = "rdw-backup-include-bg";
+	var IMPORT_MODE_LABEL = "Import mode";
+	var EXPORT_LABEL = UI_TEXT.export;
+	var IMPORT_LABEL = UI_TEXT.import;
+	var STORAGE_HINT = "Collections, artists, settings, and favorites live in Tampermonkey storage. Blacklist and site theme are browser cookies and are not included in this file.";
+	var MODE_OPTIONS = [{
+		value: IMPORT_MODE_MERGE,
+		label: "Merge"
+	}, {
+		value: IMPORT_MODE_REPLACE,
+		label: "Replace"
+	}];
+	var DATA_SECTION_CSS = `
+.${SECTION_CLASS$1} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${SECTION_CLASS$1} .${ACTIONS_CLASS$1} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.${SECTION_CLASS$1} .${HINT_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+.${SECTION_CLASS$1} .${FILE_CLASS} {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+`.trim();
+	function formatSummary(summary) {
+		return `Imported ${String(summary.artistCount)} artists, ${String(summary.collectionCount)} collections, ${String(summary.favCount)} favorites.`;
+	}
+	function readFileText(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => {
+				if (typeof reader.result === "string") {
+					resolve(reader.result);
+					return;
+				}
+				reject(new Error("Could not read file"));
+			};
+			reader.onerror = () => {
+				reject(reader.error ?? new Error("Could not read file"));
+			};
+			reader.readAsText(file);
+		});
+	}
+	function DataSection(props = {}) {
+		const includeHeading = props.includeHeading !== false;
+		const fileRef = T(null);
+		const [includeBackground, setIncludeBackground] = d(false);
+		const [mode, setMode] = d(IMPORT_MODE_MERGE);
+		const [error, setError] = d("");
+		const [summary, setSummary] = d("");
+		return a$1($, { children: [a$1("style", { children: DATA_SECTION_CSS }), a$1("section", {
+			className: `rdw-section ${SECTION_CLASS$1}`,
+			children: [
+				includeHeading ? a$1(SectionLabel, { children: HEADING$1 }) : null,
+				a$1(Switch, {
+					id: INCLUDE_BACKGROUND_ID,
+					label: INCLUDE_BACKGROUND_LABEL,
+					checked: includeBackground,
+					onChange: setIncludeBackground
+				}),
+				a$1(Segmented, {
+					label: IMPORT_MODE_LABEL,
+					options: [...MODE_OPTIONS],
+					value: mode,
+					onChange: (value) => {
+						if (value === "merge" || value === "replace") setMode(value);
+					}
+				}),
+				a$1("div", {
+					className: ACTIONS_CLASS$1,
+					children: [
+						a$1(Button, {
+							variant: "secondary",
+							onClick: () => {
+								setError("");
+								setSummary("");
+								exportBackupDownload({ includeBackground });
+							},
+							children: EXPORT_LABEL
+						}),
+						a$1(Button, {
+							variant: "secondary",
+							onClick: () => {
+								fileRef.current?.click();
+							},
+							children: IMPORT_LABEL
+						}),
+						a$1("input", {
+							ref: fileRef,
+							className: FILE_CLASS,
+							type: "file",
+							accept: "application/json,.json",
+							"aria-hidden": "true",
+							tabIndex: -1,
+							onChange: (event) => {
+								const file = event.currentTarget.files?.[0];
+								event.currentTarget.value = "";
+								if (file === void 0) return;
+								setError("");
+								setSummary("");
+								readFileText(file).then((text) => {
+									const result = importBackupJson(text, mode);
+									if (!result.ok) {
+										setError(`${UI_TEXT.importErrorPrefix} ${result.error}`);
+										return;
+									}
+									setSummary(formatSummary(result.summary));
+								}).catch((caught) => {
+									const message = caught instanceof Error ? caught.message : "Could not read file";
+									setError(`${UI_TEXT.importErrorPrefix} ${message}`);
+								});
+							}
+						})
+					]
+				}),
+				error.length > 0 ? a$1("p", {
+					className: "rdw-error",
+					children: error
+				}) : null,
+				summary.length > 0 ? a$1("p", {
+					className: "rdw-hint",
+					children: summary
+				}) : null,
+				a$1("p", {
+					className: HINT_CLASS,
+					children: STORAGE_HINT
+				})
+			]
+		})] });
+	}
+	var FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
+	var FAVORITES_SYNC_RETRY_DELAYS_MS = [
+		1e4,
+		3e4,
+		6e4
+	];
+	var MY_FAVORITES_LINK_SELECTOR = "li#my-favorites-container a[href*=\"page=favorites\"]";
+	var THUMB_SELECTOR = "span.thumb";
+	var THUMB_POST_LINK_SELECTOR = "span.thumb a[id^=\"p\"]";
+	var PAGINATOR_SELECTOR = "#paginator";
+	var LASTPAGE_SELECTOR = "a[name=\"lastpage\"]";
+	var NEXT_SELECTOR = "a[name=\"next\"]";
+	var REMOVE_LINK_SELECTOR = "a[onclick]";
+	var POST_LINK_ID_PATTERN = /^p(\d+)$/;
+	var ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
+	var URL_PARSE_BASE = "https://rule34.xxx";
+	var TAB_ID_RANDOM_RADIX = 36;
+	var TAB_ID_RANDOM_SLICE_START = 2;
+	var FAVORITES_SYNC_ERROR_NOT_LOGGED_IN = "not logged in or menu not found";
+	var FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE = "unexpected page";
+	function createAbortResult(total, page, pages) {
+		return {
+			status: "aborted",
+			total,
+			page,
+			pages
+		};
+	}
+	function isAbortError(error) {
+		return error instanceof DOMException && error.name === "AbortError" || error instanceof Error && error.name === "AbortError";
+	}
+	function throwIfAborted(signal) {
+		if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+	}
+	function delay$1(ms, signal) {
+		return new Promise((resolve, reject) => {
+			if (signal.aborted) {
+				reject(new DOMException("Aborted", "AbortError"));
+				return;
+			}
+			const timer = setTimeout(() => {
+				signal.removeEventListener("abort", onAbort);
+				if (signal.aborted) {
+					reject(new DOMException("Aborted", "AbortError"));
+					return;
+				}
+				resolve();
+			}, ms);
+			const onAbort = () => {
+				clearTimeout(timer);
+				reject(new DOMException("Aborted", "AbortError"));
+			};
+			signal.addEventListener("abort", onAbort, { once: true });
+		});
+	}
+	function parsePositiveInt(raw) {
+		if (raw === null) return null;
+		const trimmed = raw.trim();
+		if (trimmed.length === 0) return null;
+		const value = Number(trimmed);
+		if (!Number.isFinite(value) || value < 0) return null;
+		return Math.trunc(value);
+	}
+	function parsePidFromOnclick(onclick) {
+		const raw = ONCLICK_PID_PATTERN.exec(onclick)?.[1];
+		if (raw === void 0) return null;
+		return parsePositiveInt(raw);
+	}
+	function titleSnippetFromHtml(html) {
+		try {
+			return titleSnippetFromDocument(new DOMParser().parseFromString(html, "text/html"));
+		} catch {
+			return "";
+		}
+	}
+	function titleSnippetFromDocument(doc) {
+		const raw = doc.title.trim();
+		if (raw.length <= 80) return raw;
+		return raw.slice(0, 80);
+	}
+	function formatPauseMessage(status, titleSnippet) {
+		if (titleSnippet.length === 0) return `HTTP ${String(status)}`;
+		return `HTTP ${String(status)}: ${titleSnippet}`;
+	}
+	function createFavoritesSyncTabId() {
+		const random = Math.random().toString(TAB_ID_RANDOM_RADIX).slice(TAB_ID_RANDOM_SLICE_START, 12);
+		return `tab-${String(Date.now())}-${random}`;
+	}
+	function extractUserIdFromDocument(root) {
+		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
+		if (!(link instanceof HTMLAnchorElement)) return null;
+		const href = link.getAttribute("href");
+		if (href === null || href.length === 0) return null;
+		try {
+			return parsePositiveInt(new URL(href, URL_PARSE_BASE).searchParams.get("id"));
+		} catch {
+			return null;
+		}
+	}
+	function extractUserIdFromFavoritesSearch(search) {
+		if (detectPageKind(search) !== "favorites") return null;
+		return parsePositiveInt(new URLSearchParams(search).get("id"));
+	}
+	function resolveFavoritesUserId(root, search, savedUserId) {
+		const fromMenu = extractUserIdFromDocument(root);
+		if (fromMenu !== null) return fromMenu;
+		const fromUrl = extractUserIdFromFavoritesSearch(search);
+		if (fromUrl !== null) return fromUrl;
+		if (savedUserId !== void 0 && Number.isFinite(savedUserId)) return Math.trunc(savedUserId);
+		return null;
+	}
+	function buildFavoritesPageUrl(userId, pid) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_VIEW);
+		params.set("id", String(userId));
+		params.set("pid", String(pid));
+		return `${SEARCH_PATH}?${params.toString()}`;
+	}
+	function pageIndexFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid$1(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function collectFavoriteIdsFromDocument(doc) {
+		const ids = new Set();
+		const postLinks = doc.querySelectorAll(THUMB_POST_LINK_SELECTOR);
+		for (const link of postLinks) {
+			const raw = POST_LINK_ID_PATTERN.exec(link.id)?.[1];
+			if (raw === void 0) continue;
+			const parsed = Number(raw);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		const removeLinks = doc.querySelectorAll(REMOVE_LINK_SELECTOR);
+		for (const link of removeLinks) {
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) continue;
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) ids.add(Math.trunc(parsed));
+		}
+		return Array.from(ids);
+	}
+	function resolveLastPid(doc, currentPid) {
+		const lastpage = doc.querySelector(LASTPAGE_SELECTOR);
+		if (lastpage instanceof HTMLAnchorElement) {
+			const onclick = lastpage.getAttribute("onclick");
+			if (onclick === null || onclick.length === 0) return null;
+			return parsePidFromOnclick(onclick);
+		}
+		if (doc.querySelector(NEXT_SELECTOR) !== null) return null;
+		return currentPid;
+	}
+	function hasPaginator(doc) {
+		return doc.querySelector(PAGINATOR_SELECTOR) !== null;
+	}
+	function persistSyncProgress(fields) {
+		const state = {
+			nextPid: fields.nextPid,
+			lastPid: fields.lastPid,
+			startedAt: fields.startedAt,
+			running: fields.running,
+			userId: fields.userId,
+			lock: {
+				tabId: fields.tabId,
+				beatAt: Date.now()
+			}
+		};
+		if (fields.finishedAt !== void 0) state.finishedAt = fields.finishedAt;
+		setSyncState(state);
+		return state;
+	}
+	async function fetchFavoritesPageOnce(url, signal) {
+		let response;
+		try {
+			response = await fetch(url, {
+				method: "GET",
+				credentials: FETCH_CREDENTIALS,
+				signal
+			});
+		} catch (error) {
+			if (isAbortError(error)) throw error;
+			const message = error instanceof Error ? error.message : "request failed";
+			log.warn("favorites sync: fetch failed", url, error);
+			return {
+				ok: false,
+				status: 0,
+				titleSnippet: message.slice(0, 80),
+				message
+			};
+		}
+		const html = await response.text();
+		const titleSnippet = titleSnippetFromHtml(html);
+		if (!response.ok) {
+			log.warn("favorites sync: HTTP error", response.status, url);
+			return {
+				ok: false,
+				status: response.status,
+				titleSnippet,
+				message: formatPauseMessage(response.status, titleSnippet)
+			};
+		}
+		const doc = new DOMParser().parseFromString(html, "text/html");
+		if (!hasPaginator(doc)) {
+			log.warn("favorites sync: missing paginator", url);
+			return {
+				ok: false,
+				status: response.status,
+				titleSnippet: titleSnippetFromDocument(doc),
+				message: formatPauseMessage(response.status, titleSnippetFromDocument(doc))
+			};
+		}
+		return {
+			ok: true,
+			doc,
+			status: response.status,
+			titleSnippet: titleSnippetFromDocument(doc)
+		};
+	}
+	async function fetchFavoritesPageWithRetries(url, signal) {
+		let lastFailure = null;
+		for (let attempt = 0; attempt <= FAVORITES_SYNC_RETRY_DELAYS_MS.length; attempt += 1) {
+			throwIfAborted(signal);
+			if (attempt > 0) {
+				const delayMs = FAVORITES_SYNC_RETRY_DELAYS_MS[attempt - 1];
+				if (delayMs === void 0) break;
+				log.warn("favorites sync: retrying after delay", {
+					attempt,
+					delayMs,
+					url
+				});
+				await delay$1(delayMs, signal);
+				throwIfAborted(signal);
+			}
+			const result = await fetchFavoritesPageOnce(url, signal);
+			if (result.ok) return result;
+			lastFailure = result;
+		}
+		if (lastFailure === null) return {
+			ok: false,
+			status: 0,
+			titleSnippet: "",
+			message: formatPauseMessage(0, "")
+		};
+		return lastFailure;
+	}
+	async function runFavoritesSync(options) {
+		const { onProgress, signal } = options;
+		const tabId = options.tabId ?? createFavoritesSyncTabId();
+		const existing = getSyncState();
+		const userId = resolveFavoritesUserId(document, window.location.search, existing?.userId);
+		if (userId === null) {
+			log.warn("favorites sync: user id not found");
+			return {
+				status: "error",
+				message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN
+			};
+		}
+		const unfinished = existing !== void 0 && existing.finishedAt === void 0;
+		const startedAt = unfinished ? existing.startedAt : new Date().toISOString();
+		let pid = unfinished ? existing.nextPid : 0;
+		let lastPid = unfinished ? existing.lastPid : 0;
+		let persistedNextPid = pid;
+		let total = loadFavSet().size;
+		let page = pageIndexFromPid(pid);
+		let pages = pagesFromLastPid$1(lastPid);
+		let sawNonEmptyPage = unfinished && existing.nextPid > 0;
+		const writeProgress = (fields) => {
+			const nextPid = fields.nextPid ?? persistedNextPid;
+			persistedNextPid = nextPid;
+			if (fields.lastPid !== void 0) lastPid = fields.lastPid;
+			const payload = {
+				nextPid,
+				lastPid,
+				startedAt,
+				userId,
+				tabId,
+				running: fields.running
+			};
+			if (fields.finishedAt !== void 0) payload.finishedAt = fields.finishedAt;
+			persistSyncProgress(payload);
+		};
+		try {
+			throwIfAborted(signal);
+			writeProgress({ running: true });
+			while (true) {
+				throwIfAborted(signal);
+				const fetched = await fetchFavoritesPageWithRetries(buildFavoritesPageUrl(userId, pid), signal);
+				if (!fetched.ok) {
+					writeProgress({ running: true });
+					return {
+						status: "error",
+						message: fetched.message
+					};
+				}
+				const { doc } = fetched;
+				const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
+				page = pageIndexFromPid(pid);
+				if (cardCount === 0 && sawNonEmptyPage) {
+					pages = Math.max(pages, page);
+					const finishedAt = new Date().toISOString();
+					writeProgress({
+						nextPid: pid + 50,
+						running: false,
+						finishedAt
+					});
+					onProgress({
+						page,
+						pages,
+						total
+					});
+					log.info("favorites sync: completed on empty trailing page", {
+						total,
+						pages,
+						pid
+					});
+					return {
+						status: "completed",
+						total,
+						pages
+					};
+				}
+				const resolvedLastPid = resolveLastPid(doc, pid);
+				if (resolvedLastPid === null) {
+					log.warn("favorites sync: unexpected page", {
+						pid,
+						cardCount
+					});
+					writeProgress({ running: true });
+					return {
+						status: "error",
+						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
+					};
+				}
+				lastPid = resolvedLastPid;
+				pages = pagesFromLastPid$1(lastPid);
+				if (cardCount === 0) {
+					log.warn("favorites sync: unexpected empty page", {
+						pid,
+						lastPid
+					});
+					writeProgress({ running: true });
+					return {
+						status: "error",
+						message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE
+					};
+				}
+				sawNonEmptyPage = true;
+				addFavs(collectFavoriteIdsFromDocument(doc));
+				total = loadFavSet().size;
+				const nextPid = pid + 50;
+				writeProgress({
+					nextPid,
+					lastPid,
+					running: true
+				});
+				onProgress({
+					page,
+					pages,
+					total
+				});
+				if (pid >= lastPid) {
+					const finishedAt = new Date().toISOString();
+					writeProgress({
+						nextPid,
+						lastPid,
+						running: false,
+						finishedAt
+					});
+					log.info("favorites sync: completed", {
+						total,
+						pages
+					});
+					return {
+						status: "completed",
+						total,
+						pages
+					};
+				}
+				throwIfAborted(signal);
+				await delay$1(FAVORITES_SYNC_PAGE_PAUSE_MS, signal);
+				throwIfAborted(signal);
+				pid = nextPid;
+				page = pageIndexFromPid(pid);
+			}
+		} catch (error) {
+			if (isAbortError(error)) {
+				writeProgress({ running: false });
+				log.info("favorites sync: aborted", {
+					pid,
+					total
+				});
+				return createAbortResult(total, page, pages);
+			}
+			log.error("favorites sync: unexpected failure", error);
+			writeProgress({ running: true });
+			return {
+				status: "error",
+				message: error instanceof Error ? error.message : "unexpected error"
+			};
+		}
+	}
+	var SECTION_CLASS = "rdw-favs-sync";
+	var STATUS_CLASS = "rdw-favs-sync-status";
+	var ACTIONS_CLASS = "rdw-favs-sync-actions";
+	var WARNING_CLASS = "rdw-favs-sync-warning";
+	var NOTE_CLASS = "rdw-favs-sync-note";
+	var HEADING = "Favorites sync";
+	var TEXT_SYNC = "Sync favorites";
+	var TEXT_RESUME = "Resume";
+	var TEXT_STOP = "Stop";
+	var TEXT_WARNING = "Loads every favorites page, one request per 1.5 s";
+	var TEXT_NOTE = "Sync only adds favorites. Posts removed on the site stay in the local set.";
+	var TEXT_IDLE_COUNT = (count) => `${String(count)} in local favorites set`;
+	var TEXT_LAST_SYNC = (iso) => `Last full sync: ${formatSyncDate(iso)}`;
+	var TEXT_PAUSED = (page, pages) => `Paused at page ${String(page)} of ${String(pages)}`;
+	var TEXT_PROGRESS = (p) => `Page ${String(p.page)} of ${String(p.pages)} · ${String(p.total)} ids`;
+	var TEXT_DONE = (total, pages) => `Synced ${String(total)} ids across ${String(pages)} pages`;
+	var TEXT_ABORTED = (page, pages, total) => `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
+	var TEXT_STARTING = "Starting sync…";
+	var PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1e3;
+	var FAVORITES_SYNC_SECTION_CSS = `
+.${SECTION_CLASS} {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.${SECTION_CLASS} .${STATUS_CLASS} {
+  margin: 0;
+  color: var(--rdw-text);
+  font-size: 12px;
+}
+.${SECTION_CLASS} .${ACTIONS_CLASS} {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.${SECTION_CLASS} .${WARNING_CLASS},
+.${SECTION_CLASS} .${NOTE_CLASS} {
+  margin: 0;
+  color: var(--rdw-muted);
+  font-size: 12px;
+}
+`.trim();
+	var activeSync = null;
+	function formatSyncDate(iso) {
+		const parsed = Date.parse(iso);
+		if (!Number.isFinite(parsed)) return iso;
+		return new Date(parsed).toLocaleString();
+	}
+	function pageFromPid(pid) {
+		return Math.floor(pid / 50) + 1;
+	}
+	function pagesFromLastPid(lastPid) {
+		return Math.floor(lastPid / 50) + 1;
+	}
+	function isUnfinished(sync) {
+		return sync !== void 0 && sync.finishedAt === void 0;
+	}
+	function ratioFromProgress(progress) {
+		if (progress.pages <= 0) return null;
+		return progress.page / progress.pages;
+	}
+	function buildStatusText() {
+		const count = loadFavSet().size;
+		const sync = getSyncState();
+		const parts = [TEXT_IDLE_COUNT(count)];
+		if (sync !== void 0 && sync.finishedAt === void 0) {
+			const page = pageFromPid(sync.nextPid);
+			const pages = Math.max(pagesFromLastPid(sync.lastPid), page);
+			parts.push(TEXT_PAUSED(page, pages));
+		} else if (sync?.finishedAt !== void 0) parts.push(TEXT_LAST_SYNC(sync.finishedAt));
+		return parts.join(" · ");
+	}
+	function idleUi() {
+		return {
+			status: buildStatusText(),
+			progress: null,
+			waiting: false,
+			error: "",
+			unfinished: isUnfinished(getSyncState()),
+			busy: activeSync !== null
+		};
+	}
+	function progressUi(progress) {
+		const ratio = ratioFromProgress(progress);
+		return {
+			status: TEXT_PROGRESS(progress),
+			progress: ratio,
+			waiting: ratio === null,
+			error: "",
+			unfinished: true,
+			busy: true
+		};
+	}
+	function applyResult(result) {
+		activeSync = null;
+		if (result.status === "error") return {
+			...idleUi(),
+			error: result.message
+		};
+		if (result.status === "completed") return {
+			status: TEXT_DONE(result.total, result.pages),
+			progress: result.pages > 0 ? 1 : null,
+			waiting: false,
+			error: "",
+			unfinished: false,
+			busy: false
+		};
+		return {
+			status: TEXT_ABORTED(result.page, result.pages, result.total),
+			progress: ratioFromProgress({
+				page: result.page,
+				pages: result.pages,
+				total: result.total
+			}),
+			waiting: false,
+			error: "",
+			unfinished: isUnfinished(getSyncState()),
+			busy: false
+		};
+	}
+	async function startSync(setUi) {
+		if (activeSync !== null) return;
+		const controller = new AbortController();
+		const listeners = new Set();
+		activeSync = {
+			controller,
+			listeners
+		};
+		listeners.add((progress) => {
+			setUi(progressUi(progress));
+		});
+		setUi({
+			status: TEXT_STARTING,
+			progress: null,
+			waiting: true,
+			error: "",
+			unfinished: true,
+			busy: true
+		});
+		try {
+			const result = await runFavoritesSync({
+				onProgress: (progress) => {
+					for (const listener of listeners) listener(progress);
+				},
+				signal: controller.signal
+			});
+			if (activeSync?.controller === controller) setUi(applyResult(result));
+		} catch (error) {
+			log.error("favorites sync section: unexpected failure", error);
+			if (activeSync?.controller === controller) {
+				activeSync = null;
+				setUi({
+					...idleUi(),
+					error: error instanceof Error ? error.message : "unexpected error"
+				});
+			}
+		}
+	}
+	function FavoritesSyncSection(props = {}) {
+		const includeHeading = props.includeHeading !== false;
+		const [ui, setUi] = d(() => idleUi());
+		A(() => {
+			if (activeSync === null) return;
+			const listener = (progress) => {
+				setUi(progressUi(progress));
+			};
+			activeSync.listeners.add(listener);
+			setUi({
+				status: TEXT_STARTING,
+				progress: null,
+				waiting: true,
+				error: "",
+				unfinished: true,
+				busy: true
+			});
+			return () => {
+				activeSync?.listeners.delete(listener);
+			};
+		}, []);
+		return a$1($, { children: [a$1("style", { children: FAVORITES_SYNC_SECTION_CSS }), a$1("section", {
+			className: `rdw-section ${SECTION_CLASS}`,
+			children: [
+				includeHeading ? a$1(SectionLabel, { children: HEADING }) : null,
+				a$1("p", {
+					className: STATUS_CLASS,
+					children: ui.status
+				}),
+				a$1(ProgressBar, {
+					value: ui.progress,
+					waiting: ui.waiting,
+					label: "Favorites sync progress"
+				}),
+				a$1("div", {
+					className: ACTIONS_CLASS,
+					children: [!ui.unfinished ? a$1(Button, {
+						variant: "primary",
+						disabled: ui.busy,
+						onClick: () => {
+							startSync(setUi);
+						},
+						children: TEXT_SYNC
+					}) : a$1(Button, {
+						variant: "secondary",
+						disabled: ui.busy,
+						onClick: () => {
+							startSync(setUi);
+						},
+						children: TEXT_RESUME
+					}), a$1(Button, {
+						variant: "secondary",
+						disabled: !ui.busy,
+						onClick: () => {
+							activeSync?.controller.abort();
+						},
+						children: TEXT_STOP
+					})]
+				}),
+				ui.error.length > 0 ? a$1("p", {
+					className: "rdw-error",
+					children: ui.error
+				}) : null,
+				a$1("p", {
+					className: WARNING_CLASS,
+					children: TEXT_WARNING
+				}),
+				a$1("p", {
+					className: NOTE_CLASS,
+					children: TEXT_NOTE
+				}),
+				a$1("p", {
+					className: "rdw-hint",
+					children: `Pause between pages: ${String(PAUSE_SECONDS)} s`
+				})
+			]
+		})] });
+	}
 	var PAGE_FEATURE_SKIP = new Set(["grid-density"]);
 	function FeatureModules() {
 		const [, bump] = d(0);
@@ -10634,384 +11323,99 @@ ${KIT_FOCUS_CSS}
 			})
 		});
 	}
-	function SettingsTab(props) {
+	function SettingsPage() {
 		const [tweaks, setTweaks] = d(() => getTweaksEnabled());
 		const [updatesGroup, setUpdatesGroup] = d(() => getUpdatesGroupSize());
 		const [playlistChunk, setPlaylistChunk] = d(() => getPlaylistChunkSize());
+		const [gridFavEnabled, setGridFavEnabled] = d(() => getGridFavButtonsEnabled());
 		return a$1("div", {
 			className: PANEL_UI_CLASS.scrollRegion,
 			children: [
-				a$1(AppearanceSection, {}),
-				a$1("div", { children: [a$1(SectionLabel, { children: "Page" }), a$1("div", {
-					className: PANEL_UI_CLASS.settingsGroup,
-					children: [
-						a$1("div", {
-							className: PANEL_UI_CLASS.settingsRow,
-							children: a$1(Switch, {
-								id: TWEAKS_SWITCH_ID,
-								label: UI_TEXT.enablePageTweaksLabel,
-								checked: tweaks,
-								onChange: (checked) => {
-									setTweaksEnabled(checked);
-									setTweaks(checked);
-									window.location.reload();
-								}
-							})
-						}),
-						a$1(FeatureModules, {}),
-						a$1("div", {
-							className: PANEL_UI_CLASS.settingsRow,
-							children: a$1(NumberField, {
-								id: UPDATES_GROUP_SIZE_ID,
-								label: UI_TEXT.updatesGroupSizeLabel,
-								value: updatesGroup,
-								min: 0,
-								step: 1,
-								onChange: (value) => {
-									setUpdatesGroupSize(value ?? 0);
-									setUpdatesGroup(getUpdatesGroupSize());
-								}
-							})
-						}),
-						a$1("div", {
-							className: PANEL_UI_CLASS.settingsRow,
-							children: a$1(NumberField, {
-								id: PLAYLIST_CHUNK_SIZE_ID,
-								label: UI_TEXT.playlistChunkSizeLabel,
-								value: playlistChunk,
-								min: 1,
-								step: 1,
-								onChange: (value) => {
-									setPlaylistChunkSize(value ?? 0);
-									setPlaylistChunk(getPlaylistChunkSize());
-								}
-							})
-						})
-					]
-				})] }),
-				a$1("div", { children: [
-					a$1(SectionLabel, { children: "Data" }),
-					a$1("div", {
-						className: "rdw-toolbar",
-						children: [a$1(Button, {
-							variant: "secondary",
-							onClick: props.onExport,
-							children: UI_TEXT.export
-						}), a$1(Button, {
-							variant: "secondary",
-							onClick: props.onImport,
-							children: UI_TEXT.import
-						})]
-					}),
-					props.importError.length > 0 ? a$1("p", {
-						className: "rdw-error",
-						children: `${UI_TEXT.importErrorPrefix} ${props.importError}`
-					}) : null
-				] })
-			]
-		});
-	}
-	function isDarkTheme() {
-		const theme = getAppearance().theme;
-		return theme === "dark" || theme === "site-dark";
-	}
-	var TAB_ITEMS = PANEL_TABS.map((id) => ({
-		id,
-		label: PANEL_TAB_LABELS[id]
-	}));
-	function PanelRoot(props) {
-		const initial = readPersistedPanelState();
-		const [open, setOpen] = d(false);
-		const [activeTab, setActiveTab] = d(initial.tab);
-		const [importError, setImportError] = d("");
-		const [artistFilter, setArtistFilter] = d("");
-		const [pendingUnfollows, setPendingUnfollows] = d([]);
-		const [gridFavEnabled, setGridFavEnabled] = d(readInitialGridFavEnabled);
-		const [artistsVersion, setArtistsVersion] = d(0);
-		const [themeDark, setThemeDark] = d(isDarkTheme);
-		const panelRef = T(null);
-		const fileInputRef = T(null);
-		const lastWrittenRef = T({
-			width: initial.width,
-			height: initial.height
-		});
-		const sizeTimerRef = T(null);
-		const pendingRef = T(pendingUnfollows);
-		pendingRef.current = pendingUnfollows;
-		A(() => {
-			props.host.classList.toggle(PANEL_UI_CLASS.themeDark, themeDark);
-		}, [props.host, themeDark]);
-		A(() => {
-			const syncTheme = () => {
-				setThemeDark(isDarkTheme());
-			};
-			syncTheme();
-			const observer = new MutationObserver(syncTheme);
-			observer.observe(document.documentElement, {
-				attributes: true,
-				attributeFilter: ["class", "data-rdw-theme"]
-			});
-			return () => {
-				observer.disconnect();
-			};
-		}, []);
-		A(() => {
-			props.sizeStyle.textContent = buildSizeCssRule(lastWrittenRef.current.width, lastWrittenRef.current.height);
-		}, [props.sizeStyle]);
-		A(() => {
-			const panel = panelRef.current;
-			if (panel === null || typeof ResizeObserver === "undefined") return;
-			const observer = new ResizeObserver((entries) => {
-				if (!open) return;
-				const entry = entries[0];
-				if (entry === void 0) return;
-				const measured = measureBorderBoxSize(entry, panel);
-				if (measured === null) return;
-				if (sizesEqual(measured, lastWrittenRef.current)) return;
-				if (sizeTimerRef.current !== null) clearTimeout(sizeTimerRef.current);
-				sizeTimerRef.current = setTimeout(() => {
-					sizeTimerRef.current = null;
-					const nextWidth = clampSize(measured.width, 340);
-					const nextHeight = clampSize(measured.height, 260);
-					const next = {
-						width: nextWidth,
-						height: nextHeight
-					};
-					if (sizesEqual(next, lastWrittenRef.current)) return;
-					if (nextWidth === 0 || nextHeight === 0) return;
-					lastWrittenRef.current = next;
-					writePersistedPanelState({
-						tab: activeTab,
-						width: nextWidth,
-						height: nextHeight
-					});
-					props.sizeStyle.textContent = buildSizeCssRule(nextWidth, nextHeight);
-				}, 300);
-			});
-			observer.observe(panel);
-			return () => {
-				observer.disconnect();
-				if (sizeTimerRef.current !== null) clearTimeout(sizeTimerRef.current);
-			};
-		}, [
-			open,
-			activeTab,
-			props.sizeStyle
-		]);
-		A(() => {
-			const onDocClick = (event) => {
-				if (!open) return;
-				if (event.composedPath().includes(props.host)) return;
-				const shadow = props.host.shadowRoot;
-				const target = event.target;
-				if (target instanceof Node && (props.host === target || props.host.contains(target) || shadow !== null && shadow.contains(target))) return;
-				setOpen(false);
-			};
-			document.addEventListener("click", onDocClick, true);
-			return () => {
-				document.removeEventListener("click", onDocClick, true);
-			};
-		}, [open, props.host]);
-		A(() => {
-			const shadow = props.host.shadowRoot;
-			if (shadow === null) return;
-			const onKeyDown = (event) => {
-				if (!(event instanceof KeyboardEvent)) return;
-				if (event.key === "Escape" && open) {
-					event.stopPropagation();
-					setOpen(false);
-				}
-			};
-			shadow.addEventListener("keydown", onKeyDown);
-			return () => {
-				shadow.removeEventListener("keydown", onKeyDown);
-			};
-		}, [open, props.host]);
-		const clearPendingUnfollow = (tag) => {
-			setPendingUnfollows((current) => {
-				const index = current.findIndex((entry) => entry.tag === tag);
-				if (index < 0) return current;
-				const removed = current[index];
-				if (removed !== void 0) clearTimeout(removed.timer);
-				return [...current.slice(0, index), ...current.slice(index + 1)];
-			});
-		};
-		const selectTab = (tab) => {
-			setActiveTab(tab);
-			writePersistedPanelState({
-				tab,
-				width: lastWrittenRef.current.width,
-				height: lastWrittenRef.current.height
-			});
-		};
-		const downloadExport = () => {
-			const payload = exportJson();
-			const blob = new Blob([payload], { type: EXPORT_MIME });
-			const url = URL.createObjectURL(blob);
-			const anchor = document.createElement("a");
-			anchor.href = url;
-			anchor.download = EXPORT_FILENAME;
-			anchor.rel = "noopener";
-			props.host.shadowRoot?.append(anchor);
-			anchor.click();
-			anchor.remove();
-			URL.revokeObjectURL(url);
-		};
-		const data = load();
-		return a$1("div", {
-			className: CSS_CLASS.host,
-			children: [
-				a$1("section", {
-					ref: panelRef,
-					id: "ruledesk-web-panel",
-					className: `${CSS_CLASS.panel}${open ? ` ${CSS_CLASS.panelOpen}` : ""}`,
-					role: "dialog",
-					"aria-modal": "false",
-					"aria-label": UI_TEXT.panelTitle,
-					hidden: !open,
-					children: [
-						a$1("div", {
-							className: CSS_CLASS.header,
-							children: [a$1("h2", {
-								className: CSS_CLASS.title,
-								children: UI_TEXT.panelTitle
-							}), a$1(IconButton, {
-								label: UI_TEXT.toggleClose,
-								onClick: () => {
-									setOpen(false);
-								},
-								children: a$1(IconX, { size: 14 })
-							})]
-						}),
-						a$1(Tabs, {
-							items: TAB_ITEMS,
-							value: activeTab,
-							"aria-label": UI_TEXT.panelTitle,
-							onChange: (id) => {
-								if (isPanelTab(id)) selectTab(id);
-							}
-						}),
-						a$1("div", {
-							className: CSS_CLASS.body,
-							children: PANEL_TABS.map((tab) => {
-								const isActive = tab === activeTab;
-								return a$1("div", {
-									className: PANEL_UI_CLASS.tabPanel,
-									id: `rdw-tabpanel-${tab}`,
-									role: "tabpanel",
-									"aria-labelledby": `rdw-tab-${tab}`,
-									hidden: !isActive,
-									children: [
-										tab === "collections" && isActive ? a$1(CollectionsTab, {}) : null,
-										tab === "artists" && isActive ? a$1(ArtistsTab, {
-											artists: data.artists,
-											pending: pendingUnfollows,
-											filter: artistFilter,
-											onFilterChange: setArtistFilter,
-											onUnfollow: (tag) => {
-												const existing = pendingRef.current.find((entry) => entry.tag === tag);
-												if (existing !== void 0) clearTimeout(existing.timer);
-												removeArtist(tag);
-												const timer = setTimeout(() => {
-													clearPendingUnfollow(tag);
-													setArtistsVersion((value) => value + 1);
-												}, UNFOLLOW_UNDO_MS);
-												setPendingUnfollows([...pendingRef.current.filter((entry) => entry.tag !== tag), {
-													tag,
-													timer
-												}]);
-												setArtistsVersion((value) => value + 1);
-											},
-											onUndo: (tag) => {
-												clearPendingUnfollow(tag);
-												try {
-													addArtist(tag);
-												} catch (error) {
-													log.warn("Undo unfollow failed", error);
-												}
-												setArtistsVersion((value) => value + 1);
-											}
-										}) : null,
-										tab === "favorites" && isActive ? a$1(FavoritesTab, {
-											gridFavEnabled,
-											onGridFavChange: setGridFavEnabled
-										}) : null,
-										tab === "settings" && isActive ? a$1(SettingsTab, {
-											importError,
-											onExport: downloadExport,
-											onImport: () => {
-												setImportError("");
-												const input = fileInputRef.current;
-												if (input !== null) {
-													input.value = "";
-													input.click();
-												}
-											}
-										}) : null,
-										tab === "blacklist" && isActive ? a$1("div", {
-											className: PANEL_UI_CLASS.scrollRegion,
-											children: a$1(BlacklistSection, {})
-										}) : null
-									]
-								}, tab);
-							})
-						}),
-						a$1("div", {
-							className: PANEL_UI_CLASS.footer,
-							children: [a$1("span", { children: `v${USERSCRIPT_VERSION}` }), a$1("span", {
-								className: PANEL_UI_CLASS.resizeHint,
-								children: RESIZE_HINT
-							})]
-						})
-					]
+				a$1(Card, {
+					className: PANEL_UI_CLASS.pageCard,
+					children: a$1(AppearanceSection, {})
 				}),
-				a$1("button", {
-					type: "button",
-					id: TOGGLE_BUTTON_ID,
-					className: CSS_CLASS.toggle,
-					"aria-label": open ? UI_TEXT.toggleClose : UI_TEXT.toggleOpen,
-					"aria-expanded": open,
-					"aria-controls": "ruledesk-web-panel",
-					onClick: () => {
-						const next = !open;
-						setOpen(next);
-						if (next) setThemeDark(isDarkTheme());
-						else setImportError("");
-					},
-					children: "RD"
+				a$1(Card, {
+					className: PANEL_UI_CLASS.pageCard,
+					children: [a$1(SectionLabel, { children: "Page" }), a$1("div", {
+						className: PANEL_UI_CLASS.settingsGroup,
+						children: [
+							a$1("div", {
+								className: PANEL_UI_CLASS.settingsRow,
+								children: a$1(Switch, {
+									id: TWEAKS_SWITCH_ID,
+									label: UI_TEXT.enablePageTweaksLabel,
+									checked: tweaks,
+									onChange: (checked) => {
+										setTweaksEnabled(checked);
+										setTweaks(checked);
+										window.location.reload();
+									}
+								})
+							}),
+							a$1(FeatureModules, {}),
+							a$1("div", {
+								className: PANEL_UI_CLASS.settingsRow,
+								children: a$1(NumberField, {
+									id: UPDATES_GROUP_SIZE_ID,
+									label: UI_TEXT.updatesGroupSizeLabel,
+									value: updatesGroup,
+									min: 0,
+									step: 1,
+									onChange: (value) => {
+										setUpdatesGroupSize(value ?? 0);
+										setUpdatesGroup(getUpdatesGroupSize());
+									}
+								})
+							}),
+							a$1("div", {
+								className: PANEL_UI_CLASS.settingsRow,
+								children: a$1(NumberField, {
+									id: PLAYLIST_CHUNK_SIZE_ID,
+									label: UI_TEXT.playlistChunkSizeLabel,
+									value: playlistChunk,
+									min: 1,
+									step: 1,
+									onChange: (value) => {
+										setPlaylistChunkSize(value ?? 0);
+										setPlaylistChunk(getPlaylistChunkSize());
+									}
+								})
+							})
+						]
+					})]
 				}),
-				a$1("input", {
-					ref: fileInputRef,
-					type: "file",
-					accept: ".json,application/json",
-					className: CSS_CLASS.hidden,
-					"aria-hidden": "true",
-					tabIndex: -1,
-					onChange: () => {
-						const file = fileInputRef.current?.files?.item(0);
-						if (file === null || file === void 0) return;
-						const reader = new FileReader();
-						reader.addEventListener("load", () => {
-							try {
-								importJson(typeof reader.result === "string" ? reader.result : "");
-								setImportError("");
-								setArtistsVersion((value) => value + 1);
-							} catch (error) {
-								const message = error instanceof Error ? error.message : "Unknown import error";
-								setImportError(message);
-								log.warn("Import failed", message);
+				a$1(Card, {
+					className: PANEL_UI_CLASS.pageCard,
+					children: a$1(BlacklistSection, {})
+				}),
+				a$1(Card, {
+					className: PANEL_UI_CLASS.pageCard,
+					children: [a$1("div", {
+						className: PANEL_UI_CLASS.settingsRow,
+						children: a$1(Switch, {
+							id: GRID_FAV_CHECKBOX_ID,
+							label: UI_TEXT.gridFavButtonsLabel,
+							checked: gridFavEnabled,
+							onChange: (checked) => {
+								setGridFavButtonsEnabled(checked);
+								setGridFavButtonsVisible(checked);
+								setGridFavEnabled(checked);
 							}
-						});
-						reader.addEventListener("error", () => {
-							setImportError("Could not read file");
-						});
-						reader.readAsText(file);
-					}
+						})
+					}), a$1(FavoritesSyncSection, { includeHeading: true })]
+				}),
+				a$1(Card, {
+					className: PANEL_UI_CLASS.pageCard,
+					children: a$1(DataSection, {})
 				})
 			]
 		});
 	}
-	var PANEL_CSS = `
+	var THEME_DARK_CLASS = "rdw-theme-dark";
+	var PAGE_SHELL_CLASS = "rdw-page-shell";
+	var PAGE_TITLE_CLASS = "rdw-page-title";
+	var PAGE_HOST_CSS = `
 :host {
   all: initial;
   ${tokensToCssDeclarations(LIGHT_PALETTE)}
@@ -11020,303 +11424,387 @@ ${KIT_FOCUS_CSS}
   line-height: 1.35;
   color: var(--rdw-text);
 }
-
-:host(.${PANEL_UI_CLASS.themeDark}) {
+:host(.${THEME_DARK_CLASS}) {
   ${tokensToCssDeclarations(DARK_PALETTE)}
 }
-
-.${CSS_CLASS.host} {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 2147483646;
+.${PAGE_SHELL_CLASS} {
+  box-sizing: border-box;
+  max-width: ${String(960)}px;
+  margin: 0 auto;
+  padding: 16px 12px 32px;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
+  gap: 12px;
 }
-
-.${CSS_CLASS.toggle} {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--rdw-border);
-  border-radius: 999px;
-  background: var(--rdw-text);
-  color: var(--rdw-surface);
-  cursor: pointer;
+.${PAGE_TITLE_CLASS} {
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
-}
-
-.${CSS_CLASS.toggle}:focus-visible {
-  outline: 2px solid var(--rdw-accent);
-  outline-offset: 2px;
-}
-
-.${CSS_CLASS.panel} {
-  display: none;
-  box-sizing: border-box;
-  width: ${String(360)}px;
-  height: ${String(480)}px;
-  min-width: ${String(340)}px;
-  min-height: ${String(260)}px;
-  max-width: ${PANEL_MAX_WIDTH_CSS};
-  max-height: ${PANEL_MAX_HEIGHT_CSS};
-  resize: both;
-  overflow: hidden;
-  background: var(--rdw-surface);
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-l);
-  box-shadow: var(--rdw-shadow-2);
   color: var(--rdw-text);
 }
-
-.${CSS_CLASS.panel}.${CSS_CLASS.panelOpen} {
-  display: flex;
-  flex-direction: column;
-}
-
-.${CSS_CLASS.header} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px 6px;
-  flex-shrink: 0;
-}
-
-.${CSS_CLASS.title} {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--rdw-text);
-}
-
-.${CSS_CLASS.body} {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.${PANEL_UI_CLASS.tabPanel} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.${PANEL_UI_CLASS.tabPanel}[hidden] {
-  display: none !important;
-}
-
-.${PANEL_UI_CLASS.scrollRegion} {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-}
-
-.${CSS_CLASS.section} {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.${PANEL_UI_CLASS.settingsGroup} {
-  display: grid;
-  gap: 2px;
-}
-
-.${PANEL_UI_CLASS.settingsRow} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 8px;
-  border-radius: var(--rdw-radius-m);
-  font-size: 12.5px;
-}
-
-.${PANEL_UI_CLASS.settingsRow}:nth-child(even) {
-  background: var(--rdw-surface-2);
-}
-
-.${PANEL_UI_CLASS.settingsRow} .rdw-switch-row {
-  width: 100%;
-  justify-content: space-between;
-  flex-direction: row-reverse;
-}
-
-.${PANEL_UI_CLASS.settingsRow} .rdw-select,
-.${PANEL_UI_CLASS.settingsRow} .rdw-num {
-  width: 100%;
-}
-
-.${PANEL_UI_CLASS.artistMeta} {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.${PANEL_UI_CLASS.artistFilter} {
-  flex-shrink: 0;
-}
-
-.${PANEL_UI_CLASS.artistList} {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: auto;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-.${PANEL_UI_CLASS.artistRow} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: var(--rdw-radius-s);
-}
-
-.${PANEL_UI_CLASS.artistRow}:hover {
-  background: var(--rdw-surface-2);
-}
-
-.${PANEL_UI_CLASS.artistLink} {
-  color: var(--rdw-accent);
-  text-decoration: none;
-  font-weight: 600;
-  word-break: break-word;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.${PANEL_UI_CLASS.artistLink}:hover {
-  text-decoration: underline;
-}
-
-.${PANEL_UI_CLASS.artistLink}:focus-visible {
-  outline: 2px solid var(--rdw-accent);
-  outline-offset: 2px;
-}
-
-.${PANEL_UI_CLASS.artistUndo} {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
-  font-size: 12px;
-  color: var(--rdw-muted);
-}
-
-.${CSS_CLASS.list} {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.${CSS_CLASS.listItem} {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--rdw-border);
-  border-radius: var(--rdw-radius-m);
-  background: var(--rdw-surface);
-}
-
-.${CSS_CLASS.itemName} {
-  border: 0;
-  background: transparent;
-  color: var(--rdw-accent);
-  text-align: left;
-  cursor: pointer;
-  padding: 0;
-  font: inherit;
-  font-weight: 600;
-  word-break: break-word;
-}
-
-.${CSS_CLASS.itemName}:disabled {
-  color: var(--rdw-muted);
-  cursor: not-allowed;
-}
-
-.${CSS_CLASS.itemActions},
-.${CSS_CLASS.formActions},
-.${CSS_CLASS.toolbar},
-.${CSS_CLASS.confirmRow} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.${CSS_CLASS.hint} {
-  margin: 0;
-  color: var(--rdw-muted);
-  font-size: 12px;
-}
-
-.${CSS_CLASS.error} {
-  margin: 0;
-  color: var(--rdw-danger);
-  font-size: 12px;
-}
-
-.${PANEL_UI_CLASS.footer} {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--rdw-border);
-  font-size: 11px;
-  color: var(--rdw-muted);
-}
-
-.${PANEL_UI_CLASS.resizeHint} {
-  color: var(--rdw-muted);
-}
-
-.${CSS_CLASS.hidden} {
-  display: none !important;
-}
+${PAGE_CONTENT_CSS}
 `;
-	function mountPanel(target = document.body) {
-		if (document.getElementById("ruledesk-web-root") !== null) return;
+	function PageShell(props) {
+		return a$1($, { children: [a$1("style", { children: PAGE_HOST_CSS }), a$1("div", {
+			className: PAGE_SHELL_CLASS,
+			children: [a$1("h1", {
+				className: PAGE_TITLE_CLASS,
+				children: props.title
+			}), props.children]
+		})] });
+	}
+	function titleForRoute(route) {
+		if (route === "collections") return MENU_LABEL.collections;
+		if (route === "following") return MENU_LABEL.following;
+		return MENU_LABEL.settings;
+	}
+	function pageForRoute(route) {
+		if (route === "collections") return a$1(CollectionsPage, {});
+		if (route === "following") return a$1(FollowingPage, {});
+		return a$1(SettingsPage, {});
+	}
+	function isDarkTheme() {
+		const theme = getAppearance().theme;
+		return theme === "dark" || theme === "site-dark";
+	}
+	var hostElement = null;
+	var mountPoint = null;
+	function ensureHost(header) {
+		if (hostElement !== null && mountPoint !== null) {
+			if (hostElement.parentElement !== header.parentElement) header.after(hostElement);
+			return {
+				host: hostElement,
+				mount: mountPoint
+			};
+		}
+		const existing = document.getElementById(RDW_PAGE_ROOT_ID);
+		if (existing !== null) existing.remove();
 		const host = document.createElement("div");
-		host.id = PANEL_ROOT_ID;
+		host.id = RDW_PAGE_ROOT_ID;
 		const shadow = host.attachShadow({ mode: "open" });
-		const style = document.createElement("style");
-		style.textContent = PANEL_CSS;
-		const sizeStyle = document.createElement("style");
-		const mountPoint = document.createElement("div");
-		shadow.append(style, sizeStyle, mountPoint);
-		const persisted = readPersistedPanelState();
-		sizeStyle.textContent = buildSizeCssRule(persisted.width, persisted.height);
-		target.append(host);
-		Q(a$1(PanelRoot, {
+		const mount = document.createElement("div");
+		shadow.append(mount);
+		header.after(host);
+		hostElement = host;
+		mountPoint = mount;
+		return {
 			host,
-			sizeStyle
-		}), mountPoint);
+			mount
+		};
+	}
+	function showRdwPage(route, header) {
+		const { host, mount } = ensureHost(header);
+		host.classList.toggle(THEME_DARK_CLASS, isDarkTheme());
+		Q(a$1(PageShell, {
+			title: titleForRoute(route),
+			children: pageForRoute(route)
+		}), mount);
+	}
+	function hideRdwPage() {
+		if (mountPoint !== null) Q(null, mountPoint);
+		if (hostElement !== null) hostElement.remove();
+		hostElement = null;
+		mountPoint = null;
+		const stray = document.getElementById(RDW_PAGE_ROOT_ID);
+		if (stray !== null) stray.remove();
+	}
+	var CONTENT_ID = "content";
+	var savedSiteCurrent = null;
+	var siteCurrentCaptured = false;
+	function isHeaderMenuListItem(listItem, content) {
+		if (content !== null && content.contains(listItem)) return false;
+		return true;
+	}
+	function findPostsMenuItem() {
+		const content = document.getElementById(CONTENT_ID);
+		const anchors = document.querySelectorAll("a");
+		for (const node of anchors) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if ((node.textContent?.trim() ?? "") !== "Posts") continue;
+			const listItem = node.closest("li");
+			if (listItem === null || !(listItem instanceof HTMLLIElement)) continue;
+			if (!isHeaderMenuListItem(listItem, content)) continue;
+			return listItem;
+		}
+		return null;
+	}
+	function findNavbar() {
+		const navbar = document.querySelector(NAVBAR_SELECTOR);
+		return navbar instanceof HTMLUListElement ? navbar : null;
+	}
+	function findHeader$1() {
+		const header = document.querySelector(HEADER_SELECTOR);
+		return header instanceof HTMLElement ? header : null;
+	}
+	function readSavedFavoritesUserId() {
+		const userId = getSyncState()?.userId;
+		if (userId === void 0 || !Number.isFinite(userId) || userId <= 0) return null;
+		return userId;
+	}
+	function buildFavoritesHrefFromUserId(userId) {
+		const params = new URLSearchParams();
+		params.set(SEARCH_PARAM_PAGE, FAVORITES_PAGE);
+		params.set("s", FAVORITES_SECTION_VIEW);
+		params.set("id", String(userId));
+		return `${SEARCH_PATH}?${params.toString()}`;
+	}
+	function resolveFavoritesHref(root = document) {
+		const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR$2);
+		if (link instanceof HTMLAnchorElement) {
+			const href = link.getAttribute("href");
+			if (href !== null && href.length > 0) return link.href;
+		}
+		const fromDoc = extractUserIdFromDocument(root);
+		if (fromDoc !== null) return buildFavoritesHrefFromUserId(fromDoc);
+		const saved = readSavedFavoritesUserId();
+		if (saved !== null) return buildFavoritesHrefFromUserId(saved);
+		return null;
+	}
+	function ensureMenuLink(id, label, href) {
+		const existing = document.getElementById(id);
+		if (existing instanceof HTMLLIElement) {
+			const anchor = existing.querySelector("a");
+			if (anchor instanceof HTMLAnchorElement) {
+				anchor.textContent = label;
+				anchor.href = href;
+			}
+			return existing;
+		}
+		const item = document.createElement("li");
+		item.id = id;
+		const anchor = document.createElement("a");
+		anchor.textContent = label;
+		anchor.href = href;
+		item.append(anchor);
+		return item;
+	}
+	function hideNativeMyFavorites() {
+		const container = document.getElementById(MY_FAVORITES_CONTAINER_ID);
+		if (container instanceof HTMLLIElement) container.hidden = true;
+	}
+	function insertionAnchorAfterFeedOrPosts() {
+		const feed = document.getElementById(FEED_MENU_ITEM_ID);
+		if (feed instanceof HTMLLIElement) return feed;
+		return findPostsMenuItem();
+	}
+	function installSiteMenu() {
+		if (findHeader$1() === null) return;
+		const navbar = findNavbar();
+		if (navbar === null) return;
+		const anchor = insertionAnchorAfterFeedOrPosts();
+		if (anchor === null) return;
+		const collections = ensureMenuLink(MENU_ITEM_ID.collections, MENU_LABEL.collections, RDW_HASH_COLLECTIONS);
+		const following = ensureMenuLink(MENU_ITEM_ID.following, MENU_LABEL.following, RDW_HASH_FOLLOWING);
+		if (collections.parentElement !== navbar) anchor.after(collections);
+		else if (collections.previousElementSibling !== anchor) anchor.after(collections);
+		if (following.previousElementSibling !== collections) collections.after(following);
+		const favoritesHref = resolveFavoritesHref();
+		const existingFavorites = document.getElementById(MENU_ITEM_ID.favorites);
+		if (favoritesHref === null) {
+			if (existingFavorites !== null) existingFavorites.remove();
+		} else {
+			const favorites = ensureMenuLink(MENU_ITEM_ID.favorites, MENU_LABEL.favorites, favoritesHref);
+			if (favorites.previousElementSibling !== following) following.after(favorites);
+		}
+		hideNativeMyFavorites();
+		const settings = ensureMenuLink(MENU_ITEM_ID.settings, MENU_LABEL.settings, RDW_HASH_SETTINGS);
+		if (settings.parentElement !== navbar || navbar.lastElementChild !== settings) navbar.append(settings);
+	}
+	function menuItemIdForRoute(route) {
+		if (route === "collections") return MENU_ITEM_ID.collections;
+		if (route === "following") return MENU_ITEM_ID.following;
+		return MENU_ITEM_ID.settings;
+	}
+	function captureSiteCurrentIfNeeded() {
+		if (siteCurrentCaptured) return;
+		siteCurrentCaptured = true;
+		const navbar = findNavbar();
+		if (navbar === null) {
+			savedSiteCurrent = null;
+			return;
+		}
+		const current = navbar.querySelector(`li.${CURRENT_PAGE_CLASS$1}`);
+		savedSiteCurrent = current instanceof HTMLLIElement && current.id !== MENU_ITEM_ID.collections && current.id !== MENU_ITEM_ID.following && current.id !== MENU_ITEM_ID.favorites && current.id !== MENU_ITEM_ID.settings ? current : null;
+	}
+	function clearAllOwnCurrent() {
+		for (const id of Object.values(MENU_ITEM_ID)) {
+			const item = document.getElementById(id);
+			if (item instanceof HTMLLIElement) item.classList.remove(CURRENT_PAGE_CLASS$1);
+		}
+	}
+	function setOwnPageCurrentHighlight(route) {
+		captureSiteCurrentIfNeeded();
+		const navbar = findNavbar();
+		if (navbar !== null) for (const child of navbar.querySelectorAll(`li.${CURRENT_PAGE_CLASS$1}`)) child.classList.remove(CURRENT_PAGE_CLASS$1);
+		clearAllOwnCurrent();
+		const item = document.getElementById(menuItemIdForRoute(route));
+		if (item instanceof HTMLLIElement) item.classList.add(CURRENT_PAGE_CLASS$1);
+	}
+	function clearOwnPageCurrentHighlight() {
+		clearAllOwnCurrent();
+		if (savedSiteCurrent !== null && savedSiteCurrent.isConnected) savedSiteCurrent.classList.add(CURRENT_PAGE_CLASS$1);
+		savedSiteCurrent = null;
+		siteCurrentCaptured = false;
+	}
+	var EVENT_HASHCHANGE = "hashchange";
+	var routerBound = false;
+	function ensureOwnPageStyle() {
+		const style = ensureStyleElement(RDW_OWN_PAGE_STYLE_ID);
+		style.textContent = buildOwnPageCss();
+	}
+	function findHeader() {
+		const header = document.querySelector(HEADER_SELECTOR);
+		return header instanceof HTMLElement ? header : null;
+	}
+	function enterRoute(route) {
+		const header = findHeader();
+		if (header === null) return;
+		document.documentElement.classList.add(RDW_OWN_PAGE_CLASS);
+		showRdwPage(route, header);
+		setOwnPageCurrentHighlight(route);
+	}
+	function leaveRoute() {
+		document.documentElement.classList.remove(RDW_OWN_PAGE_CLASS);
+		hideRdwPage();
+		clearOwnPageCurrentHighlight();
+	}
+	function syncFromHash() {
+		if (findHeader() === null) {
+			leaveRoute();
+			return;
+		}
+		const route = parseRdwHash(window.location.hash);
+		if (route === null) {
+			leaveRoute();
+			return;
+		}
+		enterRoute(route);
+	}
+	function onHashChange() {
+		syncFromHash();
+	}
+	function startRdwPages() {
+		ensureOwnPageStyle();
+		if (findHeader() === null) {
+			leaveRoute();
+			return;
+		}
+		installSiteMenu();
+		if (!routerBound) {
+			routerBound = true;
+			window.addEventListener(EVENT_HASHCHANGE, onHashChange);
+		}
+		syncFromHash();
+	}
+	var removeClickBound = false;
+	function collectFavoritePostIds(root) {
+		const ids = [];
+		const seen = new Set();
+		const links = root.querySelectorAll(SITE_SELECTORS.favoritesDeleteLink);
+		for (const link of links) {
+			if (!(link instanceof HTMLAnchorElement)) continue;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) continue;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null || seen.has(postId)) continue;
+			seen.add(postId);
+			ids.push(postId);
+		}
+		return ids;
+	}
+	function bindRemoveClickCapture() {
+		if (removeClickBound) return;
+		removeClickBound = true;
+		document.addEventListener("click", (event) => {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const link = target.closest("a");
+			if (!(link instanceof HTMLAnchorElement)) return;
+			const onclick = link.getAttribute("onclick");
+			if (onclick === null) return;
+			const postId = extractPostIdFromFavoritesDeleteOnclick(onclick);
+			if (postId === null) return;
+			removeFav(postId);
+		}, true);
+	}
+	function syncFavoritesPage(root = document, search = window.location.search) {
+		if (detectPageKind(search) !== "favorites") return;
+		const ids = collectFavoritePostIds(root);
+		const numericIds = [];
+		for (const postId of ids) {
+			const parsed = Number(postId);
+			if (Number.isFinite(parsed)) numericIds.push(Math.trunc(parsed));
+		}
+		addFavs(numericIds);
+		bindRemoveClickCapture();
+	}
+	function extractArtistTagFromLi(li) {
+		const links = li.querySelectorAll("a[href]");
+		for (const node of links) {
+			if (!(node instanceof HTMLAnchorElement)) continue;
+			if (node.hasAttribute("onclick")) continue;
+			const href = node.getAttribute("href");
+			if (href === null || href.length === 0) continue;
+			let url;
+			try {
+				url = new URL(href, SITE_ORIGIN);
+			} catch {
+				continue;
+			}
+			if (url.searchParams.get("page") !== "post") continue;
+			if (url.searchParams.get("s") !== "list") continue;
+			const tags = url.searchParams.get(SEARCH_PARAM_TAGS);
+			if (tags === null) continue;
+			return normalizeArtistTag(tags);
+		}
+		return null;
+	}
+	function applyFollowState(button, following) {
+		button.setAttribute("aria-pressed", following ? "true" : "false");
+		button.classList.toggle(CSS_CLASS.artistFollowMarked, following);
+		const label = following ? UI_TEXT.artistFollowing : UI_TEXT.artistFollow;
+		const tag = button.dataset.rdwArtistTag ?? "";
+		button.setAttribute("aria-label", `${label}: ${tag}`);
+		button.textContent = label;
+	}
+	function attachFollowButton(li, tag) {
+		if (li.querySelector(SITE_SELECTORS.artistFollowButton) !== null) return;
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = CSS_CLASS.artistFollow;
+		button.dataset.rdwArtistTag = tag;
+		applyFollowState(button, isFollowingArtist(tag));
+		button.addEventListener("click", (event) => {
+			event.preventDefault();
+			event.stopPropagation();
+			const following = button.getAttribute("aria-pressed") === "true";
+			try {
+				if (following) {
+					removeArtist(tag);
+					applyFollowState(button, false);
+				} else {
+					addArtist(tag);
+					applyFollowState(button, true);
+				}
+			} catch {
+				applyFollowState(button, isFollowingArtist(tag));
+			}
+		});
+		li.append(button);
+	}
+	function mountArtistSidebar(root = document, search = window.location.search) {
+		const kind = detectPageKind(search);
+		if (kind !== "list" && kind !== "post") return;
+		ensureDocumentStyles();
+		const sidebar = root.querySelector(SITE_SELECTORS.tagSidebar);
+		if (sidebar === null) return;
+		const rows = sidebar.querySelectorAll(SITE_SELECTORS.tagTypeArtist);
+		for (const row of rows) {
+			if (!(row instanceof HTMLElement)) continue;
+			const tag = extractArtistTagFromLi(row);
+			if (tag === null) continue;
+			attachFollowButton(row, tag);
+		}
 	}
 	function syncAppearanceAfterDomReady() {
 		const appearance = getAppearance();
@@ -11329,7 +11817,6 @@ ${KIT_FOCUS_CSS}
 	}
 	function startApp() {
 		syncAppearanceAfterDomReady();
-		mountPanel();
 		const pageKind = detectPageKind(window.location.search);
 		if (pageKind === "list") {
 			mountCards();
@@ -11337,8 +11824,18 @@ ${KIT_FOCUS_CSS}
 		} else if (pageKind === "post") mountArtistSidebar();
 		else if (pageKind === "favorites") syncFavoritesPage();
 		runFeatures(pageKind, window.location.search);
+		startRdwPages();
+	}
+	function applyOwnPageClassEarly() {
+		if (parseRdwHash(window.location.hash) === null) return;
+		const root = document.documentElement;
+		if (root === null) return;
+		const style = ensureStyleElement(RDW_OWN_PAGE_STYLE_ID);
+		style.textContent = buildOwnPageCss();
+		root.classList.add(RDW_OWN_PAGE_CLASS);
 	}
 	function bootEarly() {
+		applyOwnPageClassEarly();
 		const appearance = getAppearance();
 		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
 		applyAppearanceTheme({
@@ -11347,12 +11844,68 @@ ${KIT_FOCUS_CSS}
 			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
 		});
 	}
+	var FAVORITES_SYNC_LOCK_STALE_MS = 1e4;
+	var FAVORITES_SYNC_RESUME_DELAY_MS = 3e3;
+	var sessionTabId;
+	var resumeAttempted = false;
+	function delay(ms) {
+		return new Promise((resolve) => {
+			setTimeout(resolve, ms);
+		});
+	}
+	function getFavoritesSyncRunnerTabId() {
+		if (sessionTabId === void 0) sessionTabId = createFavoritesSyncTabId();
+		return sessionTabId;
+	}
+	function shouldResumeStaleFavoritesSync(sync, now) {
+		if (sync?.running !== true) return false;
+		const lock = sync.lock;
+		if (lock === void 0) return true;
+		return now - lock.beatAt > FAVORITES_SYNC_LOCK_STALE_MS;
+	}
+	function shouldSkipForFreshForeignLock(sync, thisTabId, now) {
+		if (sync?.running !== true) return false;
+		const lock = sync.lock;
+		if (lock === void 0) return false;
+		if (now - lock.beatAt > 1e4) return false;
+		return lock.tabId !== thisTabId;
+	}
+	async function resumeFavoritesSyncIfStale() {
+		const tabId = getFavoritesSyncRunnerTabId();
+		const before = getSyncState();
+		if (shouldSkipForFreshForeignLock(before, tabId, Date.now())) return false;
+		if (!shouldResumeStaleFavoritesSync(before, Date.now())) return false;
+		await delay(FAVORITES_SYNC_RESUME_DELAY_MS);
+		const after = getSyncState();
+		if (shouldSkipForFreshForeignLock(after, tabId, Date.now())) return false;
+		if (!shouldResumeStaleFavoritesSync(after, Date.now())) return false;
+		await runFavoritesSync({
+			tabId,
+			signal: new AbortController().signal,
+			onProgress: () => {}
+		});
+		return true;
+	}
+	function maybeResumeFavoritesSync() {
+		if (resumeAttempted) return;
+		resumeAttempted = true;
+		resumeFavoritesSyncIfStale().catch((error) => {
+			log.error("favorites sync resume failed", error);
+		});
+	}
 	function whenDomReady(callback) {
-		if (document.readyState === "interactive" || document.readyState === "complete") {
+		const run = () => {
 			callback();
+			onDomReadySideEffects();
+		};
+		if (document.readyState === "interactive" || document.readyState === "complete") {
+			run();
 			return;
 		}
-		document.addEventListener("DOMContentLoaded", callback, { once: true });
+		document.addEventListener("DOMContentLoaded", run, { once: true });
+	}
+	function onDomReadySideEffects() {
+		maybeResumeFavoritesSync();
 	}
 	bootEarly();
 	whenDomReady(() => {

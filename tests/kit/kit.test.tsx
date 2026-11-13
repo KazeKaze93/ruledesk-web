@@ -18,9 +18,18 @@ import {
   Tabs,
   TextField,
 } from "../../src/ui/kit";
-import { cleanupKit, fireClick, flushEffects, renderKit } from "./render";
+import {
+  cleanupKit,
+  cleanupKitShadow,
+  fireClick,
+  flushEffects,
+  renderKit,
+  renderKitInShadow,
+  type KitShadowMount,
+} from "./render";
 
 const hosts: HTMLElement[] = [];
+const shadowHosts: KitShadowMount[] = [];
 
 afterEach(() => {
   while (hosts.length > 0) {
@@ -29,12 +38,26 @@ afterEach(() => {
       cleanupKit(host);
     }
   }
+  while (shadowHosts.length > 0) {
+    const shadow = shadowHosts.pop();
+    if (shadow !== undefined) {
+      cleanupKitShadow(shadow);
+    }
+  }
 });
 
 function mount(node: Parameters<typeof renderKit>[0]): HTMLElement {
   const host = renderKit(node);
   hosts.push(host);
   return host;
+}
+
+function mountShadow(
+  node: Parameters<typeof renderKitInShadow>[0],
+): KitShadowMount {
+  const mounted = renderKitInShadow(node);
+  shadowHosts.push(mounted);
+  return mounted;
 }
 
 describe("kit components", () => {
@@ -148,6 +171,58 @@ describe("kit components", () => {
     expect(host.querySelector('[role="listbox"]')).toBeNull();
   });
 
+  it("Select option click inside shadow root fires onChange", async () => {
+    const onChange = vi.fn();
+    const { host, shadow } = mountShadow(
+      <Select
+        label="Sort"
+        value="newest"
+        onChange={onChange}
+        options={[
+          { value: "newest", label: "Newest" },
+          { value: "score", label: "Score" },
+        ]}
+      />,
+    );
+    const trigger = shadow.querySelector(".rdw-select__trigger");
+    expect(trigger).toBeInstanceOf(HTMLButtonElement);
+    if (!(trigger instanceof HTMLButtonElement)) {
+      throw new Error("expected select trigger");
+    }
+    fireClick(trigger);
+    expect(shadow.querySelector('[role="listbox"]')).toBeTruthy();
+    await flushEffects();
+    const selectRoot = shadow.querySelector(".rdw-select");
+    const option = Array.from(
+      shadow.querySelectorAll('[role="option"]'),
+    ).find((node) => node.textContent === "Score");
+    expect(selectRoot).toBeTruthy();
+    expect(option).toBeTruthy();
+    if (selectRoot === null || option === undefined) {
+      throw new Error("expected select root and Score option");
+    }
+    // Browser retargets event.target to the shadow host for document listeners;
+    // composedPath still includes the real select root. Old contains(target) closed.
+    act(() => {
+      const event = new MouseEvent("mousedown", {
+        bubbles: true,
+        composed: true,
+      });
+      Object.defineProperty(event, "target", {
+        configurable: true,
+        value: host,
+      });
+      Object.defineProperty(event, "composedPath", {
+        configurable: true,
+        value: () => [option, selectRoot, shadow, host, document, window],
+      });
+      document.dispatchEvent(event);
+    });
+    expect(shadow.querySelector('[role="listbox"]')).toBeTruthy();
+    fireClick(option);
+    expect(onChange).toHaveBeenCalledWith("score");
+  });
+
   it("TextField and NumberField emit changes", () => {
     const onText = vi.fn();
     const onNum = vi.fn();
@@ -230,11 +305,66 @@ describe("kit components", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("Popover inside click in shadow root does not call onClose", async () => {
+    const onClose = vi.fn();
+    const { host, shadow } = mountShadow(
+      <Popover open onClose={onClose} aria-label="Collections">
+        <button type="button">Inside</button>
+      </Popover>,
+    );
+    const dialog = shadow.querySelector('[role="dialog"]');
+    const inside = shadow.querySelector("button");
+    expect(dialog).toBeTruthy();
+    expect(inside).toBeTruthy();
+    await flushEffects();
+    if (dialog === null || inside === null) {
+      throw new Error("expected dialog and inside button");
+    }
+    act(() => {
+      const event = new MouseEvent("mousedown", {
+        bubbles: true,
+        composed: true,
+      });
+      Object.defineProperty(event, "target", {
+        configurable: true,
+        value: host,
+      });
+      Object.defineProperty(event, "composedPath", {
+        configurable: true,
+        value: () => [inside, dialog, shadow, host, document, window],
+      });
+      document.dispatchEvent(event);
+    });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("ProgressBar exposes progressbar role", async () => {
     const host = mount(<ProgressBar value={0.5} label="Sync" />);
     await flushEffects();
     const bar = host.querySelector('[role="progressbar"]');
     expect(bar?.getAttribute("aria-valuenow")).toBe("50");
+  });
+
+  it("ProgressBar without value is empty; waiting needs explicit flag", async () => {
+    const emptyHost = mount(<ProgressBar label="Idle" />);
+    await flushEffects();
+    const emptyFill = emptyHost.querySelector(".rdw-progress__fill");
+    expect(emptyFill?.className).toBe("rdw-progress__fill");
+    expect(emptyFill?.className).not.toContain(
+      "rdw-progress__fill--indeterminate",
+    );
+    expect(
+      emptyHost.querySelector('[role="progressbar"]')?.getAttribute(
+        "aria-valuenow",
+      ),
+    ).toBeNull();
+
+    const waitingHost = mount(<ProgressBar waiting label="Wait" />);
+    await flushEffects();
+    const waitingFill = waitingHost.querySelector(".rdw-progress__fill");
+    expect(waitingFill?.className).toContain(
+      "rdw-progress__fill--indeterminate",
+    );
   });
 
   it("kit CSS uses only rdw token variables for colors", () => {

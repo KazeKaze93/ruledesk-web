@@ -46,7 +46,8 @@ export function Popover(props: PopoverProps): JSX.Element | null {
       if (root === null) {
         return;
       }
-      if (event.target instanceof Node && !root.contains(event.target)) {
+      // Shadow DOM retargets event.target to the host; composedPath keeps the real nodes.
+      if (!event.composedPath().includes(root)) {
         props.onClose();
       }
     };

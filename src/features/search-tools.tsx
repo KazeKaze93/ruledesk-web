@@ -72,7 +72,8 @@ const MEDIA_VIDEO = "video";
 const MEDIA_IMAGES = `${EXCLUDE_PREFIX}${MEDIA_VIDEO}`;
 const TAG_TYPE_CLASS_PREFIX = "tag-type-";
 const SORT_HINT = "Sorts within the current search";
-const FOOT_HINT = "Applies instantly";
+const FOOT_HINT =
+  "Typing needs Search or Enter; chips and filters apply instantly";
 const RESET_LABEL = "Reset search";
 const KEY_ENTER = "Enter";
 
@@ -768,8 +769,10 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
   applyViewRef.current = applyViewFromInput;
 
   useEffect(() => {
+    // Site tags field: refresh chips only. Search/reload is the site's
+    // Search button or Enter — never auto-apply on type or autocomplete.
     const onSiteInput = (): void => {
-      applyViewRef.current({ navigate: true });
+      applyViewRef.current({ navigate: false });
     };
     input.addEventListener(EVENT_INPUT, onSiteInput);
     input.addEventListener(EVENT_CHANGE, onSiteInput);
@@ -945,40 +948,69 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
     <>
       <style>{CHIP_CSS}</style>
       <Card className={CARD_CLASS}>
-        <div className={FIELD_CLASS}>
-          <SectionLabel>Tags</SectionLabel>
-          <div
-            className={CHIPS_CLASS}
-            onClick={onChipsClick}
-            role="list"
-            aria-label="Search tags"
-          >
-            {view.chips.map((chip) => {
-              if (chip.kind === "tag") {
-                const excluded = chip.excluded;
-                const variantClass = excluded
-                  ? "rdw-chip--exclude"
-                  : "rdw-chip--dot";
-                const kindClass =
-                  !excluded && chip.chipKind !== "default"
-                    ? `rdw-chip--${chip.chipKind}`
-                    : "";
-                const toggleable = !isMetaToken(chip.token);
+        {view.chips.length > 0 ? (
+          <div className={FIELD_CLASS}>
+            <SectionLabel>Tags</SectionLabel>
+            <div
+              className={CHIPS_CLASS}
+              onClick={onChipsClick}
+              role="list"
+              aria-label="Search tags"
+            >
+              {view.chips.map((chip) => {
+                if (chip.kind === "tag") {
+                  const excluded = chip.excluded;
+                  const variantClass = excluded
+                    ? "rdw-chip--exclude"
+                    : "rdw-chip--dot";
+                  const kindClass =
+                    !excluded && chip.chipKind !== "default"
+                      ? `rdw-chip--${chip.chipKind}`
+                      : "";
+                  const toggleable = !isMetaToken(chip.token);
+                  return (
+                    <span
+                      key={`t-${String(chip.start)}-${chip.token}`}
+                      className={[
+                        "rdw-chip",
+                        variantClass,
+                        kindClass,
+                        CHIP_CLASS,
+                      ]
+                        .filter((part) => part.length > 0)
+                        .join(" ")}
+                      role="listitem"
+                      title={chip.title ?? undefined}
+                      data-chip-start={String(chip.start)}
+                      data-chip-end={String(chip.end)}
+                      data-chip-toggle={toggleable ? "1" : "0"}
+                    >
+                      {!excluded ? (
+                        <i className="rdw-chip__dot" aria-hidden="true" />
+                      ) : null}
+                      <span>{chip.label}</span>
+                      <button
+                        type="button"
+                        className="rdw-chip__remove rdw-kit-focusable"
+                        aria-label={`Remove ${chip.label}`}
+                        data-chip-remove="1"
+                      >
+                        <IconX size={12} />
+                      </button>
+                    </span>
+                  );
+                }
+
                 return (
                   <span
-                    key={`t-${String(chip.start)}-${chip.token}`}
-                    className={["rdw-chip", variantClass, kindClass, CHIP_CLASS]
-                      .filter((part) => part.length > 0)
-                      .join(" ")}
+                    key={`g-${String(chip.start)}-${String(chip.end)}-${chip.label}`}
+                    className={`rdw-chip rdw-chip--group ${CHIP_CLASS}`}
                     role="listitem"
-                    title={chip.title ?? undefined}
+                    title={chip.title}
                     data-chip-start={String(chip.start)}
                     data-chip-end={String(chip.end)}
-                    data-chip-toggle={toggleable ? "1" : "0"}
+                    data-chip-toggle="0"
                   >
-                    {!excluded ? (
-                      <i className="rdw-chip__dot" aria-hidden="true" />
-                    ) : null}
                     <span>{chip.label}</span>
                     <button
                       type="button"
@@ -990,32 +1022,10 @@ function SearchToolsPanel(props: SearchToolsPanelProps): JSX.Element {
                     </button>
                   </span>
                 );
-              }
-
-              return (
-                <span
-                  key={`g-${String(chip.start)}-${String(chip.end)}-${chip.label}`}
-                  className={`rdw-chip rdw-chip--group ${CHIP_CLASS}`}
-                  role="listitem"
-                  title={chip.title}
-                  data-chip-start={String(chip.start)}
-                  data-chip-end={String(chip.end)}
-                  data-chip-toggle="0"
-                >
-                  <span>{chip.label}</span>
-                  <button
-                    type="button"
-                    className="rdw-chip__remove rdw-kit-focusable"
-                    aria-label={`Remove ${chip.label}`}
-                    data-chip-remove="1"
-                  >
-                    <IconX size={12} />
-                  </button>
-                </span>
-              );
-            })}
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className={FIELD_CLASS}>
           <SectionLabel>Media</SectionLabel>

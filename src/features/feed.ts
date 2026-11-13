@@ -1,6 +1,10 @@
 import { SEARCH_PARAM_TAGS } from "../config/constants";
 import { log } from "../log";
 import {
+  FEED_MENU_ITEM_ID,
+  RDW_HASH_FOLLOWING,
+} from "../pages/constants";
+import {
   buildFeedUrl,
   isFullUpdatesQuery,
   isPartialUpdatesQuery,
@@ -14,6 +18,7 @@ import {
   getSeenPostId,
   getUpdatesGroupSize,
   listArtistTags,
+  reloadFromStorage,
 } from "../storage/store";
 import { ensureDocumentStyles } from "../ui/cards";
 import { mountUpdatesBar } from "../ui/updates-bar";
@@ -33,7 +38,6 @@ const FEATURE_PAGES = ["list", "post", "favorites", "other"] as const;
 const CONTENT_ID = "content";
 const POSTS_LINK_TEXT = "Posts";
 const FEED_LINK_TEXT = "Feed";
-const FEED_MENU_ITEM_ID = "rdw-feed-menu";
 const CURRENT_PAGE_CLASS = "current-page";
 /** Class on thumbs newer than seenPostId (NEW plaque via feature CSS). */
 export const FEED_NEW_CLASS = "new";
@@ -119,24 +123,12 @@ function findPostsMenuItem(): HTMLLIElement | null {
   return null;
 }
 
-function resolveFeedHref(postsAnchor: HTMLAnchorElement | null): string {
+function resolveFeedHref(): string {
   const artistTags = listArtistTags();
   if (artistTags.length === 0) {
-    if (postsAnchor !== null) {
-      return postsAnchor.href;
-    }
-    return buildFeedUrl([], getUpdatesGroupSize());
+    return RDW_HASH_FOLLOWING;
   }
   return buildFeedUrl(artistTags, getUpdatesGroupSize());
-}
-
-function findPostsAnchor(): HTMLAnchorElement | null {
-  const postsItem = findPostsMenuItem();
-  if (postsItem === null) {
-    return null;
-  }
-  const postsAnchor = postsItem.querySelector("a");
-  return postsAnchor instanceof HTMLAnchorElement ? postsAnchor : null;
 }
 
 function findFeedLink(): HTMLAnchorElement | null {
@@ -148,14 +140,18 @@ function findFeedLink(): HTMLAnchorElement | null {
   return feedLink instanceof HTMLAnchorElement ? feedLink : null;
 }
 
-/** Recalculate Feed href from current followed artists (bfcache / late follow). */
+/**
+ * Recalculate Feed href from current followed artists (bfcache / late follow).
+ * Always re-reads GM storage first — in-memory load() cache can be stale after
+ * Follow on another page + Back (bfcache).
+ */
 export function refreshFeedHref(): void {
+  reloadFromStorage();
   const feedLink = findFeedLink();
   if (feedLink === null) {
     return;
   }
-  const postsLink = findPostsAnchor();
-  feedLink.href = resolveFeedHref(postsLink);
+  feedLink.href = resolveFeedHref();
   const artistTags = listArtistTags();
   if (artistTags.length === 0) {
     feedLink.title = NO_ARTISTS_TITLE;
@@ -204,13 +200,12 @@ function ensureFeedMenuItem(): HTMLLIElement | null {
     return null;
   }
 
-  const postsLink = findPostsAnchor();
-
+  reloadFromStorage();
   const feedItem = document.createElement("li");
   feedItem.id = FEED_MENU_ITEM_ID;
   const feedLink = document.createElement("a");
   feedLink.textContent = FEED_LINK_TEXT;
-  feedLink.href = resolveFeedHref(postsLink);
+  feedLink.href = resolveFeedHref();
   if (listArtistTags().length === 0) {
     feedLink.title = NO_ARTISTS_TITLE;
   }

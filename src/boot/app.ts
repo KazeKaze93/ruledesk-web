@@ -1,4 +1,5 @@
 import { runFeatures } from "../features/runtime";
+import { startRdwPages } from "../pages/router";
 import { getSiteSkinCss } from "../skin/site-skin";
 import { applyAppearanceTheme } from "../skin/theme";
 import { syncFavoritesPage } from "../site/favorites-page";
@@ -9,7 +10,6 @@ import {
 } from "../storage/store";
 import { mountArtistSidebar } from "../ui/artists-sidebar";
 import { mountCards } from "../ui/cards";
-import { mountPanel } from "../ui/panel";
 
 /**
  * Re-apply appearance once head/body exist so the site stylesheet link
@@ -26,11 +26,11 @@ function syncAppearanceAfterDomReady(): void {
 }
 
 /**
- * Feature/panel mount — only after DOM is ready (body exists).
+ * Feature + own-page mount — only after DOM is ready (body exists).
+ * Floating panel (#ruledesk-web-root / #ruledesk-web-toggle) is removed.
  */
 export function startApp(): void {
   syncAppearanceAfterDomReady();
-  mountPanel();
 
   const pageKind = detectPageKind(window.location.search);
   if (pageKind === "list") {
@@ -43,4 +43,6 @@ export function startApp(): void {
   }
 
   runFeatures(pageKind, window.location.search);
+  // After Feed inserts its nav item so Collections/Following sit after Feed.
+  startRdwPages();
 }

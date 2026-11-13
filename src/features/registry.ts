@@ -1,3 +1,4 @@
+import { blacklistHideFeature } from "./blacklist-hide";
 import { feedFeature } from "./feed";
 import { gridDensityFeature } from "./grid-density";
 import { seenDimFeature } from "./grid-marks";
@@ -18,6 +19,7 @@ export const FEATURES: Feature[] = [
   seenDimFeature,
   playlistMenuFeature,
   playlistBarFeature,
+  blacklistHideFeature,
   infiniteScrollFeature,
   postActionsFeature,
   gridDensityFeature,

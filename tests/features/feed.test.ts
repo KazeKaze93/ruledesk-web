@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { UPDATES_BAR_ID } from "../../src/config/constants";
+import { STORAGE_KEY, UPDATES_BAR_ID } from "../../src/config/constants";
 import {
   FEED_NEW_CLASS,
   feedFeature,
@@ -15,6 +15,7 @@ import {
   featureBodyClass,
   type FeatureContext,
 } from "../../src/features/types";
+import { RDW_HASH_FOLLOWING } from "../../src/pages/constants";
 import { createDefaultStorage } from "../../src/storage/schema";
 import { clearStorageCache, save } from "../../src/storage/store";
 
@@ -182,16 +183,15 @@ describe("feedFeature", () => {
     expect(document.querySelectorAll(`#${FEED_MENU_ITEM_ID}`).length).toBe(1);
   });
 
-  it("shows Feed with Posts href and title when no artists are followed", () => {
-    const { posts } = buildHeaderMenu();
-    const postsHref = posts.querySelector("a")?.href ?? "";
+  it("points Feed at #rdw/following with title when no artists are followed", () => {
+    buildHeaderMenu();
 
     feedFeature.mount(makeContext());
 
     const feedLink = document
       .getElementById(FEED_MENU_ITEM_ID)
       ?.querySelector("a");
-    expect(feedLink?.href).toBe(postsHref);
+    expect(feedLink?.getAttribute("href")).toBe(RDW_HASH_FOLLOWING);
     expect(feedLink?.title).toBe("Follow artists to build your feed");
   });
 
@@ -307,14 +307,33 @@ describe("feedFeature", () => {
       .getElementById(FEED_MENU_ITEM_ID)
       ?.querySelector("a");
     expect(feedLink).toBeInstanceOf(HTMLAnchorElement);
-    const postsHref = feedLink?.href ?? "";
+    expect(feedLink?.getAttribute("href")).toBe(RDW_HASH_FOLLOWING);
     expect(feedLink?.title).toBe("Follow artists to build your feed");
 
     seedArtists(["nyx_x", "other"]);
     window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
 
-    expect(feedLink?.href).not.toBe(postsHref);
     expect(feedLink?.href).toContain("tags=%28+nyx_x+~+other+%29");
+    expect(feedLink?.hasAttribute("title")).toBe(false);
+  });
+
+  it("refreshes Feed href after GM storage changed with a stale in-memory cache", () => {
+    buildHeaderMenu();
+    feedFeature.mount(makeContext());
+    const feedLink = document
+      .getElementById(FEED_MENU_ITEM_ID)
+      ?.querySelector("a");
+    expect(feedLink?.getAttribute("href")).toBe(RDW_HASH_FOLLOWING);
+
+    const data = createDefaultStorage();
+    data.artists = [{ tag: "stale_cache_artist" }, { tag: "also" }];
+    memory.set(STORAGE_KEY, data);
+
+    refreshFeedHref();
+
+    expect(feedLink?.href).toContain(
+      "tags=%28+stale_cache_artist+~+also+%29",
+    );
     expect(feedLink?.hasAttribute("title")).toBe(false);
   });
 

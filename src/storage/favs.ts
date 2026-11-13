@@ -7,6 +7,7 @@ import {
   FavsSchema,
   StorageSchema,
   createDefaultFavs,
+  stripLegacyPanelWindowSize,
   type FavsData,
   type FavsSyncState,
   type MarkFlags,
@@ -90,13 +91,15 @@ function writeMainStorage(data: StorageData): void {
 
 /**
  * Extract legacy `marks.*.fav === true` into favs.ids, strip `fav` from marks,
- * save both keys. Idempotent. Preserves `marks.seen`.
+ * strip legacy panel window size from featureState, save both keys.
+ * Idempotent. Preserves `marks.seen` and other featureState keys.
  */
 export function migrateMarksFavToFavs(): void {
   const main = readMainStorageRaw();
   const favs = readFavsRaw();
   const ids = new Set(favs.ids);
   let marksChanged = false;
+  let mainToWrite: StorageData | null = null;
 
   if (main !== null) {
     const nextMarks: StorageData["marks"] = {};
@@ -122,10 +125,18 @@ export function migrateMarksFavToFavs(): void {
       // fav-only entries become empty and are dropped
     }
 
+    let nextMain: StorageData = main;
     if (marksChanged) {
-      main.marks = nextMarks;
-      writeMainStorage(main);
+      nextMain = { ...main, marks: nextMarks };
     }
+    const stripped = stripLegacyPanelWindowSize(nextMain);
+    if (marksChanged || stripped.changed) {
+      mainToWrite = stripped.data;
+    }
+  }
+
+  if (mainToWrite !== null) {
+    writeMainStorage(mainToWrite);
   }
 
   const nextFavs: FavsData = {

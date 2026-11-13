@@ -6,7 +6,7 @@ import { readSiteBlacklist, writeSiteBlacklist } from "../src/site/blacklist";
 import {
   BLACKLIST_SECTION_CSS,
   createBlacklistSection,
-} from "../src/ui/panel";
+} from "../src/pages/blacklist-section";
 
 function click(el: Element): void {
   act(() => {
@@ -69,15 +69,6 @@ function addButton(section: HTMLElement): HTMLButtonElement {
   return button;
 }
 
-function reloadButton(section: HTMLElement): HTMLButtonElement {
-  const buttons = Array.from(section.querySelectorAll("button"));
-  const button = buttons.find((entry) => entry.textContent === "Reload");
-  if (!(button instanceof HTMLButtonElement)) {
-    throw new Error("Reload button missing");
-  }
-  return button;
-}
-
 describe("createBlacklistSection", () => {
   beforeEach(() => {
     clearCookies();
@@ -91,12 +82,12 @@ describe("createBlacklistSection", () => {
     document.body.replaceChildren();
   });
 
-  it("exports CSS for the panel shadow root", () => {
+  it("exports CSS for the page host", () => {
     expect(BLACKLIST_SECTION_CSS).toContain(".rdw-blacklist");
     expect(BLACKLIST_SECTION_CSS).toContain(".rdw-blacklist-chips");
   });
 
-  it("renders current tags as chips with remove aria-labels", () => {
+  it("renders current tags as chips without reload UI", () => {
     writeSiteBlacklist(["gay", "rating:e", "user:someone"]);
     const section = createBlacklistSection();
     document.body.append(section);
@@ -106,9 +97,10 @@ describe("createBlacklistSection", () => {
     expect(removeButton(section, "gay")?.getAttribute("aria-label")).toBe(
       "Remove gay",
     );
-    expect(section.textContent).toContain(
+    expect(section.textContent).not.toContain(
       "Saved. Reload the page to apply.",
     );
+    expect(section.textContent).not.toContain("Reload");
     expect(section.textContent).toContain(
       "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.",
     );
@@ -219,19 +211,5 @@ describe("createBlacklistSection", () => {
       "user:alice",
       "roblox",
     ]);
-  });
-
-  it("reloads the page when Reload is clicked", () => {
-    const reload = vi.fn();
-    vi.stubGlobal("location", {
-      ...window.location,
-      reload,
-    });
-
-    const section = createBlacklistSection();
-    document.body.append(section);
-    click(reloadButton(section));
-
-    expect(reload).toHaveBeenCalledTimes(1);
   });
 });

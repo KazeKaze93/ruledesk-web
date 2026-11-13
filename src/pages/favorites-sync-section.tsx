@@ -2,17 +2,17 @@ import type { JSX } from "preact";
 import { render as preactRender } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
-import { log } from "../../log";
+import { log } from "../log";
 import {
   FAVORITES_SYNC_PAGE_PAUSE_MS,
   FAVORITES_SYNC_PID_STEP,
   runFavoritesSync,
   type FavoritesSyncProgress,
   type FavoritesSyncResult,
-} from "../../site/favorites-sync";
-import { getSyncState, loadFavSet } from "../../storage/favs";
-import type { FavsSyncState } from "../../storage/schema";
-import { Button, ProgressBar, SectionLabel } from "../kit";
+} from "../site/favorites-sync";
+import { getSyncState, loadFavSet } from "../storage/favs";
+import type { FavsSyncState } from "../storage/schema";
+import { Button, ProgressBar, SectionLabel } from "../ui/kit";
 
 const SECTION_CLASS = "rdw-favs-sync";
 const STATUS_CLASS = "rdw-favs-sync-status";
@@ -39,6 +39,7 @@ const TEXT_DONE = (total: number, pages: number): string =>
   `Synced ${String(total)} ids across ${String(pages)} pages`;
 const TEXT_ABORTED = (page: number, pages: number, total: number): string =>
   `Stopped at page ${String(page)} of ${String(pages)} · ${String(total)} ids`;
+const TEXT_STARTING = "Starting sync…";
 
 const PAUSE_SECONDS = FAVORITES_SYNC_PAGE_PAUSE_MS / 1000;
 
@@ -79,6 +80,7 @@ type ActiveSync = {
 type SyncUi = {
   status: string;
   progress: number | null;
+  waiting: boolean;
   error: string;
   unfinished: boolean;
   busy: boolean;
@@ -106,6 +108,13 @@ function isUnfinished(sync: FavsSyncState | undefined): boolean {
   return sync !== undefined && sync.finishedAt === undefined;
 }
 
+function ratioFromProgress(progress: FavoritesSyncProgress): number | null {
+  if (progress.pages <= 0) {
+    return null;
+  }
+  return progress.page / progress.pages;
+}
+
 function buildStatusText(): string {
   const count = loadFavSet().size;
   const sync = getSyncState();
@@ -124,9 +133,22 @@ function idleUi(): SyncUi {
   return {
     status: buildStatusText(),
     progress: null,
+    waiting: false,
     error: "",
     unfinished: isUnfinished(getSyncState()),
     busy: activeSync !== null,
+  };
+}
+
+function progressUi(progress: FavoritesSyncProgress): SyncUi {
+  const ratio = ratioFromProgress(progress);
+  return {
+    status: TEXT_PROGRESS(progress),
+    progress: ratio,
+    waiting: ratio === null,
+    error: "",
+    unfinished: true,
+    busy: true,
   };
 }
 
@@ -141,7 +163,8 @@ function applyResult(result: FavoritesSyncResult): SyncUi {
   if (result.status === "completed") {
     return {
       status: TEXT_DONE(result.total, result.pages),
-      progress: 1,
+      progress: result.pages > 0 ? 1 : null,
+      waiting: false,
       error: "",
       unfinished: false,
       busy: false,
@@ -149,8 +172,12 @@ function applyResult(result: FavoritesSyncResult): SyncUi {
   }
   return {
     status: TEXT_ABORTED(result.page, result.pages, result.total),
-    progress:
-      result.pages > 0 ? result.page / Math.max(result.pages, 1) : 0,
+    progress: ratioFromProgress({
+      page: result.page,
+      pages: result.pages,
+      total: result.total,
+    }),
+    waiting: false,
     error: "",
     unfinished: isUnfinished(getSyncState()),
     busy: false,
@@ -167,23 +194,13 @@ async function startSync(setUi: (next: SyncUi) => void): Promise<void> {
   activeSync = { controller, listeners };
 
   listeners.add((progress) => {
-    setUi({
-      status: TEXT_PROGRESS(progress),
-      progress:
-        progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
-      error: "",
-      unfinished: true,
-      busy: true,
-    });
+    setUi(progressUi(progress));
   });
 
   setUi({
-    status: TEXT_PROGRESS({
-      page: 0,
-      pages: 1,
-      total: loadFavSet().size,
-    }),
-    progress: 0,
+    status: TEXT_STARTING,
+    progress: null,
+    waiting: true,
     error: "",
     unfinished: true,
     busy: true,
@@ -224,23 +241,13 @@ export function FavoritesSyncSection(
       return;
     }
     const listener = (progress: FavoritesSyncProgress): void => {
-      setUi({
-        status: TEXT_PROGRESS(progress),
-        progress:
-          progress.pages > 0 ? progress.page / Math.max(progress.pages, 1) : 0,
-        error: "",
-        unfinished: true,
-        busy: true,
-      });
+      setUi(progressUi(progress));
     };
     activeSync.listeners.add(listener);
     setUi({
-      status: TEXT_PROGRESS({
-        page: 0,
-        pages: 1,
-        total: loadFavSet().size,
-      }),
-      progress: 0,
+      status: TEXT_STARTING,
+      progress: null,
+      waiting: true,
       error: "",
       unfinished: true,
       busy: true,
@@ -256,7 +263,11 @@ export function FavoritesSyncSection(
       <section className={`rdw-section ${SECTION_CLASS}`}>
         {includeHeading ? <SectionLabel>{HEADING}</SectionLabel> : null}
         <p className={STATUS_CLASS}>{ui.status}</p>
-        <ProgressBar value={ui.progress} label="Favorites sync progress" />
+        <ProgressBar
+          value={ui.progress}
+          waiting={ui.waiting}
+          label="Favorites sync progress"
+        />
         <div className={ACTIONS_CLASS}>
           {!ui.unfinished ? (
             <Button

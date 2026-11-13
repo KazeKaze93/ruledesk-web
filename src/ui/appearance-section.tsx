@@ -20,10 +20,10 @@ import {
 } from "../config/constants";
 import { gridDensityFeature } from "../features/grid-density";
 import { applyCssOnlyFeatureChoice } from "../features/runtime";
-import type {
-  Appearance,
-  AppearanceCustom,
-  AppearanceTheme,
+import {
+  AppearanceThemeSchema,
+  type Appearance,
+  type AppearanceCustom,
 } from "../storage/schema";
 import {
   clearAppearanceBackgroundDataUrl,
@@ -279,7 +279,11 @@ export function AppearanceSection(
   }
 
   function onThemeChange(value: string): void {
-    const theme = value as AppearanceTheme;
+    const parsed = AppearanceThemeSchema.safeParse(value);
+    if (!parsed.success) {
+      return;
+    }
+    const theme = parsed.data;
     if (theme === APPEARANCE_THEME_CUSTOM) {
       commitAppearance({
         theme,

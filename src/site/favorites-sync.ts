@@ -17,6 +17,7 @@ import {
   setSyncState,
 } from "../storage/favs";
 import type { FavsSyncState } from "../storage/schema";
+import { detectPageKind } from "./pages";
 import { extractPostIdFromFavoritesDeleteOnclick } from "./selectors";
 
 /** Minimum pause between sequential favorites page fetches. */
@@ -24,6 +25,12 @@ export const FAVORITES_SYNC_PAGE_PAUSE_MS = 1500;
 
 /** Favorites list pagination step (site serves 50 thumbs per page). */
 export const FAVORITES_SYNC_PID_STEP = 50;
+
+/** Pauses before each of the three retries (HTTP error / missing paginator). */
+export const FAVORITES_SYNC_RETRY_DELAYS_MS = [10_000, 30_000, 60_000] as const;
+
+/** Max characters of document title included in pause/error messages. */
+export const FAVORITES_SYNC_TITLE_SNIPPET_MAX = 80;
 
 const MY_FAVORITES_LINK_SELECTOR =
   'li#my-favorites-container a[href*="page=favorites"]';
@@ -37,6 +44,9 @@ const POST_LINK_ID_PATTERN = /^p(\d+)$/;
 const ONCLICK_PID_PATTERN = /[?&]pid=(\d+)/;
 
 const URL_PARSE_BASE = "https://rule34.xxx";
+const TAB_ID_RANDOM_RADIX = 36;
+const TAB_ID_RANDOM_SLICE_START = 2;
+const TAB_ID_RANDOM_LENGTH = 10;
 
 export const FAVORITES_SYNC_ERROR_NOT_LOGGED_IN =
   "not logged in or menu not found";
@@ -56,6 +66,22 @@ export type FavoritesSyncResult =
 export type RunFavoritesSyncOptions = {
   onProgress: (progress: FavoritesSyncProgress) => void;
   signal: AbortSignal;
+  /** Stable id for this tab's sync lock; generated when omitted. */
+  tabId?: string;
+};
+
+type PageFetchSuccess = {
+  ok: true;
+  doc: Document;
+  status: number;
+  titleSnippet: string;
+};
+
+type PageFetchFailure = {
+  ok: false;
+  status: number;
+  titleSnippet: string;
+  message: string;
 };
 
 function createAbortResult(
@@ -126,6 +152,38 @@ function parsePidFromOnclick(onclick: string): number | null {
   return parsePositiveInt(raw);
 }
 
+function titleSnippetFromHtml(html: string): string {
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return titleSnippetFromDocument(doc);
+  } catch {
+    return "";
+  }
+}
+
+function titleSnippetFromDocument(doc: Document): string {
+  const raw = doc.title.trim();
+  if (raw.length <= FAVORITES_SYNC_TITLE_SNIPPET_MAX) {
+    return raw;
+  }
+  return raw.slice(0, FAVORITES_SYNC_TITLE_SNIPPET_MAX);
+}
+
+function formatPauseMessage(status: number, titleSnippet: string): string {
+  if (titleSnippet.length === 0) {
+    return `HTTP ${String(status)}`;
+  }
+  return `HTTP ${String(status)}: ${titleSnippet}`;
+}
+
+/** Stable tab id for sync lock (Package H / multi-tab). */
+export function createFavoritesSyncTabId(): string {
+  const random = Math.random()
+    .toString(TAB_ID_RANDOM_RADIX)
+    .slice(TAB_ID_RANDOM_SLICE_START, TAB_ID_RANDOM_SLICE_START + TAB_ID_RANDOM_LENGTH);
+  return `tab-${String(Date.now())}-${random}`;
+}
+
 export function extractUserIdFromDocument(root: ParentNode): number | null {
   const link = root.querySelector(MY_FAVORITES_LINK_SELECTOR);
   if (!(link instanceof HTMLAnchorElement)) {
@@ -141,6 +199,42 @@ export function extractUserIdFromDocument(root: ParentNode): number | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Reads `id` from a favorites view URL search string.
+ * Returns null when the location is not a favorites page or id is missing.
+ */
+export function extractUserIdFromFavoritesSearch(
+  search: string,
+): number | null {
+  if (detectPageKind(search) !== "favorites") {
+    return null;
+  }
+  const params = new URLSearchParams(search);
+  return parsePositiveInt(params.get(SEARCH_PARAM_ID));
+}
+
+/**
+ * Resolve favorites owner id: menu link → favorites URL id → saved sync value.
+ */
+export function resolveFavoritesUserId(
+  root: ParentNode,
+  search: string,
+  savedUserId: number | undefined,
+): number | null {
+  const fromMenu = extractUserIdFromDocument(root);
+  if (fromMenu !== null) {
+    return fromMenu;
+  }
+  const fromUrl = extractUserIdFromFavoritesSearch(search);
+  if (fromUrl !== null) {
+    return fromUrl;
+  }
+  if (savedUserId !== undefined && Number.isFinite(savedUserId)) {
+    return Math.trunc(savedUserId);
+  }
+  return null;
 }
 
 function buildFavoritesPageUrl(userId: number, pid: number): string {
@@ -220,27 +314,145 @@ export function resolveLastPid(
   return currentPid;
 }
 
-function isUnexpectedFavoritesPage(
-  doc: Document,
-  pid: number,
-  lastPid: number,
-  cardCount: number,
-): boolean {
-  if (cardCount === 0 && pid <= lastPid) {
-    return true;
-  }
-  if (
-    pid === 0 &&
-    cardCount === 0 &&
-    doc.querySelector(PAGINATOR_SELECTOR) === null
-  ) {
-    return true;
-  }
-  return false;
+function hasPaginator(doc: Document): boolean {
+  return doc.querySelector(PAGINATOR_SELECTOR) !== null;
 }
 
-function persistSyncProgress(state: FavsSyncState): void {
+type SyncProgressFields = {
+  nextPid: number;
+  lastPid: number;
+  startedAt: string;
+  userId: number;
+  tabId: string;
+  running: boolean;
+  finishedAt?: string;
+};
+
+function persistSyncProgress(fields: SyncProgressFields): FavsSyncState {
+  const state: FavsSyncState = {
+    nextPid: fields.nextPid,
+    lastPid: fields.lastPid,
+    startedAt: fields.startedAt,
+    running: fields.running,
+    userId: fields.userId,
+    lock: {
+      tabId: fields.tabId,
+      beatAt: Date.now(),
+    },
+  };
+  if (fields.finishedAt !== undefined) {
+    state.finishedAt = fields.finishedAt;
+  }
   setSyncState(state);
+  return state;
+}
+
+async function fetchFavoritesPageOnce(
+  url: string,
+  signal: AbortSignal,
+): Promise<PageFetchSuccess | PageFetchFailure> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: FETCH_METHOD_GET,
+      credentials: FETCH_CREDENTIALS,
+      signal,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    const message =
+      error instanceof Error ? error.message : "request failed";
+    log.warn("favorites sync: fetch failed", url, error);
+    return {
+      ok: false,
+      status: 0,
+      titleSnippet: message.slice(0, FAVORITES_SYNC_TITLE_SNIPPET_MAX),
+      message,
+    };
+  }
+
+  const html = await response.text();
+  const titleSnippet = titleSnippetFromHtml(html);
+  if (!response.ok) {
+    log.warn("favorites sync: HTTP error", response.status, url);
+    return {
+      ok: false,
+      status: response.status,
+      titleSnippet,
+      message: formatPauseMessage(response.status, titleSnippet),
+    };
+  }
+
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  if (!hasPaginator(doc)) {
+    log.warn("favorites sync: missing paginator", url);
+    return {
+      ok: false,
+      status: response.status,
+      titleSnippet: titleSnippetFromDocument(doc),
+      message: formatPauseMessage(
+        response.status,
+        titleSnippetFromDocument(doc),
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    doc,
+    status: response.status,
+    titleSnippet: titleSnippetFromDocument(doc),
+  };
+}
+
+/**
+ * Fetch one favorites page; retry up to 3 times after 10s / 30s / 60s on
+ * HTTP errors or missing paginator.
+ */
+async function fetchFavoritesPageWithRetries(
+  url: string,
+  signal: AbortSignal,
+): Promise<PageFetchSuccess | PageFetchFailure> {
+  let lastFailure: PageFetchFailure | null = null;
+
+  for (
+    let attempt = 0;
+    attempt <= FAVORITES_SYNC_RETRY_DELAYS_MS.length;
+    attempt += 1
+  ) {
+    throwIfAborted(signal);
+    if (attempt > 0) {
+      const delayMs = FAVORITES_SYNC_RETRY_DELAYS_MS[attempt - 1];
+      if (delayMs === undefined) {
+        break;
+      }
+      log.warn("favorites sync: retrying after delay", {
+        attempt,
+        delayMs,
+        url,
+      });
+      await delay(delayMs, signal);
+      throwIfAborted(signal);
+    }
+
+    const result = await fetchFavoritesPageOnce(url, signal);
+    if (result.ok) {
+      return result;
+    }
+    lastFailure = result;
+  }
+
+  if (lastFailure === null) {
+    return {
+      ok: false,
+      status: 0,
+      titleSnippet: "",
+      message: formatPauseMessage(0, ""),
+    };
+  }
+  return lastFailure;
 }
 
 /**
@@ -251,14 +463,19 @@ export async function runFavoritesSync(
   options: RunFavoritesSyncOptions,
 ): Promise<FavoritesSyncResult> {
   const { onProgress, signal } = options;
+  const tabId = options.tabId ?? createFavoritesSyncTabId();
 
-  const userId = extractUserIdFromDocument(document);
+  const existing = getSyncState();
+  const userId = resolveFavoritesUserId(
+    document,
+    window.location.search,
+    existing?.userId,
+  );
   if (userId === null) {
     log.warn("favorites sync: user id not found");
     return { status: "error", message: FAVORITES_SYNC_ERROR_NOT_LOGGED_IN };
   }
 
-  const existing = getSyncState();
   const unfinished =
     existing !== undefined && existing.finishedAt === undefined;
   const startedAt = unfinished
@@ -266,82 +483,115 @@ export async function runFavoritesSync(
     : new Date().toISOString();
   let pid = unfinished ? existing.nextPid : 0;
   let lastPid = unfinished ? existing.lastPid : 0;
+  let persistedNextPid = pid;
   let total = loadFavSet().size;
   let page = pageIndexFromPid(pid);
   let pages = pagesFromLastPid(lastPid);
+  let sawNonEmptyPage = unfinished && existing.nextPid > 0;
+
+  const writeProgress = (
+    fields: Partial<SyncProgressFields> &
+      Pick<SyncProgressFields, "running">,
+  ): void => {
+    const nextPid = fields.nextPid ?? persistedNextPid;
+    persistedNextPid = nextPid;
+    if (fields.lastPid !== undefined) {
+      lastPid = fields.lastPid;
+    }
+    const payload: SyncProgressFields = {
+      nextPid,
+      lastPid,
+      startedAt,
+      userId,
+      tabId,
+      running: fields.running,
+    };
+    if (fields.finishedAt !== undefined) {
+      payload.finishedAt = fields.finishedAt;
+    }
+    persistSyncProgress(payload);
+  };
 
   try {
     throwIfAborted(signal);
+    writeProgress({ running: true });
 
     while (true) {
       throwIfAborted(signal);
 
       const url = buildFavoritesPageUrl(userId, pid);
-      let response: Response;
-      try {
-        response = await fetch(url, {
-          method: FETCH_METHOD_GET,
-          credentials: FETCH_CREDENTIALS,
-        });
-      } catch (error) {
-        if (isAbortError(error)) {
-          throw error;
-        }
-        log.warn("favorites sync: fetch failed", url, error);
-        persistSyncProgress({ nextPid: pid, lastPid, startedAt });
-        const message =
-          error instanceof Error ? error.message : "request failed";
-        return { status: "error", message };
-      }
-
-      if (!response.ok) {
-        log.warn("favorites sync: HTTP error", response.status, url);
-        persistSyncProgress({ nextPid: pid, lastPid, startedAt });
+      const fetched = await fetchFavoritesPageWithRetries(url, signal);
+      if (!fetched.ok) {
+        writeProgress({ running: true });
         return {
           status: "error",
-          message: `HTTP ${String(response.status)}`,
+          message: fetched.message,
         };
       }
 
-      const html = await response.text();
-      const doc = new DOMParser().parseFromString(html, "text/html");
+      const { doc } = fetched;
       const cardCount = doc.querySelectorAll(THUMB_SELECTOR).length;
+      page = pageIndexFromPid(pid);
+
+      // Empty page with paginator after at least one non-empty → end of list.
+      if (cardCount === 0 && sawNonEmptyPage) {
+        pages = Math.max(pages, page);
+        const finishedAt = new Date().toISOString();
+        writeProgress({
+          nextPid: pid + FAVORITES_SYNC_PID_STEP,
+          running: false,
+          finishedAt,
+        });
+        onProgress({ page, pages, total });
+        log.info("favorites sync: completed on empty trailing page", {
+          total,
+          pages,
+          pid,
+        });
+        return { status: "completed", total, pages };
+      }
+
       const resolvedLastPid = resolveLastPid(doc, pid);
       if (resolvedLastPid === null) {
         log.warn("favorites sync: unexpected page", { pid, cardCount });
-        persistSyncProgress({ nextPid: pid, lastPid, startedAt });
+        writeProgress({ running: true });
         return {
           status: "error",
           message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
         };
       }
       lastPid = resolvedLastPid;
-      page = pageIndexFromPid(pid);
       pages = pagesFromLastPid(lastPid);
 
-      if (isUnexpectedFavoritesPage(doc, pid, lastPid, cardCount)) {
-        log.warn("favorites sync: unexpected page", { pid, lastPid, cardCount });
-        persistSyncProgress({ nextPid: pid, lastPid, startedAt });
+      if (cardCount === 0) {
+        // Empty first stretch (no prior non-empty page) is unexpected.
+        log.warn("favorites sync: unexpected empty page", { pid, lastPid });
+        writeProgress({ running: true });
         return {
           status: "error",
           message: FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
         };
       }
 
+      sawNonEmptyPage = true;
       const ids = collectFavoriteIdsFromDocument(doc);
       addFavs(ids);
       total = loadFavSet().size;
 
       const nextPid = pid + FAVORITES_SYNC_PID_STEP;
-      persistSyncProgress({ nextPid, lastPid, startedAt });
+      writeProgress({
+        nextPid,
+        lastPid,
+        running: true,
+      });
       onProgress({ page, pages, total });
 
       if (pid >= lastPid) {
         const finishedAt = new Date().toISOString();
-        persistSyncProgress({
+        writeProgress({
           nextPid,
           lastPid,
-          startedAt,
+          running: false,
           finishedAt,
         });
         log.info("favorites sync: completed", { total, pages });
@@ -357,11 +607,12 @@ export async function runFavoritesSync(
     }
   } catch (error) {
     if (isAbortError(error)) {
+      writeProgress({ running: false });
       log.info("favorites sync: aborted", { pid, total });
       return createAbortResult(total, page, pages);
     }
     log.error("favorites sync: unexpected failure", error);
-    persistSyncProgress({ nextPid: pid, lastPid, startedAt });
+    writeProgress({ running: true });
     const message =
       error instanceof Error ? error.message : "unexpected error";
     return { status: "error", message };

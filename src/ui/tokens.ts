@@ -53,9 +53,9 @@ export type TokenPalette = {
   readonly font: string;
 };
 
-/** Light palette — values from mock-components.html (+ metadata orange from site). */
+/** Light palette — page bg from mock-site-skin.html (.new); surfaces from mock-components. */
 export const LIGHT_PALETTE: TokenPalette = {
-  bg: "#aae5a4",
+  bg: "#f3f5f7",
   surface: "#ffffff",
   surface2: "#f4f6f8",
   border: "#cfd6dd",

@@ -13,6 +13,9 @@ import { createDefaultStorage } from "../../src/storage/schema";
 const ROOT_ID = "rdw-search-tools";
 const CHIP_CLASS = "rdw-search-tools-chip";
 const CHIPS_CLASS = "rdw-search-tools-chips";
+const NAV_DEBOUNCE_MS = 400;
+const FOOT_HINT =
+  "Typing needs Search or Enter; chips and filters apply instantly";
 
 const memory = new Map<string, unknown>();
 
@@ -338,7 +341,13 @@ describe("searchToolsFeature", () => {
     expect(chipRoots()[1]?.classList.contains("rdw-chip--artist")).toBe(false);
   });
 
-  it("updates from site input events without stealing focus while typing", () => {
+  it("updates chips from site input events without stealing focus or navigating", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=a",
+    });
     const { input } = buildSearchForm("a");
     mountFeature();
     input.focus();
@@ -351,6 +360,82 @@ describe("searchToolsFeature", () => {
 
     expect(chipLabels()).toEqual(["a", "b"]);
     expect(document.activeElement).toBe(input);
+
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("does not navigate on tags input, change, or awesomplete-selectcomplete", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=start",
+    });
+    const { input } = buildSearchForm("start");
+    mountFeature();
+
+    act(() => {
+      input.value = "start typed";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(chipLabels()).toEqual(["start", "typed"]);
+    expect(assign).not.toHaveBeenCalled();
+
+    act(() => {
+      input.value = "start typed more";
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(chipLabels()).toEqual(["start", "typed", "more"]);
+    expect(assign).not.toHaveBeenCalled();
+
+    act(() => {
+      input.value = "start typed more auto";
+      input.dispatchEvent(
+        new Event("awesomplete-selectcomplete", { bubbles: true }),
+      );
+    });
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(chipLabels()).toEqual(["start", "typed", "more", "auto"]);
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("still auto-applies navigation for chip toggle and media", () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign,
+      search: "?page=post&s=list&tags=alpha+beta",
+    });
+    const { input } = buildSearchForm("alpha beta");
+    mountFeature();
+
+    click(chipRoots()[1]!);
+    expect(input.value).toBe("alpha -beta");
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(String(assign.mock.calls[0]?.[0] ?? "")).toContain("-beta");
+
+    assign.mockClear();
+    click(mediaRadio("Images"));
+    expect(input.value).toBe("alpha -beta -video");
+    act(() => {
+      vi.advanceTimersByTime(NAV_DEBOUNCE_MS);
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(String(assign.mock.calls[0]?.[0] ?? "")).toContain("-video");
   });
 
   it("polls programmatic value changes for chips only without navigating", () => {
@@ -407,8 +492,26 @@ describe("searchToolsFeature", () => {
     const root = document.getElementById(ROOT_ID);
     expect(root?.textContent).not.toContain("Save search");
     expect(root?.textContent).not.toContain("Collections");
-    expect(root?.textContent).toContain("Applies instantly");
+    expect(root?.textContent).toContain(FOOT_HINT);
+    expect(root?.textContent).not.toContain("Applies instantly");
     expect(root?.querySelector(`.${CHIPS_CLASS}`)).not.toBeNull();
+  });
+
+  it("omits the Tags section when there are no chips", () => {
+    buildSearchForm("-video sort:score:desc");
+    mountFeature();
+    const root = document.getElementById(ROOT_ID);
+    expect(root?.querySelector(`.${CHIPS_CLASS}`)).toBeNull();
+    expect(root?.textContent).not.toContain("Tags");
+    expect(mediaRadio("Images").getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("omits the Tags section for an empty tags field", () => {
+    buildSearchForm("");
+    mountFeature();
+    const root = document.getElementById(ROOT_ID);
+    expect(root?.querySelector(`.${CHIPS_CLASS}`)).toBeNull();
+    expect(root?.textContent).not.toContain("Tags");
   });
 
   it("Reset search navigates to an empty tag list", () => {

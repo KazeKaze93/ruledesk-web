@@ -2,15 +2,15 @@ import type { JSX } from "preact";
 import { render as preactRender } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
-import { UI_TEXT } from "../../config/constants";
+import { UI_TEXT } from "../config/constants";
 import {
   buildPlaylistQueries,
   buildSearchUrl,
   buildUpdatesSearchUrl,
   readTagsFromLocation,
   serialize,
-} from "../../search/query";
-import { isPlaylist, type Collection } from "../../storage/schema";
+} from "../search/query";
+import { isPlaylist, type Collection } from "../storage/schema";
 import {
   addCollection,
   createPlaylist,
@@ -19,46 +19,54 @@ import {
   listPlaylists,
   load,
   renameCollection,
-} from "../../storage/store";
-import { Button, EmptyState, IconButton, SectionLabel, TextField } from "../kit";
-import { IconTrash } from "../kit/icons";
+} from "../storage/store";
+import {
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  SectionLabel,
+  TextField,
+} from "../ui/kit";
+import { IconTrash } from "../ui/kit/icons";
 import { PANEL_UI_CLASS } from "./constants";
 
-const TAB_CLASS = "rdw-collections-tab";
+const PAGE_CLASS = "rdw-collections-page";
 const PLAYLIST_META_CLASS = "rdw-playlist-meta";
 const PLAYLIST_PARTS_CLASS = "rdw-playlist-parts";
 const PLAYLIST_PART_CLASS = "rdw-playlist-part";
 const ROW_MAIN_CLASS = "rdw-collections-row-main";
 
-const SAVED_SEARCHES_HEADING = "Saved searches";
-const PLAYLISTS_HEADING = "Playlists";
-const EMPTY_SAVED_SEARCHES = "No saved searches yet.";
-const EMPTY_PLAYLISTS = "No playlists yet.";
-const EMPTY_PLAYLISTS_HINT = "Use the + button on a post";
-const NEW_PLAYLIST = "New playlist";
-const OPEN_PLAYLIST = "Open playlist";
+const DYNAMIC_COLLECTIONS_HEADING = "Dynamic Collection";
+const CUSTOM_COLLECTIONS_HEADING = "Custom Collection";
+const EMPTY_DYNAMIC_COLLECTIONS = "No dynamic collections yet.";
+const EMPTY_CUSTOM_COLLECTIONS = "No custom collections yet.";
+const EMPTY_CUSTOM_COLLECTIONS_HINT = "Use the + button on a post";
+const NEW_CUSTOM_COLLECTION = "New Custom Collection";
+const OPEN_CUSTOM_COLLECTION = "Open Custom Collection";
+const CUSTOM_COLLECTION_PARTS_LABEL = "Custom Collection parts";
 const SAVE_NAME_ID = "rdw-save-name";
 const PLAYLIST_NAME_ID = "rdw-playlist-name";
 
-export const COLLECTIONS_TAB_CSS = `
-.${TAB_CLASS} {
+export const COLLECTIONS_PAGE_CSS = `
+.${PAGE_CLASS} {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.${TAB_CLASS} .${ROW_MAIN_CLASS} {
+.${PAGE_CLASS} .${ROW_MAIN_CLASS} {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
-.${TAB_CLASS} .${PLAYLIST_META_CLASS} {
+.${PAGE_CLASS} .${PLAYLIST_META_CLASS} {
   margin: 0;
   color: var(--rdw-muted);
   font-size: 12px;
 }
-.${TAB_CLASS} .${PLAYLIST_PARTS_CLASS} {
+.${PAGE_CLASS} .${PLAYLIST_PARTS_CLASS} {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -67,30 +75,30 @@ export const COLLECTIONS_TAB_CSS = `
   padding: 0;
   list-style: none;
 }
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS} {
+.${PAGE_CLASS} .${PLAYLIST_PART_CLASS} {
   color: var(--rdw-accent);
   text-decoration: none;
   font-size: 12px;
   font-weight: 600;
 }
-.${TAB_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
+.${PAGE_CLASS} .${PLAYLIST_PART_CLASS}:focus-visible {
   outline: 2px solid var(--rdw-accent);
   outline-offset: 2px;
 }
 `.trim();
 
-type TabMode =
+type PageMode =
   | { kind: "list" }
   | { kind: "save-search" }
   | { kind: "create-playlist" }
   | { kind: "rename"; id: string }
   | { kind: "confirm-delete"; id: string };
 
-let sharedMode: TabMode = { kind: "list" };
+let sharedMode: PageMode = { kind: "list" };
 let sharedNameDraft = "";
 
 /** Clears transient rename/save UI state (tests and remount hygiene). */
-export function resetCollectionsTabState(): void {
+export function resetCollectionsPageState(): void {
   sharedMode = { kind: "list" };
   sharedNameDraft = "";
 }
@@ -173,15 +181,15 @@ function RenameDeleteActions(props: {
   );
 }
 
-export function CollectionsTab(): JSX.Element {
-  const [mode, setMode] = useState<TabMode>(sharedMode);
+export function CollectionsPage(): JSX.Element {
+  const [mode, setMode] = useState<PageMode>(sharedMode);
   const [nameDraft, setNameDraft] = useState(sharedNameDraft);
   const [, setTick] = useState(0);
   const refresh = (): void => {
     setTick((value) => value + 1);
   };
 
-  const setModeBoth = (next: TabMode): void => {
+  const setModeBoth = (next: PageMode): void => {
     sharedMode = next;
     setMode(next);
   };
@@ -197,10 +205,10 @@ export function CollectionsTab(): JSX.Element {
 
   return (
     <>
-      <style>{COLLECTIONS_TAB_CSS}</style>
-      <div className={`${PANEL_UI_CLASS.scrollRegion} ${TAB_CLASS}`}>
+      <style>{COLLECTIONS_PAGE_CSS}</style>
+      <Card className={`${PANEL_UI_CLASS.pageCard} ${PAGE_CLASS}`}>
         <section className="rdw-section">
-          <SectionLabel>{SAVED_SEARCHES_HEADING}</SectionLabel>
+          <SectionLabel>{DYNAMIC_COLLECTIONS_HEADING}</SectionLabel>
           {mode.kind === "save-search" ? (
             <NameForm
               inputId={SAVE_NAME_ID}
@@ -248,7 +256,7 @@ export function CollectionsTab(): JSX.Element {
             </>
           )}
           {saved.length === 0 ? (
-            <p className="rdw-hint">{EMPTY_SAVED_SEARCHES}</p>
+            <p className="rdw-hint">{EMPTY_DYNAMIC_COLLECTIONS}</p>
           ) : (
             <ul className="rdw-list">
               {saved.map((collection) => (
@@ -336,7 +344,7 @@ export function CollectionsTab(): JSX.Element {
         </section>
 
         <section className="rdw-section">
-          <SectionLabel>{PLAYLISTS_HEADING}</SectionLabel>
+          <SectionLabel>{CUSTOM_COLLECTIONS_HEADING}</SectionLabel>
           {mode.kind === "create-playlist" ? (
             <NameForm
               inputId={PLAYLIST_NAME_ID}
@@ -364,13 +372,13 @@ export function CollectionsTab(): JSX.Element {
                 setModeBoth({ kind: "create-playlist" });
               }}
             >
-              {NEW_PLAYLIST}
+              {NEW_CUSTOM_COLLECTION}
             </Button>
           )}
           {playlists.length === 0 ? (
             <EmptyState
-              title={EMPTY_PLAYLISTS}
-              description={EMPTY_PLAYLISTS_HINT}
+              title={EMPTY_CUSTOM_COLLECTIONS}
+              description={EMPTY_CUSTOM_COLLECTIONS_HINT}
             />
           ) : (
             <ul className="rdw-list">
@@ -436,7 +444,7 @@ export function CollectionsTab(): JSX.Element {
                           <button
                             type="button"
                             className="rdw-item-name"
-                            aria-label={`${OPEN_PLAYLIST}: ${playlist.name}`}
+                            aria-label={`${OPEN_CUSTOM_COLLECTION}: ${playlist.name}`}
                             disabled={!canOpen}
                             onClick={() => {
                               const first = queries[0];
@@ -473,7 +481,7 @@ export function CollectionsTab(): JSX.Element {
                         {queries.length > 1 ? (
                           <ul
                             className={PLAYLIST_PARTS_CLASS}
-                            aria-label="Playlist parts"
+                            aria-label={CUSTOM_COLLECTION_PARTS_LABEL}
                           >
                             {queries.map((query, index) => (
                               <li key={`${playlist.id}-${String(index)}`}>
@@ -495,13 +503,13 @@ export function CollectionsTab(): JSX.Element {
             </ul>
           )}
         </section>
-      </div>
+      </Card>
     </>
   );
 }
 
-export function createCollectionsTab(): HTMLElement {
+export function createCollectionsPage(): HTMLElement {
   const root = document.createElement("div");
-  preactRender(<CollectionsTab />, root);
+  preactRender(<CollectionsPage />, root);
   return root;
 }

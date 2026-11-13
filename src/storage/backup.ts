@@ -1,0 +1,350 @@
+import * as z from "zod/mini";
+
+import {
+  APPEARANCE_BACKGROUND_KEY,
+  FAVS_STORAGE_KEY,
+  IMPORT_SCHEMA_ERROR_PREFIX,
+  STORAGE_BACKUP_KEY,
+} from "../config/constants";
+import { log } from "../log";
+import {
+  clearFavsCache,
+  loadFavSet,
+  migrateMarksFavToFavs,
+} from "./favs";
+import {
+  FavsSchema,
+  StorageSchema,
+  createDefaultFavs,
+  createDefaultStorage,
+  stripLegacyPanelWindowSize,
+  type FavsData,
+  type StorageData,
+} from "./schema";
+import { clearStorageCache, load, save } from "./store";
+
+export const BACKUP_FORMAT = "ruledesk-web-backup" as const;
+export const BACKUP_VERSION = 1 as const;
+
+export const IMPORT_MODE_MERGE = "merge" as const;
+export const IMPORT_MODE_REPLACE = "replace" as const;
+
+export type BackupImportMode =
+  | typeof IMPORT_MODE_MERGE
+  | typeof IMPORT_MODE_REPLACE;
+
+export const BackupFileSchema = z.object({
+  format: z.literal(BACKUP_FORMAT),
+  version: z.literal(BACKUP_VERSION),
+  exportedAt: z.string(),
+  storage: StorageSchema,
+  favs: FavsSchema,
+  background: z.optional(z.string()),
+});
+
+export type BackupFile = z.infer<typeof BackupFileSchema>;
+
+export type BackupExportOptions = {
+  readonly includeBackground: boolean;
+};
+
+export type BackupImportSummary = {
+  readonly artistCount: number;
+  readonly collectionCount: number;
+  readonly favCount: number;
+};
+
+export type BackupImportResult =
+  | { readonly ok: true; readonly summary: BackupImportSummary }
+  | { readonly ok: false; readonly error: string };
+
+type GmGetValue = (key: string, defaultValue?: unknown) => unknown;
+type GmSetValue = (key: string, value: unknown) => void;
+
+function getGmGetValue(): GmGetValue {
+  return GM_getValue;
+}
+
+function getGmSetValue(): GmSetValue {
+  return GM_setValue;
+}
+
+function formatSchemaError(error: z.core.$ZodError): string {
+  const issue = error.issues[0];
+  if (issue === undefined) {
+    return `${IMPORT_SCHEMA_ERROR_PREFIX}: (root): Invalid data`;
+  }
+  const path =
+    issue.path.length === 0
+      ? "(root)"
+      : issue.path.map((segment) => String(segment)).join(".");
+  return `${IMPORT_SCHEMA_ERROR_PREFIX}: ${path}: ${issue.message}`;
+}
+
+function readBackgroundRaw(): string | undefined {
+  const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, undefined);
+  if (typeof raw !== "string" || raw.length === 0) {
+    return undefined;
+  }
+  return raw;
+}
+
+function writeBackgroundRaw(value: string | undefined): void {
+  if (value === undefined || value.length === 0) {
+    getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
+    return;
+  }
+  getGmSetValue()(APPEARANCE_BACKGROUND_KEY, value);
+}
+
+function readFavsForBackup(): FavsData {
+  const raw = getGmGetValue()(FAVS_STORAGE_KEY, undefined);
+  if (raw === undefined || raw === null) {
+    return createDefaultFavs();
+  }
+  const parsed = FavsSchema.safeParse(raw);
+  if (!parsed.success) {
+    log.error("backup: invalid favs; exporting empty favs", {
+      key: FAVS_STORAGE_KEY,
+    });
+    return createDefaultFavs();
+  }
+  return parsed.data;
+}
+
+function writeFavsForBackup(data: FavsData): void {
+  getGmSetValue()(FAVS_STORAGE_KEY, FavsSchema.parse(data));
+  clearFavsCache();
+}
+
+function snapshotCurrentToBackupKey(): void {
+  const background = readBackgroundRaw();
+  const snapshot: BackupFile = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    storage: load(),
+    favs: readFavsForBackup(),
+    ...(background !== undefined ? { background } : {}),
+  };
+  getGmSetValue()(STORAGE_BACKUP_KEY, snapshot);
+}
+
+function mergeArtists(
+  current: StorageData["artists"],
+  incoming: StorageData["artists"],
+): StorageData["artists"] {
+  const byTag = new Map<string, StorageData["artists"][number]>();
+  for (const entry of current) {
+    byTag.set(entry.tag, entry);
+  }
+  for (const entry of incoming) {
+    byTag.set(entry.tag, entry);
+  }
+  return Array.from(byTag.values());
+}
+
+function mergeCollections(
+  current: StorageData["collections"],
+  incoming: StorageData["collections"],
+): StorageData["collections"] {
+  const byId = new Map<string, StorageData["collections"][number]>();
+  for (const entry of current) {
+    byId.set(entry.id, entry);
+  }
+  for (const entry of incoming) {
+    byId.set(entry.id, entry);
+  }
+  return Array.from(byId.values());
+}
+
+function mergeMarks(
+  current: StorageData["marks"],
+  incoming: StorageData["marks"],
+): StorageData["marks"] {
+  const merged: StorageData["marks"] = { ...current };
+  for (const [postId, flags] of Object.entries(incoming)) {
+    const previous = merged[postId] ?? {};
+    merged[postId] = { ...previous, ...flags };
+  }
+  return merged;
+}
+
+function mergeFavs(current: FavsData, incoming: FavsData): FavsData {
+  const ids = new Set([...current.ids, ...incoming.ids]);
+  const next: FavsData = {
+    version: incoming.version,
+    ids: Array.from(ids),
+  };
+  if (incoming.sync !== undefined) {
+    next.sync = incoming.sync;
+  } else if (current.sync !== undefined) {
+    next.sync = current.sync;
+  }
+  return next;
+}
+
+function buildSummary(
+  storage: StorageData,
+  favs: FavsData,
+): BackupImportSummary {
+  return {
+    artistCount: storage.artists.length,
+    collectionCount: storage.collections.length,
+    favCount: favs.ids.length,
+  };
+}
+
+function applyImportedState(
+  storage: StorageData,
+  favs: FavsData,
+  background: string | undefined,
+  applyBackground: boolean,
+): BackupImportSummary {
+  snapshotCurrentToBackupKey();
+  const stripped = stripLegacyPanelWindowSize(storage);
+  save(stripped.data);
+  writeFavsForBackup(favs);
+  if (applyBackground) {
+    writeBackgroundRaw(background);
+  }
+  migrateMarksFavToFavs();
+  clearStorageCache();
+  clearFavsCache();
+  const finalStorage = load();
+  const finalFavs = readFavsForBackup();
+  return buildSummary(finalStorage, finalFavs);
+}
+
+/** Local calendar date YYYY-MM-DD for backup filenames. */
+export function backupDateStamp(date: Date = new Date()): string {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function buildBackupFilename(date: Date = new Date()): string {
+  return `ruledesk-web-backup-${backupDateStamp(date)}.json`;
+}
+
+/** Build a validated backup object from current Tampermonkey keys. */
+export function buildBackupFile(options: BackupExportOptions): BackupFile {
+  const storage = load();
+  const favs = readFavsForBackup();
+  const file: BackupFile = {
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    storage,
+    favs,
+  };
+  if (options.includeBackground) {
+    const background = readBackgroundRaw();
+    if (background !== undefined) {
+      return { ...file, background };
+    }
+  }
+  return file;
+}
+
+export function serializeBackupFile(file: BackupFile): string {
+  return `${JSON.stringify(file, null, 2)}\n`;
+}
+
+/** Trigger a browser download of the JSON text (Blob + `<a download>`). */
+export function downloadBackupText(json: string, filename: string): void {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function exportBackupDownload(options: BackupExportOptions): BackupFile {
+  const file = buildBackupFile(options);
+  downloadBackupText(serializeBackupFile(file), buildBackupFilename());
+  return file;
+}
+
+/**
+ * Parse and apply a backup JSON string.
+ * Invalid input leaves storage/favs/background unchanged.
+ */
+export function importBackupJson(
+  raw: string,
+  mode: BackupImportMode,
+): BackupImportResult {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid JSON";
+    return { ok: false, error: message };
+  }
+
+  const parsed = BackupFileSchema.safeParse(json);
+  if (!parsed.success) {
+    return { ok: false, error: formatSchemaError(parsed.error) };
+  }
+
+  const incoming = parsed.data;
+  const hasBackgroundField = Object.prototype.hasOwnProperty.call(
+    incoming,
+    "background",
+  );
+
+  try {
+    if (mode === IMPORT_MODE_REPLACE) {
+      const summary = applyImportedState(
+        incoming.storage,
+        incoming.favs,
+        hasBackgroundField ? incoming.background : undefined,
+        true,
+      );
+      return { ok: true, summary };
+    }
+
+    const currentStorage = load();
+    const currentFavs = readFavsForBackup();
+    const mergedStorage: StorageData = {
+      version: currentStorage.version,
+      collections: mergeCollections(
+        currentStorage.collections,
+        incoming.storage.collections,
+      ),
+      artists: mergeArtists(currentStorage.artists, incoming.storage.artists),
+      marks: mergeMarks(currentStorage.marks, incoming.storage.marks),
+      settings: incoming.storage.settings,
+      updates: incoming.storage.updates ?? currentStorage.updates,
+    };
+    if (mergedStorage.settings === undefined) {
+      mergedStorage.settings = createDefaultStorage().settings;
+    }
+    const mergedFavs = mergeFavs(currentFavs, incoming.favs);
+    const summary = applyImportedState(
+      mergedStorage,
+      mergedFavs,
+      incoming.background,
+      hasBackgroundField,
+    );
+    return { ok: true, summary };
+  } catch (error) {
+    log.error("backup import failed after parse", error);
+    clearStorageCache();
+    clearFavsCache();
+    const message =
+      error instanceof Error ? error.message : "Import failed unexpectedly";
+    return { ok: false, error: message };
+  }
+}
+
+/** Read current fav count for UI summaries (uses live set). */
+export function currentFavCount(): number {
+  return loadFavSet().size;
+}

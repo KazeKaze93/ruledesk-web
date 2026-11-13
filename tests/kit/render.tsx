@@ -4,14 +4,23 @@ import { act } from "preact/test-utils";
 
 import { buildTokensCss, LIGHT_PALETTE } from "../../src/ui/tokens";
 
-export function renderKit(vnode: VNode | ComponentChildren): HTMLElement {
-  const host = document.createElement("div");
-  document.body.append(host);
+export type KitShadowMount = {
+  readonly host: HTMLElement;
+  readonly shadow: ShadowRoot;
+  readonly mount: HTMLElement;
+};
 
+function appendTokenStyle(parent: ParentNode): void {
   const style = document.createElement("style");
   style.setAttribute("data-rdw-tokens", "1");
   style.textContent = buildTokensCss(LIGHT_PALETTE);
-  host.append(style);
+  parent.append(style);
+}
+
+export function renderKit(vnode: VNode | ComponentChildren): HTMLElement {
+  const host = document.createElement("div");
+  document.body.append(host);
+  appendTokenStyle(host);
 
   const root = document.createElement("div");
   host.append(root);
@@ -19,6 +28,22 @@ export function renderKit(vnode: VNode | ComponentChildren): HTMLElement {
     preactRender(<>{vnode}</>, root);
   });
   return host;
+}
+
+export function renderKitInShadow(
+  vnode: VNode | ComponentChildren,
+): KitShadowMount {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const shadow = host.attachShadow({ mode: "open" });
+  appendTokenStyle(shadow);
+
+  const mount = document.createElement("div");
+  shadow.append(mount);
+  act(() => {
+    preactRender(<>{vnode}</>, mount);
+  });
+  return { host, shadow, mount };
 }
 
 export function cleanupKit(host: HTMLElement): void {
@@ -31,9 +56,18 @@ export function cleanupKit(host: HTMLElement): void {
   host.remove();
 }
 
+export function cleanupKitShadow(mount: KitShadowMount): void {
+  act(() => {
+    preactRender(null, mount.mount);
+  });
+  mount.host.remove();
+}
+
 export function fireClick(target: Element): void {
   act(() => {
-    target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    target.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, composed: true }),
+    );
   });
 }
 

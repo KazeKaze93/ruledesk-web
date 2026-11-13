@@ -12,31 +12,41 @@ Managers that honor `@updateURL` / `@downloadURL` can auto-check that same raw U
 
 Local build: `npm install` then `npm run build` → `dist/ruledesk-web.user.js`.
 
-## Stage 1 — collections & playlists
+## Own pages (site navbar)
 
-- Floating toggle (bottom-right) opens a Shadow DOM panel
-- **Saved searches:** save the current `page=post&s=list` search when `tags` is non-empty; open / rename / delete
-- **Playlists:** named sets of post ids (`kind: "posts"`); create from the Collections tab or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Playlist part size**)
-- Export and import JSON via the panel (playlists travel with collections; blacklist does not)
+RuleDesk adds items to the site header navbar (`div#header ul#navbar`):
 
-## Stage 2 — favorites
+| Menu | Hash / URL | What it is |
+|---|---|---|
+| **Collections** | `#rdw/collections` | Custom Collection (saved tag searches) and Dynamic Collection (post-id playlists) |
+| **Following** | `#rdw/following` | Followed artists; add/remove; empty state links to Posts |
+| **Favorites** | site favorites URL | Shown when a favorites user id is known; native My Favorites entry is hidden |
+| **RuleDesk** | `#rdw/settings` | Appearance, Page tweaks, Blacklist, Favorites sync, Data backup |
+
+Own pages mount in `#rdw-page-root` (Shadow DOM) after `div#header` and hide the rest of the site until you leave the hash. There is no floating RD panel.
+
+**Collections**
+
+- **Custom Collection:** save the current `page=post&s=list` search when `tags` is non-empty; open / rename / delete
+- **Dynamic Collection:** named sets of post ids (`kind: "posts"`); create from Collections or the **+** button on thumbs / post side panel; open as `id:` searches (chunked by **Playlist part size**)
+
+## Favorites
 
 - On the post list grid, a star is anchored to `img.preview` via CSS anchor positioning (hover / focus to reveal; marked stars stay visible); the site’s link/image markup is left intact
 - Click toggles favorite: same-origin `addfav` (+ vote on new add) or favorites delete
 - Local favorite IDs live in a separate GM key (`ruledesk-web.favs`); legacy `marks.*.fav` is migrated on load
 - Favorites page: no DOM changes; IDs are read from Remove links into local favs, and Remove clicks clear the local mark
-- Panel setting **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
-- Panel **Favorites sync**: optional full crawl of the site favorites list (add-only; one page every 1.5 s) via Sync / Resume / Stop
+- Settings → **Show favorite buttons in grid** (`settings.gridFavButtons`, default on)
+- Settings → **Favorites sync**: optional full crawl of the site favorites list (add-only; one page every 1.5 s) via Sync / Resume / Stop; a stale lock can auto-resume in another tab
 
-## Stage 3 — artists / Updates
+## Artists / Feed
 
-- Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages
-- Panel **Artists** section: add/remove, open Updates search groups, set artists-per-search, see last seen post
-- **Updates** is a normal site search: `( artist1 ~ artist2 ) id:>N` (no background polling)
-- On a full Updates result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
-- Empty Updates pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
+- Follow / unfollow artists from the tag sidebar (`ul#tag-sidebar`) on list and post pages, or add tags on **Following**
+- Navbar **Feed** opens a normal site search `( artist1 ~ artist2 )` (optional `id:>N` / group size). With no followed artists, Feed points to `#rdw/following`
+- On a full Feed result page, a bar above `div.image-list` can **Mark all seen** (page 1 only, and only when the page has posts newer than `seenPostId`)
+- Empty Feed pages (no `image-list`) show “No new posts since #N” with a link to the same search without `id:>`
 
-No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click), `favorites-sync.ts` (explicit Sync / Resume), and `next-page.ts` (infinite scroll page loads).
+No `api.rule34.xxx`. Network `fetch` runs only in `favorites.ts` (add/remove on click), `favorites-sync.ts` (explicit Sync / Resume / auto-resume), and `next-page.ts` (infinite scroll page loads).
 
 Storage uses `GM_getValue` / `GM_setValue`.
 
@@ -51,34 +61,69 @@ Settings → **Appearance** → **Site theme**:
 | **Light** / **Dark** | RuleDesk site skin (`html.rdw-skin`) with the matching token palette |
 | **Custom** | RuleDesk skin with your accent / bg / surface / text colors; optional background image + dim |
 
-**Restore the native site look:** open the panel → Settings → Appearance → Theme → **Site default**.
+**Restore the native site look:** open **RuleDesk** (`#rdw/settings`) → Appearance → Theme → **Site default**.
 
 Default for new installs is **Light** (RuleDesk skin on).
 
 ## Blacklist (site cookie)
 
-Settings → **Blacklist** edits this browser’s `tag_blacklist` cookie (add/remove chips). Changes write immediately; reload the page to apply filtering. Account settings on the site are not updated and may overwrite the cookie after login. Export/import never includes the blacklist.
+Settings → **Blacklist** edits this browser’s `tag_blacklist` cookie (add/remove chips). Changes write immediately; with **Hide blacklisted thumbs** (`blacklist-hide`) enabled, matching thumbs on list pages are hidden without a reload. Account settings on the site are not updated and may overwrite the cookie after login. Export/import and Data backup never include the blacklist cookie.
 
-## Stage 4 — page tweaks (features, 0.8.0)
+## Page tweaks (features)
 
-Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox or choice control. CSS-only modules (menu cleanup, grid size, dim seen) apply immediately; other modules and the master tweaks switch reload the page.
+Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in Settings (default on). Each module has its own checkbox or choice control. CSS-only modules apply immediately; other modules and the master tweaks switch reload the page.
 
 | Module id | Label | Default | Pages | What it does |
 |---|---|---|---|---|
-| `feed` | Feed in site menu | on | all | Adds a Feed menu item; on feed list pages mounts the updates bar and outlines new thumbs |
+| `feed` | Feed in site menu | on | all | Adds a Feed menu item; on feed list pages mounts the updates bar and marks new thumbs |
 | `menu-cleanup` | Clean header menu | on | all | Hides unused header links |
 | `tag-groups` | Collapse tags | on | list, post | Collapse tag sidebar groups (General/Meta by default) |
-| `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form (playlists in a separate optgroup) |
+| `search-tools` | Search tools | on | list, post | Token chips, media/sort/score controls, and save-to-collection under the search form |
 | `seen-dim` | Dim seen posts | on | list, post | Marks opened posts; dims them in the grid (also restamps infinite-scroll thumbs) |
 | `playlist-menu` | Add to playlist button | on | list, post | **+** on thumbs (list) and playlist menu under Favorite (post side panel) |
 | `playlist-bar` | Playlist header | on | list | Name / part links / post count above a playlist `id:` search |
+| `blacklist-hide` | Hide blacklisted thumbs | on | list | Hides thumbs matching the site blacklist cookie (no reload) |
 | `infinite-scroll` | Infinite scroll | on | list | Loads the next page into the grid; respects site blacklist |
 | `post-actions` | Post actions | on | post | Favorite / playlist / Original / Score bar (and Options proxies) on the post page |
-| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry |
+| `grid-density` | Grid size | on | list, favorites | compact / default / large / masonry (Appearance) |
 
-**Disable a module:** open the panel → Settings → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
+**Disable a module:** open **RuleDesk** → Settings → Page → uncheck that module (or change its choice). **Disable all tweaks:** turn off **Enable page tweaks**. Removed in 0.7.0: `search-tokens`, `pager`, `followed-badge`.
 
-## Export format
+## Data backup
+
+Settings → **Data** exports one JSON file `ruledesk-web-backup-<YYYY-MM-DD>.json` with storage, favs, and optional background image. Import supports **Merge** and **Replace**. This is separate from the older collections-only export format below.
+
+Example backup shape (no real data):
+
+```json
+{
+  "format": "ruledesk-web-backup",
+  "version": 1,
+  "exportedAt": "2026-11-13T03:30:00.000Z",
+  "storage": {
+    "version": 1,
+    "collections": [],
+    "artists": [{ "tag": "example_artist" }],
+    "marks": {},
+    "settings": {
+      "gridFavButtons": true,
+      "updatesGroupSize": 0,
+      "playlistChunkSize": 40,
+      "tweaksEnabled": true,
+      "appearance": { "theme": "light" }
+    },
+    "updates": { "seenPostId": 0 }
+  },
+  "favs": {
+    "version": 1,
+    "ids": [101, 202]
+  }
+}
+```
+
+(`background` is an optional string when “Include background image” is on.)
+
+## Legacy export format
 
 ```json
 {
@@ -120,11 +165,11 @@ Optional list/post/favorites UI modules. Master switch **Enable page tweaks** in
 }
 ```
 
-- Collections without `kind` (or `kind: "search"`) are saved searches; `kind: "posts"` are playlists with `postIds`
+- Collections without `kind` (or `kind: "search"`) are saved searches (Custom Collection); `kind: "posts"` are Dynamic Collections with `postIds`
 - `settings` / `updates` / `favIds` are optional; defaults are `gridFavButtons: true`, `tweaksEnabled: true`, `updatesGroupSize: 0`, `playlistChunkSize: 40`, `seenPostId: 0`
 - Import merges collections by `id`, artists by `tag`, marks by post id (including `seen`); legacy `marks.*.fav` becomes fav ids; `seenPostId` keeps the maximum of current and imported
 - Runtime fav ids are stored under `ruledesk-web.favs` (not inside the main storage key)
-- Blacklist is never part of export/import
+- Blacklist cookie is never part of export/import or Data backup
 
 ## Scripts
 

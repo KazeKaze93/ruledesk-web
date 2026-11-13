@@ -2,25 +2,22 @@ import type { JSX } from "preact";
 import { render as preactRender } from "preact";
 import { useCallback, useState } from "preact/hooks";
 
-import { readSiteBlacklist, writeSiteBlacklist } from "../../site/blacklist";
-import { Button, Chip, SectionLabel, TextField } from "../kit";
+import { readSiteBlacklist, writeSiteBlacklist } from "../site/blacklist";
+import { Button, Chip, SectionLabel, TextField } from "../ui/kit";
 
 const SECTION_CLASS = "rdw-blacklist";
 const CHIPS_CLASS = "rdw-blacklist-chips";
 const ADD_ROW_CLASS = "rdw-blacklist-add-row";
-const SAVED_ROW_CLASS = "rdw-blacklist-saved-row";
 const HINT_CLASS = "rdw-blacklist-hint";
 
 const ADD_LABEL = "Add tag";
 const ADD_BUTTON = "Add";
-const SAVED_TEXT = "Saved. Reload the page to apply.";
-const RELOAD_BUTTON = "Reload";
 const PERMANENT_HINT =
   "Stored in this browser's site cookie. The list in your account settings is not changed and may overwrite this one after you log in again.";
 const ADD_INPUT_ID = "rdw-blacklist-add";
 const TAG_SPLIT_PATTERN = /[, ]+/;
 
-/** Layout CSS for the blacklist tab (chips come from kit Chip). */
+/** Layout CSS for the blacklist section (chips come from kit Chip). */
 export const BLACKLIST_SECTION_CSS = `
 .${SECTION_CLASS} {
   display: flex;
@@ -44,12 +41,6 @@ export const BLACKLIST_SECTION_CSS = `
 .${SECTION_CLASS} .${ADD_ROW_CLASS} .rdw-field {
   flex: 1 1 12rem;
   margin: 0;
-}
-.${SECTION_CLASS} .${SAVED_ROW_CLASS} {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
 }
 .${SECTION_CLASS} .${HINT_CLASS} {
   margin: 0;
@@ -132,17 +123,6 @@ export function BlacklistSection(
             {ADD_BUTTON}
           </Button>
         </form>
-        <div className={SAVED_ROW_CLASS}>
-          <p className="rdw-hint">{SAVED_TEXT}</p>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              window.location.reload();
-            }}
-          >
-            {RELOAD_BUTTON}
-          </Button>
-        </div>
         <p className={HINT_CLASS}>{PERMANENT_HINT}</p>
       </section>
     </>

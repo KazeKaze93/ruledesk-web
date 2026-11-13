@@ -13,6 +13,7 @@ describe("FEATURES registry", () => {
       "seen-dim",
       "playlist-menu",
       "playlist-bar",
+      "blacklist-hide",
       "infinite-scroll",
       "post-actions",
       "grid-density",

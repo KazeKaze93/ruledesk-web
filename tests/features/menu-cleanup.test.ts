@@ -117,7 +117,7 @@ describe("menuCleanupFeature", () => {
     expect(headerDiscord.classList.contains(HIDDEN_CLASS)).toBe(true);
     expect(headerAbout.classList.contains(HIDDEN_CLASS)).toBe(true);
     expect(headerPosts.classList.contains(HIDDEN_CLASS)).toBe(false);
-    expect(favorites.classList.contains(HIDDEN_CLASS)).toBe(false);
+    expect(favorites.classList.contains(HIDDEN_CLASS)).toBe(true);
     expect(contentDiscord.classList.contains(HIDDEN_CLASS)).toBe(false);
   });
 

@@ -215,6 +215,11 @@ ${ROOT} ul#tag-sidebar h6 {
   margin: 0 0 6px;
 }
 
+/* Standalone "Tags" (and similar) heading above the list card */
+${ROOT} div.sidebar > h5 {
+  display: none;
+}
+
 ${ROOT} div.tag-search,
 ${ROOT} ul#tag-sidebar {
   background: ${v.surface};
@@ -264,8 +269,12 @@ ${ROOT} span.tag-count {
   font-size: 12px;
 }
 
-/* ? + − operators (first three anchors); tag name keeps type color */
-${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:nth-of-type(-n+3) {
+/*
+ * Tag type color on the LAST link of the row (tag name).
+ * List rows: ? + − name — name is 4th. Post rows: ? name — name is 2nd.
+ * Operators / wiki stay muted on every page.
+ */
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:not(:last-of-type) {
   color: ${v.muted};
   font-size: 11px;
   font-weight: normal;
@@ -291,6 +300,30 @@ ${ROOT} .tag-type-metadata {
   color: ${v.tagMetadata};
 }
 
+${ROOT} ul#tag-sidebar > li.tag-type-artist > a:last-of-type {
+  color: ${v.tagArtist};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-character > a:last-of-type {
+  color: ${v.tagCharacter};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-copyright > a:last-of-type {
+  color: ${v.tagCopyright};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
+${ROOT} ul#tag-sidebar > li.tag-type-metadata > a:last-of-type {
+  color: ${v.tagMetadata};
+  font-size: 12.5px;
+  font-weight: normal;
+}
+
 ${ROOT} .tag-type-artist > a:hover,
 ${ROOT} .tag-type-artist:hover,
 ${ROOT} .tag-type-character > a:hover,
@@ -298,7 +331,8 @@ ${ROOT} .tag-type-character:hover,
 ${ROOT} .tag-type-copyright > a:hover,
 ${ROOT} .tag-type-copyright:hover,
 ${ROOT} .tag-type-metadata > a:hover,
-${ROOT} .tag-type-metadata:hover {
+${ROOT} .tag-type-metadata:hover,
+${ROOT} ul#tag-sidebar > li[class*="tag-type-"] > a:last-of-type:hover {
   color: ${v.accent};
 }
 
@@ -402,10 +436,33 @@ ${ROOT} div.auto_complete ul strong.highlight {
 /* —— grid / thumbs (cell size unchanged) —— */
 ${ROOT} div.image-list {
   gap: 12px;
+  align-items: flex-start;
+  align-content: flex-start;
 }
 
 ${ROOT} img.preview {
   border-radius: ${v.radiusL};
+}
+
+/* Favorites: Remove stays subtle; preview radius matches grid (no thumb size change) */
+${ROOT} span.thumb > a[onclick] {
+  color: ${v.muted};
+  font-size: 12px;
+  font-weight: normal;
+  padding: 2px 8px;
+  border-radius: ${v.radiusS};
+  background: transparent;
+  border: none;
+}
+
+${ROOT} span.thumb > a[onclick]:hover {
+  color: ${v.danger};
+  background: ${v.dangerSoft};
+}
+
+${ROOT} span.thumb > a[onclick] b {
+  font-weight: normal;
+  color: inherit;
 }
 
 ${ROOT} .webm-thumb {
@@ -505,12 +562,13 @@ ${ROOT} .manual-page-chooser > input[type="submit"] {
   cursor: pointer;
 }
 
-/* —— forms / tables —— */
+/* —— forms / tables (site chrome outside our panel) —— */
 ${ROOT} input,
 ${ROOT} select,
 ${ROOT} textarea,
 ${ROOT} button {
   color: ${v.text};
+  font-family: ${v.font};
 }
 
 ${ROOT} input[type="text"],
@@ -523,6 +581,46 @@ ${ROOT} textarea {
   border: 1px solid ${v.border};
   border-radius: ${v.radiusS};
   color: ${v.text};
+}
+
+${ROOT} button,
+${ROOT} input[type="submit"],
+${ROOT} input[type="button"],
+${ROOT} .gdprbutton button {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusS};
+  color: ${v.text};
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+${ROOT} button:hover,
+${ROOT} input[type="submit"]:hover,
+${ROOT} input[type="button"]:hover,
+${ROOT} .gdprbutton button:hover {
+  background: ${v.accentSoft};
+  border-color: ${v.accent};
+  color: ${v.accent};
+}
+
+/* Keep search submit as primary accent (overrides generic button chrome) */
+${ROOT} div.tag-search input[type="submit"],
+${ROOT} div.tag-search button[type="submit"],
+${ROOT} .manual-page-chooser > input[type="submit"] {
+  background: ${v.accent};
+  border: none;
+  color: ${v.surface};
+  font-weight: 600;
+}
+
+${ROOT} div.tag-search input[type="submit"]:hover,
+${ROOT} div.tag-search button[type="submit"]:hover,
+${ROOT} .manual-page-chooser > input[type="submit"]:hover {
+  background: ${v.accent};
+  border: none;
+  color: ${v.surface};
+  filter: brightness(1.05);
 }
 
 ${ROOT} table {
@@ -565,12 +663,47 @@ ${ROOT} table tr.pending-tag {
   background: ${v.surface2};
 }
 
+/* Zebra without native green tint */
 ${ROOT} table tr:nth-child(odd) {
   background: ${v.surface2};
 }
 
 ${ROOT} table.form th {
   color: ${v.muted};
+}
+
+/* Forum tables */
+${ROOT} div#forum > table {
+  background: ${v.surface};
+  border: 1px solid ${v.border};
+  border-radius: ${v.radiusL};
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  box-shadow: ${v.shadow1};
+}
+
+${ROOT} div#forum > table th,
+${ROOT} div#forum > table td {
+  border-color: ${v.border};
+  color: ${v.text};
+}
+
+${ROOT} div#forum > table th:first-child,
+${ROOT} div#forum > table td:first-child {
+  text-align: left;
+}
+
+${ROOT} div#forum > table tr:nth-child(odd) {
+  background: ${v.surface2};
+}
+
+${ROOT} div#forum > table tr:nth-child(even) {
+  background: ${v.surface};
+}
+
+${ROOT} div#forum > table.highlightable > tbody > tr:hover {
+  background: ${v.accentSoft};
 }
 
 ${ROOT} .added-tags {
@@ -661,10 +794,49 @@ ${ROOT} div.response-list > div.post > div.content {
 
 ${ROOT} div.response-list > div.post > div.content > div.footer {
   color: ${v.muted};
+  margin-top: 0.75em;
 }
 
-${ROOT} div.response-list > div.post > div.content > div.footer a {
+/* Edit | Respond (and similar) on comments / forum posts */
+${ROOT} div.response-list > div.post > div.content > div.footer a,
+${ROOT} ul.flat-list li a {
   color: ${v.muted};
+  font-weight: normal;
+  padding: 2px 6px;
+  border-radius: ${v.radiusS};
+}
+
+${ROOT} div.response-list > div.post > div.content > div.footer a:hover,
+${ROOT} ul.flat-list li a:hover {
+  color: ${v.accent};
+  background: ${v.accentSoft};
+}
+
+${ROOT} ul.flat-list li a.forum-update {
+  font-style: italic;
+  color: ${v.muted};
+}
+
+${ROOT} div.link-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+${ROOT} div.link-list li {
+  margin: 0 0 4px;
+}
+
+${ROOT} div.link-list a {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: ${v.radiusS};
+  color: ${v.muted};
+}
+
+${ROOT} div.link-list a:hover {
+  color: ${v.accent};
+  background: ${v.accentSoft};
 }
 
 ${ROOT} span.author,

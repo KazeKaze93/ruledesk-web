@@ -13,6 +13,25 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const DAYS_PER_YEAR = 365;
 const BLACKLIST_TAG_SEPARATOR = " ";
 
+export type SiteBlacklistChangeListener = (tags: readonly string[]) => void;
+
+const changeListeners = new Set<SiteBlacklistChangeListener>();
+
+/** Subscribe to writes of the site `tag_blacklist` cookie. */
+export function onSiteBlacklistChange(
+  cb: SiteBlacklistChangeListener,
+): () => void {
+  changeListeners.add(cb);
+  return (): void => {
+    changeListeners.delete(cb);
+  };
+}
+
+/** Clears change listeners (tests). */
+export function resetSiteBlacklistListeners(): void {
+  changeListeners.clear();
+}
+
 function readCookieValue(name: string): string | null {
   const pairs = document.cookie.split(COOKIE_PAIR_SEPARATOR);
   const prefix = `${name}${COOKIE_NAME_VALUE_SEPARATOR}`;
@@ -94,6 +113,9 @@ export function writeSiteBlacklist(tags: string[]): void {
       SITE_BLACKLIST_COOKIE_MAX_AGE_YEARS * DAYS_PER_YEAR * MS_PER_DAY,
   );
   writeBlacklistCookie(encodeBlacklistCookieValue(normalized), expires);
+  for (const listener of changeListeners) {
+    listener(normalized);
+  }
 }
 
 /**

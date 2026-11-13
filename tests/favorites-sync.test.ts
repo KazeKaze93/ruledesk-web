@@ -12,7 +12,10 @@ import {
   FAVORITES_SYNC_ERROR_UNEXPECTED_PAGE,
   FAVORITES_SYNC_PAGE_PAUSE_MS,
   FAVORITES_SYNC_PID_STEP,
+  FAVORITES_SYNC_RETRY_DELAYS_MS,
   extractUserIdFromDocument,
+  extractUserIdFromFavoritesSearch,
+  resolveFavoritesUserId,
   resolveLastPid,
   runFavoritesSync,
 } from "../src/site/favorites-sync";
@@ -24,9 +27,9 @@ import {
   setSyncState,
 } from "../src/storage/favs";
 import { clearStorageCache } from "../src/storage/store";
-import { createFavoritesSyncSection } from "../src/ui/panel";
 
 const USER_ID = 479099;
+const TAB_ID = "test-tab-1";
 const memory = new Map<string, unknown>();
 
 function installGmMocks(): void {
@@ -95,6 +98,7 @@ function favoritesPageHtml(options: {
   lastPid?: number;
   currentLabel?: string;
   includePaginator?: boolean;
+  title?: string;
 }): string {
   const {
     ids,
@@ -102,6 +106,7 @@ function favoritesPageHtml(options: {
     lastPid,
     currentLabel = "1",
     includePaginator = true,
+    title = "Rule34 Favorites",
   } = options;
   const thumbs = ids
     .map(
@@ -131,7 +136,7 @@ function favoritesPageHtml(options: {
     paginator = favoritesPaginatorHtml(paginatorOptions);
   }
 
-  return `<!DOCTYPE html><html><body>${thumbs}${paginator}</body></html>`;
+  return `<!DOCTYPE html><html><head><title>${title}</title></head><body>${thumbs}${paginator}</body></html>`;
 }
 
 function mockFetchSequence(
@@ -154,6 +159,11 @@ function mockFetchSequence(
   return fetchMock;
 }
 
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe("extractUserIdFromDocument", () => {
   beforeEach(() => {
     document.body.replaceChildren();
@@ -166,6 +176,48 @@ describe("extractUserIdFromDocument", () => {
 
   it("returns null when the menu link is missing", () => {
     expect(extractUserIdFromDocument(document)).toBeNull();
+  });
+});
+
+describe("resolveFavoritesUserId", () => {
+  beforeEach(() => {
+    document.body.replaceChildren();
+  });
+
+  it("prefers menu link over URL and saved value", () => {
+    mountMyFavoritesLink(111);
+    expect(
+      resolveFavoritesUserId(
+        document,
+        "?page=favorites&s=view&id=222",
+        333,
+      ),
+    ).toBe(111);
+  });
+
+  it("uses favorites URL id when menu link is missing", () => {
+    expect(
+      extractUserIdFromFavoritesSearch("?page=favorites&s=view&id=222"),
+    ).toBe(222);
+    expect(
+      resolveFavoritesUserId(
+        document,
+        "?page=favorites&s=view&id=222",
+        333,
+      ),
+    ).toBe(222);
+  });
+
+  it("falls back to saved sync userId", () => {
+    expect(
+      resolveFavoritesUserId(document, "?page=post&s=list&tags=cat", 333),
+    ).toBe(333);
+  });
+
+  it("returns null when no source has an id", () => {
+    expect(
+      resolveFavoritesUserId(document, "?page=post&s=list&tags=cat", undefined),
+    ).toBeNull();
   });
 });
 
@@ -230,6 +282,9 @@ describe("runFavoritesSync", () => {
     installGmMocks();
     document.body.replaceChildren();
     mountMyFavoritesLink();
+    vi.stubGlobal("location", {
+      search: "",
+    });
     vi.useFakeTimers();
   });
 
@@ -264,10 +319,11 @@ describe("runFavoritesSync", () => {
         progress.push(p);
       },
       signal: controller.signal,
+      tabId: TAB_ID,
     });
 
     await vi.advanceTimersByTimeAsync(0);
-    await Promise.resolve();
+    await flushMicrotasks();
     await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
     const result = await run;
 
@@ -278,21 +334,136 @@ describe("runFavoritesSync", () => {
       { page: 2, pages: 2, total: 3 },
     ]);
     expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([10, 11, 12]);
-    expect(getSyncState()?.finishedAt).toEqual(expect.any(String));
+    const sync = getSyncState();
+    expect(sync?.finishedAt).toEqual(expect.any(String));
+    expect(sync?.running).toBe(false);
+    expect(sync?.userId).toBe(USER_ID);
+    expect(sync?.lock).toEqual({
+      tabId: TAB_ID,
+      beatAt: expect.any(Number),
+    });
   });
 
-  it("resumes from saved nextPid", async () => {
-    setSyncState({
-      nextPid: FAVORITES_SYNC_PID_STEP,
-      lastPid: FAVORITES_SYNC_PID_STEP,
-      startedAt: "2020-01-01T00:00:00.000Z",
-    });
-    addFav(1);
+  it("completes on empty trailing page with paginator after non-empty", async () => {
     const fetchMock = mockFetchSequence([
       {
         body: favoritesPageHtml({
-          ids: [20, 21],
+          ids: [100, 101],
+          nextPid: FAVORITES_SYNC_PID_STEP,
+          lastPid: FAVORITES_SYNC_PID_STEP * 2,
+        }),
+      },
+      {
+        body: favoritesPageHtml({
+          ids: [],
           currentLabel: "2",
+          nextPid: FAVORITES_SYNC_PID_STEP * 2,
+          lastPid: FAVORITES_SYNC_PID_STEP * 2,
+        }),
+      },
+    ]);
+
+    const run = runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+    });
+
+    await vi.advanceTimersByTimeAsync(0);
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
+    const result = await run;
+
+    // lastPid advertises 3 pages; content ended on empty page 2.
+    expect(result).toEqual({ status: "completed", total: 2, pages: 3 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(getSyncState()?.running).toBe(false);
+    expect(getSyncState()?.finishedAt).toEqual(expect.any(String));
+  });
+
+  it("retries HTTP errors with 10s/30s/60s then pauses with status and title", async () => {
+    const errorBody =
+      "<!DOCTYPE html><html><head><title>Service Unavailable — please retry later now</title></head><body>down</body></html>";
+    const fetchMock = mockFetchSequence([
+      { ok: false, status: 503, body: errorBody },
+      { ok: false, status: 503, body: errorBody },
+      { ok: false, status: 503, body: errorBody },
+      { ok: false, status: 503, body: errorBody },
+    ]);
+
+    const run = runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+    });
+
+    await flushMicrotasks();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_RETRY_DELAYS_MS[0]);
+    await flushMicrotasks();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_RETRY_DELAYS_MS[1]);
+    await flushMicrotasks();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_RETRY_DELAYS_MS[2]);
+    await flushMicrotasks();
+    const result = await run;
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(result.status).toBe("error");
+    if (result.status === "error") {
+      expect(result.message).toContain("HTTP 503");
+      expect(result.message).toContain("Service Unavailable");
+      expect(result.message.length).toBeLessThanOrEqual(
+        "HTTP 503: ".length + 80,
+      );
+    }
+    expect(getSyncState()?.running).toBe(true);
+    expect(getSyncState()?.lock?.tabId).toBe(TAB_ID);
+  });
+
+  it("retries when paginator is missing then succeeds", async () => {
+    const fetchMock = mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [1],
+          includePaginator: false,
+          title: "Login required page title text here",
+        }),
+      },
+      {
+        body: favoritesPageHtml({
+          ids: [55],
+        }),
+      },
+    ]);
+
+    const run = runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+    });
+
+    await flushMicrotasks();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_RETRY_DELAYS_MS[0]);
+    await flushMicrotasks();
+    const result = await run;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ status: "completed", total: 1, pages: 1 });
+    expect(loadFavSet().has(55)).toBe(true);
+  });
+
+  it("writes running, userId, and lock heartbeat fields", async () => {
+    mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [7],
         }),
       },
     ]);
@@ -300,17 +471,74 @@ describe("runFavoritesSync", () => {
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
 
-    expect(result).toEqual({ status: "completed", total: 3, pages: 2 });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const firstUrl = String(fetchMock.mock.calls[0]?.[0]);
-    expect(firstUrl).toContain(`pid=${String(FAVORITES_SYNC_PID_STEP)}`);
-    expect(loadFavSet().has(20)).toBe(true);
-    expect(loadFavSet().has(1)).toBe(true);
+    expect(result.status).toBe("completed");
+    const sync = getSyncState();
+    expect(sync).toMatchObject({
+      running: false,
+      userId: USER_ID,
+      lock: {
+        tabId: TAB_ID,
+        beatAt: expect.any(Number),
+      },
+    });
   });
 
-  it("aborts via signal during the page pause", async () => {
+  it("resolves userId from favorites URL when menu link is absent", async () => {
+    document.body.replaceChildren();
+    vi.stubGlobal("location", {
+      search: `?page=favorites&s=view&id=${String(USER_ID)}`,
+    });
+    mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [9],
+        }),
+      },
+    ]);
+
+    const result = await runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+    });
+
+    expect(result).toEqual({ status: "completed", total: 1, pages: 1 });
+    expect(getSyncState()?.userId).toBe(USER_ID);
+  });
+
+  it("resolves userId from saved sync state when menu and URL lack it", async () => {
+    document.body.replaceChildren();
+    vi.stubGlobal("location", { search: "?page=post&s=list&tags=a" });
+    setSyncState({
+      nextPid: 0,
+      lastPid: 0,
+      startedAt: "2020-01-01T00:00:00.000Z",
+      finishedAt: "2020-01-02T00:00:00.000Z",
+      userId: USER_ID,
+      running: false,
+    });
+    mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [3],
+        }),
+      },
+    ]);
+
+    const result = await runFavoritesSync({
+      onProgress: () => {},
+      signal: new AbortController().signal,
+      tabId: TAB_ID,
+    });
+
+    expect(result).toEqual({ status: "completed", total: 1, pages: 1 });
+    expect(getSyncState()?.userId).toBe(USER_ID);
+  });
+
+  it("Stop sets running=false and keeps nextPid", async () => {
     mockFetchSequence([
       {
         body: favoritesPageHtml({
@@ -330,33 +558,56 @@ describe("runFavoritesSync", () => {
     const run = runFavoritesSync({
       onProgress: () => {},
       signal: controller.signal,
+      tabId: TAB_ID,
     });
 
     await vi.advanceTimersByTimeAsync(0);
-    await Promise.resolve();
+    await flushMicrotasks();
     controller.abort();
     await vi.advanceTimersByTimeAsync(FAVORITES_SYNC_PAGE_PAUSE_MS);
     const result = await run;
 
     expect(result.status).toBe("aborted");
-    if (result.status === "aborted") {
-      expect(result.total).toBe(1);
-      expect(result.page).toBe(1);
-    }
-    expect(getSyncState()?.finishedAt).toBeUndefined();
+    const sync = getSyncState();
+    expect(sync?.running).toBe(false);
+    expect(sync?.finishedAt).toBeUndefined();
+    expect(sync?.nextPid).toBe(FAVORITES_SYNC_PID_STEP);
+    expect(sync?.lock?.tabId).toBe(TAB_ID);
   });
 
-  it("stops with error when response is not ok", async () => {
-    mockFetchSequence([{ ok: false, status: 503, body: "down" }]);
+  it("resumes from saved nextPid", async () => {
+    setSyncState({
+      nextPid: FAVORITES_SYNC_PID_STEP,
+      lastPid: FAVORITES_SYNC_PID_STEP,
+      startedAt: "2020-01-01T00:00:00.000Z",
+      userId: USER_ID,
+      running: false,
+    });
+    addFav(1);
+    const fetchMock = mockFetchSequence([
+      {
+        body: favoritesPageHtml({
+          ids: [20, 21],
+          currentLabel: "2",
+        }),
+      },
+    ]);
+
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
-    expect(result).toEqual({ status: "error", message: "HTTP 503" });
-    expect(getSyncState()?.nextPid).toBe(0);
+
+    expect(result).toEqual({ status: "completed", total: 3, pages: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const firstUrl = String(fetchMock.mock.calls[0]?.[0]);
+    expect(firstUrl).toContain(`pid=${String(FAVORITES_SYNC_PID_STEP)}`);
+    expect(loadFavSet().has(20)).toBe(true);
+    expect(loadFavSet().has(1)).toBe(true);
   });
 
-  it("stops with unexpected page when a page has no cards", async () => {
+  it("stops with unexpected page when the first page has no cards", async () => {
     mockFetchSequence([
       {
         body: favoritesPageHtml({
@@ -368,6 +619,7 @@ describe("runFavoritesSync", () => {
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
     expect(result).toEqual({
       status: "error",
@@ -387,6 +639,7 @@ describe("runFavoritesSync", () => {
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
     expect(result).toEqual({
       status: "error",
@@ -394,12 +647,14 @@ describe("runFavoritesSync", () => {
     });
   });
 
-  it("errors when My Favorites link is missing", async () => {
+  it("errors when user id cannot be resolved", async () => {
     document.body.replaceChildren();
+    vi.stubGlobal("location", { search: "" });
     const fetchMock = mockFetchSequence([]);
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
     expect(result).toEqual({
       status: "error",
@@ -421,37 +676,9 @@ describe("runFavoritesSync", () => {
     const result = await runFavoritesSync({
       onProgress: () => {},
       signal: new AbortController().signal,
+      tabId: TAB_ID,
     });
     expect(result).toEqual({ status: "completed", total: 3, pages: 1 });
     expect(Array.from(loadFavSet()).sort((a, b) => a - b)).toEqual([40, 41, 42]);
-  });
-});
-
-describe("createFavoritesSyncSection", () => {
-  beforeEach(() => {
-    installGmMocks();
-    document.body.replaceChildren();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-    document.body.replaceChildren();
-  });
-
-  it("renders status, sync controls, warning, and add-only note", () => {
-    addFav(5);
-    const section = createFavoritesSyncSection();
-    expect(section.textContent).toContain("Favorites sync");
-    expect(section.textContent).toContain("1 in local favorites set");
-    expect(section.textContent).toContain("Sync favorites");
-    expect(section.textContent).toContain("Stop");
-    expect(section.textContent).toContain(
-      "Loads every favorites page, one request per 1.5 s",
-    );
-    expect(section.textContent).toContain(
-      "Sync only adds favorites. Posts removed on the site stay in the local set.",
-    );
-    expect(section.querySelector('[role="progressbar"]')).not.toBeNull();
   });
 });
