@@ -1,0 +1,101 @@
+import type { JSX } from "preact";
+
+import { KIT_FOCUS_CSS, KIT_MIN_TARGET_PX } from "./shared";
+
+export type TabItem = {
+  readonly id: string;
+  readonly label: string;
+};
+
+export type TabsProps = {
+  readonly items: readonly TabItem[];
+  readonly value: string;
+  readonly onChange: (id: string) => void;
+  readonly className?: string;
+  readonly "aria-label"?: string;
+};
+
+export const TABS_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--rdw-border);
+  padding: 0 8px;
+}
+.rdw-tabs__tab {
+  box-sizing: border-box;
+  min-height: ${KIT_MIN_TARGET_PX}px;
+  padding: 7px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.rdw-tabs__tab[aria-selected="true"] {
+  color: var(--rdw-text);
+  font-weight: 600;
+  border-bottom-color: var(--rdw-accent);
+}
+`;
+
+export function Tabs(props: TabsProps): JSX.Element {
+  const className = ["rdw-tabs", props.className]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
+
+  return (
+    <>
+      <style>{TABS_CSS}</style>
+      <div
+        className={className}
+        role="tablist"
+        aria-label={props["aria-label"]}
+      >
+        {props.items.map((item) => {
+          const selected = item.id === props.value;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              id={`rdw-tab-${item.id}`}
+              className="rdw-tabs__tab rdw-kit-focusable"
+              aria-selected={selected}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => {
+                props.onChange(item.id);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                  return;
+                }
+                event.preventDefault();
+                const index = props.items.findIndex(
+                  (entry) => entry.id === props.value,
+                );
+                if (index < 0) {
+                  return;
+                }
+                const delta = event.key === "ArrowRight" ? 1 : -1;
+                const next =
+                  props.items[
+                    (index + delta + props.items.length) % props.items.length
+                  ];
+                if (next !== undefined) {
+                  props.onChange(next.id);
+                }
+              }}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}

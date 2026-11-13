@@ -1,0 +1,62 @@
+import type { ComponentChildren, JSX, MouseEventHandler } from "preact";
+
+import { KIT_FOCUS_CSS, KIT_MIN_TARGET_PX } from "./shared";
+
+export type IconButtonProps = {
+  readonly label: string;
+  readonly pressed?: boolean;
+  readonly disabled?: boolean;
+  readonly children: ComponentChildren;
+  readonly onClick?: MouseEventHandler<HTMLButtonElement>;
+  readonly className?: string;
+};
+
+export const ICON_BUTTON_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-icon-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  min-width: ${KIT_MIN_TARGET_PX}px;
+  min-height: ${KIT_MIN_TARGET_PX}px;
+  width: ${KIT_MIN_TARGET_PX}px;
+  height: ${KIT_MIN_TARGET_PX}px;
+  padding: 0;
+  border-radius: var(--rdw-radius-m);
+  border: 1px solid var(--rdw-border);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  cursor: pointer;
+}
+.rdw-icon-btn[aria-pressed="true"] {
+  background: var(--rdw-accent-soft);
+  border-color: var(--rdw-accent);
+  color: var(--rdw-accent);
+}
+.rdw-icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+
+export function IconButton(props: IconButtonProps): JSX.Element {
+  const className = ["rdw-icon-btn", "rdw-kit-focusable", props.className]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
+
+  return (
+    <>
+      <style>{ICON_BUTTON_CSS}</style>
+      <button
+        type="button"
+        className={className}
+        aria-label={props.label}
+        aria-pressed={props.pressed}
+        disabled={props.disabled}
+        onClick={props.onClick}
+      >
+        {props.children}
+      </button>
+    </>
+  );
+}

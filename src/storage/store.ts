@@ -1,6 +1,9 @@
 import * as z from "zod/mini";
 
 import {
+  APPEARANCE_BACKGROUND_KEY,
+  APPEARANCE_BACKGROUND_MAX_BYTES,
+  APPEARANCE_BACKGROUND_TOO_LARGE,
   COLLECTION_KIND_POSTS,
   DEFAULT_GRID_FAV_BUTTONS,
   DEFAULT_PLAYLIST_CHUNK_SIZE,
@@ -22,17 +25,21 @@ import {
   removeFav,
 } from "./favs";
 import {
+  AppearanceSchema,
   ArtistEntrySchema,
   CollectionSchema,
   ExportBlobSchema,
   StorageSchema,
+  createDefaultAppearance,
   createDefaultStorage,
   isPlaylist,
+  resolveAppearance,
   resolveGridFavButtons,
   resolvePlaylistChunkSize,
   resolveSeenPostId,
   resolveTweaksEnabled,
   resolveUpdatesGroupSize,
+  type Appearance,
   type ArtistEntry,
   type Collection,
   type ExportBlob,
@@ -137,7 +144,17 @@ function currentSettings(data: StorageData): Settings {
   if (data.settings?.featureState !== undefined) {
     next.featureState = { ...data.settings.featureState };
   }
+  if (data.settings?.appearance !== undefined) {
+    next.appearance = data.settings.appearance;
+  }
   return next;
+}
+
+function byteLengthUtf8(value: string): number {
+  if (typeof TextEncoder !== "undefined") {
+    return new TextEncoder().encode(value).length;
+  }
+  return value.length;
 }
 
 function normalizePostId(postId: number): number | null {
@@ -441,6 +458,49 @@ export function setPlaylistChunkSize(size: number): void {
   save(data);
 }
 
+export function getAppearance(): Appearance {
+  return resolveAppearance(load());
+}
+
+export function setAppearance(appearance: Appearance): Appearance {
+  const parsed = AppearanceSchema.parse(appearance);
+  const data = load();
+  data.settings = {
+    ...currentSettings(data),
+    appearance: parsed,
+  };
+  save(data);
+  return parsed;
+}
+
+/** Reads the background image data URL from its dedicated GM key. */
+export function getAppearanceBackgroundDataUrl(): string | undefined {
+  const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, undefined);
+  if (typeof raw !== "string" || raw.length === 0) {
+    return undefined;
+  }
+  return raw;
+}
+
+/**
+ * Stores a background image data URL in a dedicated GM key.
+ * Rejects payloads larger than APPEARANCE_BACKGROUND_MAX_BYTES.
+ */
+export function setAppearanceBackgroundDataUrl(dataUrl: string): void {
+  if (byteLengthUtf8(dataUrl) > APPEARANCE_BACKGROUND_MAX_BYTES) {
+    throw new Error(APPEARANCE_BACKGROUND_TOO_LARGE);
+  }
+  getGmSetValue()(APPEARANCE_BACKGROUND_KEY, dataUrl);
+}
+
+export function clearAppearanceBackgroundDataUrl(): void {
+  getGmSetValue()(APPEARANCE_BACKGROUND_KEY, "");
+}
+
+export function createDefaultAppearanceSettings(): Appearance {
+  return createDefaultAppearance();
+}
+
 export function getSeenPostId(): number {
   return resolveSeenPostId(load());
 }
@@ -625,6 +685,11 @@ function mergeSettings(
   );
   if (featureState !== undefined) {
     merged.featureState = featureState;
+  }
+  if (incoming.appearance !== undefined) {
+    merged.appearance = incoming.appearance;
+  } else if (current.appearance !== undefined) {
+    merged.appearance = current.appearance;
   }
   return merged;
 }

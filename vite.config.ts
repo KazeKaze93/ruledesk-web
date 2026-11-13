@@ -1,3 +1,4 @@
+import preact from "@preact/preset-vite";
 import { defineConfig } from "vitest/config";
 import monkey from "vite-plugin-monkey";
 
@@ -6,6 +7,7 @@ const USERSCRIPT_RAW_URL =
 
 export default defineConfig({
   plugins: [
+    preact(),
     monkey({
       entry: "src/main.ts",
       userscript: {
@@ -15,7 +17,7 @@ export default defineConfig({
           "Collections, playlists, favorites, artist updates, and page tweaks for rule34.xxx",
         version: "0.8.1",
         match: ["https://rule34.xxx/*"],
-        "run-at": "document-idle",
+        "run-at": "document-start",
         grant: ["GM_getValue", "GM_setValue"],
         updateURL: USERSCRIPT_RAW_URL,
         downloadURL: USERSCRIPT_RAW_URL,
@@ -25,8 +27,16 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    dedupe: ["preact"],
+    alias: {
+      react: "preact/compat",
+      "react-dom": "preact/compat",
+      "react/jsx-runtime": "preact/jsx-runtime",
+    },
+  },
   test: {
     environment: "jsdom",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.{test,spec}.{ts,tsx}"],
   },
 });

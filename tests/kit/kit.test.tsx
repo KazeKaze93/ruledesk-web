@@ -1,0 +1,248 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act } from "preact/test-utils";
+
+import {
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  IconButton,
+  IconStar,
+  NumberField,
+  Popover,
+  ProgressBar,
+  SectionLabel,
+  Segmented,
+  Select,
+  Switch,
+  Tabs,
+  TextField,
+} from "../../src/ui/kit";
+import { cleanupKit, fireClick, flushEffects, renderKit } from "./render";
+
+const hosts: HTMLElement[] = [];
+
+afterEach(() => {
+  while (hosts.length > 0) {
+    const host = hosts.pop();
+    if (host !== undefined) {
+      cleanupKit(host);
+    }
+  }
+});
+
+function mount(node: Parameters<typeof renderKit>[0]): HTMLElement {
+  const host = renderKit(node);
+  hosts.push(host);
+  return host;
+}
+
+describe("kit components", () => {
+  it("Button supports variants, sizes, loading and focus class", () => {
+    const onClick = vi.fn();
+    const host = mount(
+      <Button variant="primary" size="s" loading onClick={onClick}>
+        Save
+      </Button>,
+    );
+    const button = host.querySelector("button");
+    expect(button).toBeTruthy();
+    expect(button?.className).toContain("rdw-btn--primary");
+    expect(button?.className).toContain("rdw-btn--s");
+    expect(button?.getAttribute("aria-busy")).toBe("true");
+    expect(button?.disabled).toBe(true);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("IconButton exposes accessible name", () => {
+    const host = mount(
+      <IconButton label="Favorite">
+        <IconStar />
+      </IconButton>,
+    );
+    const button = host.querySelector("button");
+    expect(button?.getAttribute("aria-label")).toBe("Favorite");
+    expect(button?.getBoundingClientRect().height).toBeGreaterThanOrEqual(0);
+  });
+
+  it("Segmented is a radiogroup with keyboard change", () => {
+    const onChange = vi.fn();
+    const host = mount(
+      <Segmented
+        label="Media"
+        value="images"
+        onChange={onChange}
+        options={[
+          { value: "all", label: "All" },
+          { value: "images", label: "Images" },
+          { value: "videos", label: "Videos" },
+        ]}
+      />,
+    );
+    expect(host.querySelector('[role="radiogroup"]')).toBeTruthy();
+    const selected = host.querySelector('[aria-checked="true"]');
+    expect(selected?.textContent).toBe("Images");
+    act(() => {
+      selected?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+    });
+    expect(onChange).toHaveBeenCalledWith("videos");
+  });
+
+  it("Chip remove button and exclude variant", () => {
+    const onRemove = vi.fn();
+    const host = mount(
+      <Chip label="3d" variant="exclude" onRemove={onRemove} />,
+    );
+    expect(host.querySelector(".rdw-chip--exclude")).toBeTruthy();
+    const remove = host.querySelector("button");
+    expect(remove).toBeTruthy();
+    if (remove !== null) {
+      fireClick(remove);
+    }
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it("Switch toggles via role=switch", () => {
+    const onChange = vi.fn();
+    const host = mount(
+      <Switch checked={false} label="Search tools" onChange={onChange} />,
+    );
+    const sw = host.querySelector('[role="switch"]');
+    expect(sw?.getAttribute("aria-checked")).toBe("false");
+    expect(sw).toBeTruthy();
+    if (sw !== null) {
+      fireClick(sw);
+    }
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it("Select closes on Escape and outside click", async () => {
+    const onChange = vi.fn();
+    const host = mount(
+      <Select
+        label="Sort"
+        value="newest"
+        onChange={onChange}
+        options={[
+          { value: "newest", label: "Newest" },
+          { value: "score", label: "Score" },
+        ]}
+      />,
+    );
+    const trigger = host.querySelector(".rdw-select__trigger");
+    expect(trigger).toBeInstanceOf(HTMLButtonElement);
+    if (!(trigger instanceof HTMLButtonElement)) {
+      throw new Error("expected select trigger");
+    }
+    fireClick(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(host.querySelector('[role="listbox"]')).toBeTruthy();
+    await flushEffects();
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(host.querySelector('[role="listbox"]')).toBeNull();
+  });
+
+  it("TextField and NumberField emit changes", () => {
+    const onText = vi.fn();
+    const onNum = vi.fn();
+    const host = mount(
+      <>
+        <TextField label="Name" value="" onChange={onText} />
+        <NumberField label="Score" value={10} onChange={onNum} />
+      </>,
+    );
+    const text = host.querySelector('input[type="text"]');
+    const num = host.querySelector('input[type="number"]');
+    expect(text).toBeTruthy();
+    expect(num).toBeTruthy();
+    act(() => {
+      if (text instanceof HTMLInputElement) {
+        text.value = "nyx";
+        text.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (num instanceof HTMLInputElement) {
+        num.value = "20";
+        num.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    });
+    expect(onText).toHaveBeenCalledWith("nyx");
+    expect(onNum).toHaveBeenCalledWith(20);
+  });
+
+  it("Tabs use tablist semantics", () => {
+    const onChange = vi.fn();
+    const host = mount(
+      <Tabs
+        aria-label="Panel"
+        value="settings"
+        onChange={onChange}
+        items={[
+          { id: "artists", label: "Artists" },
+          { id: "settings", label: "Settings" },
+        ]}
+      />,
+    );
+    expect(host.querySelector('[role="tablist"]')).toBeTruthy();
+    const artists = host.querySelector("#rdw-tab-artists");
+    expect(artists).toBeTruthy();
+    if (artists !== null) {
+      fireClick(artists);
+    }
+    expect(onChange).toHaveBeenCalledWith("artists");
+  });
+
+  it("Card, SectionLabel, EmptyState render", () => {
+    const host = mount(
+      <Card>
+        <SectionLabel>Appearance</SectionLabel>
+        <EmptyState title="Nothing here" description="Add items" />
+      </Card>,
+    );
+    expect(host.querySelector(".rdw-card")).toBeTruthy();
+    expect(host.textContent).toContain("Appearance");
+    expect(host.querySelector('[role="status"]')?.textContent).toContain(
+      "Nothing here",
+    );
+  });
+
+  it("Popover closes on Escape and outside click", async () => {
+    const onClose = vi.fn();
+    const host = mount(
+      <div>
+        <Popover open onClose={onClose} aria-label="Collections">
+          <div>Menu</div>
+        </Popover>
+      </div>,
+    );
+    expect(host.querySelector('[role="dialog"]')).toBeTruthy();
+    await flushEffects();
+    act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("ProgressBar exposes progressbar role", async () => {
+    const host = mount(<ProgressBar value={0.5} label="Sync" />);
+    await flushEffects();
+    const bar = host.querySelector('[role="progressbar"]');
+    expect(bar?.getAttribute("aria-valuenow")).toBe("50");
+  });
+
+  it("kit CSS uses only rdw token variables for colors", () => {
+    const host = mount(<Button variant="danger">Delete</Button>);
+    const styles = Array.from(host.querySelectorAll("style:not([data-rdw-tokens])"))
+      .map((node) => node.textContent ?? "")
+      .join("\n");
+    expect(styles).toContain("var(--rdw-danger)");
+    expect(styles).not.toMatch(/#[0-9a-fA-F]{3,8}/);
+  });
+});

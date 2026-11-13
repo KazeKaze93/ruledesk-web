@@ -1,0 +1,213 @@
+import type { JSX, SVGAttributes } from "preact";
+
+type IconProps = {
+  readonly size?: number;
+  readonly className?: string;
+  readonly title?: string;
+};
+
+const DEFAULT_SIZE = 16;
+
+function baseProps(
+  size: number,
+  className: string | undefined,
+  title: string | undefined,
+): SVGAttributes<SVGSVGElement> {
+  const props: SVGAttributes<SVGSVGElement> = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    "stroke-width": 2,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+    "aria-hidden": title === undefined ? true : undefined,
+    role: title === undefined ? undefined : "img",
+  };
+  if (className !== undefined) {
+    props.className = className;
+  }
+  if (title !== undefined) {
+    props["aria-label"] = title;
+  }
+  return props;
+}
+
+export function IconStar(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+export function IconStarFilled(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg
+      {...baseProps(size, props.className, props.title)}
+      fill="currentColor"
+      stroke="none"
+    >
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+export function IconPlus(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+export function IconCheck(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+export function IconX(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+export function IconChevronDown(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
+
+export function IconChevronRight(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+export function IconArrowUp(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+export function IconExternalLink(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+
+export function IconSettings(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  );
+}
+
+export function IconSearch(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  );
+}
+
+export function IconTrash(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
+export function IconEye(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function IconImage(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  );
+}
+
+export function IconVideo(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <polygon points="5 3 19 12 5 21 5 3" />
+    </svg>
+  );
+}
+
+export function IconPalette(props: IconProps): JSX.Element {
+  const size = props.size ?? DEFAULT_SIZE;
+  return (
+    <svg {...baseProps(size, props.className, props.title)}>
+      {props.title !== undefined ? <title>{props.title}</title> : null}
+      <path d="M12 2a10 10 0 1 0 10 10c0-1.5-1.5-2-2.5-2-1 0-1.5.5-2.5.5s-1.5-.5-1.5-1.5.5-2 1.5-2.5S18.5 5 18.5 3.5A10 10 0 0 0 12 2z" />
+      <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="14.5" cy="8" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

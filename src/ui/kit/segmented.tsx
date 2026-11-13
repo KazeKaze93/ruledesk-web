@@ -1,0 +1,106 @@
+import type { JSX } from "preact";
+
+import { KIT_FOCUS_CSS, KIT_MIN_TARGET_PX } from "./shared";
+
+export type SegmentedOption = {
+  readonly value: string;
+  readonly label: string;
+};
+
+export type SegmentedProps = {
+  readonly options: readonly SegmentedOption[];
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly label?: string;
+  readonly className?: string;
+};
+
+export const SEGMENTED_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--rdw-surface-2);
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  padding: 2px;
+  gap: 2px;
+}
+.rdw-seg__btn {
+  min-height: ${KIT_MIN_TARGET_PX}px;
+  height: ${KIT_MIN_TARGET_PX}px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--rdw-radius-s);
+  background: transparent;
+  color: var(--rdw-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+.rdw-seg__btn[aria-checked="true"] {
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font-weight: 600;
+  box-shadow: var(--rdw-shadow-1);
+}
+`;
+
+export function Segmented(props: SegmentedProps): JSX.Element {
+  const className = ["rdw-seg", props.className]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
+
+  return (
+    <>
+      <style>{SEGMENTED_CSS}</style>
+      <div
+        className={className}
+        role="radiogroup"
+        aria-label={props.label}
+      >
+        {props.options.map((option) => {
+          const selected = option.value === props.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              className="rdw-seg__btn rdw-kit-focusable"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              onClick={() => {
+                props.onChange(option.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") {
+                  return;
+                }
+                event.preventDefault();
+                const index = props.options.findIndex(
+                  (item) => item.value === props.value,
+                );
+                if (index < 0) {
+                  return;
+                }
+                const delta = event.key === "ArrowRight" ? 1 : -1;
+                const next =
+                  props.options[
+                    (index + delta + props.options.length) % props.options.length
+                  ];
+                if (next !== undefined) {
+                  props.onChange(next.value);
+                }
+              }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}

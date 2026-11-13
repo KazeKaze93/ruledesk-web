@@ -8,7 +8,7 @@
 // @match        https://rule34.xxx/*
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 (function() {
@@ -17,6 +17,17 @@
 	var STORAGE_BACKUP_KEY = "ruledesk-web.storage.backup";
 	var FAVS_STORAGE_KEY = "ruledesk-web.favs";
 	var DEBUG_KEY = "ruledesk-web.debug";
+	var APPEARANCE_BACKGROUND_KEY = "ruledesk-web.appearance.background";
+	var TOKEN_STYLE_ID = "ruledesk-web-tokens";
+	var SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
+	var RDW_SKIN_CLASS = "rdw-skin";
+	var RDW_THEME_ATTR = "data-rdw-theme";
+	var APPEARANCE_THEME_SITE = "site";
+	var APPEARANCE_THEME_SITE_DARK = "site-dark";
+	var APPEARANCE_THEME_LIGHT = "light";
+	var APPEARANCE_THEME_DARK = "dark";
+	var APPEARANCE_THEME_CUSTOM = "custom";
+	var DEFAULT_APPEARANCE_THEME = APPEARANCE_THEME_LIGHT;
 	var SITE_ORIGIN = "https://rule34.xxx";
 	var SEARCH_PATH = "/index.php";
 	var SEARCH_PAGE = "post";
@@ -713,7 +724,7 @@
 	};
 	var safeParseAsync = _safeParseAsync($ZodRealError);
 	var anyString = /^[\s\S]{0,}$/;
-	var number = /^-?\d+(?:\.\d+)?$/;
+	var number$1 = /^-?\d+(?:\.\d+)?$/;
 	var boolean$1 = /^(?:true|false)$/i;
 	var $ZodCheck = $constructor("$ZodCheck", (inst, def) => {
 		var _a;
@@ -966,7 +977,7 @@
 	});
 	var $ZodNumber = $constructor("$ZodNumber", (inst, def) => {
 		$ZodType.init(inst, def);
-		inst._zod.pattern = number;
+		inst._zod.pattern = number$1;
 		inst._zod.parse = (payload, _ctx) => {
 			if (def.coerce) try {
 				payload.value = Number(payload.value);
@@ -1300,7 +1311,7 @@
 						issues: []
 					}, ctx);
 					if (keyResult instanceof Promise) throw new Error("Async schemas not supported in object keys currently");
-					if (typeof key === "string" && number.test(key) && keyResult.issues.length) {
+					if (typeof key === "string" && number$1.test(key) && keyResult.issues.length) {
 						const retryResult = def.keyType._zod.run({
 							value: Number(key),
 							issues: []
@@ -1430,6 +1441,13 @@
 			...normalizeParams(params)
 		}));
 	}
+	function _number(Class, params) {
+		return new Class(snapshotChecks({
+			type: "number",
+			checks: [],
+			...normalizeParams(params)
+		}));
+	}
 	function _int(Class, params) {
 		return new Class({
 			type: "number",
@@ -1537,6 +1555,9 @@
 		$ZodNumber.init(inst, def);
 		ZodMiniType.init(inst, def);
 	});
+	function number(params) {
+		return _number(ZodMiniNumber, params);
+	}
 	var ZodMiniNumberFormat = $constructor("ZodMiniNumberFormat", (inst, def) => {
 		$ZodNumberFormat.init(inst, def);
 		ZodMiniNumber.init(inst, def);
@@ -1872,6 +1893,23 @@
 		fav: optional(boolean()),
 		seen: optional(boolean())
 	});
+	var AppearanceSchema = object({
+		theme: _enum([
+			APPEARANCE_THEME_SITE,
+			APPEARANCE_THEME_SITE_DARK,
+			APPEARANCE_THEME_LIGHT,
+			APPEARANCE_THEME_DARK,
+			APPEARANCE_THEME_CUSTOM
+		]),
+		custom: optional(object({
+			accent: string(),
+			bg: string(),
+			surface: string(),
+			text: string(),
+			backgroundImage: optional(string()),
+			backgroundDim: optional(number())
+		}))
+	});
 	var SettingsSchema = object({
 		gridFavButtons: boolean(),
 		updatesGroupSize: optional(int().check(_nonnegative())),
@@ -1879,7 +1917,8 @@
 		tweaksEnabled: optional(boolean()),
 		features: optional(record(string(), boolean())),
 		featureChoice: optional(record(string(), string())),
-		featureState: optional(record(string(), unknown()))
+		featureState: optional(record(string(), unknown())),
+		appearance: optional(AppearanceSchema)
 	});
 	var UpdatesSchema = object({ seenPostId: int().check(_nonnegative()) });
 	var StorageSchema = object({
@@ -1919,6 +1958,9 @@
 			ids: []
 		};
 	}
+	function createDefaultAppearance() {
+		return { theme: DEFAULT_APPEARANCE_THEME };
+	}
 	function createDefaultStorage() {
 		return {
 			version: 1,
@@ -1928,10 +1970,14 @@
 			settings: {
 				gridFavButtons: true,
 				updatesGroupSize: 0,
-				tweaksEnabled: true
+				tweaksEnabled: true,
+				appearance: createDefaultAppearance()
 			},
 			updates: { seenPostId: 0 }
 		};
+	}
+	function resolveAppearance(data) {
+		return data.settings?.appearance ?? createDefaultAppearance();
 	}
 	function resolveGridFavButtons(data) {
 		return data.settings?.gridFavButtons ?? true;
@@ -2188,6 +2234,7 @@
 		if (data.settings?.features !== void 0) next.features = { ...data.settings.features };
 		if (data.settings?.featureChoice !== void 0) next.featureChoice = { ...data.settings.featureChoice };
 		if (data.settings?.featureState !== void 0) next.featureState = { ...data.settings.featureState };
+		if (data.settings?.appearance !== void 0) next.appearance = data.settings.appearance;
 		return next;
 	}
 	function normalizePostId(postId) {
@@ -2407,6 +2454,14 @@
 		};
 		save(data);
 	}
+	function getAppearance() {
+		return resolveAppearance(load());
+	}
+	function getAppearanceBackgroundDataUrl() {
+		const raw = getGmGetValue()(APPEARANCE_BACKGROUND_KEY, void 0);
+		if (typeof raw !== "string" || raw.length === 0) return;
+		return raw;
+	}
 	function getSeenPostId() {
 		return resolveSeenPostId(load());
 	}
@@ -2509,6 +2564,8 @@
 		if (featureChoice !== void 0) merged.featureChoice = featureChoice;
 		const featureState = mergeUnknownRecord(current.featureState, incoming.featureState);
 		if (featureState !== void 0) merged.featureState = featureState;
+		if (incoming.appearance !== void 0) merged.appearance = incoming.appearance;
+		else if (current.appearance !== void 0) merged.appearance = current.appearance;
 		return merged;
 	}
 	function mergeUpdates(current, incoming) {
@@ -8389,12 +8446,219 @@ ${BODY_SELECTOR} #${POST_ACTIONS_ID} .${CLASS_SCORE} {
 			reader.readAsText(file);
 		});
 	}
-	mountPanel();
-	var pageKind = detectPageKind(window.location.search);
-	if (pageKind === "list") {
-		mountCards();
-		mountArtistSidebar();
-	} else if (pageKind === "post") mountArtistSidebar();
-	else if (pageKind === "favorites") syncFavoritesPage();
-	runFeatures(pageKind, window.location.search);
+	function startApp() {
+		mountPanel();
+		const pageKind = detectPageKind(window.location.search);
+		if (pageKind === "list") {
+			mountCards();
+			mountArtistSidebar();
+		} else if (pageKind === "post") mountArtistSidebar();
+		else if (pageKind === "favorites") syncFavoritesPage();
+		runFeatures(pageKind, window.location.search);
+	}
+	var TOKEN_VAR = {
+		bg: "--rdw-bg",
+		surface: "--rdw-surface",
+		surface2: "--rdw-surface-2",
+		border: "--rdw-border",
+		text: "--rdw-text",
+		muted: "--rdw-muted",
+		accent: "--rdw-accent",
+		accentSoft: "--rdw-accent-soft",
+		danger: "--rdw-danger",
+		dangerSoft: "--rdw-danger-soft",
+		tagArtist: "--rdw-tag-artist",
+		tagCharacter: "--rdw-tag-character",
+		tagCopyright: "--rdw-tag-copyright",
+		tagMetadata: "--rdw-tag-metadata",
+		radiusS: "--rdw-radius-s",
+		radiusM: "--rdw-radius-m",
+		radiusL: "--rdw-radius-l",
+		shadow1: "--rdw-shadow-1",
+		shadow2: "--rdw-shadow-2",
+		font: "--rdw-font",
+		backgroundImage: "--rdw-background-image",
+		backgroundDim: "--rdw-background-dim"
+	};
+	var LIGHT_PALETTE = {
+		bg: "#aae5a4",
+		surface: "#ffffff",
+		surface2: "#f4f6f8",
+		border: "#cfd6dd",
+		text: "#1c2228",
+		muted: "#66727e",
+		accent: "#2f6fed",
+		accentSoft: "#e8f0fe",
+		danger: "#c0392b",
+		dangerSoft: "#fdecea",
+		tagArtist: "#b00020",
+		tagCharacter: "#0a7a2f",
+		tagCopyright: "#8e24aa",
+		tagMetadata: "#ff8800",
+		radiusS: "6px",
+		radiusM: "8px",
+		radiusL: "10px",
+		shadow1: "0 1px 2px rgba(0, 0, 0, 0.06)",
+		shadow2: "0 8px 24px rgba(0, 0, 0, 0.25)",
+		font: "system-ui, \"Segoe UI\", sans-serif"
+	};
+	var DARK_PALETTE = {
+		bg: "#16181c",
+		surface: "#1e2228",
+		surface2: "#262b33",
+		border: "#3a424c",
+		text: "#e8edf2",
+		muted: "#8a96a3",
+		accent: "#4c8bf5",
+		accentSoft: "#1a2f5a",
+		danger: "#e57373",
+		dangerSoft: "#3d1f1f",
+		tagArtist: "#ff6b81",
+		tagCharacter: "#5dcea0",
+		tagCopyright: "#ce93d8",
+		tagMetadata: "#ffb74d",
+		radiusS: "6px",
+		radiusM: "8px",
+		radiusL: "10px",
+		shadow1: "0 1px 2px rgba(0, 0, 0, 0.35)",
+		shadow2: "0 8px 24px rgba(0, 0, 0, 0.55)",
+		font: "system-ui, \"Segoe UI\", sans-serif"
+	};
+	function paletteForMode(mode) {
+		return mode === "dark" ? DARK_PALETTE : LIGHT_PALETTE;
+	}
+	function escapeCssValue(value) {
+		return value.replace(/</g, "\\3c ");
+	}
+	function tokensToCssDeclarations(palette) {
+		return [
+			`${TOKEN_VAR.bg}: ${escapeCssValue(palette.bg)};`,
+			`${TOKEN_VAR.surface}: ${escapeCssValue(palette.surface)};`,
+			`${TOKEN_VAR.surface2}: ${escapeCssValue(palette.surface2)};`,
+			`${TOKEN_VAR.border}: ${escapeCssValue(palette.border)};`,
+			`${TOKEN_VAR.text}: ${escapeCssValue(palette.text)};`,
+			`${TOKEN_VAR.muted}: ${escapeCssValue(palette.muted)};`,
+			`${TOKEN_VAR.accent}: ${escapeCssValue(palette.accent)};`,
+			`${TOKEN_VAR.accentSoft}: ${escapeCssValue(palette.accentSoft)};`,
+			`${TOKEN_VAR.danger}: ${escapeCssValue(palette.danger)};`,
+			`${TOKEN_VAR.dangerSoft}: ${escapeCssValue(palette.dangerSoft)};`,
+			`${TOKEN_VAR.tagArtist}: ${escapeCssValue(palette.tagArtist)};`,
+			`${TOKEN_VAR.tagCharacter}: ${escapeCssValue(palette.tagCharacter)};`,
+			`${TOKEN_VAR.tagCopyright}: ${escapeCssValue(palette.tagCopyright)};`,
+			`${TOKEN_VAR.tagMetadata}: ${escapeCssValue(palette.tagMetadata)};`,
+			`${TOKEN_VAR.radiusS}: ${escapeCssValue(palette.radiusS)};`,
+			`${TOKEN_VAR.radiusM}: ${escapeCssValue(palette.radiusM)};`,
+			`${TOKEN_VAR.radiusL}: ${escapeCssValue(palette.radiusL)};`,
+			`${TOKEN_VAR.shadow1}: ${escapeCssValue(palette.shadow1)};`,
+			`${TOKEN_VAR.shadow2}: ${escapeCssValue(palette.shadow2)};`,
+			`${TOKEN_VAR.font}: ${escapeCssValue(palette.font)};`
+		].join("\n  ");
+	}
+	function buildTokensCss(palette, selector = ":root") {
+		return `${selector} {\n  ${tokensToCssDeclarations(palette)}\n}\n`;
+	}
+	function applyCustomThemeProperties(target, custom) {
+		if (custom.accent !== void 0) target.style.setProperty(TOKEN_VAR.accent, custom.accent);
+		if (custom.bg !== void 0) target.style.setProperty(TOKEN_VAR.bg, custom.bg);
+		if (custom.surface !== void 0) target.style.setProperty(TOKEN_VAR.surface, custom.surface);
+		if (custom.text !== void 0) target.style.setProperty(TOKEN_VAR.text, custom.text);
+		if (custom.backgroundImage !== void 0 && custom.backgroundImage.length > 0) target.style.setProperty(TOKEN_VAR.backgroundImage, `url("${custom.backgroundImage.replace(/"/g, "\\\"")}")`);
+		if (custom.backgroundDim !== void 0) target.style.setProperty(TOKEN_VAR.backgroundDim, String(custom.backgroundDim));
+	}
+	function clearCustomThemeProperties(target) {
+		target.style.removeProperty(TOKEN_VAR.accent);
+		target.style.removeProperty(TOKEN_VAR.bg);
+		target.style.removeProperty(TOKEN_VAR.surface);
+		target.style.removeProperty(TOKEN_VAR.text);
+		target.style.removeProperty(TOKEN_VAR.backgroundImage);
+		target.style.removeProperty(TOKEN_VAR.backgroundDim);
+	}
+	function themeEnablesSkin(theme) {
+		return theme === "light" || theme === "dark" || theme === "custom";
+	}
+	function paletteModeForTheme(theme) {
+		if (theme === "dark" || theme === "site-dark") return "dark";
+		if (theme === "custom") return "light";
+		return "light";
+	}
+	function resolveTokenPalette(appearance) {
+		const base = paletteForMode(paletteModeForTheme(appearance.theme));
+		if (appearance.theme !== "custom" || appearance.custom === void 0) return base;
+		return {
+			...base,
+			accent: appearance.custom.accent,
+			bg: appearance.custom.bg,
+			surface: appearance.custom.surface,
+			text: appearance.custom.text
+		};
+	}
+	function ensureStyleElement(id) {
+		const existing = document.getElementById(id);
+		if (existing instanceof HTMLStyleElement) return existing;
+		if (existing !== null) existing.remove();
+		const style = document.createElement("style");
+		style.id = id;
+		(document.head ?? document.documentElement).append(style);
+		return style;
+	}
+	function injectTokenStyles(palette) {
+		const style = ensureStyleElement(TOKEN_STYLE_ID);
+		style.textContent = buildTokensCss(palette, ":root");
+		return style;
+	}
+	function injectSiteSkinHook(cssText = "") {
+		const style = ensureStyleElement(SITE_SKIN_STYLE_ID);
+		style.textContent = cssText;
+		return style;
+	}
+	function applyHtmlThemeAttributes(theme) {
+		const root = document.documentElement;
+		root.setAttribute(RDW_THEME_ATTR, theme);
+		if (themeEnablesSkin(theme)) root.classList.add(RDW_SKIN_CLASS);
+		else root.classList.remove(RDW_SKIN_CLASS);
+	}
+	function applyAppearanceToDocument(options) {
+		const { appearance } = options;
+		applyHtmlThemeAttributes(appearance.theme);
+		injectTokenStyles(resolveTokenPalette(appearance));
+		injectSiteSkinHook(options.siteSkinCss ?? "");
+		const root = document.documentElement;
+		clearCustomThemeProperties(root);
+		if (appearance.theme === "custom" && appearance.custom !== void 0) {
+			const backgroundImage = options.backgroundDataUrl ?? appearance.custom.backgroundImage;
+			applyCustomThemeProperties(root, backgroundImage !== void 0 && backgroundImage.length > 0 ? {
+				accent: appearance.custom.accent,
+				bg: appearance.custom.bg,
+				surface: appearance.custom.surface,
+				text: appearance.custom.text,
+				backgroundImage,
+				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
+			} : {
+				accent: appearance.custom.accent,
+				bg: appearance.custom.bg,
+				surface: appearance.custom.surface,
+				text: appearance.custom.text,
+				...appearance.custom.backgroundDim !== void 0 ? { backgroundDim: appearance.custom.backgroundDim } : {}
+			});
+		} else if (options.backgroundDataUrl !== void 0 && options.backgroundDataUrl.length > 0) applyCustomThemeProperties(root, { backgroundImage: options.backgroundDataUrl });
+	}
+	function bootEarly() {
+		const appearance = getAppearance();
+		const backgroundDataUrl = getAppearanceBackgroundDataUrl();
+		applyAppearanceToDocument({
+			appearance,
+			...backgroundDataUrl !== void 0 ? { backgroundDataUrl } : {}
+		});
+	}
+	function whenDomReady(callback) {
+		if (document.readyState === "interactive" || document.readyState === "complete") {
+			callback();
+			return;
+		}
+		document.addEventListener("DOMContentLoaded", callback, { once: true });
+	}
+	bootEarly();
+	whenDomReady(() => {
+		startApp();
+	});
 })();

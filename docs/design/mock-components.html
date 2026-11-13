@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+:root{--bg:#aae5a4;--bar:#93c393;--link:#000099;--s:#ffffff;--s2:#f4f6f8;--bd:#cfd6dd;--tx:#1c2228;--mut:#66727e;--acc:#2f6fed;--acc2:#e8f0fe;--red:#c0392b;--red2:#fdecea;--art:#b00020;--chr:#0a7a2f;--cop:#8e24aa}
+*{box-sizing:border-box}body{margin:0;background:#2b2f36;font:13px/1.35 system-ui,Segoe UI,sans-serif;color:var(--tx);padding:28px;display:grid;grid-template-columns:560px 780px 420px;gap:28px;align-items:start}
+.frame{background:var(--bg);border-radius:10px;overflow:hidden;box-shadow:0 6px 24px #0008}
+.cap{color:#e9edf2;font:600 15px system-ui;margin:0 0 10px}
+.site-h{padding:8px 16px 0;font:700 20px verdana;color:var(--link)}
+.nav{padding:4px 16px;font:14px verdana;color:var(--link);display:flex;gap:16px}.nav b{background:var(--bar);color:#fff;padding:0 8px}
+.sub{background:var(--bar);padding:3px 16px;font:12px verdana;color:var(--link);display:flex;gap:16px}
+.body{display:flex;gap:16px;padding:14px 16px 18px}
+.side{width:204px;flex:none}.h5{font:700 15px verdana;margin:0 0 4px}
+.inp{width:100%;height:24px;border:1px solid #777;background:#fff;padding:0 4px;font:12px verdana}
+.btn-site{width:100%;height:20px;border:1px solid #000;background:#fff;font:12px verdana;margin-top:3px}
+/* --- script design system --- */
+.card{background:var(--s);border:1px solid var(--bd);border-radius:10px;box-shadow:0 1px 2px #0001}
+.tools{margin-top:8px;padding:10px;display:grid;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 4px 0 8px;border-radius:12px;background:var(--s2);border:1px solid var(--bd);font-size:12px;max-width:100%}
+.chip i{width:7px;height:7px;border-radius:50%;background:#8a96a3;flex:none}.chip.art i{background:var(--art)}.chip.chr i{background:var(--chr)}.chip.cop i{background:var(--cop)}
+.chip.ex{background:var(--red2);border-color:#f1b9b3;color:var(--red);text-decoration:line-through}
+.chip{white-space:nowrap}.chip.grp{background:var(--acc2);border-color:#bcd0fb;color:#1b4fc4;font-weight:600}
+.chip u{text-decoration:none;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;color:var(--mut);font-size:13px}.chip u:hover{background:#0001}
+.lbl{font:600 10.5px system-ui;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:2px;gap:2px}
+.seg span{height:24px;display:grid;place-items:center;border-radius:6px;font-size:12px;color:var(--mut)}.seg .on{background:#fff;color:var(--tx);font-weight:600;box-shadow:0 1px 2px #0002}
+.sel{height:28px;border:1px solid var(--bd);border-radius:8px;background:#fff;padding:0 8px;display:flex;align-items:center;justify-content:space-between;font-size:12px}.sel:after{content:"▾";color:var(--mut)}
+.row2{display:grid;grid-template-columns:1fr 72px;gap:8px}
+.num{height:28px;border:1px solid var(--bd);border-radius:8px;background:#fff;padding:0 8px;display:flex;align-items:center;font-size:12px;color:var(--mut)}
+.foot{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--bd);padding-top:8px;font-size:12px;color:var(--mut)}
+.ghost{color:var(--acc);font-weight:600}
+.tags{margin-top:12px;font:12px verdana}.tags b{display:block;margin-top:2px}.t-art{color:var(--art)}.pillf{display:inline-block;border:1px solid var(--bd);background:#fff;border-radius:10px;font:11px system-ui;padding:1px 7px;margin-left:4px;color:var(--mut)}
+.grid{flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-content:start}
+.th{height:150px;border-radius:2px;position:relative}.th .ic{position:absolute;top:6px;right:6px;display:grid;gap:4px}
+.icb{width:26px;height:26px;border-radius:8px;background:#fffd;border:1px solid #0002;display:grid;place-items:center;font-size:13px;box-shadow:0 1px 3px #0003}.icb.on{background:#ffd75e;border-color:#c79a00}
+.th.new:after{content:"NEW";position:absolute;left:6px;top:6px;background:var(--acc);color:#fff;font:700 9.5px system-ui;letter-spacing:.05em;padding:2px 6px;border-radius:9px}
+.feedbar{white-space:nowrap;grid-column:1/-1;padding:8px 10px;display:flex;align-items:center;gap:10px;font-size:12px}
+.pri,.sec{white-space:nowrap}.pri{background:var(--acc);color:#fff;border-radius:8px;height:28px;padding:0 12px;display:inline-grid;place-items:center;font-weight:600;font-size:12px}
+.sec{border:1px solid var(--bd);background:#fff;border-radius:8px;height:28px;padding:0 10px;display:inline-grid;place-items:center;font-size:12px}
+/* post */
+.post{flex:1;display:flex;gap:12px;align-items:flex-start}.img{width:300px;height:500px;background:linear-gradient(160deg,#6d7480,#3d434c);border-radius:2px}
+.pp{width:216px;flex:none;padding:10px;display:grid;gap:10px;position:sticky;top:0}
+.act{display:grid;grid-template-columns:1fr 1fr;gap:6px}.act .pri,.act .sec{width:100%}.wide{grid-column:1/-1}
+.score{display:flex;align-items:center;justify-content:space-between;background:var(--s2);border-radius:8px;padding:6px 8px}.score b{font-size:18px}
+.kv{display:grid;grid-template-columns:62px 1fr;gap:3px 8px;font-size:12px}.kv span{color:var(--mut)}.kv a{color:var(--acc)}
+.more{display:grid;gap:2px;font-size:12px}.more a{padding:4px 6px;border-radius:6px;color:var(--tx)}.more a:hover{background:var(--s2)}
+.pop{position:absolute;left:-232px;top:44px;width:220px;padding:8px;display:grid;gap:4px;box-shadow:0 8px 24px #0004;z-index:2}
+.pop .it{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;font-size:12px}.pop .it:nth-child(3){background:var(--s2)}
+.cb{width:15px;height:15px;border:1px solid #9aa5b1;border-radius:4px;display:grid;place-items:center;font-size:11px;color:#fff}.cb.on{background:var(--acc);border-color:var(--acc)}
+.search{height:26px;border:1px solid var(--bd);border-radius:8px;padding:0 8px;display:flex;align-items:center;color:var(--mut);font-size:12px}
+/* window */
+.win{width:380px;margin:18px auto 22px;overflow:hidden;box-shadow:0 12px 32px #0005}
+.wh{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px}.wh b{font-size:14px}.x{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;color:var(--mut)}
+.tabs{display:flex;gap:2px;padding:0 8px;border-bottom:1px solid var(--bd)}.tabs span{padding:7px 10px;font-size:12.5px;color:var(--mut);border-bottom:2px solid transparent}.tabs .on{color:var(--tx);font-weight:600;border-color:var(--acc)}
+.wb{padding:12px;display:grid;gap:12px;max-height:520px}
+.grp{display:grid;gap:2px}.rowi{display:flex;align-items:center;justify-content:space-between;padding:7px 8px;border-radius:8px;font-size:12.5px}.rowi:nth-child(even){background:var(--s2)}.rowi small{display:block;color:var(--mut);font-size:11px}
+.sw{width:30px;height:17px;border-radius:9px;background:#c5ccd4;position:relative;flex:none}.sw:after{content:"";position:absolute;width:13px;height:13px;border-radius:50%;background:#fff;top:2px;left:2px}.sw.on{background:var(--acc)}.sw.on:after{left:15px}
+.wf{display:flex;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--bd);font-size:11px;color:var(--mut)}
+.swatches{display:flex;gap:6px}.swatches i{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--bd)}
+</style></head><body>
+<div><p class="cap">1 · Поиск: панель под полем, значки на превью, лента</p><div class="frame">
+<div class="site-h">Rule 34</div><div class="nav">My Account <b>Posts</b> Feed Collections Comments Wiki</div><div class="sub">Video Upload My Favorites Random Help</div>
+<div class="body"><div class="side"><div class="h5">Search</div><div class="inp">nyx_x -video score:&gt;=10</div><div class="btn-site" style="text-align:center">Search</div>
+<div class="card tools">
+ <div><div class="lbl">Tags</div><div class="chips"><span class="chip art"><i></i>nyx_x<u>×</u></span><span class="chip chr"><i></i>frieren<u>×</u></span><span class="chip ex">3d<u>×</u></span><span class="chip grp">Feed · 12 artists<u>×</u></span></div></div>
+ <div><div class="lbl">Media</div><div class="seg"><span>All</span><span class="on">Images</span><span>Videos</span></div></div>
+ <div class="row2"><div><div class="lbl">Sort</div><div class="sel">Newest</div></div><div><div class="lbl">Min score</div><div class="num">10</div></div></div>
+ <div><div class="lbl">Source</div><div class="seg"><span class="on">All</span><span>Feed</span><span>Favorites</span></div></div>
+ <div class="foot"><span>Applies instantly</span><span class="ghost">Reset search</span></div>
+</div>
+<div class="tags"><div class="h5">Tags</div><b>Artist (1)</b><span class="t-art">? + − nyx x</span> 2691<span class="pillf">Following</span><b>General (41) ▸</b><b>Meta (2) ▸</b></div></div>
+<div class="grid"><div class="card feedbar"><b>14 new</b><span class="pri" style="margin-left:auto">Mark all seen</span><span class="sec">Only new</span></div>
+<div class="th new" style="background:#3f4a5a"><div class="ic"><span class="icb on">★</span><span class="icb">＋</span></div></div><div class="th new" style="background:#5a4a3f"></div><div class="th" style="background:#3f5a47"></div><div class="th" style="background:#553f5a"></div><div class="th" style="background:#4a4a4a"></div><div class="th" style="background:#5a573f"></div></div></div></div></div>
+
+<div><p class="cap">2 · Страница поста: панель вплотную к посту, окно коллекций</p><div class="frame">
+<div class="site-h">Rule 34</div><div class="nav">My Account <b>Posts</b> Feed Collections Comments Wiki</div><div class="sub">Video Upload My Favorites Random Help</div>
+<div class="body"><div class="side"><div class="h5">Search</div><div class="inp">nyx_x</div><div class="btn-site" style="text-align:center">Search</div><div class="tags"><b>Artist (1)</b><span class="t-art">? nyx x</span> 2691<span class="pillf">Following</span><b>General (44) ▸</b><b>Meta (2) ▸</b></div></div>
+<div class="post"><div class="img"></div>
+<div class="card pp" style="position:relative">
+ <div class="act"><span class="pri wide">★ In favorites</span><span class="sec">＋ Collections</span><span class="sec">Original ↗</span></div>
+ <div class="score"><span><span class="lbl" style="margin:0">Score</span><b>6</b></span><span class="sec">▲ Vote up</span></div>
+ <div class="kv"><span>Id</span><b>19335568</b><span>Posted</span><div>2026-11-12 19:22</div><span>By</span><a>kaxaqq</a><span>Size</span><div>1344×1728</div><span>Rating</span><div>Explicit</div><span>Source</span><a>x.com/Nyx_x__</a></div>
+ <div><div class="lbl">More</div><div class="more"><a>Edit</a><a>Resize image</a><a>Add note</a><a>Report to moderation</a><a>I came (site counter)</a></div></div>
+ <div class="card pop"><div class="search">Filter collections…</div><div class="it"><span class="cb on">✓</span>Best of nyx</div><div class="it"><span class="cb"></span>Wallpapers</div><div class="it"><span class="cb"></span>To review</div><div class="it" style="color:var(--acc);font-weight:600">＋ New custom collection</div></div>
+</div></div></div></div></div>
+
+<div><p class="cap">3 · Окно скрипта</p><div class="frame"><div class="card win">
+<div class="wh"><b>RuleDesk</b><span class="x">✕</span></div>
+<div class="tabs"><span>Artists</span><span>Favorites</span><span class="on">Settings</span><span>Blacklist</span></div>
+<div class="wb">
+ <div><div class="lbl">Appearance</div><div class="grp"><div class="rowi"><span>Site theme<small>Light, dark or your own</small></span><div class="sel" style="width:110px">Custom</div></div><div class="rowi"><span>Accent and background</span><span class="swatches"><i style="background:#aae5a4"></i><i style="background:#16181c"></i><i style="background:#2f6fed"></i><i style="background:#c0392b"></i></span></div><div class="rowi"><span>Background image<small>From a link or a file</small></span><span class="sec">Choose…</span></div><div class="rowi"><span>Grid</span><div class="sel" style="width:110px">Masonry</div></div></div></div>
+ <div><div class="lbl">Page</div><div class="grp"><div class="rowi"><span>Search tools</span><span class="sw on"></span></div><div class="rowi"><span>Infinite scroll</span><span class="sw on"></span></div><div class="rowi"><span>Collapse tags</span><span class="sw on"></span></div><div class="rowi"><span>Dim seen posts</span><span class="sw on"></span></div><div class="rowi"><span>Clean site menu</span><span class="sw"></span></div><div class="rowi"><span>Post side panel</span><span class="sw on"></span></div></div></div>
+ <div><div class="lbl">Data</div><div style="display:flex;gap:8px"><span class="sec">Export</span><span class="sec">Import</span></div></div>
+</div><div class="wf"><span>v0.9.0</span><span>Drag the corner to resize</span></div></div></div></div>
+</body></html>

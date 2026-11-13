@@ -2,6 +2,23 @@ export const STORAGE_KEY = "ruledesk-web.storage";
 export const STORAGE_BACKUP_KEY = "ruledesk-web.storage.backup";
 export const FAVS_STORAGE_KEY = "ruledesk-web.favs";
 export const DEBUG_KEY = "ruledesk-web.debug";
+export const APPEARANCE_BACKGROUND_KEY = "ruledesk-web.appearance.background";
+
+export const APPEARANCE_BACKGROUND_MAX_BYTES = 1_572_864;
+export const APPEARANCE_BACKGROUND_TOO_LARGE =
+  "Background image is too large (max 1.5 MB).";
+
+export const TOKEN_STYLE_ID = "ruledesk-web-tokens";
+export const SITE_SKIN_STYLE_ID = "ruledesk-web-site-skin";
+export const RDW_SKIN_CLASS = "rdw-skin";
+export const RDW_THEME_ATTR = "data-rdw-theme";
+
+export const APPEARANCE_THEME_SITE = "site" as const;
+export const APPEARANCE_THEME_SITE_DARK = "site-dark" as const;
+export const APPEARANCE_THEME_LIGHT = "light" as const;
+export const APPEARANCE_THEME_DARK = "dark" as const;
+export const APPEARANCE_THEME_CUSTOM = "custom" as const;
+export const DEFAULT_APPEARANCE_THEME = APPEARANCE_THEME_LIGHT;
 
 export const SCHEMA_VERSION = 1 as const;
 export const FAVS_SCHEMA_VERSION = 1 as const;

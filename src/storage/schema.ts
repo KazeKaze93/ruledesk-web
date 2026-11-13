@@ -1,8 +1,14 @@
 import * as z from "zod/mini";
 
 import {
+  APPEARANCE_THEME_CUSTOM,
+  APPEARANCE_THEME_DARK,
+  APPEARANCE_THEME_LIGHT,
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
   COLLECTION_KIND_POSTS,
   COLLECTION_KIND_SEARCH,
+  DEFAULT_APPEARANCE_THEME,
   DEFAULT_GRID_FAV_BUTTONS,
   DEFAULT_PLAYLIST_CHUNK_SIZE,
   DEFAULT_SEEN_POST_ID,
@@ -45,6 +51,28 @@ export const MarkFlagsSchema = z.object({
   seen: z.optional(z.boolean()),
 });
 
+export const AppearanceThemeSchema = z.enum([
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
+  APPEARANCE_THEME_LIGHT,
+  APPEARANCE_THEME_DARK,
+  APPEARANCE_THEME_CUSTOM,
+]);
+
+export const AppearanceCustomSchema = z.object({
+  accent: z.string(),
+  bg: z.string(),
+  surface: z.string(),
+  text: z.string(),
+  backgroundImage: z.optional(z.string()),
+  backgroundDim: z.optional(z.number()),
+});
+
+export const AppearanceSchema = z.object({
+  theme: AppearanceThemeSchema,
+  custom: z.optional(AppearanceCustomSchema),
+});
+
 export const SettingsSchema = z.object({
   gridFavButtons: z.boolean(),
   updatesGroupSize: z.optional(z.int().check(z.nonnegative())),
@@ -53,6 +81,7 @@ export const SettingsSchema = z.object({
   features: z.optional(z.record(z.string(), z.boolean())),
   featureChoice: z.optional(z.record(z.string(), z.string())),
   featureState: z.optional(z.record(z.string(), z.unknown())),
+  appearance: z.optional(AppearanceSchema),
 });
 
 export const UpdatesSchema = z.object({
@@ -98,6 +127,9 @@ export type CollectionKind = z.infer<typeof CollectionKindSchema>;
 export type Collection = z.infer<typeof CollectionSchema>;
 export type ArtistEntry = z.infer<typeof ArtistEntrySchema>;
 export type MarkFlags = z.infer<typeof MarkFlagsSchema>;
+export type AppearanceTheme = z.infer<typeof AppearanceThemeSchema>;
+export type AppearanceCustom = z.infer<typeof AppearanceCustomSchema>;
+export type Appearance = z.infer<typeof AppearanceSchema>;
 export type Settings = z.infer<typeof SettingsSchema>;
 export type UpdatesState = z.infer<typeof UpdatesSchema>;
 export type StorageData = z.infer<typeof StorageSchema>;
@@ -120,6 +152,12 @@ export function createDefaultFavs(): FavsData {
   };
 }
 
+export function createDefaultAppearance(): Appearance {
+  return {
+    theme: DEFAULT_APPEARANCE_THEME,
+  };
+}
+
 export function createDefaultStorage(): StorageData {
   return {
     version: SCHEMA_VERSION,
@@ -130,11 +168,16 @@ export function createDefaultStorage(): StorageData {
       gridFavButtons: DEFAULT_GRID_FAV_BUTTONS,
       updatesGroupSize: DEFAULT_UPDATES_GROUP_SIZE,
       tweaksEnabled: DEFAULT_TWEAKS_ENABLED,
+      appearance: createDefaultAppearance(),
     },
     updates: {
       seenPostId: DEFAULT_SEEN_POST_ID,
     },
   };
+}
+
+export function resolveAppearance(data: StorageData): Appearance {
+  return data.settings?.appearance ?? createDefaultAppearance();
 }
 
 export function resolveGridFavButtons(data: StorageData): boolean {

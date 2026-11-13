@@ -1,0 +1,92 @@
+import type { JSX } from "preact";
+import { useId } from "preact/hooks";
+
+import { KIT_FOCUS_CSS, KIT_MIN_TARGET_PX } from "./shared";
+
+export type NumberFieldProps = {
+  readonly value: number | null;
+  readonly onChange: (value: number | null) => void;
+  readonly label?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly step?: number;
+  readonly disabled?: boolean;
+  readonly placeholder?: string;
+  readonly className?: string;
+  readonly id?: string;
+};
+
+export const NUMBER_FIELD_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-num {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.rdw-num__label {
+  font: 600 10.5px var(--rdw-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rdw-muted);
+}
+.rdw-num__input {
+  box-sizing: border-box;
+  min-height: ${KIT_MIN_TARGET_PX}px;
+  height: ${KIT_MIN_TARGET_PX}px;
+  width: 100%;
+  padding: 0 8px;
+  border: 1px solid var(--rdw-border);
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-surface);
+  color: var(--rdw-text);
+  font: inherit;
+  font-size: 12px;
+}
+.rdw-num__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+`;
+
+export function NumberField(props: NumberFieldProps): JSX.Element {
+  const autoId = useId();
+  const inputId = props.id ?? autoId;
+  const className = ["rdw-num", props.className]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
+
+  return (
+    <>
+      <style>{NUMBER_FIELD_CSS}</style>
+      <div className={className}>
+        {props.label !== undefined ? (
+          <label className="rdw-num__label" htmlFor={inputId}>
+            {props.label}
+          </label>
+        ) : null}
+        <input
+          id={inputId}
+          className="rdw-num__input rdw-kit-focusable"
+          type="number"
+          value={props.value ?? ""}
+          min={props.min}
+          max={props.max}
+          step={props.step}
+          placeholder={props.placeholder}
+          disabled={props.disabled}
+          aria-label={props.label}
+          onInput={(event) => {
+            const raw = event.currentTarget.value;
+            if (raw.trim() === "") {
+              props.onChange(null);
+              return;
+            }
+            const next = Number(raw);
+            props.onChange(Number.isFinite(next) ? next : null);
+          }}
+        />
+      </div>
+    </>
+  );
+}
