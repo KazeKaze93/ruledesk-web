@@ -39,7 +39,8 @@ function writeThemeCookie(value: string, expires: Date): void {
   ].join("; ");
 }
 
-function deleteThemeCookie(): void {
+/** Deletes the site `theme` cookie (light / default). */
+export function clearSiteThemeCookie(): void {
   document.cookie = [
     `${SITE_THEME_COOKIE_NAME}${COOKIE_NAME_VALUE_SEPARATOR}`,
     `expires=${new Date(0).toUTCString()}`,
@@ -90,7 +91,11 @@ function findSiteDesktopStylesheetLink(): HTMLLinkElement | null {
   return null;
 }
 
-function applySiteStylesheet(theme: SiteTheme): void {
+/**
+ * Swap the site desktop stylesheet link (desktop.css ↔ desktop-dark.css).
+ * Preserves query string. No-op (warn) if the link is missing.
+ */
+export function applySiteDesktopStylesheet(theme: SiteTheme): void {
   const link = findSiteDesktopStylesheetLink();
   if (link === null) {
     log.warn("Site desktop stylesheet link not found; theme cookie updated only");
@@ -105,6 +110,15 @@ function applySiteStylesheet(theme: SiteTheme): void {
     "href",
     replaceStylesheetFilename(href, stylesheetFilenameForTheme(theme)),
   );
+}
+
+/**
+ * RuleDesk skin modes need a predictable site base: no theme cookie + light CSS.
+ * Does not touch html.rdw-skin (that is owned by src/skin/theme.ts).
+ */
+export function forceLightSiteBase(): void {
+  clearSiteThemeCookie();
+  applySiteDesktopStylesheet("light");
 }
 
 export function getSiteTheme(): SiteTheme {
@@ -122,7 +136,7 @@ export function setSiteTheme(theme: SiteTheme): void {
     );
     writeThemeCookie(SITE_THEME_COOKIE_VALUE_DARK, expires);
   } else {
-    deleteThemeCookie();
+    clearSiteThemeCookie();
   }
-  applySiteStylesheet(theme);
+  applySiteDesktopStylesheet(theme);
 }

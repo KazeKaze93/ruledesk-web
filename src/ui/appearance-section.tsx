@@ -1,0 +1,587 @@
+import type { JSX } from "preact";
+import { render } from "preact";
+import { useId, useRef, useState } from "preact/hooks";
+
+import { getSiteSkinCss } from "../skin/site-skin";
+import {
+  applyAppearanceTheme,
+  clampBackgroundDim,
+  CONTRAST_RATIO_MIN,
+  createDefaultCustomTheme,
+  DEFAULT_BACKGROUND_DIM,
+  hasInsufficientTextContrast,
+} from "../skin/theme";
+import {
+  APPEARANCE_THEME_CUSTOM,
+  APPEARANCE_THEME_DARK,
+  APPEARANCE_THEME_LIGHT,
+  APPEARANCE_THEME_SITE,
+  APPEARANCE_THEME_SITE_DARK,
+} from "../config/constants";
+import { gridDensityFeature } from "../features/grid-density";
+import { applyCssOnlyFeatureChoice } from "../features/runtime";
+import type {
+  Appearance,
+  AppearanceCustom,
+  AppearanceTheme,
+} from "../storage/schema";
+import {
+  clearAppearanceBackgroundDataUrl,
+  getAppearance,
+  getAppearanceBackgroundDataUrl,
+  getFeatureChoiceValue,
+  setAppearance,
+  setAppearanceBackgroundDataUrl,
+  setFeatureChoiceValue,
+} from "../storage/store";
+import { Button } from "./kit/button";
+import { SectionLabel } from "./kit/section-label";
+import { Select, type SelectOption } from "./kit/select";
+import { TextField } from "./kit/text-field";
+import { KIT_FOCUS_CSS } from "./kit/shared";
+
+const GRID_FEATURE_ID = gridDensityFeature.id;
+
+const THEME_OPTIONS: readonly SelectOption[] = [
+  { value: APPEARANCE_THEME_SITE, label: "Site default" },
+  { value: APPEARANCE_THEME_SITE_DARK, label: "Site dark" },
+  { value: APPEARANCE_THEME_LIGHT, label: "Light" },
+  { value: APPEARANCE_THEME_DARK, label: "Dark" },
+  { value: APPEARANCE_THEME_CUSTOM, label: "Custom" },
+];
+
+const GRID_OPTIONS: readonly SelectOption[] = [
+  { value: "default", label: "Default" },
+  { value: "compact", label: "Compact" },
+  { value: "large", label: "Large" },
+  { value: "masonry", label: "Masonry" },
+];
+
+const SECTION_TITLE = "Appearance";
+const THEME_ROW_LABEL = "Site theme";
+const THEME_ROW_HINT = "Light, dark or your own";
+const COLORS_ROW_LABEL = "Accent and background";
+const BG_IMAGE_LABEL = "Background image";
+const BG_IMAGE_HINT = "From a link or a file";
+const BG_URL_PLACEHOLDER = "https://… or data URL";
+const BG_DIM_LABEL = "Dim";
+const CHOOSE_LABEL = "Choose…";
+const REMOVE_LABEL = "Remove";
+const RESET_LABEL = "Reset to defaults";
+const GRID_ROW_LABEL = "Grid";
+const CONTRAST_WARN_TEXT = `Low contrast: text on background is below ${String(CONTRAST_RATIO_MIN)}:1`;
+
+const COLOR_FIELDS: readonly {
+  readonly key: "accent" | "bg" | "surface" | "text";
+  readonly label: string;
+}[] = [
+  { key: "accent", label: "Accent" },
+  { key: "bg", label: "Background" },
+  { key: "surface", label: "Surface" },
+  { key: "text", label: "Text" },
+];
+
+const ACCEPT_IMAGE = "image/*";
+
+export const APPEARANCE_SECTION_CSS = `
+${KIT_FOCUS_CSS}
+.rdw-appearance {
+  display: grid;
+  gap: 2px;
+}
+.rdw-appearance__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--rdw-radius-m);
+  font-size: 12.5px;
+  color: var(--rdw-text);
+}
+.rdw-appearance__row--top {
+  align-items: flex-start;
+}
+.rdw-appearance__row:nth-child(even) {
+  background: var(--rdw-surface-2);
+}
+.rdw-appearance__row-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.rdw-appearance__row-text small {
+  color: var(--rdw-muted);
+  font-size: 11px;
+}
+.rdw-appearance__select {
+  width: 110px;
+  flex: none;
+}
+.rdw-appearance__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.rdw-appearance__color {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  color: var(--rdw-muted);
+}
+.rdw-appearance__color input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--rdw-surface);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--rdw-border);
+  background: transparent;
+  cursor: pointer;
+}
+.rdw-appearance__bg {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.rdw-appearance__bg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.rdw-appearance__dim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rdw-muted);
+}
+.rdw-appearance__dim input[type="range"] {
+  flex: 1;
+  min-width: 80px;
+  accent-color: var(--rdw-accent);
+}
+.rdw-appearance__warn {
+  margin: 4px 8px 0;
+  padding: 6px 8px;
+  border-radius: var(--rdw-radius-m);
+  background: var(--rdw-danger-soft);
+  color: var(--rdw-danger);
+  font-size: 12px;
+}
+.rdw-appearance__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.rdw-appearance__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px 0;
+}
+`;
+
+function resolveGridChoice(): string {
+  const stored = getFeatureChoiceValue(GRID_FEATURE_ID);
+  const options = gridDensityFeature.choice?.options ?? [];
+  if (
+    stored !== undefined &&
+    options.some((option) => option.value === stored)
+  ) {
+    return stored;
+  }
+  return gridDensityFeature.choice?.defaultValue ?? "default";
+}
+
+function ensureCustom(appearance: Appearance): AppearanceCustom {
+  return appearance.custom ?? createDefaultCustomTheme();
+}
+
+function persistAndApply(appearance: Appearance): {
+  contrastWarning: boolean;
+} {
+  const parsed = setAppearance(appearance);
+  const backgroundDataUrl = getAppearanceBackgroundDataUrl();
+  const result = applyAppearanceTheme({
+    appearance: parsed,
+    siteSkinCss: getSiteSkinCss(),
+    ...(backgroundDataUrl !== undefined
+      ? { backgroundDataUrl }
+      : {}),
+  });
+  return { contrastWarning: result.contrastWarning };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Could not read image file"));
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Could not read image file"));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+export type AppearanceSectionProps = {
+  readonly className?: string;
+};
+
+export function AppearanceSection(
+  props: AppearanceSectionProps,
+): JSX.Element {
+  const fileInputId = useId();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [appearance, setAppearanceState] = useState<Appearance>(() =>
+    getAppearance(),
+  );
+  const [gridValue, setGridValue] = useState<string>(() => resolveGridChoice());
+  const [bgUrlDraft, setBgUrlDraft] = useState<string>(() => {
+    const current = getAppearance();
+    return current.custom?.backgroundImage ?? "";
+  });
+  const [fileError, setFileError] = useState<string>("");
+  const [contrastWarning, setContrastWarning] = useState<boolean>(() => {
+    const current = getAppearance();
+    if (current.theme !== APPEARANCE_THEME_CUSTOM || current.custom === undefined) {
+      return false;
+    }
+    return hasInsufficientTextContrast(current.custom.text, current.custom.bg);
+  });
+
+  const custom = ensureCustom(appearance);
+  const isCustom = appearance.theme === APPEARANCE_THEME_CUSTOM;
+  const hasBackground =
+    (getAppearanceBackgroundDataUrl()?.length ?? 0) > 0 ||
+    (custom.backgroundImage?.length ?? 0) > 0 ||
+    bgUrlDraft.length > 0;
+
+  function commitAppearance(next: Appearance): void {
+    setAppearanceState(next);
+    const { contrastWarning: warn } = persistAndApply(next);
+    setContrastWarning(warn);
+    setFileError("");
+  }
+
+  function onThemeChange(value: string): void {
+    const theme = value as AppearanceTheme;
+    if (theme === APPEARANCE_THEME_CUSTOM) {
+      commitAppearance({
+        theme,
+        custom: ensureCustom(appearance),
+      });
+      return;
+    }
+    commitAppearance({ theme });
+  }
+
+  function onColorChange(
+    key: "accent" | "bg" | "surface" | "text",
+    value: string,
+  ): void {
+    // Read store (not React state) so rapid color inputs do not clobber each other.
+    const nextCustom: AppearanceCustom = {
+      ...ensureCustom(getAppearance()),
+      [key]: value,
+    };
+    commitAppearance({
+      theme: APPEARANCE_THEME_CUSTOM,
+      custom: nextCustom,
+    });
+  }
+
+  function onBgUrlCommit(url: string): void {
+    const trimmed = url.trim();
+    setBgUrlDraft(trimmed);
+    const base = ensureCustom(getAppearance());
+    const nextCustom: AppearanceCustom = {
+      accent: base.accent,
+      bg: base.bg,
+      surface: base.surface,
+      text: base.text,
+      backgroundDim: clampBackgroundDim(
+        base.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
+      ),
+      ...(trimmed.length > 0 ? { backgroundImage: trimmed } : {}),
+    };
+    // URL image lives in appearance; clear dedicated GM blob if switching to URL.
+    if (trimmed.length > 0) {
+      clearAppearanceBackgroundDataUrl();
+    }
+    commitAppearance({
+      theme: APPEARANCE_THEME_CUSTOM,
+      custom: nextCustom,
+    });
+  }
+
+  function onDimChange(raw: number): void {
+    const dim = clampBackgroundDim(raw);
+    const base = ensureCustom(getAppearance());
+    const nextCustom: AppearanceCustom = {
+      accent: base.accent,
+      bg: base.bg,
+      surface: base.surface,
+      text: base.text,
+      backgroundDim: dim,
+      ...(base.backgroundImage !== undefined
+        ? { backgroundImage: base.backgroundImage }
+        : {}),
+    };
+    commitAppearance({
+      theme: APPEARANCE_THEME_CUSTOM,
+      custom: nextCustom,
+    });
+  }
+
+  async function onFileSelected(file: File | undefined): Promise<void> {
+    if (file === undefined) {
+      return;
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      setAppearanceBackgroundDataUrl(dataUrl);
+      setBgUrlDraft("");
+      const base = ensureCustom(getAppearance());
+      const nextCustom: AppearanceCustom = {
+        accent: base.accent,
+        bg: base.bg,
+        surface: base.surface,
+        text: base.text,
+        backgroundDim: clampBackgroundDim(
+          base.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
+        ),
+      };
+      commitAppearance({
+        theme: APPEARANCE_THEME_CUSTOM,
+        custom: nextCustom,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not read image file";
+      setFileError(message);
+    }
+  }
+
+  function onRemoveBackground(): void {
+    clearAppearanceBackgroundDataUrl();
+    setBgUrlDraft("");
+    const base = ensureCustom(getAppearance());
+    commitAppearance({
+      theme: APPEARANCE_THEME_CUSTOM,
+      custom: {
+        accent: base.accent,
+        bg: base.bg,
+        surface: base.surface,
+        text: base.text,
+        backgroundDim: DEFAULT_BACKGROUND_DIM,
+      },
+    });
+  }
+
+  function onResetDefaults(): void {
+    clearAppearanceBackgroundDataUrl();
+    setBgUrlDraft("");
+    const defaults = createDefaultCustomTheme();
+    commitAppearance({
+      theme: APPEARANCE_THEME_CUSTOM,
+      custom: defaults,
+    });
+  }
+
+  function onGridChange(value: string): void {
+    setGridValue(value);
+    setFeatureChoiceValue(GRID_FEATURE_ID, value);
+    applyCssOnlyFeatureChoice(GRID_FEATURE_ID, value);
+  }
+
+  const className = ["rdw-appearance", props.className]
+    .filter((part) => part !== undefined && part.length > 0)
+    .join(" ");
+
+  return (
+    <>
+      <style>{APPEARANCE_SECTION_CSS}</style>
+      <section className={className} aria-label={SECTION_TITLE}>
+        <SectionLabel>{SECTION_TITLE}</SectionLabel>
+
+        <div className="rdw-appearance__row">
+          <div className="rdw-appearance__row-text">
+            <span>{THEME_ROW_LABEL}</span>
+            <small>{THEME_ROW_HINT}</small>
+          </div>
+          <Select
+            className="rdw-appearance__select"
+            options={THEME_OPTIONS}
+            value={appearance.theme}
+            onChange={onThemeChange}
+          />
+        </div>
+
+        {isCustom ? (
+          <>
+            <div className="rdw-appearance__row">
+              <div className="rdw-appearance__row-text">
+                <span>{COLORS_ROW_LABEL}</span>
+              </div>
+              <div className="rdw-appearance__colors">
+                {COLOR_FIELDS.map((field) => (
+                  <label key={field.key} className="rdw-appearance__color">
+                    <input
+                      type="color"
+                      className="rdw-kit-focusable"
+                      value={custom[field.key]}
+                      aria-label={field.label}
+                      onInput={(event) => {
+                        onColorChange(field.key, event.currentTarget.value);
+                      }}
+                    />
+                    <span>{field.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="rdw-appearance__row rdw-appearance__row--top">
+              <div className="rdw-appearance__row-text">
+                <span>{BG_IMAGE_LABEL}</span>
+                <small>{BG_IMAGE_HINT}</small>
+              </div>
+              <div
+                className="rdw-appearance__bg"
+                onFocusOut={(event) => {
+                  const root = event.currentTarget;
+                  const next = event.relatedTarget;
+                  if (next instanceof Node && root.contains(next)) {
+                    return;
+                  }
+                  onBgUrlCommit(bgUrlDraft);
+                }}
+              >
+                <TextField
+                  value={bgUrlDraft}
+                  placeholder={BG_URL_PLACEHOLDER}
+                  aria-label={BG_IMAGE_LABEL}
+                  onChange={(value) => {
+                    setBgUrlDraft(value);
+                  }}
+                />
+                <div className="rdw-appearance__bg-actions">
+                  <Button
+                    variant="secondary"
+                    size="s"
+                    onClick={() => {
+                      fileRef.current?.click();
+                    }}
+                  >
+                    {CHOOSE_LABEL}
+                  </Button>
+                  {hasBackground ? (
+                    <Button
+                      variant="ghost"
+                      size="s"
+                      onClick={onRemoveBackground}
+                    >
+                      {REMOVE_LABEL}
+                    </Button>
+                  ) : null}
+                  <input
+                    ref={fileRef}
+                    id={fileInputId}
+                    className="rdw-appearance__file"
+                    type="file"
+                    accept={ACCEPT_IMAGE}
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      void onFileSelected(file);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </div>
+                {hasBackground ? (
+                  <label className="rdw-appearance__dim">
+                    <span>{BG_DIM_LABEL}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={0.8}
+                      step={0.05}
+                      value={custom.backgroundDim ?? DEFAULT_BACKGROUND_DIM}
+                      aria-label={BG_DIM_LABEL}
+                      onInput={(event) => {
+                        onDimChange(Number(event.currentTarget.value));
+                      }}
+                    />
+                    <span>
+                      {String(
+                        clampBackgroundDim(
+                          custom.backgroundDim ?? DEFAULT_BACKGROUND_DIM,
+                        ),
+                      )}
+                    </span>
+                  </label>
+                ) : null}
+                {fileError.length > 0 ? (
+                  <div className="rdw-appearance__warn" role="status">
+                    {fileError}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {contrastWarning ? (
+              <div className="rdw-appearance__warn" role="status">
+                {CONTRAST_WARN_TEXT}
+              </div>
+            ) : null}
+
+            <div className="rdw-appearance__footer">
+              <Button variant="ghost" size="s" onClick={onResetDefaults}>
+                {RESET_LABEL}
+              </Button>
+            </div>
+          </>
+        ) : null}
+
+        <div className="rdw-appearance__row">
+          <div className="rdw-appearance__row-text">
+            <span>{GRID_ROW_LABEL}</span>
+          </div>
+          <Select
+            className="rdw-appearance__select"
+            options={GRID_OPTIONS}
+            value={gridValue}
+            onChange={onGridChange}
+          />
+        </div>
+      </section>
+    </>
+  );
+}
+
+/**
+ * Mount the Appearance settings block into a host element for the panel.
+ * B3 Settings tab should call this (or render `<AppearanceSection />` directly).
+ */
+export function createAppearanceSection(): HTMLElement {
+  const host = document.createElement("div");
+  host.className = "rdw-appearance-host";
+  render(<AppearanceSection />, host);
+  return host;
+}
